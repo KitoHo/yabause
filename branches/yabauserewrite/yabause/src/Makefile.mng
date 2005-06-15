@@ -1,0 +1,78 @@
+#       Makefile.mng
+#       Mingw makefile
+#	Copyright (C) 2002, 2003, 2004 Lawrence Sebald
+#       Copyright (C) 2004 Theo Berkau
+#	Based on KOS makefiles (C) by Dan Potter
+#
+#	This program is free software; you can redistribute it and/or modify
+#	it under the terms of the GNU General Public License as published by
+#	the Free Software Foundation; either version 2 of the License, or
+#	(at your option) any later version.
+#
+#	This program is distributed in the hope that it will be useful,
+#	but WITHOUT ANY WARRANTY; without even the implied warranty of
+#	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#	GNU General Public License for more details.
+#
+#	You should have received a copy of the GNU General Public License
+#	along with this program; if not, write to the Free Software
+#	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+
+TARGET = yabause.exe
+CC = g++
+RC = windres
+DDEFINES=
+#DDEFINES=-DDEBUG -DCDDEBUG -DVDP2_DEBUG
+#DDEFINES=-DDEBUG -DVDP1_DEBUG
+#DDEFINES=-DDEBUG
+VDEFINES=-DPACKAGE=\"yabause-win\" -DVERSION=\"0.0.8\" -DHAVE_LIBSDL
+CFLAGS=$(VDEFINES) $(DDEFINES) -O2
+#CFLAGS=$(VDEFINES) $(DDEFINES) -O2 -march=athlon-xp -Wall
+#CFLAGS=$(VDEFINES) $(DDEFINES) -g
+#CFLAGS=$(VDEFINES) $(DDEFINES) -O2 -march=athlon-xp -Wall -pg
+#CFLAGS=$(VDEFINES) $(DDEFINES)
+LDFLAGS=-lmingw32 -lSDLmain -lSDL -lopengl32 -lglut32 -lkernel32 -lgdi32 -lcomctl32 -lcomdlg32 -mwindows -mthreads
+OBJS = cdbase.o cs0.o cs1.o cs2.o exception.o intc.o memory.o scu.o scsp.o smpc.o superh.o vdp1.o vdp2.o yabause.o c68k/c68k.o c68k/c68kexec.o c68k/gen68k.o windows/cd.o windows/yui.o windows/resource.o windows/settings.o sh2d.o ygl.o
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+.cc.o:
+	$(CC) $(CFLAGS) -c $< -o $@
+.c.o:
+	$(CC) $(CFLAGS) -c $< -o $@
+
+windows/resource.o: windows/resource.rc windows/resource.h
+	$(RC) $< -o $@
+clean:
+	rm -f $(OBJS)
+	rm -f $(TARGET)
+
+cs0.o: cs0.hh
+cs1.o: cs0.hh cs1.hh
+cs2.o: cs2.hh cdbase.hh yui.hh
+exception.o: exception.hh
+intc.o: intc.hh superh.hh 
+memory.o: registres.hh cs2.hh superh.hh yui.hh cdbase.hh
+scu.o: scu.hh superh.hh
+sh2d.o: sh2d.hh
+scsp.o: scsp.hh
+smpc.o: smpc.hh cs2.hh scu.hh yui.hh
+superh.o: vdp1.hh vdp2.hh exception.hh superh.hh yui.hh sh2d.hh
+vdp1.o: saturn.hh vdp1.hh intc.hh exception.hh scu.hh vdp2.hh
+vdp2.o: vdp2.hh saturn.hh scu.hh yui.hh
+yabause.o: superh.hh smpc.hh intc.hh vdp1.hh vdp2.hh yui.hh
+c68k/c68k.o: c68k/c68k.h
+c68k/c68kexec.o: c68k/c68k.h c68k/c68k_ini.inc
+	$(CC) $(DDEFINES) $(VDEFINES) -c c68k/c68kexec.c -o $@
+c68k/c68k_ini.inc: c68k/gen68k.exe
+c68k/gen68k.exe: c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c
+	$(CC) $(CFLAGS) -DC68K_GEN -o $@ $^
+	cd c68k && gen68k
+windows/cd.o: windows/cd.hh
+windows/yui.o: superh.hh sh2d.hh vdp2.hh yui.hh windows/resource.h windows/settings.hh
+windows/resource.o: windows/resource.h
+windows/settings.o: windows/resource.h
+

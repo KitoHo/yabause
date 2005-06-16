@@ -22,10 +22,15 @@ void DebugChangeOutput(Debug *, DebugOutType, char *);
 
 void DebugPrintf(Debug *, const char *, u32, const char *, ...);
 
+Debug * MainLog;
+
+void LogStart(void);
+void LogStop(void);
+
 #ifdef DEBUG
-#define LOG(d, f, r...) DebugPrintf(d, __FILE__, __LINE__, f, ## r)
+#define LOG(f, r...) DebugPrintf(MainLog, __FILE__, __LINE__, f, ## r)
 #else
-#define LOG(d, f, r...)
+#define LOG(f, r...)
 #endif
 
 #endif

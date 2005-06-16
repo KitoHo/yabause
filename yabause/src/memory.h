@@ -20,4 +20,7 @@ FASTCALL void	WriteByte(Memory *, u32 , u8);
 FASTCALL void	WriteWord(Memory *, u32 , u16);
 FASTCALL void	WriteLong(Memory *, u32 , u32);
 
+int MemoryLoad(Memory *, const char *, u32);
+int MemorySave(Memory *, const char *, u32, u32);
+
 #endif

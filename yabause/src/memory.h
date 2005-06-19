@@ -3,24 +3,65 @@
 
 #include "core.h"
 
+/* Type 1 Memory, faster for byte (8 bits) accesses */
+
+typedef struct {
+	u8 * mem;
+	u32 size;
+} T1Memory;
+
+T1Memory * T1MemoryNew(u32);
+void T1MemoryDelete(T1Memory *);
+
+FASTCALL u8	T1ReadByte(T1Memory *, u32);
+FASTCALL u16	T1ReadWord(T1Memory *, u32);
+FASTCALL u32	T1ReadLong(T1Memory *, u32);
+
+FASTCALL void	T1WriteByte(T1Memory *, u32 , u8);
+FASTCALL void	T1WriteWord(T1Memory *, u32 , u16);
+FASTCALL void	T1WriteLong(T1Memory *, u32 , u32);
+
+int T1MemoryLoad(T1Memory *, const char *, u32);
+int T1MemorySave(T1Memory *, const char *, u32, u32);
+
+/* Type 2 Memory, faster for word (16 bits) accesses */
+
+typedef struct {
+	u8 * mem;
+	u32 size;
+} T2Memory;
+
+T2Memory * T2MemoryNew(u32);
+void T2MemoryDelete(T2Memory *);
+
+FASTCALL u8	T2ReadByte(T2Memory *, u32);
+FASTCALL u16	T2ReadWord(T2Memory *, u32);
+FASTCALL u32	T2ReadLong(T2Memory *, u32);
+
+FASTCALL void	T2WriteByte(T2Memory *, u32 , u8);
+FASTCALL void	T2WriteWord(T2Memory *, u32 , u16);
+FASTCALL void	T2WriteLong(T2Memory *, u32 , u32);
+
+/* Type 3 Memory, faster for long (32 bits) accesses */
+
 typedef struct {
 	u8 * base_mem;
 	u8 * mem;
 	u32 size;
-} Memory;
+} T3Memory;
 
-Memory * MemoryNew(u32);
-void MemoryDelete(Memory *);
+T3Memory * T3MemoryNew(u32);
+void T3MemoryDelete(T3Memory *);
 
-FASTCALL u8	ReadByte(Memory *, u32);
-FASTCALL u16	ReadWord(Memory *, u32);
-FASTCALL u32	ReadLong(Memory *, u32);
+FASTCALL u8	T3ReadByte(T3Memory *, u32);
+FASTCALL u16	T3ReadWord(T3Memory *, u32);
+FASTCALL u32	T3ReadLong(T3Memory *, u32);
 
-FASTCALL void	WriteByte(Memory *, u32 , u8);
-FASTCALL void	WriteWord(Memory *, u32 , u16);
-FASTCALL void	WriteLong(Memory *, u32 , u32);
+FASTCALL void	T3WriteByte(T3Memory *, u32 , u8);
+FASTCALL void	T3WriteWord(T3Memory *, u32 , u16);
+FASTCALL void	T3WriteLong(T3Memory *, u32 , u32);
 
-int MemoryLoad(Memory *, const char *, u32);
-int MemorySave(Memory *, const char *, u32, u32);
+int T3MemoryLoad(T3Memory *, const char *, u32);
+int T3MemorySave(T3Memory *, const char *, u32, u32);
 
 #endif

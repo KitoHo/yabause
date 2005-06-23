@@ -42,6 +42,9 @@ FASTCALL void	T2WriteByte(T2Memory *, u32 , u8);
 FASTCALL void	T2WriteWord(T2Memory *, u32 , u16);
 FASTCALL void	T2WriteLong(T2Memory *, u32 , u32);
 
+int T2MemoryLoad(T2Memory *, const char *, u32);
+int T2MemorySave(T2Memory *, const char *, u32, u32);
+
 /* Type 3 Memory, faster for long (32 bits) accesses */
 
 typedef struct {
@@ -63,5 +66,20 @@ FASTCALL void	T3WriteLong(T3Memory *, u32 , u32);
 
 int T3MemoryLoad(T3Memory *, const char *, u32);
 int T3MemorySave(T3Memory *, const char *, u32, u32);
+
+/* Dummy memory, always returns 0 */
+
+typedef void Dummy;
+
+Dummy * DummyNew(u32);
+void DummyDelete(Dummy *);
+
+FASTCALL u8	DummyReadByte(Dummy *, u32);
+FASTCALL u16	DummyReadWord(Dummy *, u32);
+FASTCALL u32	DummyReadLong(Dummy *, u32);
+
+FASTCALL void	DummyWriteByte(Dummy *, u32 , u8);
+FASTCALL void	DummyWriteWord(Dummy *, u32 , u16);
+FASTCALL void	DummyWriteLong(Dummy *, u32 , u32);
 
 #endif

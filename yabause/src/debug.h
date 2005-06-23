@@ -22,7 +22,7 @@ void DebugChangeOutput(Debug *, DebugOutType, char *);
 
 void DebugPrintf(Debug *, const char *, u32, const char *, ...);
 
-Debug * MainLog;
+extern Debug * MainLog;
 
 void LogStart(void);
 void LogStop(void);

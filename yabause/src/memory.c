@@ -308,3 +308,16 @@ int T3MemorySave(T3Memory * mem, const char * filename, u32 addr, u32 size) {
 
 	free(buffer);
 }
+
+////////////////////////////////////////////////////////////////
+
+Dummy * DummyNew(u32 s) { return NULL; }
+void DummyDelete(Dummy * d) {}
+
+FASTCALL u8	DummyReadByte(Dummy * d, u32 a) { return 0; }
+FASTCALL u16	DummyReadWord(Dummy * d, u32 a) { return 0; }
+FASTCALL u32	DummyReadLong(Dummy * d, u32 a) { return 0; }
+
+FASTCALL void	DummyWriteByte(Dummy * d, u32 a, u8 v) {}
+FASTCALL void	DummyWriteWord(Dummy * d, u32 a, u16 v) {}
+FASTCALL void	DummyWriteLong(Dummy * d, u32 a, u32 v) {}

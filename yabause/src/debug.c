@@ -89,6 +89,8 @@ void DebugPrintf(Debug * d, const char * file, u32 line, const char * format, ..
 	va_end(l);
 }
 
+Debug * MainLog;
+
 void LogStart(void) {
 	MainLog = DebugNew("main", DEBUG_STDOUT, NULL);
 }

@@ -24,38 +24,38 @@ void T1MemoryDelete(T1Memory * mem) {
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u8 T1ReadByte(T1Memory * mem, u32 addr) {
+inline u8 T1ReadByte(T1Memory * mem, u32 addr) {
 	return mem->mem[addr];
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u16 T1ReadWord(T1Memory * mem, u32 addr) {
+inline u16 T1ReadWord(T1Memory * mem, u32 addr) {
 	return (mem->mem[addr] << 8) | mem->mem[addr + 1];
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u32 T1ReadLong(T1Memory * mem, u32 addr)  {
+inline u32 T1ReadLong(T1Memory * mem, u32 addr)  {
 	return (mem->mem[addr] << 24 | mem->mem[addr + 1] << 16 | mem->mem[addr + 2] << 8 | mem->mem[addr + 3]);
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void T1WriteByte(T1Memory * mem, u32 addr, u8 val)  {
+inline void T1WriteByte(T1Memory * mem, u32 addr, u8 val)  {
 	mem->mem[addr] = val;
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void T1WriteWord(T1Memory * mem, u32 addr, u16 val)  {
+inline void T1WriteWord(T1Memory * mem, u32 addr, u16 val)  {
 	mem->mem[addr] = val >> 8;
 	mem->mem[addr + 1] = val & 0xFF;
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void T1WriteLong(T1Memory * mem, u32 addr, u32 val)  {
+inline void T1WriteLong(T1Memory * mem, u32 addr, u32 val)  {
 	mem->mem[addr] = val >> 24;
 	mem->mem[addr + 1] = (val >> 16) & 0xFF;
 	mem->mem[addr + 2] = (val >> 8) & 0xFF;
@@ -128,37 +128,37 @@ void T2MemoryDelete(T2Memory * mem) {
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u8 T2ReadByte(T2Memory * mem, u32 addr) {
+inline u8 T2ReadByte(T2Memory * mem, u32 addr) {
 	return mem->mem[addr ^ 1];
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u16 T2ReadWord(T2Memory * mem, u32 addr) {
+inline u16 T2ReadWord(T2Memory * mem, u32 addr) {
 	return *((u16 *) (mem->mem + addr));
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u32 T2ReadLong(T2Memory * mem, u32 addr)  {
+inline u32 T2ReadLong(T2Memory * mem, u32 addr)  {
 	return *((u16 *) (mem->mem + addr)) << 16 | *((u16 *) (mem->mem + addr + 2));
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void T2WriteByte(T2Memory * mem, u32 addr, u8 val)  {
+inline void T2WriteByte(T2Memory * mem, u32 addr, u8 val)  {
 	mem->mem[addr ^ 1] = val;
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void T2WriteWord(T2Memory * mem, u32 addr, u16 val)  {
+inline void T2WriteWord(T2Memory * mem, u32 addr, u16 val)  {
 	*((u16 *) (mem->mem + addr)) = val;
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void T2WriteLong(T2Memory * mem, u32 addr, u32 val)  {
+inline void T2WriteLong(T2Memory * mem, u32 addr, u32 val)  {
 	*((u16 *) (mem->mem + addr)) = val >> 16;
 	*((u16 *) (mem->mem + addr + 2)) = val & 0xFFFF;
 }
@@ -230,37 +230,37 @@ void T3MemoryDelete(T3Memory * mem) {
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u8 T3ReadByte(T3Memory * mem, u32 addr) {
+inline u8 T3ReadByte(T3Memory * mem, u32 addr) {
 	return (mem->mem - addr - 1)[0];
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u16 T3ReadWord(T3Memory * mem, u32 addr) {
+inline u16 T3ReadWord(T3Memory * mem, u32 addr) {
 	return ((u16 *) (mem->mem - addr - 2))[0];
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u32 T3ReadLong(T3Memory * mem, u32 addr)  {
+inline u32 T3ReadLong(T3Memory * mem, u32 addr)  {
 	return ((u32 *) (mem->mem - addr - 4))[0];
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void T3WriteByte(T3Memory * mem, u32 addr, u8 val)  {
+inline void T3WriteByte(T3Memory * mem, u32 addr, u8 val)  {
 	(mem->mem - addr - 1)[0] = val;
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void T3WriteWord(T3Memory * mem, u32 addr, u16 val)  {
+inline void T3WriteWord(T3Memory * mem, u32 addr, u16 val)  {
 	((u16 *) (mem->mem - addr - 2))[0] = val;
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void T3WriteLong(T3Memory * mem, u32 addr, u32 val)  {
+inline void T3WriteLong(T3Memory * mem, u32 addr, u32 val)  {
 	((u32 *) (mem->mem - addr - 4))[0] = val;
 }
 
@@ -314,10 +314,10 @@ int T3MemorySave(T3Memory * mem, const char * filename, u32 addr, u32 size) {
 Dummy * DummyNew(u32 s) { return NULL; }
 void DummyDelete(Dummy * d) {}
 
-FASTCALL u8	DummyReadByte(Dummy * d, u32 a) { return 0; }
-FASTCALL u16	DummyReadWord(Dummy * d, u32 a) { return 0; }
-FASTCALL u32	DummyReadLong(Dummy * d, u32 a) { return 0; }
+inline u8	DummyReadByte(Dummy * d, u32 a) { return 0; }
+inline u16	DummyReadWord(Dummy * d, u32 a) { return 0; }
+inline u32	DummyReadLong(Dummy * d, u32 a) { return 0; }
 
-FASTCALL void	DummyWriteByte(Dummy * d, u32 a, u8 v) {}
-FASTCALL void	DummyWriteWord(Dummy * d, u32 a, u16 v) {}
-FASTCALL void	DummyWriteLong(Dummy * d, u32 a, u32 v) {}
+inline void	DummyWriteByte(Dummy * d, u32 a, u8 v) {}
+inline void	DummyWriteWord(Dummy * d, u32 a, u16 v) {}
+inline void	DummyWriteLong(Dummy * d, u32 a, u32 v) {}

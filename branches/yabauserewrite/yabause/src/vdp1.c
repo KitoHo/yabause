@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "vdp1.h"
 #include "debug.h"
 

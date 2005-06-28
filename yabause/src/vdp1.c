@@ -34,7 +34,8 @@ Vdp1 * Vdp1New(void) {
 	Vdp1 * v;
 
 	v = (Vdp1 *) malloc(sizeof(Vdp1));
-	v->PTMR = 0;
+
+	Vdp1Reset(v);
 
 	return v;
 }

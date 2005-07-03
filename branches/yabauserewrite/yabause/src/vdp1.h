@@ -28,10 +28,10 @@ typedef struct {
 
 extern Vdp1 * Vdp1Regs;
 
-Vdp1 * Vdp1New(void);
-void Vdp1Delete(Vdp1 *);
+void Vdp1New(void);
+void Vdp1Delete(void);
 
-void Vdp1Reset(Vdp1 *);
+void Vdp1Reset(void);
 
 FASTCALL u8	Vdp1ReadByte(u32);
 FASTCALL u16	Vdp1ReadWord(u32);

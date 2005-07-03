@@ -30,22 +30,18 @@ FASTCALL void Vdp1RamWriteLong(u32 addr, u32 val) {
 
 Vdp1 * Vdp1Regs;
 
-Vdp1 * Vdp1New(void) {
-	Vdp1 * v;
+void Vdp1New(void) {
+	Vdp1Regs = (Vdp1 *) malloc(sizeof(Vdp1));
 
-	v = (Vdp1 *) malloc(sizeof(Vdp1));
-
-	Vdp1Reset(v);
-
-	return v;
+	Vdp1Reset();
 }
 
-void Vdp1Delete(Vdp1 * v) {
-	free(v);
+void Vdp1Delete(void) {
+	free(Vdp1Regs);
 }
 
-void Vdp1Reset(Vdp1 * v) {
-	v->PTMR = 0;
+void Vdp1Reset(void) {
+	Vdp1Regs->PTMR = 0;
 }
 
 FASTCALL u8 Vdp1ReadByte(u32 addr) {

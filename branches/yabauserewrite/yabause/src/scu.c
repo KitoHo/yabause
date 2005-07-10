@@ -4,7 +4,7 @@
 Scu * ScuRegs;
 
 void ScuNew(void) {
-	ScuRegs = (Scu *) malloc(sizeof(scu));
+	ScuRegs = (Scu *) malloc(sizeof(Scu));
 
 	ScuReset();
 }
@@ -160,7 +160,7 @@ FASTCALL void ScuWriteLong(u32 addr, u32 val) {
 		ScuRegs->PPD = val;
 		break;
 	case 0x88:
-		ScuRegs->PPA = val;
+		ScuRegs->PDA = val;
 		break;
 	case 0x8C:
 		ScuRegs->PDD = val;

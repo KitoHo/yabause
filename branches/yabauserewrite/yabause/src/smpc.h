@@ -4,53 +4,53 @@
 #include "memory.h"
 
 typedef struct {
-	u16 IREG0;
-	u16 IREG1;
-	u16 IREG2;
-	u16 IREG3;
-	u16 IREG4;
-	u16 IREG5;
-	u16 IREG6;
+	u8 IREG0;
+	u8 IREG1;
+	u8 IREG2;
+	u8 IREG3;
+	u8 IREG4;
+	u8 IREG5;
+	u8 IREG6;
 
-	u16 padding[8];
+	u8 padding[8];
 
-	u16 COMREG;
+	u8 COMREG;
 
-	u16 OREG0;
-	u16 OREG1;
-	u16 OREG2;
-	u16 OREG3;
-	u16 OREG4;
-	u16 OREG5;
-	u16 OREG6;
-	u16 OREG7;
-	u16 OREG8;
-	u16 OREG9;
-	u16 OREG10;
-	u16 OREG11;
-	u16 OREG12;
-	u16 OREG13;
-	u16 OREG14;
-	u16 OREG15;
-	u16 OREG16;
-	u16 OREG17;
-	u16 OREG18;
-	u16 OREG19;
-	u16 OREG20;
-	u16 OREG21;
-	u16 OREG22;
-	u16 OREG23;
-	u16 OREG24;
-	u16 OREG25;
-	u16 OREG26;
-	u16 OREG27;
-	u16 OREG28;
-	u16 OREG29;
-	u16 OREG30;
-	u16 OREG31;
+	u8 OREG0;
+	u8 OREG1;
+	u8 OREG2;
+	u8 OREG3;
+	u8 OREG4;
+	u8 OREG5;
+	u8 OREG6;
+	u8 OREG7;
+	u8 OREG8;
+	u8 OREG9;
+	u8 OREG10;
+	u8 OREG11;
+	u8 OREG12;
+	u8 OREG13;
+	u8 OREG14;
+	u8 OREG15;
+	u8 OREG16;
+	u8 OREG17;
+	u8 OREG18;
+	u8 OREG19;
+	u8 OREG20;
+	u8 OREG21;
+	u8 OREG22;
+	u8 OREG23;
+	u8 OREG24;
+	u8 OREG25;
+	u8 OREG26;
+	u8 OREG27;
+	u8 OREG28;
+	u8 OREG29;
+	u8 OREG30;
+	u8 OREG31;
 
-	u16 SR;
-	u16 SF;
+	u8 SR;
+	u8 SF;
 } Smpc;
 
 extern Smpc * SmpcRegs;

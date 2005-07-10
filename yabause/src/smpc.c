@@ -5,10 +5,10 @@ Smpc * SmpcRegs;
 u8 * SmpcRegsT;
 
 void SmpcNew(void) {
-	SmpcRegsT = (u8 *) malloc(sizeof(SmpcRegs) + sizeof(u8));
-	SmpcRegs = (Smpc *) (SmpcRegsT + 1);
+	SmpcRegsT = (u8 *) malloc(sizeof(SmpcRegs));
+	SmpcRegs = (Smpc *) SmpcRegsT;
 
-	SmpcReset(SmpcRegs);
+	SmpcReset();
 }
 
 void SmpcDelete(void) {
@@ -19,7 +19,7 @@ void SmpcReset(void) {
 }
 
 FASTCALL u8 SmpcReadByte(u32 addr) {
-	return SmpcRegsT[addr];
+	return SmpcRegsT[addr >> 1];
 }
 
 FASTCALL u16 SmpcReadWord(u32 addr) {
@@ -33,7 +33,7 @@ FASTCALL u32 SmpcReadLong(u32 addr) {
 }
 
 FASTCALL void SmpcWriteByte(u32 addr, u8 val) {
-	SmpcRegsT[addr] = val;
+	SmpcRegsT[addr >> 1] = val;
 }
 
 FASTCALL void SmpcWriteWord(u32 addr, u16 val) {

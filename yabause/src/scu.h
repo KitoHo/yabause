@@ -1,7 +1,7 @@
 #ifndef SCU_H
 #define SCU_H
 
-#include "memory.h"
+#include "core.h"
 
 typedef struct {
 	/* DMA registers */
@@ -32,7 +32,7 @@ typedef struct {
 	/* DSP registers */
 	u32 PPAF;
 	u32 PPD;
-	u32 PPA;
+	u32 PDA;
 	u32 PDD;
 
 	/* Timer registers */

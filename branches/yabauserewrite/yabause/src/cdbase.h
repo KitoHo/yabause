@@ -25,36 +25,24 @@
 
 typedef struct
 {
-	void * (*New)(const char *);
-	int (*Delete)(void *);
-	long (*ReadTOC)(void *, unsigned long *);
-	int (*GetStatus)(void *);
-	int (*ReadSectorFAD)(void *, unsigned long, void *);
-	const char * (*DeviceName)(void *);
+        const char *Name;
+        int (*Init)(const char *);
+        int (*DeInit)();
+        int (*GetStatus)();
+        long (*ReadTOC)(unsigned long *TOC);
+        int (*ReadSectorFAD)(unsigned long FAD, void *buffer);
 } CDInterface;
 
-void * DummyCDDriveNew(const char *);
-int DummyCDDriveDelete(void *);
-const char * DummyCDDriveDeviceName(void *);
-int DummyCDDriveGetStatus(void *);
-long DummyCDDriveReadTOC(void *, unsigned long *);
-int DummyCDDriveReadSectorFAD(void *, unsigned long, void *);
+int DummyCDInit(const char *);
+int DummyCDDeInit();
+int DummyCDGetStatus();
+long DummyCDReadTOC(unsigned long *);
+int DummyCDReadSectorFAD(unsigned long, void *);
 
-CDInterface * DummyCDDrive(void);
-
-typedef struct
-{
-	FILE * _isoFile;
-	int _fileSize;
-} _ISOCDDrive;
-
-_ISOCDDrive * ISOCDDriveNew(const char *);
-int ISOCDDriveDelete(_ISOCDDrive *);
-const char * ISOCDDriveDeviceName(_ISOCDDrive *);
-long ISOCDDriveReadTOC(_ISOCDDrive *, unsigned long *);
-int ISOCDDriveGetStatus(_ISOCDDrive *);
-int ISOCDDriveReadSectorFAD(_ISOCDDrive *, unsigned long, void *);
-
-CDInterface * ISOCDDrive(void);
+int ISOCDInit(const char *);
+int ISOCDDeInit();
+int ISOCDGetStatus();
+long ISOCDReadTOC(unsigned long *);
+int ISOCDReadSectorFAD(unsigned long, void *);
 
 #endif

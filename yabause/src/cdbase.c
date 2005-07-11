@@ -18,12 +18,37 @@
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
+#include <string.h>
 #include <assert.h>
 #include "cdbase.h"
 
+//////////////////////////////////////////////////////////////////////////////
+
 // Contains the Dummy and ISO CD Interfaces
 
-void * DummyCDDriveNew(const char * file)
+CDInterface dummycd = {
+"Dummy CD Drive",
+DummyCDInit,
+DummyCDDeInit,
+DummyCDGetStatus,
+DummyCDReadTOC,
+DummyCDReadSectorFAD
+};
+
+CDInterface isocd = {
+"ISO-File Virtual Drive",
+ISOCDInit,
+ISOCDDeInit,
+ISOCDGetStatus,
+ISOCDReadTOC,
+ISOCDReadSectorFAD
+};
+
+//////////////////////////////////////////////////////////////////////////////
+// Dummy Interface
+//////////////////////////////////////////////////////////////////////////////
+
+int DummyCDInit(const char *cdrom_name)
 {
 	// Initialization function. cdrom_name can be whatever you want it to be.
 	// Obviously with some ports(e.g. the dreamcast port) you probably won't
@@ -31,18 +56,17 @@ void * DummyCDDriveNew(const char * file)
 	return 0;
 }
 
-int DummyCDDriveDelete(void * cd)
+//////////////////////////////////////////////////////////////////////////////
+
+int DummyCDDeInit()
 {
 	// Cleanup function. Enough said.
 	return 0;
 }
 
-const char * DummyCDDriveDeviceName(void * cd)
-{
-	return "Dummy CD Drive";
-}
+//////////////////////////////////////////////////////////////////////////////
 
-int DummyCDDriveGetStatus(void * cd)
+int DummyCDGetStatus()
 {
 	// This function is called periodically to see what the status of the
 	// drive is.
@@ -60,7 +84,9 @@ int DummyCDDriveGetStatus(void * cd)
 	return 0;
 }
 
-long DummyCDDriveReadTOC(void * cd, unsigned long *TOC)
+//////////////////////////////////////////////////////////////////////////////
+
+long DummyCDReadTOC(unsigned long *TOC)
 {
 	// The format of TOC is as follows:
 	// TOC[0] - TOC[98] are meant for tracks 1-99. Each entry has the following
@@ -98,7 +124,9 @@ long DummyCDDriveReadTOC(void * cd, unsigned long *TOC)
 	return 0;
 }
 
-int DummyCDDriveReadSectorFAD(void * cd, unsigned long FAD, void * buffer)
+//////////////////////////////////////////////////////////////////////////////
+
+int DummyCDReadSectorFAD(unsigned long FAD, void * buffer)
 {
 	// This function is supposed to read exactly 1 -RAW- 2352-byte sector at
 	// the specified FAD address to buffer. Should return true if successful,
@@ -114,59 +142,50 @@ int DummyCDDriveReadSectorFAD(void * cd, unsigned long FAD, void * buffer)
 	return 1;
 }
 
-CDInterface * DummyCDDrive(void)
-{
-	CDInterface * cd;
-	cd = (CDInterface *) malloc(sizeof(CDInterface));
+//////////////////////////////////////////////////////////////////////////////
+// ISO Interface
+//////////////////////////////////////////////////////////////////////////////
 
-	cd->New = DummyCDDriveNew;
-	cd->Delete = DummyCDDriveDelete;
-	cd->ReadTOC = DummyCDDriveReadTOC;
-	cd->GetStatus = DummyCDDriveGetStatus;
-	cd->ReadSectorFAD = DummyCDDriveReadSectorFAD;
-	cd->DeviceName = DummyCDDriveDeviceName;
+static const char syncHdr[12] = { 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00 };
+static FILE *isofile=NULL;
+static int isofilesize=0;
 
-	return cd;
-}
+//////////////////////////////////////////////////////////////////////////////
 
-static const char _syncHdr[12] = { 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00 };
+int ISOCDInit(const char * iso) {
+        if (!(isofile = fopen(iso, "rb")))
+                return -1;
 
-_ISOCDDrive * ISOCDDriveNew(const char * iso) {
-	_ISOCDDrive * cd;
-
-	cd = (_ISOCDDrive *) malloc(sizeof(ISOCDDrive));
-
-	if (!(cd->_isoFile = fopen(iso, "rb")))
-		return 0;
-
-	fseek(cd->_isoFile, 0, SEEK_END);
-	cd->_fileSize = ftell(cd->_isoFile);
+        fseek(isofile, 0, SEEK_END);
+        isofilesize = ftell(isofile);
 	
-	assert(0 == (cd->_fileSize % 2048));
-	fprintf(stderr, "CDInit (%s) OK\n", iso);
+        assert(0 == (isofilesize % 2048));
 
-	return cd;
+        return 0;
 }
 
-int ISOCDDriveDelete(_ISOCDDrive * cd) {
-	fclose(cd->_isoFile);
-	cd->_fileSize = 0;
-	fprintf(stderr, "CDDeInit OK\n");
+//////////////////////////////////////////////////////////////////////////////
 
-	free(cd);
-
+int ISOCDDeInit() {
+        fclose(isofile);
 	return 0;
 }
 
-const char * ISOCDDriveDeviceName(_ISOCDDrive * cd) { return "ISO-File Virtual Drive"; }
+//////////////////////////////////////////////////////////////////////////////
 
-long ISOCDDriveReadTOC(_ISOCDDrive * cd, unsigned long * TOC) {
-	if (cd->_isoFile) {
+int ISOCDGetStatus() {
+        return isofile != NULL ? 0 : 2;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+long ISOCDReadTOC(unsigned long * TOC) {
+        if (isofile) {
 		memset(TOC, 0xFF, 0xCC * 2);
 
 		TOC[99] = 0x41010000;
 		TOC[100] = 0x01010000;
-		TOC[101] = (0x41 << 24) | (cd->_fileSize / 2048);	//this isn't fully correct, but it does the job for now.
+                TOC[101] = (0x41 << 24) | (isofilesize / 2048);       //this isn't fully correct, but it does the job for now.
       
 		return (0xCC * 2);
 	}
@@ -174,35 +193,21 @@ long ISOCDDriveReadTOC(_ISOCDDrive * cd, unsigned long * TOC) {
 	return 0;
 }
 
-int ISOCDDriveGetStatus(_ISOCDDrive * cd) {
-	return cd->_isoFile != NULL ? 0 : 2;
-}
+//////////////////////////////////////////////////////////////////////////////
 
-int ISOCDDriveReadSectorFAD(_ISOCDDrive * cd, unsigned long FAD, void *buffer) {
+int ISOCDReadSectorFAD(unsigned long FAD, void *buffer) {
 	int sector = FAD - 150;
 	
-	assert(cd->_isoFile);
-	assert((sector * 2048) < cd->_fileSize);
+        assert(isofile);
+        assert((sector * 2048) < isofilesize);
 	
         memset(buffer, 0, 2352);
-	memcpy(buffer, _syncHdr, 12);
-	fseek(cd->_isoFile, sector * 2048, SEEK_SET);
-	fread((char *)buffer + 0x10, 2048, 1, cd->_isoFile);
+        memcpy(buffer, syncHdr, 12);
+        fseek(isofile, sector * 2048, SEEK_SET);
+        fread((char *)buffer + 0x10, 2048, 1, isofile);
 	
 	return 1;
 }
 
-CDInterface * ISOCDDrive(void)
-{
-	CDInterface * cd;
-	cd = (CDInterface *) malloc(sizeof(CDInterface));
+//////////////////////////////////////////////////////////////////////////////
 
-	cd->New = (void * (*)(const char *)) ISOCDDriveNew;
-	cd->Delete = (int (*)(void *)) ISOCDDriveDelete;
-	cd->ReadTOC = (long (*)(void *, unsigned long *)) ISOCDDriveReadTOC;
-	cd->GetStatus = (int (*)(void *)) ISOCDDriveGetStatus;
-	cd->ReadSectorFAD = (int (*)(void *, unsigned long, void *)) ISOCDDriveReadSectorFAD;
-	cd->DeviceName = (const char * (*)(void *)) ISOCDDriveDeviceName;
-
-	return cd;
-}

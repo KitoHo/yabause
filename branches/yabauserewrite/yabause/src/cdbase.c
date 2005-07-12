@@ -26,7 +26,7 @@
 
 // Contains the Dummy and ISO CD Interfaces
 
-CDInterface dummycd = {
+CDInterface DummyCD = {
 "Dummy CD Drive",
 DummyCDInit,
 DummyCDDeInit,
@@ -35,7 +35,7 @@ DummyCDReadTOC,
 DummyCDReadSectorFAD
 };
 
-CDInterface isocd = {
+CDInterface ISOCD = {
 "ISO-File Virtual Drive",
 ISOCDInit,
 ISOCDDeInit,

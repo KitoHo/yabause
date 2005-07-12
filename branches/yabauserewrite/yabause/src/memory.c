@@ -55,7 +55,6 @@ T1Memory * T1MemoryNew(u32 size) {
 	T1Memory * mem;
 
 	mem = (T1Memory *) malloc(sizeof(T1Memory));
-	mem->size = size;
 	mem->mem = (u8 *) malloc(sizeof(u8) * size);
 
 	return mem;
@@ -177,7 +176,6 @@ T2Memory * T2MemoryNew(u32 size) {
 	T2Memory * mem;
 
 	mem = (T2Memory *) malloc(sizeof(T2Memory));
-	mem->size = size;
 	mem->mem = (u8 *) malloc(sizeof(u8) * size);
 
 	return mem;
@@ -296,7 +294,6 @@ T3Memory * T3MemoryNew(u32 size) {
 	T3Memory * mem;
 
 	mem = (T3Memory *) malloc(sizeof(T3Memory));
-	mem->size = size;
 	mem->base_mem = (u8 *) malloc(sizeof(u8) * size);
 	mem->mem = mem->base_mem + size;
 

@@ -21,7 +21,6 @@ int MemorySave(MemoryInterface *, void *, const char *, u32, u32);
 
 typedef struct {
 	u8 * mem;
-	u32 size;
 } T1Memory;
 
 T1Memory * T1MemoryNew(u32);
@@ -44,7 +43,6 @@ int T1MemorySave(T1Memory *, const char *, u32, u32);
 
 typedef struct {
 	u8 * mem;
-	u32 size;
 } T2Memory;
 
 T2Memory * T2MemoryNew(u32);
@@ -68,7 +66,6 @@ int T2MemorySave(T2Memory *, const char *, u32, u32);
 typedef struct {
 	u8 * base_mem;
 	u8 * mem;
-	u32 size;
 } T3Memory;
 
 T3Memory * T3MemoryNew(u32);

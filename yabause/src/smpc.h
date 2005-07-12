@@ -56,8 +56,8 @@ typedef struct {
 extern Smpc * SmpcRegs;
 extern u8 * SmpcRegsT;
 
-void SmpcNew(void);
-void SmpcDelete(void);
+int SmpcInit(void);
+void SmpcDeInit(void);
 
 void SmpcReset(void);
 

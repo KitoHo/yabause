@@ -393,6 +393,9 @@ FASTCALL void Cs2WriteLong(u32 addr, u32 val) {
 void Cs2New(int type) {
   Cs2Area = (Cs2 *) malloc(sizeof(Cs2));
 
+  if (Cs2Area == NULL)
+	return -1;
+
   Cs2Area->mem = T3MemoryNew(0x100000);
 
   Cs2Area->carttype = type;
@@ -416,6 +419,8 @@ void Cs2New(int type) {
      T3WriteByte(Cs2Area->mem, 0x95019, 0x30);
      T3WriteByte(Cs2Area->mem, 0x9501D, 0x01);
   }
+
+  return 0;
 }
 
 void Cs2Delete(void) {

@@ -57,8 +57,8 @@ typedef struct {
 
 extern Scu * ScuRegs;
 
-void ScuNew(void);
-void ScuDelete(void);
+int ScuInit(void);
+void ScuDeInit(void);
 
 void ScuReset(void);
 

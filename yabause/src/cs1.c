@@ -23,8 +23,11 @@
 
 Cs1 * Cs1Area;
 
-void Cs1New(const char * file, int type) {
+void Cs1Init(const char * file, int type) {
 	Cs1Area = (Cs1 *) malloc(sizeof(Cs1));
+
+	if (Cs1Area == NULL)
+		return -1;
 
 	switch (type) {
 	case CART_PAR: // Action Replay, Rom carts?(may need to change this)
@@ -83,9 +86,11 @@ void Cs1New(const char * file, int type) {
 
 	Cs1Area->carttype = type;
 	Cs1Area->cartfile = file;
+
+	return 0;
 }
 
-void Cs1Delete(void) {
+void Cs1DeInit(void) {
 	switch (Cs1Area->carttype) {
 	case CART_BACKUPRAM4MBIT: // 4 Mbit Backup Ram
 		MemorySave(Cs1Area->srammi, Cs1Area->sramarea, Cs1Area->cartfile, 0, 0x100000);

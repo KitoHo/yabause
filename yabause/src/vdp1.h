@@ -28,8 +28,8 @@ typedef struct {
 
 extern Vdp1 * Vdp1Regs;
 
-void Vdp1New(void);
-void Vdp1Delete(void);
+void Vdp1Init(void);
+void Vdp1DeInit(void);
 
 void Vdp1Reset(void);
 

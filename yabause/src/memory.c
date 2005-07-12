@@ -5,219 +5,65 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 
-int MemoryLoad(MemoryInterface * mi, void * mem, const char * filename, u32 addr) {
-	struct stat infos;
-	u32 i;
-	u8 * buffer;
-	FILE * exe;
-
-	if (stat(filename, &infos) == -1) {
-		LOG("file not found: %s\n", filename);
-		return -1;
-	}
-
-	buffer = (u8 *) malloc(sizeof(u8) * infos.st_size);
-
-	exe = fopen(filename, "r");
-	fread(buffer, 1, infos.st_size, exe);
-	for(i = addr;i < (infos.st_size + addr);i++) {
-		mi->WriteByte(mem, i, buffer[i]);
-	}
-	fclose(exe);
-
-	free(buffer);
-	return 0;
-}
-
 ////////////////////////////////////////////////////////////////
 
-int MemorySave(MemoryInterface * mi, void * mem, const char * filename, u32 addr, u32 size) {
-        u32 i;
-        u8 * buffer;
-	FILE * exe;
-
-	buffer = (u8 *) malloc(sizeof(u8) * size);
-
-	exe = fopen(filename, "w");
-        for(i = addr;i < (addr + size);i++) {
-                buffer[i] = mi->ReadByte(mem, i);
-        }
-        fwrite(buffer, 1, size, exe);
-        fclose(exe);
-
-	free(buffer);
-	return 0;
-}
-
-////////////////////////////////////////////////////////////////
-
-T1Memory * T1MemoryNew(u32 size) {
+T1Memory * T1MemoryInit(u32 size) {
 	T1Memory * mem;
 
 	mem = (T1Memory *) malloc(sizeof(T1Memory));
+	if (mem == NULL)
+		return NULL;
+
 	mem->mem = (u8 *) malloc(sizeof(u8) * size);
+	if (mem->mem == NULL)
+		return NULL;
 
 	return mem;
 }
 
 ////////////////////////////////////////////////////////////////
 
-void T1MemoryDelete(T1Memory * mem) {
+void T1MemoryDeInit(T1Memory * mem) {
 	free(mem->mem);
 	free(mem);
 }
 
 ////////////////////////////////////////////////////////////////
 
-MemoryInterface * T1Interface(void) {
-	MemoryInterface * mi;
-
-	mi = (MemoryInterface *) malloc(sizeof(MemoryInterface));
-	mi->New = (void * (*)(u32)) T1MemoryNew;
-	mi->Delete = (void (*)(void *)) T1MemoryDelete;
-	mi->ReadByte = (u8 (*)(void *, u32)) T1ReadByte;
-	mi->ReadWord = (u16 (*)(void *, u32)) T1ReadWord;
-	mi->ReadLong = (u32 (*)(void *, u32)) T1ReadLong;
-	mi->WriteByte = (void (*)(void *, u32, u8)) T1WriteByte;
-	mi->WriteWord = (void (*)(void *, u32, u16)) T1WriteWord;
-	mi->WriteLong = (void (*)(void *, u32, u32)) T1WriteLong;
-
-	return mi;
-}
-
-////////////////////////////////////////////////////////////////
-
-int T1MemoryLoad(T1Memory * mem, const char * filename, u32 addr) {
-	struct stat infos;
-	u32 i;
-	u8 * buffer;
-	FILE * exe;
-
-	if (stat(filename, &infos) == -1) {
-		LOG("file not found: %s\n", filename);
-		return -1;
-	}
-
-	buffer = (u8 *) malloc(sizeof(u8) * infos.st_size);
-
-	exe = fopen(filename, "r");
-	fread(buffer, 1, infos.st_size, exe);
-	for(i = addr;i < (infos.st_size + addr);i++) {
-		T1WriteByte(mem, i, buffer[i]);
-	}
-	fclose(exe);
-
-	free(buffer);
-	return 0;
-}
-
-////////////////////////////////////////////////////////////////
-
-int T1MemorySave(T1Memory * mem, const char * filename, u32 addr, u32 size) {
-        u32 i;
-        u8 * buffer;
-	FILE * exe;
-
-	buffer = (u8 *) malloc(sizeof(u8) * size);
-
-	exe = fopen(filename, "w");
-        for(i = addr;i < (addr + size);i++) {
-                buffer[i] = T1ReadByte(mem, i);
-        }
-        fwrite(buffer, 1, size, exe);
-        fclose(exe);
-
-	free(buffer);
-}
-
-////////////////////////////////////////////////////////////////
-
-T2Memory * T2MemoryNew(u32 size) {
+T2Memory * T2MemoryInit(u32 size) {
 	T2Memory * mem;
 
 	mem = (T2Memory *) malloc(sizeof(T2Memory));
+	if (mem == NULL)
+		return NULL;
+
 	mem->mem = (u8 *) malloc(sizeof(u8) * size);
+	if (mem->mem == NULL)
+		return NULL;
 
 	return mem;
 }
 
 ////////////////////////////////////////////////////////////////
 
-void T2MemoryDelete(T2Memory * mem) {
+void T2MemoryDeInit(T2Memory * mem) {
 	free(mem->mem);
 	free(mem);
 }
 
 ////////////////////////////////////////////////////////////////
 
-MemoryInterface * T2Interface(void) {
-	MemoryInterface * mi;
-
-	mi = (MemoryInterface *) malloc(sizeof(MemoryInterface));
-	mi->New = (void * (*)(u32)) T2MemoryNew;
-	mi->Delete = (void (*)(void *)) T2MemoryDelete;
-	mi->ReadByte = (u8 (*)(void *, u32)) T2ReadByte;
-	mi->ReadWord = (u16 (*)(void *, u32)) T2ReadWord;
-	mi->ReadLong = (u32 (*)(void *, u32)) T2ReadLong;
-	mi->WriteByte = (void (*)(void *, u32, u8)) T2WriteByte;
-	mi->WriteWord = (void (*)(void *, u32, u16)) T2WriteWord;
-	mi->WriteLong = (void (*)(void *, u32, u32)) T2WriteLong;
-
-	return mi;
-}
-
-////////////////////////////////////////////////////////////////
-
-int T2MemoryLoad(T2Memory * mem, const char * filename, u32 addr) {
-	struct stat infos;
-	u32 i;
-	u8 * buffer;
-	FILE * exe;
-
-	if (stat(filename, &infos) == -1) {
-		LOG("file not found: %s\n", filename);
-		return -1;
-	}
-
-	buffer = (u8 *) malloc(sizeof(u8) * infos.st_size);
-
-	exe = fopen(filename, "r");
-	fread(buffer, 1, infos.st_size, exe);
-	for(i = addr;i < (infos.st_size + addr);i++) {
-		T2WriteByte(mem, i, buffer[i]);
-	}
-	fclose(exe);
-
-	free(buffer);
-	return 0;
-}
-
-////////////////////////////////////////////////////////////////
-
-int T2MemorySave(T2Memory * mem, const char * filename, u32 addr, u32 size) {
-        u32 i;
-        u8 * buffer;
-	FILE * exe;
-
-	buffer = (u8 *) malloc(sizeof(u8) * size);
-
-	exe = fopen(filename, "w");
-        for(i = addr;i < (addr + size);i++) {
-                buffer[i] = T2ReadByte(mem, i);
-        }
-        fwrite(buffer, 1, size, exe);
-        fclose(exe);
-
-	free(buffer);
-}
-
-////////////////////////////////////////////////////////////////
-
-T3Memory * T3MemoryNew(u32 size) {
+T3Memory * T3MemoryInit(u32 size) {
 	T3Memory * mem;
 
 	mem = (T3Memory *) malloc(sizeof(T3Memory));
+	if (mem == NULL)
+		return NULL;
+
 	mem->base_mem = (u8 *) malloc(sizeof(u8) * size);
+	if (mem->base_mem == NULL)
+		return NULL;
+
 	mem->mem = mem->base_mem + size;
 
 	return mem;
@@ -225,91 +71,12 @@ T3Memory * T3MemoryNew(u32 size) {
 
 ////////////////////////////////////////////////////////////////
 
-void T3MemoryDelete(T3Memory * mem) {
+void T3MemoryDeInit(T3Memory * mem) {
 	free(mem->base_mem);
 	free(mem);
 }
 
 ////////////////////////////////////////////////////////////////
 
-MemoryInterface * T3Interface(void) {
-	MemoryInterface * mi;
-
-	mi = (MemoryInterface *) malloc(sizeof(MemoryInterface));
-	mi->New = (void * (*)(u32)) T3MemoryNew;
-	mi->Delete = (void (*)(void *)) T3MemoryDelete;
-	mi->ReadByte = (u8 (*)(void *, u32)) T3ReadByte;
-	mi->ReadWord = (u16 (*)(void *, u32)) T3ReadWord;
-	mi->ReadLong = (u32 (*)(void *, u32)) T3ReadLong;
-	mi->WriteByte = (void (*)(void *, u32, u8)) T3WriteByte;
-	mi->WriteWord = (void (*)(void *, u32, u16)) T3WriteWord;
-	mi->WriteLong = (void (*)(void *, u32, u32)) T3WriteLong;
-
-	return mi;
-}
-
-////////////////////////////////////////////////////////////////
-
-int T3MemoryLoad(T3Memory * mem, const char * filename, u32 addr) {
-	struct stat infos;
-	u32 i;
-	u8 * buffer;
-	FILE * exe;
-
-	if (stat(filename, &infos) == -1) {
-		LOG("file not found: %s\n", filename);
-		return -1;
-	}
-
-	buffer = (u8 *) malloc(sizeof(u8) * infos.st_size);
-
-	exe = fopen(filename, "r");
-	fread(buffer, 1, infos.st_size, exe);
-	for(i = addr;i < (infos.st_size + addr);i++) {
-		T3WriteByte(mem, i, buffer[i]);
-	}
-	fclose(exe);
-
-	free(buffer);
-	return 0;
-}
-
-////////////////////////////////////////////////////////////////
-
-int T3MemorySave(T3Memory * mem, const char * filename, u32 addr, u32 size) {
-        u32 i;
-        u8 * buffer;
-	FILE * exe;
-
-	buffer = (u8 *) malloc(sizeof(u8) * size);
-
-	exe = fopen(filename, "w");
-        for(i = addr;i < (addr + size);i++) {
-                buffer[i] = T3ReadByte(mem, i);
-        }
-        fwrite(buffer, 1, size, exe);
-        fclose(exe);
-
-	free(buffer);
-}
-
-////////////////////////////////////////////////////////////////
-
-Dummy * DummyNew(u32 s) { return NULL; }
-void DummyDelete(Dummy * d) {}
-
-MemoryInterface * DummyInterface(void) {
-	MemoryInterface * mi;
-
-	mi = (MemoryInterface *) malloc(sizeof(MemoryInterface));
-	mi->New = (void * (*)(u32)) DummyNew;
-	mi->Delete = (void (*)(void *)) DummyDelete;
-	mi->ReadByte = (u8 (*)(void *, u32)) DummyReadByte;
-	mi->ReadWord = (u16 (*)(void *, u32)) DummyReadWord;
-	mi->ReadLong = (u32 (*)(void *, u32)) DummyReadLong;
-	mi->WriteByte = (void (*)(void *, u32, u8)) DummyWriteByte;
-	mi->WriteWord = (void (*)(void *, u32, u16)) DummyWriteWord;
-	mi->WriteLong = (void (*)(void *, u32, u32)) DummyWriteLong;
-
-	return mi;
-}
+Dummy * DummyInit(u32 s) { return NULL; }
+void DummyDeInit(Dummy * d) {}

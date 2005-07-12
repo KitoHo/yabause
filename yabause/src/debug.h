@@ -15,8 +15,8 @@ typedef struct {
 	char * name;
 } Debug;
 
-Debug * DebugNew(const char *, DebugOutType, char *);
-void DebugDelete(Debug *);
+Debug * DebugInit(const char *, DebugOutType, char *);
+void DebugDeInit(Debug *);
 
 void DebugChangeOutput(Debug *, DebugOutType, char *);
 

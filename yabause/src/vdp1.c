@@ -30,13 +30,17 @@ FASTCALL void Vdp1RamWriteLong(u32 addr, u32 val) {
 
 Vdp1 * Vdp1Regs;
 
-void Vdp1New(void) {
+int Vdp1Init(void) {
 	Vdp1Regs = (Vdp1 *) malloc(sizeof(Vdp1));
+	if (Vdp1Regs == NULL)
+		return -1;
 
 	Vdp1Reset();
+
+	return 0;
 }
 
-void Vdp1Delete(void) {
+void Vdp1DeInit(void) {
 	free(Vdp1Regs);
 }
 

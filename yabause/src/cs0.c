@@ -22,8 +22,11 @@
 
 Cs0 * Cs0Area;
 
-void Cs0New(const char * file, int type) {
+int Cs0Init(const char * file, int type) {
 	Cs0Area = (Cs0 *) malloc(sizeof(Cs0));
+
+	if (Cs0Area == NULL)
+		return -1;
 
 	switch (type) {
 	case CART_PAR: // Action Replay, Rom carts?(may need to change this)
@@ -57,9 +60,11 @@ void Cs0New(const char * file, int type) {
 	}
 
 	Cs0Area->carttype = type;
+
+	return 0;
 }
 
-void Cs0Delete(void) {
+void Cs0DeInit(void) {
 	Cs0Area->biosmi->Delete(Cs0Area->biosarea);
 	Cs0Area->drammi->Delete(Cs0Area->dramarea);
 	free(Cs0Area->biosmi);

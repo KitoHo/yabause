@@ -39,10 +39,14 @@ int DummyCDGetStatus();
 long DummyCDReadTOC(unsigned long *);
 int DummyCDReadSectorFAD(unsigned long, void *);
 
+extern CDInterface DummyCD;
+
 int ISOCDInit(const char *);
 int ISOCDDeInit();
 int ISOCDGetStatus();
 long ISOCDReadTOC(unsigned long *);
 int ISOCDReadSectorFAD(unsigned long, void *);
+
+extern CDInterface ISOCD;
 
 #endif

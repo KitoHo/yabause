@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-Debug * DebugNew(const char * n, DebugOutType t, char * s) {
+Debug * DebugInit(const char * n, DebugOutType t, char * s) {
 	Debug * d;
 
 	d = (Debug *) malloc(sizeof(Debug));
@@ -29,7 +29,7 @@ Debug * DebugNew(const char * n, DebugOutType t, char * s) {
 	return d;
 }
 
-void DebugDelete(Debug * d) {
+void DebugDeInit(Debug * d) {
 	switch(d->output_type) {
 	case DEBUG_STREAM:
 		fclose(d->output.stream);
@@ -92,9 +92,9 @@ void DebugPrintf(Debug * d, const char * file, u32 line, const char * format, ..
 Debug * MainLog;
 
 void LogStart(void) {
-	MainLog = DebugNew("main", DEBUG_STDOUT, NULL);
+	MainLog = DebugInit("main", DEBUG_STDOUT, NULL);
 }
 
 void LogStop(void) {
-	DebugDelete(MainLog);
+	DebugDeInit(MainLog);
 }

@@ -4,13 +4,17 @@
 
 Scu * ScuRegs;
 
-void ScuNew(void) {
+int ScuInit(void) {
 	ScuRegs = (Scu *) malloc(sizeof(Scu));
+	if (ScuRegs == NULL)
+		return -1;
 
 	ScuReset();
+
+	return 0;
 }
 
-void ScuDelete(void) {
+void ScuDeInit(void) {
 	free(ScuRegs);
 }
 

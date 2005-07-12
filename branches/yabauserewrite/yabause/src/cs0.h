@@ -43,8 +43,8 @@ typedef struct {
 
 extern Cs0 * Cs0Area;
 
-void Cs0New(const char *, int);
-void Cs0Delete(void);
+void Cs0Init(const char *, int);
+void Cs0DeInit(void);
 
 FASTCALL u8	Cs0ReadByte(u32);
 FASTCALL u16	Cs0ReadWord(u32);

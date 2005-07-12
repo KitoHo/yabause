@@ -216,8 +216,8 @@ typedef struct {
 
 extern Cs2 * Cs2Area;
 
-void Cs2New(int);
-void Cs2Delete(void);
+void Cs2Init(int);
+void Cs2DeInit(void);
 
 FASTCALL u8	Cs2ReadByte(u32);
 FASTCALL u16	Cs2ReadWord(u32);

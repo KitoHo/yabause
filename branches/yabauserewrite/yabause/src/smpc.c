@@ -5,14 +5,19 @@
 Smpc * SmpcRegs;
 u8 * SmpcRegsT;
 
-void SmpcNew(void) {
+int SmpcInit(void) {
 	SmpcRegsT = (u8 *) malloc(sizeof(SmpcRegs));
+	if (SmpcRegsT == NULL)
+		return -1;
+
 	SmpcRegs = (Smpc *) SmpcRegsT;
 
 	SmpcReset();
+
+	return 0;
 }
 
-void SmpcDelete(void) {
+void SmpcDeInit(void) {
 	free(SmpcRegsT);
 }
 

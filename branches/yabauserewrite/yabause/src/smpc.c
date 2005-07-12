@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "smpc.h"
 #include "debug.h"
 

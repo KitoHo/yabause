@@ -12,30 +12,36 @@ typedef struct
 
 typedef struct
 {
-   u32 R[16];
-   union
+   struct
    {
-      struct
+      u32 R[16];
+      union
       {
-         u32 T:1;
-         u32 S:1;
-         u32 reserved0:2;
-         u32 I:4;
-         u32 Q:1;
-         u32 M:1;
-         u32 reserved1:22;
-      } bits;
-      u32 full;
-   } SR;
+         struct
+         {
+            u32 T:1;
+            u32 S:1;
+            u32 reserved0:2;
+            u32 I:4;
+            u32 Q:1;
+            u32 M:1;
+            u32 reserved1:22;
+         } part;
+         u32 all;
+      } SR;
 
-   u32 GBR;
-   u32 VBR;
-   u32 MACH;
-   u32 MACL;
-   u32 PR;
-   u32 PC;
-   u32 jump_addr;
-   int cycles;
+      u32 GBR;
+      u32 VBR;
+      u32 MACH;
+      u32 MACL;
+      u32 PR;
+      u32 PC;
+   } regs;
+
+   u32 delay;
+   u32 cycles;
+   unsigned char isslave;
+   unsigned short instruction;
    Onchip_struct *onchip;
 //   interrupt_struct interrupts[MAX_INTERRUPTS];
 //   unsigned long NumberOfInterrupts;

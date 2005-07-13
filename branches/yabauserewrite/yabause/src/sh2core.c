@@ -96,18 +96,19 @@ void SH2Reset(SH2_struct *context)
 {
    // Reset general registers
    for (int i = 0; i < 15; i++)
-      context->R[i] = 0x00000000;
+      context->regs.R[i] = 0x00000000;
                    
-   context->SR.full = 0x000000F0;
-   context->GBR = 0x00000000;
-   context->VBR = 0x00000000;
-   context->MACH = 0x00000000;
-   context->MACL = 0x00000000;
-   context->PR = 0x00000000;
+   context->regs.SR.all = 0x000000F0;
+   context->regs.GBR = 0x00000000;
+   context->regs.VBR = 0x00000000;
+   context->regs.MACH = 0x00000000;
+   context->regs.MACL = 0x00000000;
+   context->regs.PR = 0x00000000;
 
    // Get PC/Stack initial values(fix me)
 
    // Internal variables
+   context->delay = 0x00000000;
    context->cycles = 0;
 
    // Core specific reset

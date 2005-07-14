@@ -1,4 +1,11 @@
 #include "yui.h"
+#include "sh2core.h"
+#include "sh2int.h"
+
+SH2Interface_struct *SH2CoreList[] = {
+&SH2Interpreter,
+NULL
+};
 
 int stop;
 

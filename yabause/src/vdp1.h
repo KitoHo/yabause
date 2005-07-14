@@ -3,7 +3,7 @@
 
 #include "memory.h"
 
-extern T1Memory * Vdp1Ram;
+extern u8 * Vdp1Ram;
 
 FASTCALL u8	Vdp1RamReadByte(u32);
 FASTCALL u16	Vdp1RamReadWord(u32);

@@ -2,7 +2,7 @@
 #include "vdp1.h"
 #include "debug.h"
 
-T1Memory * Vdp1Ram;
+u8 * Vdp1Ram;
 
 FASTCALL u8 Vdp1RamReadByte(u32 addr) {
 	return T1ReadByte(Vdp1Ram, addr);

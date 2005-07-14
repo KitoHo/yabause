@@ -48,10 +48,10 @@ SH2Interface_struct SH2Interpreter = {
 FASTCALL void delay(SH2_struct * sh, unsigned long addr) {
         switch ((addr >> 20) & 0x0FF) {
            case 0x000: // Bios              
-//                       sh->instruction = readWord(memoire->rom, addr);
+                       sh->instruction = T2ReadWord(BiosRom, sh->regs.PC);
                        break;
            case 0x002: // Low Work Ram
-//                       sh->instruction = readWord(memoire->ramLow, addr);
+                       sh->instruction = T2ReadWord(LowWram, sh->regs.PC);
                        break;
            case 0x020: // CS0
 //                       sh->instruction = memoire->getWord(addr);
@@ -72,7 +72,7 @@ FASTCALL void delay(SH2_struct * sh, unsigned long addr) {
            case 0x06D: 
            case 0x06E: 
            case 0x06F:
-//                       instruction = readWord(memoire->ramHigh, addr);
+                       sh->instruction = T2ReadWord(HighWram, sh->regs.PC);
                        break;
            default:
                        break;
@@ -2299,10 +2299,10 @@ FASTCALL u32 SH2InterpreterExec(SH2_struct *context, u32 cycles) {
       // handle breakpoints here
       switch ((context->regs.PC >> 20) & 0x0FF) {
          case 0x000: // Bios
-//            context->instruction = readWord(memoire->rom, regs->PC);
+            context->instruction = T2ReadWord(BiosRom, context->regs.PC);
             break;
          case 0x002: // Low Work Ram
-//            context->instruction = readWord(memoire->ramLow, regs->PC);
+            context->instruction = T2ReadWord(LowWram, context->regs.PC);
             break;
          case 0x020: // CS0(fix me)
 //            context->instruction = memoire->getWord(regs->PC);
@@ -2323,10 +2323,10 @@ FASTCALL u32 SH2InterpreterExec(SH2_struct *context, u32 cycles) {
          case 0x06D: 
          case 0x06E: 
          case 0x06F:
-//            context->instruction = readWord(memoire->ramHigh, regs->PC);
-              break;
+            context->instruction = T2ReadWord(HighWram, context->regs.PC);
+            break;
          default:
-              break;
+            break;
       }
 
       (*opcodes[context->instruction])(context);

@@ -5,74 +5,66 @@
 
 /* Type 1 Memory, faster for byte (8 bits) accesses */
 
-typedef struct {
-	u8 * mem;
-} T1Memory;
+u8 * T1MemoryInit(u32);
+void T1MemoryDeInit(u8 *);
 
-T1Memory * T1MemoryInit(u32);
-void T1MemoryDeInit(T1Memory *);
-
-static inline u8 T1ReadByte(T1Memory * mem, u32 addr) {
-	return mem->mem[addr];
+static inline u8 T1ReadByte(u8 * mem, u32 addr) {
+        return mem[addr];
 }
 
-static inline u16 T1ReadWord(T1Memory * mem, u32 addr) {
-	return (mem->mem[addr] << 8) | mem->mem[addr + 1];
+static inline u16 T1ReadWord(u8 * mem, u32 addr) {
+        return (mem[addr] << 8) | mem[addr + 1];
 }
 
-static inline u32 T1ReadLong(T1Memory * mem, u32 addr)  {
-	return (mem->mem[addr] << 24 | mem->mem[addr + 1] << 16 |
-		mem->mem[addr + 2] << 8 | mem->mem[addr + 3]);
+static inline u32 T1ReadLong(u8 * mem, u32 addr)  {
+        return (mem[addr] << 24 | mem[addr + 1] << 16 |
+                mem[addr + 2] << 8 | mem[addr + 3]);
 }
 
-static inline void T1WriteByte(T1Memory * mem, u32 addr, u8 val)  {
-	mem->mem[addr] = val;
+static inline void T1WriteByte(u8 * mem, u32 addr, u8 val)  {
+        mem[addr] = val;
 }
 
-static inline void T1WriteWord(T1Memory * mem, u32 addr, u16 val)  {
-	mem->mem[addr] = val >> 8;
-	mem->mem[addr + 1] = val & 0xFF;
+static inline void T1WriteWord(u8 * mem, u32 addr, u16 val)  {
+        mem[addr] = val >> 8;
+        mem[addr + 1] = val & 0xFF;
 }
 
-static inline void T1WriteLong(T1Memory * mem, u32 addr, u32 val)  {
-	mem->mem[addr] = val >> 24;
-	mem->mem[addr + 1] = (val >> 16) & 0xFF;
-	mem->mem[addr + 2] = (val >> 8) & 0xFF;
-	mem->mem[addr + 3] = val & 0xFF;
+static inline void T1WriteLong(u8 * mem, u32 addr, u32 val)  {
+        mem[addr] = val >> 24;
+        mem[addr + 1] = (val >> 16) & 0xFF;
+        mem[addr + 2] = (val >> 8) & 0xFF;
+        mem[addr + 3] = val & 0xFF;
 }
 
 /* Type 2 Memory, faster for word (16 bits) accesses */
 
-typedef struct {
-	u8 * mem;
-} T2Memory;
+#define T2MemoryInit(x) (T1MemoryInit(x))
+#define T2MemoryDeInit(x) (T1MemoryDeInit(x))
 
-T2Memory * T2MemoryInit(u32);
-void T2MemoryDeInit(T2Memory *);
-
-static inline u8 T2ReadByte(T2Memory * mem, u32 addr) {
-	return mem->mem[addr ^ 1];
+static inline u8 T2ReadByte(u8 * mem, u32 addr) {
+        return mem[addr ^ 1];
 }
 
-static inline u16 T2ReadWord(T2Memory * mem, u32 addr) {
-	return *((u16 *) (mem->mem + addr));
+static inline u16 T2ReadWord(u8 * mem, u32 addr) {
+        return *((u16 *) (mem + addr));
 }
 
-static inline u32 T2ReadLong(T2Memory * mem, u32 addr)  {
-	return *((u16 *) (mem->mem + addr)) << 16 | *((u16 *) (mem->mem + addr + 2));
+static inline u32 T2ReadLong(u8 * mem, u32 addr)  {
+        return *((u16 *) (mem + addr)) << 16 | *((u16 *) (mem + addr + 2));
 }
 
-static inline void T2WriteByte(T2Memory * mem, u32 addr, u8 val)  {
-	mem->mem[addr ^ 1] = val;
+static inline void T2WriteByte(u8 * mem, u32 addr, u8 val)  {
+        mem[addr ^ 1] = val;
 }
 
-static inline void T2WriteWord(T2Memory * mem, u32 addr, u16 val)  {
-	*((u16 *) (mem->mem + addr)) = val;
+static inline void T2WriteWord(u8 * mem, u32 addr, u16 val)  {
+        *((u16 *) (mem + addr)) = val;
 }
 
-static inline void T2WriteLong(T2Memory * mem, u32 addr, u32 val)  {
-	*((u16 *) (mem->mem + addr)) = val >> 16;
-	*((u16 *) (mem->mem + addr + 2)) = val & 0xFFFF;
+static inline void T2WriteLong(u8 * mem, u32 addr, u32 val)  {
+        *((u16 *) (mem + addr)) = val >> 16;
+        *((u16 *) (mem + addr + 2)) = val & 0xFFFF;
 }
 
 /* Type 3 Memory, faster for long (32 bits) accesses */
@@ -130,5 +122,9 @@ u32 MappedMemoryReadLong(u32 addr);
 void MappedMemoryWriteByte(u32 addr, u8 val);
 void MappedMemoryWriteWord(u32 addr, u16 val);
 void MappedMemoryWriteLong(u32 addr, u32 val);
+
+extern u8 *HighWram;
+extern u8 *LowWram;
+extern u8 *BiosRom;
 
 #endif

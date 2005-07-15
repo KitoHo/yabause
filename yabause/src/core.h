@@ -4,7 +4,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifndef FASTCALL
 #define FASTCALL __attribute__((regparm(3)))
+#endif
 
 typedef unsigned char u8;
 typedef unsigned short u16;

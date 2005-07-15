@@ -3,6 +3,16 @@
 
 #include "memory.h"
 
+#define REGION_AUTODETECT               0
+#define REGION_JAPAN                    1
+#define REGION_ASIANTSC                 2
+#define REGION_NORTHAMERICA             4
+#define REGION_CENTRALSOUTHAMERICANTSC  5
+#define REGION_KOREA                    6
+#define REGION_ASIAPAL                  10
+#define REGION_EUROPE                   12
+#define REGION_CENTRALSOUTHAMERICAPAL   13
+
 typedef struct {
 	u8 IREG0;
 	u8 IREG1;

@@ -115,9 +115,13 @@ typedef struct
    FASTCALL u32 (*Exec)(SH2_struct *context, u32 cycles);
 } SH2Interface_struct;
 
+extern SH2_struct *MSH2;
+extern SH2_struct *SSH2;
+
 int SH2Init(int coreid);
 void SH2DeInit();
 void SH2Reset(SH2_struct *context);
+FASTCALL u32 SH2Exec(SH2_struct *context, u32 cycles);
 
 FASTCALL u8 OnchipReadByte(u32 addr);
 FASTCALL u16 OnchipReadWord(u32 addr);

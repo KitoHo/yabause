@@ -3,6 +3,8 @@
 
 #include "memory.h"
 
+#define GFXCORE_DEFAULT         -1
+
 extern u8 * Vdp1Ram;
 
 FASTCALL u8	Vdp1RamReadByte(u32);

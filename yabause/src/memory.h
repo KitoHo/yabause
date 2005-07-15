@@ -116,6 +116,7 @@ static inline void DummyWriteByte(Dummy * d, u32 a, u8 v) {}
 static inline void DummyWriteWord(Dummy * d, u32 a, u16 v) {}
 static inline void DummyWriteLong(Dummy * d, u32 a, u32 v) {}
 
+void MappedMemoryInit();
 u8 MappedMemoryReadByte(u32 addr);
 u16 MappedMemoryReadWord(u32 addr);
 u32 MappedMemoryReadLong(u32 addr);
@@ -126,5 +127,8 @@ void MappedMemoryWriteLong(u32 addr, u32 val);
 extern u8 *HighWram;
 extern u8 *LowWram;
 extern u8 *BiosRom;
+
+int LoadBios(const char *filename);
+int LoadBackupRam(const char *filename);
 
 #endif

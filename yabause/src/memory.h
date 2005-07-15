@@ -117,12 +117,12 @@ static inline void DummyWriteWord(Dummy * d, u32 a, u16 v) {}
 static inline void DummyWriteLong(Dummy * d, u32 a, u32 v) {}
 
 void MappedMemoryInit();
-u8 MappedMemoryReadByte(u32 addr);
-u16 MappedMemoryReadWord(u32 addr);
-u32 MappedMemoryReadLong(u32 addr);
-void MappedMemoryWriteByte(u32 addr, u8 val);
-void MappedMemoryWriteWord(u32 addr, u16 val);
-void MappedMemoryWriteLong(u32 addr, u32 val);
+FASTCALL u8 MappedMemoryReadByte(u32 addr);
+FASTCALL u16 MappedMemoryReadWord(u32 addr);
+FASTCALL u32 MappedMemoryReadLong(u32 addr);
+FASTCALL void MappedMemoryWriteByte(u32 addr, u8 val);
+FASTCALL void MappedMemoryWriteWord(u32 addr, u16 val);
+FASTCALL void MappedMemoryWriteLong(u32 addr, u32 val);
 
 extern u8 *HighWram;
 extern u8 *LowWram;

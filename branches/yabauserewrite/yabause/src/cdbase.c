@@ -27,6 +27,7 @@
 // Contains the Dummy and ISO CD Interfaces
 
 CDInterface DummyCD = {
+CDCORE_DUMMY,
 "Dummy CD Drive",
 DummyCDInit,
 DummyCDDeInit,
@@ -36,6 +37,7 @@ DummyCDReadSectorFAD
 };
 
 CDInterface ISOCD = {
+CDCORE_ISO,
 "ISO-File Virtual Drive",
 ISOCDInit,
 ISOCDDeInit,

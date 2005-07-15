@@ -29,6 +29,7 @@
 
 typedef struct
 {
+        int id;
         const char *Name;
         int (*Init)(const char *);
         int (*DeInit)();

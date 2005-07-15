@@ -128,6 +128,22 @@ typedef struct
    unsigned short MPEGRGB;
 } blockregs_struct;
 
+typedef struct
+{
+   unsigned char RBR;
+   unsigned char THR;
+   unsigned char IER;
+   unsigned char DLL;
+   unsigned char DLM;
+   unsigned char IIR;
+   unsigned char FCR;
+   unsigned char LCR;
+   unsigned char MCR;
+   unsigned char LSR;
+   unsigned char MSR;
+   unsigned char SCR;
+} netlinkregs_struct;
+
 typedef struct {
   blockregs_struct reg;
   unsigned long FAD;
@@ -198,6 +214,8 @@ typedef struct {
   dirrec_struct fileinfo[MAX_FILES];
   unsigned long numfiles;
 
+  const char *mpegpath;
+
   unsigned long mpegintmask;
 
   mpegcon_struct mpegcon[2];
@@ -211,12 +229,12 @@ typedef struct {
 
   int carttype;
 
-  T3Memory * mem; // FIXME: keeped for default accesses
+  netlinkregs_struct nlreg;
 } Cs2;
 
 extern Cs2 * Cs2Area;
 
-void Cs2Init(int);
+int Cs2Init(int, int, const char *, const char *);
 void Cs2DeInit(void);
 
 FASTCALL u8	Cs2ReadByte(u32);

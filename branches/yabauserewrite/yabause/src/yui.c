@@ -5,6 +5,12 @@ SH2Interface_struct *SH2CoreList[] = {
 NULL
 };
 
+CDInterface *CDCoreList[] = {
+&DummyCD,
+&ISOCD,
+NULL
+};
+
 int stop;
 
 const char * bios = "jap.rom";

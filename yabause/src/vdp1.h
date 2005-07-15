@@ -7,12 +7,12 @@
 
 extern u8 * Vdp1Ram;
 
-FASTCALL u8	Vdp1RamReadByte(u32);
-FASTCALL u16	Vdp1RamReadWord(u32);
-FASTCALL u32	Vdp1RamReadLong(u32);
-FASTCALL void	Vdp1RamWriteByte(u32, u8);
-FASTCALL void	Vdp1RamWriteWord(u32, u16);
-FASTCALL void	Vdp1RamWriteLong(u32, u32);
+u8 FASTCALL	Vdp1RamReadByte(u32);
+u16 FASTCALL	Vdp1RamReadWord(u32);
+u32 FASTCALL	Vdp1RamReadLong(u32);
+void FASTCALL	Vdp1RamWriteByte(u32, u8);
+void FASTCALL	Vdp1RamWriteWord(u32, u16);
+void FASTCALL	Vdp1RamWriteLong(u32, u32);
 
 typedef struct {
 	u16 TVHR;
@@ -35,11 +35,11 @@ void Vdp1DeInit(void);
 
 void Vdp1Reset(void);
 
-FASTCALL u8	Vdp1ReadByte(u32);
-FASTCALL u16	Vdp1ReadWord(u32);
-FASTCALL u32	Vdp1ReadLong(u32);
-FASTCALL void	Vdp1WriteByte(u32, u8);
-FASTCALL void	Vdp1WriteWord(u32, u16);
-FASTCALL void	Vdp1WriteLong(u32, u32);
+u8 FASTCALL	Vdp1ReadByte(u32);
+u16 FASTCALL	Vdp1ReadWord(u32);
+u32 FASTCALL	Vdp1ReadLong(u32);
+void FASTCALL	Vdp1WriteByte(u32, u8);
+void FASTCALL	Vdp1WriteWord(u32, u16);
+void FASTCALL	Vdp1WriteLong(u32, u32);
 
 #endif

@@ -69,7 +69,7 @@ Cs2 * Cs2Area;
 
 extern CDInterface *CDCoreList[];
 
-FASTCALL u8 Cs2GetByte(u32 addr) {
+u8 FASTCALL Cs2GetByte(u32 addr) {
   if(Cs2Area->carttype == CART_NETLINK) {
 /*
      switch (addr) {
@@ -88,7 +88,7 @@ FASTCALL u8 Cs2GetByte(u32 addr) {
   return 0xFF; // only netlink seems to use byte-access
 }
 
-FASTCALL void Cs2WriteByte(u32 addr, u8 val) {
+void FASTCALL Cs2WriteByte(u32 addr, u8 val) {
   if(Cs2Area->carttype == CART_NETLINK) {
 /*
      switch (addr) {
@@ -112,7 +112,7 @@ FASTCALL void Cs2WriteByte(u32 addr, u8 val) {
    }
 }
 
-FASTCALL u16 Cs2ReadWord(u32 addr) {
+u16 FASTCALL Cs2ReadWord(u32 addr) {
   u16 val = 0;
 
   switch(addr) {
@@ -224,7 +224,7 @@ FASTCALL u16 Cs2ReadWord(u32 addr) {
   return val;
 }
 
-FASTCALL void Cs2WriteWord(u32 addr, u16 val) {
+void FASTCALL Cs2WriteWord(u32 addr, u16 val) {
   switch(addr) {
     case 0x90008:
     case 0x9000A:
@@ -260,7 +260,7 @@ FASTCALL void Cs2WriteWord(u32 addr, u16 val) {
   }
 }
 
-FASTCALL u32 Cs2ReadLong(u32 addr) {
+u32 FASTCALL Cs2ReadLong(u32 addr) {
   long i;
   u32 val = 0;
 
@@ -387,7 +387,7 @@ FASTCALL u32 Cs2ReadLong(u32 addr) {
   return val;
 }
 
-FASTCALL void Cs2WriteLong(u32 addr, u32 val) {
+void FASTCALL Cs2WriteLong(u32 addr, u32 val) {
 #if CDDEBUG
    fprintf(stderr, "cs2\t: Long writing isn't implemented\n");
 #endif

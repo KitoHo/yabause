@@ -72,7 +72,7 @@ void Cs0DeInit(void) {
 	free(Cs0Area);
 }
 
-FASTCALL void Cs0WriteByte(u32 addr, u8 val) {
+void FASTCALL Cs0WriteByte(u32 addr, u8 val) {
 	switch (addr >> 20) {
 	case 0x00:  
 		if ((addr & 0x80000) == 0) // EEPROM
@@ -109,7 +109,7 @@ FASTCALL void Cs0WriteByte(u32 addr, u8 val) {
 	}
 }
 
-FASTCALL u8 Cs0ReadByte(u32 addr) {
+u8 FASTCALL Cs0ReadByte(u32 addr) {
 	u8 val = 0xFF;
 
 	switch (addr >> 20) {
@@ -161,7 +161,7 @@ FASTCALL u8 Cs0ReadByte(u32 addr) {
 	return val;
 }
 
-FASTCALL void Cs0WriteWord(u32 addr, u16 val) {
+void FASTCALL Cs0WriteWord(u32 addr, u16 val) {
 	switch (addr >> 20) {
 	case 0x00:  
 		if ((addr & 0x80000) == 0) // EEPROM
@@ -198,7 +198,7 @@ FASTCALL void Cs0WriteWord(u32 addr, u16 val) {
 	}
 }
 
-FASTCALL u16 Cs0ReadWord(u32 addr) {
+u16 FASTCALL Cs0ReadWord(u32 addr) {
 	u16 val = 0xFFFF;
 
 	switch (addr >> 20) {
@@ -252,7 +252,7 @@ FASTCALL u16 Cs0ReadWord(u32 addr) {
 	return val;
 }
 
-FASTCALL void Cs0WriteLong(u32 addr, u32 val) {
+void FASTCALL Cs0WriteLong(u32 addr, u32 val) {
 	switch (addr >> 20) {
 	case 0x00:  
 		if ((addr & 0x80000) == 0) // EEPROM
@@ -289,7 +289,7 @@ FASTCALL void Cs0WriteLong(u32 addr, u32 val) {
 	}
 }
 
-FASTCALL u32 Cs0ReadLong(u32 addr) {
+u32 FASTCALL Cs0ReadLong(u32 addr) {
 	u32 val = 0xFFFFFFFF;
 
 	switch (addr >> 20) {

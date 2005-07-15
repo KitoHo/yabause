@@ -126,7 +126,7 @@ void SH2Reset(SH2_struct *context)
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL u32 SH2Exec(SH2_struct *context, u32 cycles)
+u32 FASTCALL SH2Exec(SH2_struct *context, u32 cycles)
 {
    CurrentSH2 = context;
 
@@ -273,40 +273,40 @@ void OnchipReset(SH2_struct *context) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL u8 OnchipReadByte(u32 addr) {
+u8 FASTCALL OnchipReadByte(u32 addr) {
    // stub
    return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL u16 OnchipReadWord(u32 addr) {
+u16 FASTCALL OnchipReadWord(u32 addr) {
    // stub
    return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL u32 OnchipReadLong(u32 addr) {
+u32 FASTCALL OnchipReadLong(u32 addr) {
    // stub
    return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void OnchipWriteByte(u32 addr, u8 val) {
+void FASTCALL OnchipWriteByte(u32 addr, u8 val) {
    // stub
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void OnchipWriteWord(u32 addr, u16 val) {
+void FASTCALL OnchipWriteWord(u32 addr, u16 val) {
    // stub
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void OnchipWriteLong(u32 addr, u32 val)  {
+void FASTCALL OnchipWriteLong(u32 addr, u32 val)  {
    // stub
 }
 

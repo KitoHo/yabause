@@ -71,11 +71,11 @@ void SmpcDeInit(void);
 
 void SmpcReset(void);
 
-FASTCALL u8	SmpcReadByte(u32);
-FASTCALL u16	SmpcReadWord(u32);
-FASTCALL u32	SmpcReadLong(u32);
-FASTCALL void	SmpcWriteByte(u32, u8);
-FASTCALL void	SmpcWriteWord(u32, u16);
-FASTCALL void	SmpcWriteLong(u32, u32);
+u8 FASTCALL	SmpcReadByte(u32);
+u16 FASTCALL	SmpcReadWord(u32);
+u32 FASTCALL	SmpcReadLong(u32);
+void FASTCALL	SmpcWriteByte(u32, u8);
+void FASTCALL	SmpcWriteWord(u32, u16);
+void FASTCALL	SmpcWriteLong(u32, u32);
 
 #endif

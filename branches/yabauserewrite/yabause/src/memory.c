@@ -241,7 +241,9 @@ void FillMemoryArea(unsigned short start, unsigned short end,
                     readlongfunc r32func, writebytefunc w8func,
                     writewordfunc w16func, writelongfunc w32func)
 {
-   for (int i=start; i < (end+1); i++)
+   int i;
+
+   for (i=start; i < (end+1); i++)
    {
       ReadByteList[i] = r8func;
       ReadWordList[i] = r16func;
@@ -611,6 +613,52 @@ FASTCALL void MappedMemoryWriteLong(u32 addr, u32 val)  {
          return;
       }
    }
+}
+
+////////////////////////////////////////////////////////////////
+
+int LoadBios(const char *filename) {
+   FILE *fp;
+   unsigned long filesize;
+   unsigned char *buffer;
+   unsigned long i;
+
+   if ((fp = fopen(filename, "rb")) == NULL)
+      return -1;
+
+   // Calculate file size
+   fseek(fp, 0, SEEK_END);
+   filesize = ftell(fp);
+   fseek(fp, 0, SEEK_SET);
+
+   // Make sure bios size is valid
+   if (filesize != 0x80000)
+   {
+      fclose(fp);
+      return -2;
+   }
+
+   if ((buffer = (unsigned char *)malloc(filesize)) == NULL)
+   {
+      fclose(fp);
+      return -3;
+   }
+
+   fread((void *)buffer, 1, filesize, fp);
+   fclose(fp);
+
+   for (i = 0; i < filesize; i++)
+      T2WriteByte(BiosRom, i, buffer[i]);
+
+   free(buffer);
+
+   return 0;
+}
+
+////////////////////////////////////////////////////////////////
+
+int LoadBackupRam(const char *filename) {
+   return 0;
 }
 
 ////////////////////////////////////////////////////////////////

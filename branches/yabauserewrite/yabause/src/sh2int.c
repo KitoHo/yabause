@@ -31,7 +31,7 @@
 #define INSTRUCTION_CD(x) (x & 0x00FF)
 #define INSTRUCTION_BCD(x) (x & 0x0FFF)
 
-typedef FASTCALL void (*opcodefunc)(SH2_struct *);
+typedef void (*opcodefunc)(SH2_struct *);
 static opcodefunc opcodes[0x10000];
 
 SH2Interface_struct SH2Interpreter = {
@@ -48,10 +48,10 @@ SH2Interface_struct SH2Interpreter = {
 FASTCALL void delay(SH2_struct * sh, unsigned long addr) {
         switch ((addr >> 20) & 0x0FF) {
            case 0x000: // Bios              
-                       sh->instruction = T2ReadWord(BiosRom, sh->regs.PC);
+                       sh->instruction = T2ReadWord(BiosRom, sh->regs.PC & 0x7FFFF);
                        break;
            case 0x002: // Low Work Ram
-                       sh->instruction = T2ReadWord(LowWram, sh->regs.PC);
+                       sh->instruction = T2ReadWord(LowWram, sh->regs.PC & 0xFFFFF);
                        break;
            case 0x020: // CS0
 //                       sh->instruction = memoire->getWord(addr);
@@ -72,7 +72,7 @@ FASTCALL void delay(SH2_struct * sh, unsigned long addr) {
            case 0x06D: 
            case 0x06E: 
            case 0x06F:
-                       sh->instruction = T2ReadWord(HighWram, sh->regs.PC);
+                       sh->instruction = T2ReadWord(HighWram, sh->regs.PC & 0xFFFFF);
                        break;
            default:
                        break;
@@ -82,12 +82,10 @@ FASTCALL void delay(SH2_struct * sh, unsigned long addr) {
         sh->regs.PC -= 2;
 }
 
-FASTCALL void undecoded(SH2_struct * sh) {
+void undecoded(SH2_struct * sh) {
         if (sh->isslave)
         {
            int vectnum;
-
-           fprintf(stderr, "Slave SH2 Illegal Opcode: %04X, regs.PC: %08X. Jumping to Exception Service Routine.\n", sh->instruction, sh->regs.PC);
 
            // Save regs.SR on stack
            sh->regs.R[15]-=4;
@@ -131,7 +129,7 @@ FASTCALL void undecoded(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void add(SH2_struct * sh) {
+void add(SH2_struct * sh) {
   sh->regs.R[INSTRUCTION_B(sh->instruction)] += sh->regs.R[INSTRUCTION_C(sh->instruction)];
   sh->regs.PC += 2;
   sh->cycles++;
@@ -139,7 +137,7 @@ FASTCALL void add(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void addi(SH2_struct * sh) {
+void addi(SH2_struct * sh) {
   long cd = (long)(signed char)INSTRUCTION_CD(sh->instruction);
   long b = INSTRUCTION_B(sh->instruction);
 
@@ -150,7 +148,7 @@ FASTCALL void addi(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void addc(SH2_struct * sh) {
+void addc(SH2_struct * sh) {
   unsigned long tmp0, tmp1;
   long source = INSTRUCTION_C(sh->instruction);
   long dest = INSTRUCTION_B(sh->instruction);
@@ -171,7 +169,7 @@ FASTCALL void addc(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void addv(SH2_struct * sh) {
+void addv(SH2_struct * sh) {
   long dest,src,ans;
   long n = INSTRUCTION_B(sh->instruction);
   long m = INSTRUCTION_C(sh->instruction);
@@ -197,7 +195,7 @@ FASTCALL void addv(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void y_and(SH2_struct * sh) {
+void y_and(SH2_struct * sh) {
   sh->regs.R[INSTRUCTION_B(sh->instruction)] &= sh->regs.R[INSTRUCTION_C(sh->instruction)];
   sh->regs.PC += 2;
   sh->cycles++;
@@ -205,7 +203,7 @@ FASTCALL void y_and(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void andi(SH2_struct * sh) {
+void andi(SH2_struct * sh) {
   sh->regs.R[0] &= INSTRUCTION_CD(sh->instruction);
   sh->regs.PC += 2;
   sh->cycles++;
@@ -213,7 +211,7 @@ FASTCALL void andi(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void andm(SH2_struct * sh) {
+void andm(SH2_struct * sh) {
   long temp;
   long source = INSTRUCTION_CD(sh->instruction);
 
@@ -226,7 +224,7 @@ FASTCALL void andm(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void bf(SH2_struct * sh) {
+void bf(SH2_struct * sh) {
   long disp;
   long d = INSTRUCTION_CD(sh->instruction);
 
@@ -244,7 +242,7 @@ FASTCALL void bf(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void bfs(SH2_struct * sh) {
+void bfs(SH2_struct * sh) {
   long disp;
   unsigned long temp;
   long d = INSTRUCTION_CD(sh->instruction);
@@ -266,7 +264,7 @@ FASTCALL void bfs(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void bra(SH2_struct * sh) {
+void bra(SH2_struct * sh) {
   long disp = INSTRUCTION_BCD(sh->instruction);
   unsigned long temp;
 
@@ -280,7 +278,7 @@ FASTCALL void bra(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void braf(SH2_struct * sh) {
+void braf(SH2_struct * sh) {
   unsigned long temp;
   long m = INSTRUCTION_B(sh->instruction);
 
@@ -293,7 +291,7 @@ FASTCALL void braf(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void bsr(SH2_struct * sh) {
+void bsr(SH2_struct * sh) {
   unsigned long temp;
   long disp = INSTRUCTION_BCD(sh->instruction);
 
@@ -308,7 +306,7 @@ FASTCALL void bsr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void bsrf(SH2_struct * sh) {
+void bsrf(SH2_struct * sh) {
   unsigned long temp = sh->regs.PC;
   sh->regs.PR = sh->regs.PC + 4;
   sh->regs.PC += sh->regs.R[INSTRUCTION_B(sh->instruction)] + 4;
@@ -318,7 +316,7 @@ FASTCALL void bsrf(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void bt(SH2_struct * sh) { // FIXME ya plus rapide
+void bt(SH2_struct * sh) { // FIXME ya plus rapide
   long disp;
   long d = INSTRUCTION_CD(sh->instruction);
 
@@ -335,7 +333,7 @@ FASTCALL void bt(SH2_struct * sh) { // FIXME ya plus rapide
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void bts(SH2_struct * sh) {
+void bts(SH2_struct * sh) {
   long disp;
   unsigned long temp;
   long d = INSTRUCTION_CD(sh->instruction);
@@ -355,7 +353,7 @@ FASTCALL void bts(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void clrmac(SH2_struct * sh) {
+void clrmac(SH2_struct * sh) {
   sh->regs.MACH = 0;
   sh->regs.MACL = 0;
   sh->regs.PC += 2;
@@ -364,7 +362,7 @@ FASTCALL void clrmac(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void clrt(SH2_struct * sh) {
+void clrt(SH2_struct * sh) {
   sh->regs.SR.part.T = 0;
   sh->regs.PC += 2;
   sh->cycles++;
@@ -372,7 +370,7 @@ FASTCALL void clrt(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void cmpeq(SH2_struct * sh) {
+void cmpeq(SH2_struct * sh) {
   if (sh->regs.R[INSTRUCTION_B(sh->instruction)] == sh->regs.R[INSTRUCTION_C(sh->instruction)])
     sh->regs.SR.part.T = 1;
   else
@@ -383,7 +381,7 @@ FASTCALL void cmpeq(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void cmpge(SH2_struct * sh) {
+void cmpge(SH2_struct * sh) {
   if ((long)sh->regs.R[INSTRUCTION_B(sh->instruction)] >=
                   (long)sh->regs.R[INSTRUCTION_C(sh->instruction)])
     sh->regs.SR.part.T = 1;
@@ -395,7 +393,7 @@ FASTCALL void cmpge(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void cmpgt(SH2_struct * sh) {
+void cmpgt(SH2_struct * sh) {
   if ((long)sh->regs.R[INSTRUCTION_B(sh->instruction)]>(long)sh->regs.R[INSTRUCTION_C(sh->instruction)])
     sh->regs.SR.part.T = 1;
   else
@@ -406,7 +404,7 @@ FASTCALL void cmpgt(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void cmphi(SH2_struct * sh) {
+void cmphi(SH2_struct * sh) {
   if ((unsigned long)sh->regs.R[INSTRUCTION_B(sh->instruction)]>
                   (unsigned long)sh->regs.R[INSTRUCTION_C(sh->instruction)])
     sh->regs.SR.part.T = 1;
@@ -418,7 +416,7 @@ FASTCALL void cmphi(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void cmphs(SH2_struct * sh) {
+void cmphs(SH2_struct * sh) {
   if ((unsigned long)sh->regs.R[INSTRUCTION_B(sh->instruction)]>=
                   (unsigned long)sh->regs.R[INSTRUCTION_C(sh->instruction)])
     sh->regs.SR.part.T = 1;
@@ -430,7 +428,7 @@ FASTCALL void cmphs(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void cmpim(SH2_struct * sh) {
+void cmpim(SH2_struct * sh) {
   long imm;
   long i = INSTRUCTION_CD(sh->instruction);
 
@@ -446,7 +444,7 @@ FASTCALL void cmpim(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void cmppl(SH2_struct * sh) {
+void cmppl(SH2_struct * sh) {
   if ((long)sh->regs.R[INSTRUCTION_B(sh->instruction)]>0)
     sh->regs.SR.part.T = 1;
   else
@@ -457,7 +455,7 @@ FASTCALL void cmppl(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void cmppz(SH2_struct * sh) {
+void cmppz(SH2_struct * sh) {
   if ((long)sh->regs.R[INSTRUCTION_B(sh->instruction)]>=0)
     sh->regs.SR.part.T = 1;
   else
@@ -468,7 +466,7 @@ FASTCALL void cmppz(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void cmpstr(SH2_struct * sh) {
+void cmpstr(SH2_struct * sh) {
   unsigned long temp;
   long HH,HL,LH,LL;
   long m = INSTRUCTION_C(sh->instruction);
@@ -489,7 +487,7 @@ FASTCALL void cmpstr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void div0s(SH2_struct * sh) {
+void div0s(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
   if ((sh->regs.R[n]&0x80000000)==0)
@@ -507,7 +505,7 @@ FASTCALL void div0s(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void div0u(SH2_struct * sh) {
+void div0u(SH2_struct * sh) {
   sh->regs.SR.part.M = sh->regs.SR.part.Q = sh->regs.SR.part.T = 0;
   sh->regs.PC += 2;
   sh->cycles++;
@@ -515,7 +513,7 @@ FASTCALL void div0u(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void div1(SH2_struct * sh) {
+void div1(SH2_struct * sh) {
   unsigned long tmp0;
   unsigned char old_q, tmp1;
   long m = INSTRUCTION_C(sh->instruction);
@@ -593,7 +591,7 @@ FASTCALL void div1(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void dmuls(SH2_struct * sh) {
+void dmuls(SH2_struct * sh) {
   unsigned long RnL,RnH,RmL,RmH,Res0,Res1,Res2;
   unsigned long temp0,temp1,temp2,temp3;
   long tempm,tempn,fnLmL;
@@ -645,7 +643,7 @@ FASTCALL void dmuls(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void dmulu(SH2_struct * sh) {
+void dmulu(SH2_struct * sh) {
   unsigned long RnL,RnH,RmL,RmH,Res0,Res1,Res2;
   unsigned long temp0,temp1,temp2,temp3;
   long m = INSTRUCTION_C(sh->instruction);
@@ -679,7 +677,7 @@ FASTCALL void dmulu(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void dt(SH2_struct * sh) {
+void dt(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
 
   sh->regs.R[n]--;
@@ -691,7 +689,7 @@ FASTCALL void dt(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void extsb(SH2_struct * sh) {
+void extsb(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -702,7 +700,7 @@ FASTCALL void extsb(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void extsw(SH2_struct * sh) {
+void extsw(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -713,7 +711,7 @@ FASTCALL void extsw(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void extub(SH2_struct * sh) {
+void extub(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -724,7 +722,7 @@ FASTCALL void extub(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void extuw(SH2_struct * sh) {
+void extuw(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -735,7 +733,7 @@ FASTCALL void extuw(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void jmp(SH2_struct * sh) {
+void jmp(SH2_struct * sh) {
   unsigned long temp;
   long m = INSTRUCTION_B(sh->instruction);
 
@@ -747,7 +745,7 @@ FASTCALL void jmp(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void jsr(SH2_struct * sh) {
+void jsr(SH2_struct * sh) {
   unsigned long temp;
   long m = INSTRUCTION_B(sh->instruction);
 
@@ -760,7 +758,7 @@ FASTCALL void jsr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void ldcgbr(SH2_struct * sh) {
+void ldcgbr(SH2_struct * sh) {
   sh->regs.GBR = sh->regs.R[INSTRUCTION_B(sh->instruction)];
   sh->regs.PC += 2;
   sh->cycles++;
@@ -768,7 +766,7 @@ FASTCALL void ldcgbr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void ldcmgbr(SH2_struct * sh) {
+void ldcmgbr(SH2_struct * sh) {
   long m = INSTRUCTION_B(sh->instruction);
 
   sh->regs.GBR = MappedMemoryReadLong(sh->regs.R[m]);
@@ -779,7 +777,7 @@ FASTCALL void ldcmgbr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void ldcmsr(SH2_struct * sh) {
+void ldcmsr(SH2_struct * sh) {
   long m = INSTRUCTION_B(sh->instruction);
 
   sh->regs.SR.all = MappedMemoryReadLong(sh->regs.R[m]) & 0x000003F3;
@@ -790,7 +788,7 @@ FASTCALL void ldcmsr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void ldcmvbr(SH2_struct * sh) {
+void ldcmvbr(SH2_struct * sh) {
   long m = INSTRUCTION_B(sh->instruction);
 
   sh->regs.VBR = MappedMemoryReadLong(sh->regs.R[m]);
@@ -801,7 +799,7 @@ FASTCALL void ldcmvbr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void ldcsr(SH2_struct * sh) {
+void ldcsr(SH2_struct * sh) {
   sh->regs.SR.all = sh->regs.R[INSTRUCTION_B(sh->instruction)]&0x000003F3;
   sh->regs.PC += 2;
   sh->cycles++;
@@ -809,7 +807,7 @@ FASTCALL void ldcsr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void ldcvbr(SH2_struct * sh) {
+void ldcvbr(SH2_struct * sh) {
   long m = INSTRUCTION_B(sh->instruction);
 
   sh->regs.VBR = sh->regs.R[m];
@@ -819,7 +817,7 @@ FASTCALL void ldcvbr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void ldsmach(SH2_struct * sh) {
+void ldsmach(SH2_struct * sh) {
   sh->regs.MACH = sh->regs.R[INSTRUCTION_B(sh->instruction)];
   sh->regs.PC+=2;
   sh->cycles++;
@@ -827,7 +825,7 @@ FASTCALL void ldsmach(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void ldsmacl(SH2_struct * sh) {
+void ldsmacl(SH2_struct * sh) {
   sh->regs.MACL = sh->regs.R[INSTRUCTION_B(sh->instruction)];
   sh->regs.PC += 2;
   sh->cycles++;
@@ -835,7 +833,7 @@ FASTCALL void ldsmacl(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void ldsmmach(SH2_struct * sh) {
+void ldsmmach(SH2_struct * sh) {
   long m = INSTRUCTION_B(sh->instruction);
   sh->regs.MACH = MappedMemoryReadLong(sh->regs.R[m]);
   sh->regs.R[m] += 4;
@@ -845,7 +843,7 @@ FASTCALL void ldsmmach(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void ldsmmacl(SH2_struct * sh) {
+void ldsmmacl(SH2_struct * sh) {
   long m = INSTRUCTION_B(sh->instruction);
   sh->regs.MACL = MappedMemoryReadLong(sh->regs.R[m]);
   sh->regs.R[m] += 4;
@@ -855,7 +853,7 @@ FASTCALL void ldsmmacl(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void ldsmpr(SH2_struct * sh) {
+void ldsmpr(SH2_struct * sh) {
   long m = INSTRUCTION_B(sh->instruction);
   sh->regs.PR = MappedMemoryReadLong(sh->regs.R[m]);
   sh->regs.R[m] += 4;
@@ -865,7 +863,7 @@ FASTCALL void ldsmpr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void ldspr(SH2_struct * sh) {
+void ldspr(SH2_struct * sh) {
   sh->regs.PR = sh->regs.R[INSTRUCTION_B(sh->instruction)];
   sh->regs.PC += 2;
   sh->cycles++;
@@ -873,7 +871,7 @@ FASTCALL void ldspr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void macl(SH2_struct * sh) {
+void macl(SH2_struct * sh) {
   unsigned long RnL,RnH,RmL,RmH,Res0,Res1,Res2;
   unsigned long temp0,temp1,temp2,temp3;
   long tempm,tempn,fnLmL;
@@ -951,7 +949,7 @@ FASTCALL void macl(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void macw(SH2_struct * sh) {
+void macw(SH2_struct * sh) {
   long tempm,tempn,dest,src,ans;
   unsigned long templ;
   long m = INSTRUCTION_C(sh->instruction);
@@ -995,7 +993,7 @@ FASTCALL void macw(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void mov(SH2_struct * sh) {
+void mov(SH2_struct * sh) {
   sh->regs.R[INSTRUCTION_B(sh->instruction)]=sh->regs.R[INSTRUCTION_C(sh->instruction)];
   sh->regs.PC+=2;
   sh->cycles++;
@@ -1003,7 +1001,7 @@ FASTCALL void mov(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void mova(SH2_struct * sh) {
+void mova(SH2_struct * sh) {
   long disp = INSTRUCTION_CD(sh->instruction);
 
   sh->regs.R[0]=((sh->regs.PC+4)&0xFFFFFFFC)+(disp<<2);
@@ -1013,7 +1011,7 @@ FASTCALL void mova(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movbl(SH2_struct * sh) {
+void movbl(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1024,7 +1022,7 @@ FASTCALL void movbl(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movbl0(SH2_struct * sh) {
+void movbl0(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1035,7 +1033,7 @@ FASTCALL void movbl0(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movbl4(SH2_struct * sh) {
+void movbl4(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long disp = INSTRUCTION_D(sh->instruction);
 
@@ -1046,7 +1044,7 @@ FASTCALL void movbl4(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movblg(SH2_struct * sh) {
+void movblg(SH2_struct * sh) {
   long disp = INSTRUCTION_CD(sh->instruction);
   
   sh->regs.R[0] = (long)(signed char)MappedMemoryReadByte(sh->regs.GBR + disp);
@@ -1056,7 +1054,7 @@ FASTCALL void movblg(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movbm(SH2_struct * sh) {
+void movbm(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1068,7 +1066,7 @@ FASTCALL void movbm(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movbp(SH2_struct * sh) {
+void movbp(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1081,7 +1079,7 @@ FASTCALL void movbp(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movbs(SH2_struct * sh) {
+void movbs(SH2_struct * sh) {
   int b = INSTRUCTION_B(sh->instruction);
   int c = INSTRUCTION_C(sh->instruction);
 
@@ -1092,7 +1090,7 @@ FASTCALL void movbs(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movbs0(SH2_struct * sh) {
+void movbs0(SH2_struct * sh) {
   MappedMemoryWriteByte(sh->regs.R[INSTRUCTION_B(sh->instruction)] + sh->regs.R[0],
         sh->regs.R[INSTRUCTION_C(sh->instruction)]);
   sh->regs.PC += 2;
@@ -1101,7 +1099,7 @@ FASTCALL void movbs0(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movbs4(SH2_struct * sh) {
+void movbs4(SH2_struct * sh) {
   long disp = INSTRUCTION_D(sh->instruction);
   long n = INSTRUCTION_C(sh->instruction);
 
@@ -1112,7 +1110,7 @@ FASTCALL void movbs4(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movbsg(SH2_struct * sh) {
+void movbsg(SH2_struct * sh) {
   long disp = INSTRUCTION_CD(sh->instruction);
 
   MappedMemoryWriteByte(sh->regs.GBR + disp,sh->regs.R[0]);
@@ -1122,7 +1120,7 @@ FASTCALL void movbsg(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movi(SH2_struct * sh) {
+void movi(SH2_struct * sh) {
   long i = INSTRUCTION_CD(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1133,7 +1131,7 @@ FASTCALL void movi(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movli(SH2_struct * sh) {
+void movli(SH2_struct * sh) {
   long disp = INSTRUCTION_CD(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1144,7 +1142,7 @@ FASTCALL void movli(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movll(SH2_struct * sh) {
+void movll(SH2_struct * sh) {
   sh->regs.R[INSTRUCTION_B(sh->instruction)] =
         MappedMemoryReadLong(sh->regs.R[INSTRUCTION_C(sh->instruction)]);
   sh->regs.PC += 2;
@@ -1153,7 +1151,7 @@ FASTCALL void movll(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movll0(SH2_struct * sh) {
+void movll0(SH2_struct * sh) {
   sh->regs.R[INSTRUCTION_B(sh->instruction)] =
         MappedMemoryReadLong(sh->regs.R[INSTRUCTION_C(sh->instruction)] + sh->regs.R[0]);
   sh->regs.PC += 2;
@@ -1162,7 +1160,7 @@ FASTCALL void movll0(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movll4(SH2_struct * sh) {
+void movll4(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long disp = INSTRUCTION_D(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
@@ -1174,7 +1172,7 @@ FASTCALL void movll4(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movllg(SH2_struct * sh) {
+void movllg(SH2_struct * sh) {
   long disp = INSTRUCTION_CD(sh->instruction);
 
   sh->regs.R[0] = MappedMemoryReadLong(sh->regs.GBR + (disp << 2));
@@ -1184,7 +1182,7 @@ FASTCALL void movllg(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movlm(SH2_struct * sh) {
+void movlm(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1196,7 +1194,7 @@ FASTCALL void movlm(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movlp(SH2_struct * sh) {
+void movlp(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1208,7 +1206,7 @@ FASTCALL void movlp(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movls(SH2_struct * sh) {
+void movls(SH2_struct * sh) {
   int b = INSTRUCTION_B(sh->instruction);
   int c = INSTRUCTION_C(sh->instruction);
 
@@ -1219,7 +1217,7 @@ FASTCALL void movls(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movls0(SH2_struct * sh) {
+void movls0(SH2_struct * sh) {
   MappedMemoryWriteLong(sh->regs.R[INSTRUCTION_B(sh->instruction)] + sh->regs.R[0],
         sh->regs.R[INSTRUCTION_C(sh->instruction)]);
   sh->regs.PC += 2;
@@ -1228,7 +1226,7 @@ FASTCALL void movls0(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movls4(SH2_struct * sh) {
+void movls4(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long disp = INSTRUCTION_D(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
@@ -1240,7 +1238,7 @@ FASTCALL void movls4(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movlsg(SH2_struct * sh) {
+void movlsg(SH2_struct * sh) {
   long disp = INSTRUCTION_CD(sh->instruction);
 
   MappedMemoryWriteLong(sh->regs.GBR+(disp<<2),sh->regs.R[0]);
@@ -1250,7 +1248,7 @@ FASTCALL void movlsg(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movt(SH2_struct * sh) {
+void movt(SH2_struct * sh) {
   sh->regs.R[INSTRUCTION_B(sh->instruction)] = (0x00000001 & sh->regs.SR.all);
   sh->regs.PC += 2;
   sh->cycles++;
@@ -1258,7 +1256,7 @@ FASTCALL void movt(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movwi(SH2_struct * sh) {
+void movwi(SH2_struct * sh) {
   long disp = INSTRUCTION_CD(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1269,7 +1267,7 @@ FASTCALL void movwi(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movwl(SH2_struct * sh) {
+void movwl(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1280,7 +1278,7 @@ FASTCALL void movwl(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movwl0(SH2_struct * sh) {
+void movwl0(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1291,7 +1289,7 @@ FASTCALL void movwl0(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movwl4(SH2_struct * sh) {
+void movwl4(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long disp = INSTRUCTION_D(sh->instruction);
 
@@ -1302,7 +1300,7 @@ FASTCALL void movwl4(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movwlg(SH2_struct * sh) {
+void movwlg(SH2_struct * sh) {
   long disp = INSTRUCTION_CD(sh->instruction);
 
   sh->regs.R[0] = (long)(signed short)MappedMemoryReadWord(sh->regs.GBR+(disp<<1));
@@ -1312,7 +1310,7 @@ FASTCALL void movwlg(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movwm(SH2_struct * sh) {
+void movwm(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1324,7 +1322,7 @@ FASTCALL void movwm(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movwp(SH2_struct * sh) {
+void movwp(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1337,7 +1335,7 @@ FASTCALL void movwp(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movws(SH2_struct * sh) {
+void movws(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1348,7 +1346,7 @@ FASTCALL void movws(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movws0(SH2_struct * sh) {
+void movws0(SH2_struct * sh) {
   MappedMemoryWriteWord(sh->regs.R[INSTRUCTION_B(sh->instruction)] + sh->regs.R[0],
         sh->regs.R[INSTRUCTION_C(sh->instruction)]);
   sh->regs.PC+=2;
@@ -1357,7 +1355,7 @@ FASTCALL void movws0(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movws4(SH2_struct * sh) {
+void movws4(SH2_struct * sh) {
   long disp = INSTRUCTION_D(sh->instruction);
   long n = INSTRUCTION_C(sh->instruction);
 
@@ -1368,7 +1366,7 @@ FASTCALL void movws4(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void movwsg(SH2_struct * sh) {
+void movwsg(SH2_struct * sh) {
   long disp = INSTRUCTION_CD(sh->instruction);
 
   MappedMemoryWriteWord(sh->regs.GBR+(disp<<1),sh->regs.R[0]);
@@ -1378,7 +1376,7 @@ FASTCALL void movwsg(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void mull(SH2_struct * sh) {
+void mull(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1389,7 +1387,7 @@ FASTCALL void mull(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void muls(SH2_struct * sh) {
+void muls(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1400,7 +1398,7 @@ FASTCALL void muls(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void mulu(SH2_struct * sh) {
+void mulu(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1412,7 +1410,7 @@ FASTCALL void mulu(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void neg(SH2_struct * sh) {
+void neg(SH2_struct * sh) {
   sh->regs.R[INSTRUCTION_B(sh->instruction)]=0-sh->regs.R[INSTRUCTION_C(sh->instruction)];
   sh->regs.PC+=2;
   sh->cycles++;
@@ -1420,7 +1418,7 @@ FASTCALL void neg(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void negc(SH2_struct * sh) {
+void negc(SH2_struct * sh) {
   unsigned long temp;
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
@@ -1436,14 +1434,14 @@ FASTCALL void negc(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void nop(SH2_struct * sh) {
+void nop(SH2_struct * sh) {
   sh->regs.PC += 2;
   sh->cycles++;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void y_not(SH2_struct * sh) {
+void y_not(SH2_struct * sh) {
   sh->regs.R[INSTRUCTION_B(sh->instruction)] = ~sh->regs.R[INSTRUCTION_C(sh->instruction)];
   sh->regs.PC += 2;
   sh->cycles++;
@@ -1451,7 +1449,7 @@ FASTCALL void y_not(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void y_or(SH2_struct * sh) {
+void y_or(SH2_struct * sh) {
   sh->regs.R[INSTRUCTION_B(sh->instruction)] |= sh->regs.R[INSTRUCTION_C(sh->instruction)];
   sh->regs.PC += 2;
   sh->cycles++;
@@ -1459,7 +1457,7 @@ FASTCALL void y_or(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void ori(SH2_struct * sh) {
+void ori(SH2_struct * sh) {
   sh->regs.R[0] |= INSTRUCTION_CD(sh->instruction);
   sh->regs.PC += 2;
   sh->cycles++;
@@ -1467,7 +1465,7 @@ FASTCALL void ori(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void orm(SH2_struct * sh) {
+void orm(SH2_struct * sh) {
   long temp;
   long source = INSTRUCTION_CD(sh->instruction);
 
@@ -1480,7 +1478,7 @@ FASTCALL void orm(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void rotcl(SH2_struct * sh) {
+void rotcl(SH2_struct * sh) {
   long temp;
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1497,7 +1495,7 @@ FASTCALL void rotcl(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void rotcr(SH2_struct * sh) {
+void rotcr(SH2_struct * sh) {
   long temp;
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1514,7 +1512,7 @@ FASTCALL void rotcr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void rotl(SH2_struct * sh) {
+void rotl(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
 
   if ((sh->regs.R[n]&0x80000000)==0) sh->regs.SR.part.T=0;
@@ -1528,7 +1526,7 @@ FASTCALL void rotl(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void rotr(SH2_struct * sh) {
+void rotr(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
 
   if ((sh->regs.R[n]&0x00000001)==0) sh->regs.SR.part.T = 0;
@@ -1542,7 +1540,7 @@ FASTCALL void rotr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void rte(SH2_struct * sh) {
+void rte(SH2_struct * sh) {
   unsigned long temp;
   temp=sh->regs.PC;
   sh->regs.PC = MappedMemoryReadLong(sh->regs.R[15]);
@@ -1555,7 +1553,7 @@ FASTCALL void rte(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void rts(SH2_struct * sh) {
+void rts(SH2_struct * sh) {
   unsigned long temp;
 
   temp = sh->regs.PC;
@@ -1567,7 +1565,7 @@ FASTCALL void rts(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void sett(SH2_struct * sh) {
+void sett(SH2_struct * sh) {
   sh->regs.SR.part.T = 1;
   sh->regs.PC += 2;
   sh->cycles++;
@@ -1575,7 +1573,7 @@ FASTCALL void sett(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void shal(SH2_struct * sh) {
+void shal(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
   if ((sh->regs.R[n] & 0x80000000) == 0) sh->regs.SR.part.T = 0;
   else sh->regs.SR.part.T = 1;
@@ -1586,7 +1584,7 @@ FASTCALL void shal(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void shar(SH2_struct * sh) {
+void shar(SH2_struct * sh) {
   long temp;
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1603,7 +1601,7 @@ FASTCALL void shar(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void shll(SH2_struct * sh) {
+void shll(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
 
   if ((sh->regs.R[n]&0x80000000)==0) sh->regs.SR.part.T=0;
@@ -1615,7 +1613,7 @@ FASTCALL void shll(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void shll2(SH2_struct * sh) {
+void shll2(SH2_struct * sh) {
   sh->regs.R[INSTRUCTION_B(sh->instruction)] <<= 2;
   sh->regs.PC+=2;
   sh->cycles++;
@@ -1623,7 +1621,7 @@ FASTCALL void shll2(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void shll8(SH2_struct * sh) {
+void shll8(SH2_struct * sh) {
   sh->regs.R[INSTRUCTION_B(sh->instruction)]<<=8;
   sh->regs.PC+=2;
   sh->cycles++;
@@ -1631,7 +1629,7 @@ FASTCALL void shll8(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void shll16(SH2_struct * sh) {
+void shll16(SH2_struct * sh) {
   sh->regs.R[INSTRUCTION_B(sh->instruction)]<<=16;
   sh->regs.PC+=2;
   sh->cycles++;
@@ -1639,7 +1637,7 @@ FASTCALL void shll16(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void shlr(SH2_struct * sh) {
+void shlr(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
 
   if ((sh->regs.R[n]&0x00000001)==0) sh->regs.SR.part.T=0;
@@ -1651,7 +1649,7 @@ FASTCALL void shlr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void shlr2(SH2_struct * sh) {
+void shlr2(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
   sh->regs.R[n]>>=2;
   sh->regs.PC+=2;
@@ -1660,7 +1658,7 @@ FASTCALL void shlr2(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void shlr8(SH2_struct * sh) {
+void shlr8(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
   sh->regs.R[n]>>=8;
   sh->regs.PC+=2;
@@ -1669,7 +1667,7 @@ FASTCALL void shlr8(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void shlr16(SH2_struct * sh) {
+void shlr16(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
   sh->regs.R[n]>>=16;
   sh->regs.PC+=2;
@@ -1678,7 +1676,7 @@ FASTCALL void shlr16(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void stcgbr(SH2_struct * sh) {
+void stcgbr(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
   sh->regs.R[n]=sh->regs.GBR;
   sh->regs.PC+=2;
@@ -1687,7 +1685,7 @@ FASTCALL void stcgbr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void stcmgbr(SH2_struct * sh) {
+void stcmgbr(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
   sh->regs.R[n]-=4;
   MappedMemoryWriteLong(sh->regs.R[n],sh->regs.GBR);
@@ -1697,7 +1695,7 @@ FASTCALL void stcmgbr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void stcmsr(SH2_struct * sh) {
+void stcmsr(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
   sh->regs.R[n]-=4;
   MappedMemoryWriteLong(sh->regs.R[n],sh->regs.SR.all);
@@ -1707,7 +1705,7 @@ FASTCALL void stcmsr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void stcmvbr(SH2_struct * sh) {
+void stcmvbr(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
   sh->regs.R[n]-=4;
   MappedMemoryWriteLong(sh->regs.R[n],sh->regs.VBR);
@@ -1717,7 +1715,7 @@ FASTCALL void stcmvbr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void stcsr(SH2_struct * sh) {
+void stcsr(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
   sh->regs.R[n] = sh->regs.SR.all;
   sh->regs.PC+=2;
@@ -1726,7 +1724,7 @@ FASTCALL void stcsr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void stcvbr(SH2_struct * sh) {
+void stcvbr(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
   sh->regs.R[n]=sh->regs.VBR;
   sh->regs.PC+=2;
@@ -1735,7 +1733,7 @@ FASTCALL void stcvbr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void stsmach(SH2_struct * sh) {
+void stsmach(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
   sh->regs.R[n]=sh->regs.MACH;
   sh->regs.PC+=2;
@@ -1744,7 +1742,7 @@ FASTCALL void stsmach(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void stsmacl(SH2_struct * sh) {
+void stsmacl(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
   sh->regs.R[n]=sh->regs.MACL;
   sh->regs.PC+=2;
@@ -1753,7 +1751,7 @@ FASTCALL void stsmacl(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void stsmmach(SH2_struct * sh) {
+void stsmmach(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
   sh->regs.R[n] -= 4;
   MappedMemoryWriteLong(sh->regs.R[n],sh->regs.MACH); 
@@ -1763,7 +1761,7 @@ FASTCALL void stsmmach(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void stsmmacl(SH2_struct * sh) {
+void stsmmacl(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
   sh->regs.R[n] -= 4;
   MappedMemoryWriteLong(sh->regs.R[n],sh->regs.MACL);
@@ -1773,7 +1771,7 @@ FASTCALL void stsmmacl(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void stsmpr(SH2_struct * sh) {
+void stsmpr(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
   sh->regs.R[n] -= 4;
   MappedMemoryWriteLong(sh->regs.R[n],sh->regs.PR);
@@ -1783,7 +1781,7 @@ FASTCALL void stsmpr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void stspr(SH2_struct * sh) {
+void stspr(SH2_struct * sh) {
   long n = INSTRUCTION_B(sh->instruction);
   sh->regs.R[n] = sh->regs.PR;
   sh->regs.PC+=2;
@@ -1792,7 +1790,7 @@ FASTCALL void stspr(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void sub(SH2_struct * sh) {
+void sub(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
   sh->regs.R[n]-=sh->regs.R[m];
@@ -1802,7 +1800,7 @@ FASTCALL void sub(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void subc(SH2_struct * sh) {
+void subc(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
   unsigned long tmp0,tmp1;
@@ -1819,7 +1817,7 @@ FASTCALL void subc(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void subv(SH2_struct * sh) {
+void subv(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
   long dest,src,ans;
@@ -1844,7 +1842,7 @@ FASTCALL void subv(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void swapb(SH2_struct * sh) {
+void swapb(SH2_struct * sh) {
   unsigned long temp0,temp1;
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
@@ -1859,7 +1857,7 @@ FASTCALL void swapb(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void swapw(SH2_struct * sh) {
+void swapw(SH2_struct * sh) {
   unsigned long temp;
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
@@ -1872,7 +1870,7 @@ FASTCALL void swapw(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void tas(SH2_struct * sh) {
+void tas(SH2_struct * sh) {
   long temp;
   long n = INSTRUCTION_B(sh->instruction);
 
@@ -1887,7 +1885,7 @@ FASTCALL void tas(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void trapa(SH2_struct * sh) {
+void trapa(SH2_struct * sh) {
   long imm = INSTRUCTION_CD(sh->instruction);
 
   sh->regs.R[15]-=4;
@@ -1900,7 +1898,7 @@ FASTCALL void trapa(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void tst(SH2_struct * sh) {
+void tst(SH2_struct * sh) {
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
   if ((sh->regs.R[n]&sh->regs.R[m])==0) sh->regs.SR.part.T = 1;
@@ -1911,7 +1909,7 @@ FASTCALL void tst(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void tsti(SH2_struct * sh) {
+void tsti(SH2_struct * sh) {
   long temp;
   long i = INSTRUCTION_CD(sh->instruction);
 
@@ -1924,7 +1922,7 @@ FASTCALL void tsti(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void tstm(SH2_struct * sh) {
+void tstm(SH2_struct * sh) {
   long temp;
   long i = INSTRUCTION_CD(sh->instruction);
 
@@ -1938,7 +1936,7 @@ FASTCALL void tstm(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void y_xor(SH2_struct * sh) {
+void y_xor(SH2_struct * sh) {
   int b = INSTRUCTION_B(sh->instruction);
   int c = INSTRUCTION_C(sh->instruction);
 
@@ -1949,7 +1947,7 @@ FASTCALL void y_xor(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void xori(SH2_struct * sh) {
+void xori(SH2_struct * sh) {
   long source = INSTRUCTION_CD(sh->instruction);
   sh->regs.R[0] ^= source;
   sh->regs.PC += 2;
@@ -1958,7 +1956,7 @@ FASTCALL void xori(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void xorm(SH2_struct * sh) {
+void xorm(SH2_struct * sh) {
   long source = INSTRUCTION_CD(sh->instruction);
   long temp;
 
@@ -1971,7 +1969,7 @@ FASTCALL void xorm(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void xtrct(SH2_struct * sh) {
+void xtrct(SH2_struct * sh) {
   unsigned long temp;
   long m = INSTRUCTION_C(sh->instruction);
   long n = INSTRUCTION_B(sh->instruction);
@@ -1985,7 +1983,7 @@ FASTCALL void xtrct(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void sleep(SH2_struct * sh) {
+void sleep(SH2_struct * sh) {
   //cerr << "SLEEP" << endl;
   sh->cycles += 3;
 }
@@ -2271,8 +2269,10 @@ opcodefunc decode(unsigned short instruction) {
 //////////////////////////////////////////////////////////////////////////////
 
 int SH2InterpreterInit() {
+   int i;
+
    // Initialize any internal variables
-   for(int i = 0;i < 0x10000;i++) {
+   for(i = 0;i < 0x10000;i++) {
       opcodes[i] = decode(i);
    }
 
@@ -2299,10 +2299,10 @@ FASTCALL u32 SH2InterpreterExec(SH2_struct *context, u32 cycles) {
       // handle breakpoints here
       switch ((context->regs.PC >> 20) & 0x0FF) {
          case 0x000: // Bios
-            context->instruction = T2ReadWord(BiosRom, context->regs.PC);
+            context->instruction = T2ReadWord(BiosRom, context->regs.PC & 0x7FFFF);
             break;
          case 0x002: // Low Work Ram
-            context->instruction = T2ReadWord(LowWram, context->regs.PC);
+            context->instruction = T2ReadWord(LowWram, context->regs.PC & 0xFFFFF);
             break;
          case 0x020: // CS0(fix me)
 //            context->instruction = memoire->getWord(regs->PC);
@@ -2323,7 +2323,7 @@ FASTCALL u32 SH2InterpreterExec(SH2_struct *context, u32 cycles) {
          case 0x06D: 
          case 0x06E: 
          case 0x06F:
-            context->instruction = T2ReadWord(HighWram, context->regs.PC);
+            context->instruction = T2ReadWord(HighWram, context->regs.PC & 0xFFFFF);
             break;
          default:
             break;

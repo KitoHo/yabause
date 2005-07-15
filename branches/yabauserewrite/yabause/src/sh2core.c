@@ -37,21 +37,23 @@ void WDTExec(u32 cycles);
 
 int SH2Init(int coreid)
 {
+   int i;
+
    // MSH2
-   if ((MSH2 = (SH2_struct *)malloc(sizeof(SH2_struct))) == NULL)
+   if ((MSH2 = (SH2_struct *)calloc(1, sizeof(SH2_struct))) == NULL)
       return -1;
 
    MSH2->onchip.BCR1 = 0x0000;
-   SSH2->isslave = 0;
+   MSH2->isslave = 0;
 
    // SSH2
-   if ((SSH2 = (SH2_struct *)malloc(sizeof(SH2_struct))) == NULL)
+   if ((SSH2 = (SH2_struct *)calloc(1, sizeof(SH2_struct))) == NULL)
       return -1;
 
    SSH2->onchip.BCR1 = 0x8000;
    SSH2->isslave = 1;
 
-   if ((SH2Core = (SH2Interface_struct *)malloc(sizeof(SH2Interface_struct))) == NULL)
+   if ((SH2Core = (SH2Interface_struct *)calloc(1, sizeof(SH2Interface_struct))) == NULL)
       return -1;
 
    // So which core do we want?
@@ -59,7 +61,7 @@ int SH2Init(int coreid)
       coreid = 0; // Assume we want the first one
 
    // Go through core list and find the id
-   for (int i = 0; SH2CoreList[i] != NULL; i++)
+   for (i = 0; SH2CoreList[i] != NULL; i++)
    {
       if (SH2CoreList[i]->id == coreid)
       {
@@ -69,6 +71,9 @@ int SH2Init(int coreid)
       }
    }
 
+   if (SH2Core)
+      SH2Core->Init();
+
    return 0;
 }
 
@@ -76,6 +81,9 @@ int SH2Init(int coreid)
 
 void SH2DeInit()
 {
+   if (SH2Core)
+      SH2Core->DeInit();
+
    if (MSH2)
       free(MSH2);
 
@@ -90,8 +98,10 @@ void SH2DeInit()
 
 void SH2Reset(SH2_struct *context)
 {
+   int i;
+
    // Reset general registers
-   for (int i = 0; i < 15; i++)
+   for (i = 0; i < 15; i++)
       context->regs.R[i] = 0x00000000;
                    
    context->regs.SR.all = 0x000000F0;
@@ -101,7 +111,9 @@ void SH2Reset(SH2_struct *context)
    context->regs.MACL = 0x00000000;
    context->regs.PR = 0x00000000;
 
-   // Get PC/Stack initial values(fix me)
+   // Get PC/Stack initial values
+   context->regs.PC = T2ReadLong(BiosRom, 0);
+   context->regs.R[15] = T2ReadLong(BiosRom, 4);
 
    // Internal variables
    context->delay = 0x00000000;

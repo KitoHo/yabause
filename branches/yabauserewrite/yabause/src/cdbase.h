@@ -23,6 +23,10 @@
 
 #include <stdio.h>
 
+#define CDCORE_DEFAULT -1
+#define CDCORE_DUMMY    0
+#define CDCORE_ISO      1
+
 typedef struct
 {
         const char *Name;

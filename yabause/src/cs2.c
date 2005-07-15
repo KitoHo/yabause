@@ -18,6 +18,7 @@
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
+#include <stdlib.h>
 #include "cs2.h"
 #include "yui.h"
 
@@ -66,9 +67,11 @@
 
 Cs2 * Cs2Area;
 
-FASTCALL u8 Cs2GetByte(u32 addr) {
+extern CDInterface *CDCoreList[];
 
+FASTCALL u8 Cs2GetByte(u32 addr) {
   if(Cs2Area->carttype == CART_NETLINK) {
+/*
      switch (addr) {
         case 0x95019: // Modem Status Register
            // Send interrupt here?
@@ -77,17 +80,17 @@ FASTCALL u8 Cs2GetByte(u32 addr) {
            return T3ReadByte(Cs2Area->mem, addr);
         default:
            return T3ReadByte(Cs2Area->mem, addr);
+
      }
+*/
   }
-  else
-  {
-     return 0xFF; // only netlink seems to use byte-access
-//     return Memory::getByte(addr);
-  }
+
+  return 0xFF; // only netlink seems to use byte-access
 }
 
 FASTCALL void Cs2WriteByte(u32 addr, u8 val) {
   if(Cs2Area->carttype == CART_NETLINK) {
+/*
      switch (addr) {
         case 0x2503D: // ???
            T3WriteByte(Cs2Area->mem, addr, val);
@@ -100,6 +103,7 @@ FASTCALL void Cs2WriteByte(u32 addr, u8 val) {
         default:
            break;
       }
+*/
    }
    else
    {
@@ -213,7 +217,7 @@ FASTCALL u16 Cs2ReadWord(u32 addr) {
 #if DEBUG
              cerr << "cs2\t: Undocumented register read " << hex << addr << endl;
 #endif
-             val = T3ReadWord(Cs2Area->mem, addr);
+//             val = T3ReadWord(Cs2Area->mem, addr);
              break;
   }
 
@@ -251,7 +255,7 @@ FASTCALL void Cs2WriteWord(u32 addr, u16 val) {
 #if DEBUG
              cerr << "cs2\t:Undocumented register write " << hex << addr << endl;
 #endif
-                  T3WriteWord(Cs2Area->mem, addr, val);
+//                  T3WriteWord(Cs2Area->mem, addr, val);
                   break;
   }
 }
@@ -376,7 +380,7 @@ FASTCALL u32 Cs2ReadLong(u32 addr) {
 #if DEBUG
              cerr << "cs2\t: Undocumented register read " << hex << addr << endl;
 #endif
-	     val = T3ReadLong(Cs2Area->mem, addr);
+//             val = T3ReadLong(Cs2Area->mem, addr);
              break;
   }
 
@@ -387,49 +391,60 @@ FASTCALL void Cs2WriteLong(u32 addr, u32 val) {
 #if CDDEBUG
    fprintf(stderr, "cs2\t: Long writing isn't implemented\n");
 #endif
-   T3WriteLong(Cs2Area->mem, addr, val);
+//   T3WriteLong(Cs2Area->mem, addr, val);
 }
 
-void Cs2New(int type) {
-  Cs2Area = (Cs2 *) malloc(sizeof(Cs2));
+int Cs2Init(int carttype, int coreid, const char *cdrompath, const char *mpegpath) {
+   int i;
+   if ((Cs2Area = (Cs2 *) malloc(sizeof(Cs2))) == NULL)
+      return -1;
 
-  if (Cs2Area == NULL)
-	return -1;
+   Cs2Area->carttype = carttype;
+   Cs2Area->mpegpath = mpegpath;
 
-  Cs2Area->mem = T3MemoryNew(0x100000);
+   // So which core do we want?
+   if (coreid == CDCORE_DEFAULT)
+      coreid = 0; // Assume we want the first one
 
-  Cs2Area->carttype = type;
-
-  Cs2Area->cdi = YuiCd();
-  if (Cs2Area->cdi == NULL) {
-	fprintf(stderr, "Unable to initialize cdrom!\n");
-  }
-  Cs2Reset();
-
-  // If Modem is connected, set the registers
-  if(Cs2Area->carttype == CART_NETLINK)
-  {
-     T3WriteByte(Cs2Area->mem, 0x95001, 0x00);
-     T3WriteByte(Cs2Area->mem, 0x95001, 0x00);
-     T3WriteByte(Cs2Area->mem, 0x95005, 0x00);
-     T3WriteByte(Cs2Area->mem, 0x95009, 0x01);
-     T3WriteByte(Cs2Area->mem, 0x9500D, 0x00);
-     T3WriteByte(Cs2Area->mem, 0x95011, 0x00);
-     T3WriteByte(Cs2Area->mem, 0x95015, 0x60);
-     T3WriteByte(Cs2Area->mem, 0x95019, 0x30);
-     T3WriteByte(Cs2Area->mem, 0x9501D, 0x01);
-  }
-
-  return 0;
-}
-
-void Cs2Delete(void) {
-
-   if (Cs2Area->cdi != NULL) {
-      Cs2Area->cdi->DeInit();
+   // Go through core list and find the id
+   for (i = 0; CDCoreList[i] != NULL; i++)
+   {
+      if (CDCoreList[i]->id == coreid)
+      {
+         // Set to current core
+         Cs2Area->cdi = CDCoreList[i];
+         break;
+      }
    }
-   free(Cs2Area->cdi);
-   T3MemoryDelete(Cs2Area->mem);
+
+   Cs2Reset();
+
+   // If Modem is connected, set the registers
+   if(Cs2Area->carttype == CART_NETLINK)
+   {
+      Cs2Area->nlreg.RBR = 0x00;
+//     Cs2Area->nlreg.THR = 0x??; // have no idea
+      Cs2Area->nlreg.IER = 0x00;
+//     Cs2Area->nlreg.DLL = 0x??; // need to check
+//     Cs2Area->nlreg.DLM = 0x??; // need to check
+     Cs2Area->nlreg.IIR = 0x01;
+//      Cs2Area->nlreg.FCR = 0x??; // have no idea
+      Cs2Area->nlreg.LCR = 0x00;
+      Cs2Area->nlreg.MCR = 0x00;
+      Cs2Area->nlreg.LSR = 0x60;
+      Cs2Area->nlreg.MSR = 0x30;
+      Cs2Area->nlreg.SCR = 0x01;
+   }
+
+   return 0;
+}
+
+void Cs2DeInit(void) {
+//   if (Cs2Area->cdi != NULL) {
+//      Cs2Area->cdi->DeInit();
+//   }
+//   free(Cs2Area->cdi);
+//   T3MemoryDelete(Cs2Area->mem);
    free(Cs2Area);
 }
 
@@ -1178,7 +1193,7 @@ void Cs2InitializeCDSystem(void) {
   u16 val = 0;
   u8 initflag = Cs2Area->reg.CR1 & 0xFF;
 
-  if (Cs2Area->status & 0xF != CDB_STAT_OPEN && Cs2Area->status & 0xF != CDB_STAT_NODISC)
+  if ((Cs2Area->status & 0xF) != CDB_STAT_OPEN && (Cs2Area->status & 0xF) != CDB_STAT_NODISC)
   {
      Cs2Area->status = CDB_STAT_PAUSE;
      Cs2Area->FAD = 150;
@@ -1729,7 +1744,7 @@ void Cs2GetSectorInfo(void) {
      }
   }
 
-  Cs2Area->reg.CR1 = (CDB_STAT_REJECT << 8) | Cs2Area->reg.CR1 & 0xFF;
+  Cs2Area->reg.CR1 = (CDB_STAT_REJECT << 8) | (Cs2Area->reg.CR1 & 0xFF);
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_ESEL;
 }
 
@@ -2323,7 +2338,7 @@ void Cs2CmdE2(void) {
   Cs2Area->outconmpegrom = Cs2Area->filter + 0;
   Cs2Area->outconmpegromnum = 0;
 
-  if ((mpgfp = fopen(YuiMpegrom(), "rb")) != NULL)
+  if ((mpgfp = fopen(Cs2Area->mpegpath, "rb")) != NULL)
   {
      u32 readoffset = ((Cs2Area->reg.CR1 & 0xFF) << 8) | Cs2Area->reg.CR2;
      u16 readsize = Cs2Area->reg.CR4;
@@ -3037,7 +3052,6 @@ unsigned char Cs2GetRegionID() {
 
 int Cs2saveState(FILE * fp) {
    int offset, i;
-   u8 tempbyte;
 
    // This is mostly kludge, but it will have to do until I have time to rewrite it all
 

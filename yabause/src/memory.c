@@ -28,13 +28,13 @@
 
 ////////////////////////////////////////////////////////////////
 
-typedef FASTCALL void (*writebytefunc)(u32, u8);
-typedef FASTCALL void (*writewordfunc)(u32, u16);
-typedef FASTCALL void (*writelongfunc)(u32, u32);
+typedef void (*writebytefunc)(u32, u8);
+typedef void (*writewordfunc)(u32, u16);
+typedef void (*writelongfunc)(u32, u32);
 
-typedef FASTCALL u8 (*readbytefunc)(u32);
-typedef FASTCALL u16 (*readwordfunc)(u32);
-typedef FASTCALL u32 (*readlongfunc)(u32);
+typedef u8 (*readbytefunc)(u32);
+typedef u16 (*readwordfunc)(u32);
+typedef u32 (*readlongfunc)(u32);
 
 static writebytefunc WriteByteList[0x1000];
 static writewordfunc WriteWordList[0x1000];
@@ -95,142 +95,148 @@ void DummyDeInit(Dummy * d) {}
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u8 UnhandledMemoryReadByte(u32 addr) {
+u8 UnhandledMemoryReadByte(u32 addr) {
+   fprintf(stderr, "Unhandled byte read %08X\n", addr);
    return 0;
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u16 UnhandledMemoryReadWord(u32 addr) {
+u16 UnhandledMemoryReadWord(u32 addr) {
+   fprintf(stderr, "Unhandled word read %08X\n", addr);
    return 0;
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u32 UnhandledMemoryReadLong(u32 addr)  {
+u32 UnhandledMemoryReadLong(u32 addr)  {
+   fprintf(stderr, "Unhandled long read %08X\n", addr);
    return 0;
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void UnhandledMemoryWriteByte(u32 addr, u8 val)  {
+void UnhandledMemoryWriteByte(u32 addr, u8 val)  {
+   fprintf(stderr, "Unhandled byte write %08X\n", addr);
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void UnhandledMemoryWriteWord(u32 addr, u16 val)  {
+void UnhandledMemoryWriteWord(u32 addr, u16 val)  {
+   fprintf(stderr, "Unhandled word write %08X\n", addr);
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void UnhandledMemoryWriteLong(u32 addr, u32 val)  {
+void UnhandledMemoryWriteLong(u32 addr, u32 val)  {
+   fprintf(stderr, "Unhandled long write %08X\n", addr);
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u8 HighWramMemoryReadByte(u32 addr) {   
+u8 HighWramMemoryReadByte(u32 addr) {   
    return T2ReadByte(HighWram, addr & 0xFFFFF);
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u16 HighWramMemoryReadWord(u32 addr) {
+u16 HighWramMemoryReadWord(u32 addr) {
    return T2ReadWord(HighWram, addr & 0xFFFFF);
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u32 HighWramMemoryReadLong(u32 addr)  {
+u32 HighWramMemoryReadLong(u32 addr)  {
    return T2ReadLong(HighWram, addr & 0xFFFFF);
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void HighWramMemoryWriteByte(u32 addr, u8 val)  {
+void HighWramMemoryWriteByte(u32 addr, u8 val)  {
    T2WriteByte(HighWram, addr & 0xFFFFF, val);
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void HighWramMemoryWriteWord(u32 addr, u16 val)  {
+void HighWramMemoryWriteWord(u32 addr, u16 val)  {
    T2WriteWord(HighWram, addr & 0xFFFFF, val);
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void HighWramMemoryWriteLong(u32 addr, u32 val)  {
+void HighWramMemoryWriteLong(u32 addr, u32 val)  {
    T2WriteLong(HighWram, addr & 0xFFFFF, val);
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u8 LowWramMemoryReadByte(u32 addr) {   
+u8 LowWramMemoryReadByte(u32 addr) {   
    return T2ReadByte(LowWram, addr & 0xFFFFF);
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u16 LowWramMemoryReadWord(u32 addr) {
+u16 LowWramMemoryReadWord(u32 addr) {
    return T2ReadWord(LowWram, addr & 0xFFFFF);
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u32 LowWramMemoryReadLong(u32 addr)  {
+u32 LowWramMemoryReadLong(u32 addr)  {
    return T2ReadLong(LowWram, addr & 0xFFFFF);
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void LowWramMemoryWriteByte(u32 addr, u8 val)  {
+void LowWramMemoryWriteByte(u32 addr, u8 val)  {
    T2WriteByte(LowWram, addr & 0xFFFFF, val);
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void LowWramMemoryWriteWord(u32 addr, u16 val)  {
+void LowWramMemoryWriteWord(u32 addr, u16 val)  {
    T2WriteWord(LowWram, addr & 0xFFFFF, val);
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void LowWramMemoryWriteLong(u32 addr, u32 val)  {
+void LowWramMemoryWriteLong(u32 addr, u32 val)  {
    T2WriteLong(LowWram, addr & 0xFFFFF, val);
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u8 BiosRomMemoryReadByte(u32 addr) {   
+u8 BiosRomMemoryReadByte(u32 addr) {   
    return T2ReadByte(BiosRom, addr & 0x7FFFF);
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u16 BiosRomMemoryReadWord(u32 addr) {
+u16 BiosRomMemoryReadWord(u32 addr) {
    return T2ReadWord(BiosRom, addr & 0x7FFFF);
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u32 BiosRomMemoryReadLong(u32 addr)  {
+u32 BiosRomMemoryReadLong(u32 addr)  {
    return T2ReadLong(BiosRom, addr & 0x7FFFF);
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void BiosRomMemoryWriteByte(u32 addr, u8 val)  {
+void BiosRomMemoryWriteByte(u32 addr, u8 val)  {
    // read-only
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void BiosRomMemoryWriteWord(u32 addr, u16 val)  {
+void BiosRomMemoryWriteWord(u32 addr, u16 val)  {
    // read-only
 }
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void BiosRomMemoryWriteLong(u32 addr, u32 val)  {
+void BiosRomMemoryWriteLong(u32 addr, u32 val)  {
    // read-only
 }
 

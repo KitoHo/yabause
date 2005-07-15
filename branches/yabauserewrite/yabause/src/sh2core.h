@@ -8,6 +8,32 @@
 
 typedef struct
 {
+   u32 R[16];
+   union
+   {
+      struct
+      {
+         u32 T:1;
+         u32 S:1;
+         u32 reserved0:2;
+         u32 I:4;
+         u32 Q:1;
+         u32 M:1;
+         u32 reserved1:22;
+      } part;
+      u32 all;
+   } SR;
+
+   u32 GBR;
+   u32 VBR;
+   u32 MACH;
+   u32 MACL;
+   u32 PR;
+   u32 PC;
+} sh2regs_struct;
+
+typedef struct
+{
    unsigned char SMR;     // 0xFFFFFE00
    unsigned char BRR;     // 0xFFFFFE01
    unsigned char SCR;     // 0xFFFFFE02
@@ -70,31 +96,7 @@ typedef struct
 
 typedef struct
 {
-   struct
-   {
-      u32 R[16];
-      union
-      {
-         struct
-         {
-            u32 T:1;
-            u32 S:1;
-            u32 reserved0:2;
-            u32 I:4;
-            u32 Q:1;
-            u32 M:1;
-            u32 reserved1:22;
-         } part;
-         u32 all;
-      } SR;
-
-      u32 GBR;
-      u32 VBR;
-      u32 MACH;
-      u32 MACL;
-      u32 PR;
-      u32 PC;
-   } regs;
+   sh2regs_struct regs;
 
    u32 delay;
    u32 cycles;
@@ -122,6 +124,9 @@ int SH2Init(int coreid);
 void SH2DeInit();
 void SH2Reset(SH2_struct *context);
 FASTCALL u32 SH2Exec(SH2_struct *context, u32 cycles);
+void SH2Step(SH2_struct *context);
+void SH2GetRegisters(SH2_struct *context, sh2regs_struct * r);
+void SH2SetRegisters(SH2_struct *context, sh2regs_struct * r);
 
 FASTCALL u8 OnchipReadByte(u32 addr);
 FASTCALL u16 OnchipReadWord(u32 addr);

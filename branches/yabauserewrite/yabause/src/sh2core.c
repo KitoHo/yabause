@@ -196,6 +196,39 @@ void SH2SendInterrupt(SH2_struct *context, unsigned char vector, unsigned char l
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+void SH2Step(SH2_struct *context)
+{
+   unsigned long tmp = context->regs.PC;
+
+   // Execute 1 instruction
+   SH2Exec(context, context->cycles+1);
+
+   // Sometimes it doesn't always execute one instruction,
+   // let's make sure it did
+   if (tmp == context->regs.PC)
+      SH2Exec(context, context->cycles+1);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void SH2GetRegisters(SH2_struct *context, sh2regs_struct * r)
+{
+   if (r != NULL) {
+      memcpy(r, &context->regs, sizeof(context->regs));
+   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void SH2SetRegisters(SH2_struct *context, sh2regs_struct * r)
+{
+   if (r != NULL) {
+      memcpy(&context->regs, r, sizeof(context->regs));
+   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
 // Onchip specific
 //////////////////////////////////////////////////////////////////////////////
 

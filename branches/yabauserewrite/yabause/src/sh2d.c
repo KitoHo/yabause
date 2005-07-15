@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "sh2d.hh"
+#include "sh2d.h"
 #if 0
 #include <curses.h>
 #endif

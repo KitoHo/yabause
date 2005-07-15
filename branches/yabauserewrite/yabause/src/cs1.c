@@ -112,40 +112,40 @@ void Cs1DeInit(void) {
 	free(Cs1Area);
 }
 
-FASTCALL u8 Cs1ReadByte(u32 addr) {
+u8 FASTCALL Cs1ReadByte(u32 addr) {
 	if (addr == 0xFFFFFF)
 		return Cs1Area->cartid;
 
 	return Cs1Area->srammi->ReadByte(Cs1Area->sramarea, addr);
 }
 
-FASTCALL u16 Cs1ReadWord(u32 addr) {
+u16 FASTCALL Cs1ReadWord(u32 addr) {
 	if (addr == 0xFFFFFE)
 		return (0xFF00 | Cs1Area->cartid);
 
 	return Cs1Area->srammi->ReadWord(Cs1Area->sramarea, addr);
 }
 
-FASTCALL u32 Cs1ReadLong(u32 addr) {
+u32 FASTCALL Cs1ReadLong(u32 addr) {
 	if (addr == 0xFFFFFC)
 		return (0xFF00FF00 | (Cs1Area->cartid << 16) | Cs1Area->cartid);
 
 	return Cs1Area->srammi->ReadLong(Cs1Area->sramarea, addr);
 }
 
-FASTCALL void Cs1WriteByte(u32 addr, u8 val) {
+void FASTCALL Cs1WriteByte(u32 addr, u8 val) {
 	if (addr == 0xFFFFFF)
 		return;
 	Cs1Area->srammi->WriteByte(Cs1Area->sramarea, addr, val);
 }
 
-FASTCALL void Cs1WriteWord(u32 addr, u16 val) {
+void FASTCALL Cs1WriteWord(u32 addr, u16 val) {
 	if (addr == 0xFFFFFF)
 		return;
 	Cs1Area->srammi->WriteWord(Cs1Area->sramarea, addr, val);
 }
 
-FASTCALL void Cs1WriteLong(u32 addr, u32 val) {
+void FASTCALL Cs1WriteLong(u32 addr, u32 val) {
 	if (addr == 0xFFFFFF)
 		return;
 	Cs1Area->srammi->WriteLong(Cs1Area->sramarea, addr, val);

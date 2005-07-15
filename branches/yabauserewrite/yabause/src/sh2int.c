@@ -45,7 +45,7 @@ SH2Interface_struct SH2Interpreter = {
 
 //////////////////////////////////////////////////////////////////////////////
 
-FASTCALL void delay(SH2_struct * sh, unsigned long addr) {
+void FASTCALL delay(SH2_struct * sh, unsigned long addr) {
         switch ((addr >> 20) & 0x0FF) {
            case 0x000: // Bios              
                        sh->instruction = T2ReadWord(BiosRom, sh->regs.PC & 0x7FFFF);

@@ -4,27 +4,27 @@
 
 u8 * Vdp1Ram;
 
-FASTCALL u8 Vdp1RamReadByte(u32 addr) {
+u8 FASTCALL Vdp1RamReadByte(u32 addr) {
 	return T1ReadByte(Vdp1Ram, addr);
 }
 
-FASTCALL u16 Vdp1RamReadWord(u32 addr) {
+u16 FASTCALL Vdp1RamReadWord(u32 addr) {
 	return T1ReadWord(Vdp1Ram, addr);
 }
 
-FASTCALL u32 Vdp1RamReadLong(u32 addr) {
+u32 FASTCALL Vdp1RamReadLong(u32 addr) {
 	return T1ReadLong(Vdp1Ram, addr);
 }
 
-FASTCALL void Vdp1RamWriteByte(u32 addr, u8 val) {
+void FASTCALL Vdp1RamWriteByte(u32 addr, u8 val) {
 	T1WriteByte(Vdp1Ram, addr, val);
 }
 
-FASTCALL void Vdp1RamWriteWord(u32 addr, u16 val) {
+void FASTCALL Vdp1RamWriteWord(u32 addr, u16 val) {
 	T1WriteWord(Vdp1Ram, addr, val);
 }
 
-FASTCALL void Vdp1RamWriteLong(u32 addr, u32 val) {
+void FASTCALL Vdp1RamWriteLong(u32 addr, u32 val) {
 	T1WriteLong(Vdp1Ram, addr, val);
 }
 
@@ -48,12 +48,12 @@ void Vdp1Reset(void) {
 	Vdp1Regs->PTMR = 0;
 }
 
-FASTCALL u8 Vdp1ReadByte(u32 addr) {
+u8 FASTCALL Vdp1ReadByte(u32 addr) {
 	LOG("trying to byte-read a Vdp1 register\n");
 	return 0;
 }
 
-FASTCALL u16 Vdp1ReadWord(u32 addr) {
+u16 FASTCALL Vdp1ReadWord(u32 addr) {
 	switch(addr) {
 	case 0x10:
 		return Vdp1Regs->EDSR;
@@ -69,16 +69,16 @@ FASTCALL u16 Vdp1ReadWord(u32 addr) {
 	return 0;
 }
 
-FASTCALL u32 Vdp1ReadLong(u32 addr) {
+u32 FASTCALL Vdp1ReadLong(u32 addr) {
 	LOG("trying to long-read a Vdp1 register\n");
 	return 0;
 }
 
-FASTCALL void Vdp1WriteByte(u32 addr, u8 val) {
+void FASTCALL Vdp1WriteByte(u32 addr, u8 val) {
 	LOG("trying to byte-write a Vdp1 register\n");
 }
 
-FASTCALL void Vdp1WriteWord(u32 addr, u16 val) {
+void FASTCALL Vdp1WriteWord(u32 addr, u16 val) {
 	switch(addr) {
 	case 0x0:
 		Vdp1Regs->TVHR = val;
@@ -106,6 +106,6 @@ FASTCALL void Vdp1WriteWord(u32 addr, u16 val) {
 	}
 }
 
-FASTCALL void Vdp1WriteLong(u32 addr, u32 val) {
+void FASTCALL Vdp1WriteLong(u32 addr, u32 val) {
 	LOG("trying to long-write a Vdp1 register\n");
 }

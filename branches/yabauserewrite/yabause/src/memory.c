@@ -294,7 +294,7 @@ void MappedMemoryInit() {
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u8 MappedMemoryReadByte(u32 addr) {
+u8 FASTCALL MappedMemoryReadByte(u32 addr) {
    switch (addr >> 29)
    {
       case 0x0:
@@ -349,7 +349,7 @@ FASTCALL u8 MappedMemoryReadByte(u32 addr) {
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u16 MappedMemoryReadWord(u32 addr) {
+u16 FASTCALL MappedMemoryReadWord(u32 addr) {
    switch (addr >> 29)
    {
       case 0x0:
@@ -404,7 +404,7 @@ FASTCALL u16 MappedMemoryReadWord(u32 addr) {
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL u32 MappedMemoryReadLong(u32 addr)  {
+u32 FASTCALL MappedMemoryReadLong(u32 addr)  {
    switch (addr >> 29)
    {
       case 0x0:
@@ -458,7 +458,7 @@ FASTCALL u32 MappedMemoryReadLong(u32 addr)  {
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void MappedMemoryWriteByte(u32 addr, u8 val)  {
+void FASTCALL MappedMemoryWriteByte(u32 addr, u8 val)  {
    switch (addr >> 29)
    {
       case 0x0:
@@ -513,7 +513,7 @@ FASTCALL void MappedMemoryWriteByte(u32 addr, u8 val)  {
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void MappedMemoryWriteWord(u32 addr, u16 val)  {
+void FASTCALL MappedMemoryWriteWord(u32 addr, u16 val)  {
    switch (addr >> 29)
    {
       case 0x0:
@@ -568,7 +568,7 @@ FASTCALL void MappedMemoryWriteWord(u32 addr, u16 val)  {
 
 ////////////////////////////////////////////////////////////////
 
-FASTCALL void MappedMemoryWriteLong(u32 addr, u32 val)  {
+void FASTCALL MappedMemoryWriteLong(u32 addr, u32 val)  {
    switch (addr >> 29)
    {
       case 0x0:

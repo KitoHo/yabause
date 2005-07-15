@@ -237,12 +237,12 @@ extern Cs2 * Cs2Area;
 int Cs2Init(int, int, const char *, const char *);
 void Cs2DeInit(void);
 
-FASTCALL u8	Cs2ReadByte(u32);
-FASTCALL u16	Cs2ReadWord(u32);
-FASTCALL u32	Cs2ReadLong(u32);
-FASTCALL void	Cs2WriteByte(u32, u8);
-FASTCALL void	Cs2WriteWord(u32, u16);
-FASTCALL void	Cs2WriteLong(u32, u32);
+u8 FASTCALL 	Cs2ReadByte(u32);
+u16 FASTCALL 	Cs2ReadWord(u32);
+u32 FASTCALL 	Cs2ReadLong(u32);
+void FASTCALL 	Cs2WriteByte(u32, u8);
+void FASTCALL 	Cs2WriteWord(u32, u16);
+void FASTCALL 	Cs2WriteLong(u32, u32);
 
 void Cs2Run(unsigned long);
 void Cs2Execute(void);

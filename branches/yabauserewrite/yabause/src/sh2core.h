@@ -114,7 +114,7 @@ typedef struct
    int (*Init)();
    void (*DeInit)();
    int (*Reset)();
-   FASTCALL u32 (*Exec)(SH2_struct *context, u32 cycles);
+   u32 FASTCALL (*Exec)(SH2_struct *context, u32 cycles);
 } SH2Interface_struct;
 
 extern SH2_struct *MSH2;
@@ -123,16 +123,16 @@ extern SH2_struct *SSH2;
 int SH2Init(int coreid);
 void SH2DeInit();
 void SH2Reset(SH2_struct *context);
-FASTCALL u32 SH2Exec(SH2_struct *context, u32 cycles);
+u32 FASTCALL SH2Exec(SH2_struct *context, u32 cycles);
 void SH2Step(SH2_struct *context);
 void SH2GetRegisters(SH2_struct *context, sh2regs_struct * r);
 void SH2SetRegisters(SH2_struct *context, sh2regs_struct * r);
 
-FASTCALL u8 OnchipReadByte(u32 addr);
-FASTCALL u16 OnchipReadWord(u32 addr);
-FASTCALL u32 OnchipReadLong(u32 addr);
-FASTCALL void OnchipWriteByte(u32 addr, u8 val);
-FASTCALL void OnchipWriteWord(u32 addr, u16 val);
-FASTCALL void OnchipWriteLong(u32 addr, u32 val);
+u8 FASTCALL OnchipReadByte(u32 addr);
+u16 FASTCALL OnchipReadWord(u32 addr);
+u32 FASTCALL OnchipReadLong(u32 addr);
+void FASTCALL OnchipWriteByte(u32 addr, u8 val);
+void FASTCALL OnchipWriteWord(u32 addr, u16 val);
+void FASTCALL OnchipWriteLong(u32 addr, u32 val);
 
 #endif

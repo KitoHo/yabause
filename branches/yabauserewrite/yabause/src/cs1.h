@@ -36,12 +36,12 @@ extern Cs1 * Cs1Area;
 void Cs1Init(const char * file, int type);
 void Cs1DeInit(void);
 
-FASTCALL u8	Cs1ReadByte(u32);
-FASTCALL u16	Cs1ReadWord(u32);
-FASTCALL u32	Cs1ReadLong(u32);
-FASTCALL void	Cs1WriteByte(u32, u8);
-FASTCALL void	Cs1WriteWord(u32, u16);
-FASTCALL void	Cs1WriteLong(u32, u32);
+u8 FASTCALL 	Cs1ReadByte(u32);
+u16 FASTCALL 	Cs1ReadWord(u32);
+u32 FASTCALL 	Cs1ReadLong(u32);
+void FASTCALL 	Cs1WriteByte(u32, u8);
+void FASTCALL 	Cs1WriteWord(u32, u16);
+void FASTCALL 	Cs1WriteLong(u32, u32);
 
 int Cs1SaveState(FILE *);
 int Cs1LoadState(FILE *, int, int);

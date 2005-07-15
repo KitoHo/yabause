@@ -41,17 +41,17 @@ void ScuReset(void) {
 	ScuRegs->VER = 0x0;
 }
 
-FASTCALL u8 ScuReadByte(u32 addr) {
+u8 FASTCALL ScuReadByte(u32 addr) {
 	LOG("trying to byte-read a Scu register\n");
 	return 0;
 }
 
-FASTCALL u16 ScuReadWord(u32 addr) {
+u16 FASTCALL ScuReadWord(u32 addr) {
 	LOG("trying to word-read a Scu register\n");
 	return 0;
 }
 
-FASTCALL u32 ScuReadLong(u32 addr) {
+u32 FASTCALL ScuReadLong(u32 addr) {
 	switch(addr) {
 	case 0:
 		return ScuRegs->D0R;
@@ -91,15 +91,15 @@ FASTCALL u32 ScuReadLong(u32 addr) {
 	}
 }
 
-FASTCALL void ScuWriteByte(u32 addr, u8 val) {
+void FASTCALL ScuWriteByte(u32 addr, u8 val) {
 	LOG("trying to byte-write a Scu register\n");
 }
 
-FASTCALL void ScuWriteWord(u32 addr, u16 val) {
+void FASTCALL ScuWriteWord(u32 addr, u16 val) {
 	LOG("trying to word-write a Scu register\n");
 }
 
-FASTCALL void ScuWriteLong(u32 addr, u32 val) {
+void FASTCALL ScuWriteLong(u32 addr, u32 val) {
 	switch(addr) {
 	case 0:
 		ScuRegs->D0R = val;

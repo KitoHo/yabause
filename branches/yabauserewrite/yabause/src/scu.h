@@ -62,11 +62,11 @@ void ScuDeInit(void);
 
 void ScuReset(void);
 
-FASTCALL u8	ScuReadByte(u32);
-FASTCALL u16	ScuReadWord(u32);
-FASTCALL u32	ScuReadLong(u32);
-FASTCALL void	ScuWriteByte(u32, u8);
-FASTCALL void	ScuWriteWord(u32, u16);
-FASTCALL void	ScuWriteLong(u32, u32);
+u8 FASTCALL	ScuReadByte(u32);
+u16 FASTCALL	ScuReadWord(u32);
+u32 FASTCALL	ScuReadLong(u32);
+void FASTCALL	ScuWriteByte(u32, u8);
+void FASTCALL	ScuWriteWord(u32, u16);
+void FASTCALL	ScuWriteLong(u32, u32);
 
 #endif

@@ -53,9 +53,6 @@ int SH2Init(int coreid)
    SSH2->onchip.BCR1 = 0x8000;
    SSH2->isslave = 1;
 
-   if ((SH2Core = (SH2Interface_struct *)calloc(1, sizeof(SH2Interface_struct))) == NULL)
-      return -1;
-
    // So which core do we want?
    if (coreid == SH2CORE_DEFAULT)
       coreid = 0; // Assume we want the first one
@@ -89,9 +86,6 @@ void SH2DeInit()
 
    if (SSH2)
       free(SSH2);
-
-   if (SH2Core)
-      free(SH2Core);
 }
 
 //////////////////////////////////////////////////////////////////////////////

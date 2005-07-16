@@ -22,21 +22,15 @@
 #include "sh2core.h"
 #include "memory.h"
 #include "SDL.h"
+#include "scu.h"
+#include "vdp2.h"
 #include "yui.h"
 
 //////////////////////////////////////////////////////////////////////////////
 
 unsigned short buttonbits = 0xFFFF;
 
-static struct
-{
-   int DecilineCount;
-   int LineCount;
-   int DecilineStop;
-   u32 Duf;
-   u32 CycleCountII;
-   int IsSSH2Running;
-} yabsys;
+yabsys_struct yabsys;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -310,11 +304,17 @@ int YabauseInit(int sh2coretype, int gfxcoretype, int sndcoretype,
   // Initialize CS0 area here
   // Initialize CS1 area here
   // Initialize CS2 area here
-  // Initialize SCU here
+  if (ScuInit() != 0)
+     return -1;
+
   // Initialize M68K here
   // Initialize SCSP here
   // Initialize VDP1 here
   // Initialize VDP2 here
+
+  if (Vdp2Init(gfxcoretype) != 0)
+     return -1;
+
   // Initialize SMPC here
 
   MappedMemoryInit();
@@ -344,6 +344,9 @@ void YabauseDeInit() {
 
   if (LowWram)
      T2MemoryDeInit(LowWram);
+
+  ScuDeInit();
+  Vdp2DeInit();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -364,12 +367,12 @@ int YabauseExec() {
    if(yabsys.DecilineCount == 9)
    {
       // HBlankIN
-//      ((Vdp2 *) vdp2_3)->HBlankIN();
+      Vdp2HBlankIN();
    }
    else if (yabsys.DecilineCount == 9)
    {
       // HBlankOUT
-//      ((Vdp2 *) vdp2_3)->HBlankOUT();
+      Vdp2HBlankOUT();
 //      ((Scsp *)soundr)->run();
       yabsys.DecilineCount = 0;
       yabsys.LineCount++;
@@ -377,12 +380,12 @@ int YabauseExec() {
       {
          // VBlankIN
 //         ((Smpc *) smpc)->INTBACKEnd();
-//         ((Vdp2 *) vdp2_3)->VBlankIN();
+         Vdp2VBlankIN();
       }
       else if (yabsys.LineCount == 263)
       {
          // VBlankOUT
-//         ((Vdp2 *) vdp2_3)->VBlankOUT();
+         Vdp2VBlankOUT();
          yabsys.LineCount = 0;
       }
    }

@@ -34,77 +34,77 @@ typedef struct
 
 typedef struct
 {
-   unsigned char SMR;     // 0xFFFFFE00
-   unsigned char BRR;     // 0xFFFFFE01
-   unsigned char SCR;     // 0xFFFFFE02
-   unsigned char TDR;     // 0xFFFFFE03
-   unsigned char SSR;     // 0xFFFFFE04
-   unsigned char RDR;     // 0xFFFFFE05
-   unsigned char TIER;    // 0xFFFFFE10
-   unsigned char FTCSR;   // 0xFFFFFE11
-   unsigned short FRC;    // 0xFFFFFE12
-                          // 0xFFFFFE13
-   unsigned char TCR;     // 0xFFFFFE16
-   unsigned short FICR;   // 0xFFFFFE18
-                          // 0xFFFFFE19
-   unsigned short IPRB;   // 0xFFFFFE60
-   unsigned short VCRA;   // 0xFFFFFE62
-   unsigned short VCRB;   // 0xFFFFFE64
-   unsigned short VCRC;   // 0xFFFFFE66
-   unsigned short VCRD;   // 0xFFFFFE68
-   unsigned char DRCR0;   // 0xFFFFFE71
-   unsigned char DRCR1;   // 0xFFFFFE72
-   unsigned char WTCSR;   // 0xFFFFFE80
-   unsigned char WTCNT;   // 0xFFFFFE81
-   unsigned char RSTCSR;  // 0xFFFFFE83
-   unsigned char SBYCR;   // 0xFFFFFE91
-   unsigned char CCR;     // 0xFFFFFE92
-   unsigned short ICR;    // 0xFFFFFEE0
-   unsigned short IPRA;   // 0xFFFFFEE2
-   unsigned short VCRWDT; // 0xFFFFFEE4
-   unsigned long DVSR;    // 0xFFFFFF00
-   unsigned long DVDNT;   // 0xFFFFFF04
-   unsigned long DVCR;    // 0xFFFFFF08
-   unsigned long VCRDIV;  // 0xFFFFFF0C
-   unsigned long DVDNTH;  // 0xFFFFFF10
-   unsigned long DVDNTL;  // 0xFFFFFF14
-   unsigned long SAR0;    // 0xFFFFFF80
-   unsigned long DAR0;    // 0xFFFFFF84
-   unsigned long TCR0;    // 0xFFFFFF88
-   unsigned long CHCR0;   // 0xFFFFFF8C
-   unsigned long SAR1;    // 0xFFFFFF90
-   unsigned long DAR1;    // 0xFFFFFF94
-   unsigned long TCR1;    // 0xFFFFFF98
-   unsigned long CHCR1;   // 0xFFFFFF9C
-   unsigned long VCRDMA0; // 0xFFFFFFA0
-   unsigned long VCRDMA1; // 0xFFFFFFA8
-   unsigned long DMAOR;   // 0xFFFFFFB0
-   unsigned short BCR1;   // 0xFFFFFFE0
-   unsigned short BCR2;   // 0xFFFFFFE4
-   unsigned short WCR;    // 0xFFFFFFE8
-   unsigned short MCR;    // 0xFFFFFFEC
-   unsigned short RTCSR;  // 0xFFFFFFF0
-   unsigned short RTCNT;  // 0xFFFFFFF4
-   unsigned short RTCOR;  // 0xFFFFFFF8
+   u8 SMR;     // 0xFFFFFE00
+   u8 BRR;     // 0xFFFFFE01
+   u8 SCR;     // 0xFFFFFE02
+   u8 TDR;     // 0xFFFFFE03
+   u8 SSR;     // 0xFFFFFE04
+   u8 RDR;     // 0xFFFFFE05
+   u8 TIER;    // 0xFFFFFE10
+   u8 FTCSR;   // 0xFFFFFE11
+   u16 FRC;    // 0xFFFFFE12
+               // 0xFFFFFE13
+   u8 TCR;     // 0xFFFFFE16
+   u16 FICR;   // 0xFFFFFE18
+               // 0xFFFFFE19
+   u16 IPRB;   // 0xFFFFFE60
+   u16 VCRA;   // 0xFFFFFE62
+   u16 VCRB;   // 0xFFFFFE64
+   u16 VCRC;   // 0xFFFFFE66
+   u16 VCRD;   // 0xFFFFFE68
+   u8 DRCR0;   // 0xFFFFFE71
+   u8 DRCR1;   // 0xFFFFFE72
+   u8 WTCSR;   // 0xFFFFFE80
+   u8 WTCNT;   // 0xFFFFFE81
+   u8 RSTCSR;  // 0xFFFFFE83
+   u8 SBYCR;   // 0xFFFFFE91
+   u8 CCR;     // 0xFFFFFE92
+   u16 ICR;    // 0xFFFFFEE0
+   u16 IPRA;   // 0xFFFFFEE2
+   u16 VCRWDT; // 0xFFFFFEE4
+   u32 DVSR;   // 0xFFFFFF00
+   u32 DVDNT;  // 0xFFFFFF04
+   u32 DVCR;   // 0xFFFFFF08
+   u32 VCRDIV; // 0xFFFFFF0C
+   u32 DVDNTH; // 0xFFFFFF10
+   u32 DVDNTL; // 0xFFFFFF14
+   u32 SAR0;   // 0xFFFFFF80
+   u32 DAR0;   // 0xFFFFFF84
+   u32 TCR0;   // 0xFFFFFF88
+   u32 CHCR0;  // 0xFFFFFF8C
+   u32 SAR1;   // 0xFFFFFF90
+   u32 DAR1;   // 0xFFFFFF94
+   u32 TCR1;   // 0xFFFFFF98
+   u32 CHCR1;  // 0xFFFFFF9C
+   u32 VCRDMA0;// 0xFFFFFFA0
+   u32 VCRDMA1;// 0xFFFFFFA8
+   u32 DMAOR;  // 0xFFFFFFB0
+   u16 BCR1;   // 0xFFFFFFE0
+   u16 BCR2;   // 0xFFFFFFE4
+   u16 WCR;    // 0xFFFFFFE8
+   u16 MCR;    // 0xFFFFFFEC
+   u16 RTCSR;  // 0xFFFFFFF0
+   u16 RTCNT;  // 0xFFFFFFF4
+   u16 RTCOR;  // 0xFFFFFFF8
 } Onchip_struct;
 
 typedef struct
 {
-   unsigned char vector;
-   unsigned char level;
+   u8 vector;
+   u8 level;
 } interrupt_struct;
 
 typedef struct
 {
    sh2regs_struct regs;
-
-   u32 delay;
-   u32 cycles;
-   unsigned char isslave;
-   unsigned short instruction;
    Onchip_struct onchip;
    interrupt_struct interrupts[MAX_INTERRUPTS];
-   unsigned long NumberOfInterrupts;
+   u32 NumberOfInterrupts;
+   u32 AddressArray[0x100];
+   u32 delay;
+   u32 cycles;
+   u8 isslave;
+   u16 instruction;
 } SH2_struct;
 
 typedef struct
@@ -124,6 +124,7 @@ int SH2Init(int coreid);
 void SH2DeInit();
 void SH2Reset(SH2_struct *context);
 u32 FASTCALL SH2Exec(SH2_struct *context, u32 cycles);
+void SH2SendInterrupt(SH2_struct *context, u8 vector, u8 level);
 void SH2Step(SH2_struct *context);
 void SH2GetRegisters(SH2_struct *context, sh2regs_struct * r);
 void SH2SetRegisters(SH2_struct *context, sh2regs_struct * r);
@@ -134,5 +135,8 @@ u32 FASTCALL OnchipReadLong(u32 addr);
 void FASTCALL OnchipWriteByte(u32 addr, u8 val);
 void FASTCALL OnchipWriteWord(u32 addr, u16 val);
 void FASTCALL OnchipWriteLong(u32 addr, u32 val);
+
+u32 FASTCALL AddressArrayReadLong(u32 addr);
+void FASTCALL AddressArrayWriteLong(u32 addr, u32 val);
 
 #endif

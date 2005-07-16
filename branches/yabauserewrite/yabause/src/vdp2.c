@@ -20,6 +20,7 @@
 
 #include <stdlib.h>
 #include "vdp2.h"
+#include "scu.h"
 #include "sh2core.h"
 #include "yabause.h"
 
@@ -106,20 +107,20 @@ void Vdp2Reset(void) {
 
 void Vdp2VBlankIN(void) {
    Vdp2Regs->TVSTAT |= 0x0008;
-//        satmem->scu->sendVBlankIN();
+   ScuSendVBlankIN();
 
    if (yabsys.IsSSH2Running)
-      SH2SendInterrupt(SSH2, 0x6, 0x43);
+      SH2SendInterrupt(SSH2, 0x43, 0x6);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void Vdp2HBlankIN(void) {
    Vdp2Regs->TVSTAT |= 0x0004;
-//        satmem->scu->sendHBlankIN();
+   ScuSendHBlankIN();
 
    if (yabsys.IsSSH2Running)
-      SH2SendInterrupt(SSH2, 0x2, 0x41);
+      SH2SendInterrupt(SSH2, 0x41, 0x2);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -137,7 +138,7 @@ void Vdp2VBlankOUT(void) {
      // draw here
   }
 
-//  satmem->scu->sendVBlankOUT();
+  ScuSendVBlankOUT();
 }
 
 //////////////////////////////////////////////////////////////////////////////

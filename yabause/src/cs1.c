@@ -21,9 +21,10 @@
 #include <stdlib.h>
 #include "cs1.h"
 
-Cs1 * Cs1Area;
+//Cs1 * Cs1Area;
 
 void Cs1Init(const char * file, int type) {
+/*
 	Cs1Area = (Cs1 *) malloc(sizeof(Cs1));
 
 	if (Cs1Area == NULL)
@@ -86,11 +87,11 @@ void Cs1Init(const char * file, int type) {
 
 	Cs1Area->carttype = type;
 	Cs1Area->cartfile = file;
-
-	return 0;
+*/
 }
 
 void Cs1DeInit(void) {
+/*
 	switch (Cs1Area->carttype) {
 	case CART_BACKUPRAM4MBIT: // 4 Mbit Backup Ram
 		MemorySave(Cs1Area->srammi, Cs1Area->sramarea, Cs1Area->cartfile, 0, 0x100000);
@@ -110,48 +111,65 @@ void Cs1DeInit(void) {
 	Cs1Area->srammi->Delete(Cs1Area->sramarea);
 	free(Cs1Area->srammi);
 	free(Cs1Area);
+*/
 }
 
 u8 FASTCALL Cs1ReadByte(u32 addr) {
+/*
 	if (addr == 0xFFFFFF)
 		return Cs1Area->cartid;
 
 	return Cs1Area->srammi->ReadByte(Cs1Area->sramarea, addr);
+*/
+   return 0xFF;
 }
 
 u16 FASTCALL Cs1ReadWord(u32 addr) {
+/*
 	if (addr == 0xFFFFFE)
 		return (0xFF00 | Cs1Area->cartid);
 
 	return Cs1Area->srammi->ReadWord(Cs1Area->sramarea, addr);
+*/
+   return 0xFFFF;
 }
 
 u32 FASTCALL Cs1ReadLong(u32 addr) {
+/*
 	if (addr == 0xFFFFFC)
 		return (0xFF00FF00 | (Cs1Area->cartid << 16) | Cs1Area->cartid);
 
 	return Cs1Area->srammi->ReadLong(Cs1Area->sramarea, addr);
+*/
+   return 0xFFFFFFFF;
 }
 
 void FASTCALL Cs1WriteByte(u32 addr, u8 val) {
+/*
 	if (addr == 0xFFFFFF)
 		return;
 	Cs1Area->srammi->WriteByte(Cs1Area->sramarea, addr, val);
+*/
 }
 
 void FASTCALL Cs1WriteWord(u32 addr, u16 val) {
+/*
 	if (addr == 0xFFFFFF)
 		return;
 	Cs1Area->srammi->WriteWord(Cs1Area->sramarea, addr, val);
+*/
 }
 
 void FASTCALL Cs1WriteLong(u32 addr, u32 val) {
+/*
 	if (addr == 0xFFFFFF)
 		return;
 	Cs1Area->srammi->WriteLong(Cs1Area->sramarea, addr, val);
+*/
 }
 
 int Cs1SaveState(FILE * fp) {
+/*
 	int offset;
 
 	offset = StateWriteHeader(fp, "CS1 ", 1);
@@ -162,9 +180,12 @@ int Cs1SaveState(FILE * fp) {
 	// Write the areas associated with the cart type here
 
 	return StateFinishHeader(fp, offset);
+*/
+   return 0;
 }
 
 int Cs1LoadState(FILE * fp, int version, int size) {
+/*
 	int oldtype = Cs1Area->carttype;
 	// Read cart type
 	fread((void *) &Cs1Area->carttype, 4, 1, fp);
@@ -175,4 +196,6 @@ int Cs1LoadState(FILE * fp, int version, int size) {
 	// Read the areas associated with the cart type here
 
 	return size;
+*/
+   return 0;
 }

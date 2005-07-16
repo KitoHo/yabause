@@ -18,13 +18,14 @@
     Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include "memory.h"
-#include "debug.h"
-#include "sh2core.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+
+#include "memory.h"
+#include "cs2.h"
+#include "debug.h"
+#include "sh2core.h"
 
 ////////////////////////////////////////////////////////////////
 
@@ -284,6 +285,12 @@ void MappedMemoryInit() {
                                 &LowWramMemoryWriteByte,
                                 &LowWramMemoryWriteWord,
                                 &LowWramMemoryWriteLong);
+   FillMemoryArea(0x580, 0x590, &Cs2ReadByte,
+                                &Cs2ReadWord,
+                                &Cs2ReadLong,
+                                &Cs2WriteByte,
+                                &Cs2WriteWord,
+                                &Cs2WriteLong);
    FillMemoryArea(0x600, 0x7FF, &HighWramMemoryReadByte,
                                 &HighWramMemoryReadWord,
                                 &HighWramMemoryReadLong,

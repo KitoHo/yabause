@@ -69,7 +69,9 @@ Cs2 * Cs2Area;
 
 extern CDInterface *CDCoreList[];
 
-u8 FASTCALL Cs2GetByte(u32 addr) {
+//////////////////////////////////////////////////////////////////////////////
+
+u8 FASTCALL Cs2ReadByte(u32 addr) {
   if(Cs2Area->carttype == CART_NETLINK) {
 /*
      switch (addr) {
@@ -87,6 +89,8 @@ u8 FASTCALL Cs2GetByte(u32 addr) {
 
   return 0xFF; // only netlink seems to use byte-access
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL Cs2WriteByte(u32 addr, u8 val) {
   if(Cs2Area->carttype == CART_NETLINK) {
@@ -111,6 +115,8 @@ void FASTCALL Cs2WriteByte(u32 addr, u8 val) {
 //      Memory::setByte(addr, val);
    }
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 u16 FASTCALL Cs2ReadWord(u32 addr) {
   u16 val = 0;
@@ -224,6 +230,8 @@ u16 FASTCALL Cs2ReadWord(u32 addr) {
   return val;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void FASTCALL Cs2WriteWord(u32 addr, u16 val) {
   switch(addr) {
     case 0x90008:
@@ -259,6 +267,8 @@ void FASTCALL Cs2WriteWord(u32 addr, u16 val) {
                   break;
   }
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 u32 FASTCALL Cs2ReadLong(u32 addr) {
   long i;
@@ -387,6 +397,8 @@ u32 FASTCALL Cs2ReadLong(u32 addr) {
   return val;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void FASTCALL Cs2WriteLong(u32 addr, u32 val) {
 #if CDDEBUG
    fprintf(stderr, "cs2\t: Long writing isn't implemented\n");
@@ -394,7 +406,9 @@ void FASTCALL Cs2WriteLong(u32 addr, u32 val) {
 //   T3WriteLong(Cs2Area->mem, addr, val);
 }
 
-int Cs2Init(int carttype, int coreid, const char *cdrompath, const char *mpegpath) {
+//////////////////////////////////////////////////////////////////////////////
+
+int Cs2Init(int carttype, int coreid, const char *cdpath, const char *mpegpath) {
    int i;
    if ((Cs2Area = (Cs2 *) malloc(sizeof(Cs2))) == NULL)
       return -1;
@@ -416,6 +430,11 @@ int Cs2Init(int carttype, int coreid, const char *cdrompath, const char *mpegpat
          break;
       }
    }
+
+   if (Cs2Area->cdi == NULL)
+      return -1;
+
+   Cs2Area->cdi->Init(cdpath);
 
    Cs2Reset();
 
@@ -439,14 +458,16 @@ int Cs2Init(int carttype, int coreid, const char *cdrompath, const char *mpegpat
    return 0;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2DeInit(void) {
-//   if (Cs2Area->cdi != NULL) {
-//      Cs2Area->cdi->DeInit();
-//   }
-//   free(Cs2Area->cdi);
-//   T3MemoryDelete(Cs2Area->mem);
+   if (Cs2Area->cdi != NULL) {
+      Cs2Area->cdi->DeInit();
+   }
    free(Cs2Area);
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2Reset(void) {
   unsigned long i, i2;
@@ -579,7 +600,9 @@ void Cs2Reset(void) {
   Cs2Area->mpegstm[1].audchannum = Cs2Area->mpegstm[1].vidchannum = 0x00;
 }
 
-void Cs2Run(unsigned long timing) {
+//////////////////////////////////////////////////////////////////////////////
+
+void Cs2Exec(unsigned long timing) {
     Cs2Area->_periodiccycles += timing;
 
     if (Cs2Area->_commandtiming > 0) {
@@ -685,9 +708,13 @@ void Cs2Run(unsigned long timing) {
     }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2Command(void) {
   Cs2Area->_command = 1;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2SetTiming(int playing) {
   if (playing) {
@@ -701,6 +728,8 @@ void Cs2SetTiming(int playing) {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2SetCommandTiming(unsigned char cmd) {
    switch(cmd) {
       default:
@@ -708,6 +737,8 @@ void Cs2SetCommandTiming(unsigned char cmd) {
                break;
    }
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2Execute(void) {
   Cs2Area->reg.HIRQ &= ~CDB_HIRQ_CMOK;
@@ -1127,10 +1158,14 @@ void Cs2Execute(void) {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2GetStatus(void) {
   doCDReport();
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2GetHardwareInfo(void) {
   if ((Cs2Area->status & 0xF) != CDB_STAT_OPEN && (Cs2Area->status & 0xF) != CDB_STAT_NODISC)
@@ -1151,6 +1186,8 @@ void Cs2GetHardwareInfo(void) {
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2GetToc(void) {
   Cs2Area->cdi->ReadTOC(Cs2Area->TOC);
 
@@ -1164,6 +1201,8 @@ void Cs2GetToc(void) {
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_DRDY;
   Cs2Area->status = CDB_STAT_PAUSE;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2GetSessionInfo(void) {
 
@@ -1188,6 +1227,8 @@ void Cs2GetSessionInfo(void) {
 
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2InitializeCDSystem(void) {
   u16 val = 0;
@@ -1293,6 +1334,8 @@ void Cs2EndDataTransfer(void) {
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2PlayDisc(void) {
   u32 pdspos;
   u32 pdepos;
@@ -1364,6 +1407,8 @@ void Cs2PlayDisc(void) {
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2SeekDisc(void) {
   if (Cs2Area->reg.CR1 & 0x80)
   {
@@ -1410,6 +1455,8 @@ void Cs2SeekDisc(void) {
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2GetSubcodeQRW(void) {
   // According to Tyranid's doc, the subcode type is stored in the low byte
   // of CR2. However, Sega's CDC library writes the type to the low byte
@@ -1439,6 +1486,8 @@ void Cs2GetSubcodeQRW(void) {
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_DRDY;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2SetCDDeviceConnection(void) {
   u32 scdcfilternum;
 
@@ -1455,6 +1504,8 @@ void Cs2SetCDDeviceConnection(void) {
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_ESEL;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2GetLastBufferDestination(void) {
   Cs2Area->reg.CR1 = (Cs2Area->status << 8);
   Cs2Area->reg.CR2 = 0;
@@ -1462,6 +1513,8 @@ void Cs2GetLastBufferDestination(void) {
   Cs2Area->reg.CR4 = 0;
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2SetFilterRange(void) {
   unsigned char sfrfilternum;
@@ -1475,6 +1528,8 @@ void Cs2SetFilterRange(void) {
   doCDReport();
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_ESEL;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2SetFilterSubheaderConditions(void) {
   u8 sfscfilternum;
@@ -1492,6 +1547,8 @@ void Cs2SetFilterSubheaderConditions(void) {
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_ESEL;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2GetFilterSubheaderConditions(void) {
   u8 gfscfilternum;
 
@@ -1503,6 +1560,8 @@ void Cs2GetFilterSubheaderConditions(void) {
   Cs2Area->reg.CR4 = (Cs2Area->filter[gfscfilternum].smval << 8) | Cs2Area->filter[gfscfilternum].cival;
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_ESEL;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2SetFilterMode(void) {
   u8 sfmfilternum;
@@ -1528,6 +1587,8 @@ void Cs2SetFilterMode(void) {
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_ESEL;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2GetFilterMode(void) {
   u8 gfmfilternum;
 
@@ -1539,6 +1600,8 @@ void Cs2GetFilterMode(void) {
   Cs2Area->reg.CR4 = 0;
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_ESEL;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2SetFilterConnection(void) {
   u8 sfcfilternum;
@@ -1560,6 +1623,8 @@ void Cs2SetFilterConnection(void) {
   doCDReport();
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_ESEL;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2ResetSelector(void) {
   // still needs a bit of work
@@ -1662,6 +1727,8 @@ void Cs2ResetSelector(void) {
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_ESEL;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2GetBufferSize(void) {
   Cs2Area->reg.CR1 = Cs2Area->status << 8;
   Cs2Area->reg.CR2 = Cs2Area->blockfreespace;
@@ -1669,6 +1736,8 @@ void Cs2GetBufferSize(void) {
   Cs2Area->reg.CR4 = MAX_BLOCKS;
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2GetSectorNumber(void) {
   u32 gsnbufno;
@@ -1685,6 +1754,8 @@ void Cs2GetSectorNumber(void) {
   Cs2Area->reg.CR3 = 0;
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_DRDY;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2CalculateActualSize(void) {
   u16 i;
@@ -1713,6 +1784,8 @@ void Cs2CalculateActualSize(void) {
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_ESEL;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2GetActualSize(void) {
   Cs2Area->reg.CR1 = (Cs2Area->status << 8) | ((Cs2Area->calcsize >> 16) & 0xFF);
   Cs2Area->reg.CR2 = Cs2Area->calcsize & 0xFFFF;
@@ -1720,6 +1793,8 @@ void Cs2GetActualSize(void) {
   Cs2Area->reg.CR4 = 0;
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_ESEL;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2GetSectorInfo(void) {
   u32 gsisctnum;
@@ -1747,6 +1822,8 @@ void Cs2GetSectorInfo(void) {
   Cs2Area->reg.CR1 = (CDB_STAT_REJECT << 8) | (Cs2Area->reg.CR1 & 0xFF);
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_ESEL;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2SetSectorLength(void) {
   switch (Cs2Area->reg.CR1 & 0xFF) {
@@ -1785,6 +1862,8 @@ void Cs2SetSectorLength(void) {
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_ESEL;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2GetSectorData(void) {
   u32 gsdbufno;
 
@@ -1814,6 +1893,8 @@ void Cs2GetSectorData(void) {
      Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_EHST;
   }
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2DeleteSectorData(void) {
   u32 dsdsectoffset = 0;
@@ -1874,6 +1955,8 @@ void Cs2DeleteSectorData(void) {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2GetThenDeleteSectorData(void) {
   u32 gtdsdbufno;
 
@@ -1903,6 +1986,8 @@ void Cs2GetThenDeleteSectorData(void) {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2PutSectorData(void) {
   u32 psdfiltno;
 
@@ -1923,6 +2008,8 @@ void Cs2PutSectorData(void) {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2GetCopyError(void) {
   Cs2Area->reg.CR1 = Cs2Area->status << 8;
   Cs2Area->reg.CR2 = 0;
@@ -1930,6 +2017,8 @@ void Cs2GetCopyError(void) {
   Cs2Area->reg.CR4 = 0;
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2ChangeDirectory(void) {
   u32 cdfilternum;
@@ -1955,6 +2044,8 @@ void Cs2ChangeDirectory(void) {
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_EFLS;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2ReadDirectory(void) {
   u32 rdfilternum;
 
@@ -1979,6 +2070,8 @@ void Cs2ReadDirectory(void) {
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_EFLS;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2GetFileSystemScope(void) {
   // may need to fix this
   Cs2Area->reg.CR1 = Cs2Area->status << 8;
@@ -1988,6 +2081,8 @@ void Cs2GetFileSystemScope(void) {
 
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_EFLS;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2GetFileInfo(void) {
   u32 gfifid;
@@ -2021,6 +2116,8 @@ void Cs2GetFileInfo(void) {
 
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2ReadFile(void) {
   u32 rffid, rfoffset, rfsize;
 
@@ -2044,6 +2141,8 @@ void Cs2ReadFile(void) {
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_EFLS;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2AbortFile(void) {
   if ((Cs2Area->status & 0xF) != CDB_STAT_OPEN &&
       (Cs2Area->status & 0xF) != CDB_STAT_NODISC)
@@ -2055,10 +2154,14 @@ void Cs2AbortFile(void) {
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_EFLS;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2MpegGetStatus(void) {
    doMPEGReport();
    Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_MPCM;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2MpegGetInterrupt(void) {
    u32 mgiworkinterrupt;
@@ -2076,12 +2179,16 @@ void Cs2MpegGetInterrupt(void) {
    Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_MPCM;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2MpegSetInterruptMask(void) {
    Cs2Area->mpegintmask = ((Cs2Area->reg.CR1 & 0xFF) << 16) | Cs2Area->reg.CR2;
 
    doMPEGReport();
    Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_MPCM;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2MpegInit(void) {
 
@@ -2103,12 +2210,16 @@ void Cs2MpegInit(void) {
   // future mpeg-related variables should be initialized here
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2MpegSetMode(void) {
    // fix me
 
    doMPEGReport();
    Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_MPCM;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2MpegPlay(void) {
    // fix me
@@ -2117,12 +2228,16 @@ void Cs2MpegPlay(void) {
    Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_MPCM;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2MpegSetDecodingMethod(void) {
    // fix me
 
    doMPEGReport();
    Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_MPCM;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2MpegSetConnection(void) {
    int mscnext = (Cs2Area->reg.CR3 >> 8);
@@ -2152,6 +2267,8 @@ void Cs2MpegSetConnection(void) {
    Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_MPCM;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2MpegGetConnection(void) {
    int mgcnext = (Cs2Area->reg.CR3 >> 8);
 
@@ -2174,6 +2291,8 @@ void Cs2MpegGetConnection(void) {
 
    Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_MPCM;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2MpegSetStream(void) {
    int mssnext = (Cs2Area->reg.CR3 >> 8);
@@ -2203,6 +2322,8 @@ void Cs2MpegSetStream(void) {
    Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_MPCM;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2MpegGetStream(void) {
    int mgsnext = (Cs2Area->reg.CR3 >> 8);
 
@@ -2226,12 +2347,16 @@ void Cs2MpegGetStream(void) {
    Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_MPCM;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2MpegDisplay(void) {
    // fix me(should be setting display setting)
 
    doMPEGReport();
    Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_MPCM;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2MpegSetWindow(void) {
    // fix me(should be setting windows settings)
@@ -2241,12 +2366,16 @@ void Cs2MpegSetWindow(void) {
    Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_MPCM;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2MpegSetBorderColor() {
    // fix me(should be setting border color)
 
    doMPEGReport();
    Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_MPCM;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2MpegSetFade() {
    // fix me(should be setting fade setting)
@@ -2255,6 +2384,8 @@ void Cs2MpegSetFade() {
    Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_MPCM;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2MpegSetVideoEffects(void) {
    // fix me(should be setting video effects settings)
 
@@ -2262,10 +2393,14 @@ void Cs2MpegSetVideoEffects(void) {
    Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_MPCM;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2MpegSetLSI() {
    // fix me(should be setting the LSI, among other things)
    Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_MPCM;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2CmdE0(void) {
   int mpegauth;
@@ -2316,6 +2451,8 @@ void Cs2CmdE0(void) {
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2CmdE1(void) {
   Cs2Area->reg.CR1 = (Cs2Area->status << 8);
   if (Cs2Area->reg.CR2)
@@ -2326,6 +2463,8 @@ void Cs2CmdE1(void) {
   Cs2Area->reg.CR4 = 0;
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2CmdE2(void) {
   u16 i;
@@ -2372,6 +2511,8 @@ void Cs2CmdE2(void) {
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK | CDB_HIRQ_MPED;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 u8 Cs2FADToTrack(u32 val) {
   int i;
   for (i = 0; i < 99; i++)
@@ -2385,6 +2526,8 @@ u8 Cs2FADToTrack(u32 val) {
   return 0;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 u32 Cs2TrackToFAD(u16 trackandindex) {
   if (trackandindex == 0xFFFF)
      // leadout position
@@ -2397,6 +2540,8 @@ u32 Cs2TrackToFAD(u16 trackandindex) {
   return 0;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2SetupDefaultPlayStats(u8 track_number) {
   if (track_number != 0xFF)
   {
@@ -2408,6 +2553,8 @@ void Cs2SetupDefaultPlayStats(u8 track_number) {
      Cs2Area->FAD = Cs2Area->TOC[track_number - 1] & 0x00FFFFFF;
   }
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 block_struct * Cs2AllocateBlock(u8 * blocknum) {
   unsigned long i;
@@ -2432,12 +2579,16 @@ block_struct * Cs2AllocateBlock(u8 * blocknum) {
   return NULL;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2FreeBlock(block_struct * blk) {
   blk->size = -1;
   Cs2Area->blockfreespace++;
   Cs2Area->isbufferfull = 0;
   Cs2Area->reg.HIRQ &= ~CDB_HIRQ_BFUL;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void Cs2SortBlocks(partition_struct * part) {
   unsigned long i, i2;
@@ -2461,12 +2612,16 @@ void Cs2SortBlocks(partition_struct * part) {
   }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 partition_struct * Cs2GetPartition(filter_struct * curfilter)
 {
   // go through various filter conditions here(fix me)
 
   return &Cs2Area->partition[curfilter->condtrue];
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 partition_struct * Cs2FilterData(filter_struct * curfilter, int isaudio)
 {
@@ -2602,6 +2757,7 @@ partition_struct * Cs2FilterData(filter_struct * curfilter, int isaudio)
   return fltpartition;
 }
 
+//////////////////////////////////////////////////////////////////////////////
 
 int Cs2CopyDirRecord(u8 * buffer, dirrec_struct * dirrec)
 {
@@ -2703,6 +2859,8 @@ int Cs2CopyDirRecord(u8 * buffer, dirrec_struct * dirrec)
 
   return 0;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 int Cs2ReadFileSystem(filter_struct * curfilter, u32 fid, int isoffset)
 {
@@ -2852,6 +3010,8 @@ int Cs2ReadFileSystem(filter_struct * curfilter, u32 fid, int isoffset)
   return 0;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2SetupFileInfoTransfer(unsigned long fid) {
   Cs2Area->transfileinfo[0] = (Cs2Area->fileinfo[fid].lba & 0xFF000000) >> 24;
   Cs2Area->transfileinfo[1] = (Cs2Area->fileinfo[fid].lba & 0x00FF0000) >> 16;
@@ -2868,6 +3028,8 @@ void Cs2SetupFileInfoTransfer(unsigned long fid) {
   Cs2Area->transfileinfo[10] = (u8) fid;
   Cs2Area->transfileinfo[11] = Cs2Area->fileinfo[fid].flags;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 partition_struct * Cs2ReadUnFilteredSector(unsigned long rufsFAD) {
   partition_struct * rufspartition;
@@ -2954,6 +3116,8 @@ partition_struct * Cs2ReadUnFilteredSector(unsigned long rufsFAD) {
   return NULL;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 partition_struct * Cs2ReadFilteredSector(unsigned long rfsFAD) {
   char syncheader[12] = { 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
                           0xFF, 0xFF, 0xFF, 0x00};
@@ -2991,6 +3155,8 @@ partition_struct * Cs2ReadFilteredSector(unsigned long rfsFAD) {
 
   return NULL;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 unsigned char Cs2GetRegionID() {
    partition_struct * gripartition;
@@ -3049,6 +3215,8 @@ unsigned char Cs2GetRegionID() {
 
    return ret;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 int Cs2saveState(FILE * fp) {
    int offset, i;
@@ -3140,6 +3308,8 @@ int Cs2saveState(FILE * fp) {
 
    return StateFinishHeader(fp, offset);
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 int Cs2loadState(FILE * fp, int version, int size) {
    int i, i2;
@@ -3263,3 +3433,4 @@ int Cs2loadState(FILE * fp, int version, int size) {
    return size;
 }
 
+//////////////////////////////////////////////////////////////////////////////

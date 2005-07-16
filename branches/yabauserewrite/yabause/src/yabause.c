@@ -19,9 +19,12 @@
 */
 
 #include <sys/types.h>
+#include "yabause.h"
 #include "sh2core.h"
 #include "memory.h"
 #include "SDL.h"
+#include "cs0.h"
+#include "cs2.h"
 #include "scu.h"
 #include "vdp2.h"
 #include "yui.h"
@@ -303,7 +306,9 @@ int YabauseInit(int sh2coretype, int gfxcoretype, int sndcoretype,
 
   // Initialize CS0 area here
   // Initialize CS1 area here
-  // Initialize CS2 area here
+  if (Cs2Init(CART_NONE, cdcoretype, cdpath, mpegpath) != 0)
+     return -1;
+
   if (ScuInit() != 0)
      return -1;
 
@@ -345,6 +350,7 @@ void YabauseDeInit() {
   if (LowWram)
      T2MemoryDeInit(LowWram);
 
+  Cs2DeInit();
   ScuDeInit();
   Vdp2DeInit();
 }
@@ -395,7 +401,7 @@ int YabauseExec() {
    while (yabsys.CycleCountII > yabsys.Duf)
    {
 //      ((Smpc *) smpc)->execute2(10);
-//      ((Cs2 *)cs2)->run(10);
+      Cs2Exec(10);
 //      msh->run(10);
 //      ssh->run(10);
 //      ((Scu *)scu)->run(10);

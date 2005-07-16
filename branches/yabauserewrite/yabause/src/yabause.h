@@ -1,6 +1,8 @@
 #ifndef YABAUSE_H
 #define YABAUSE_H
 
+#include "core.h"
+
 #define CLKTYPE_26MHZNTSC       0
 #define CLKTYPE_28MHZNTSC       1
 #define CLKTYPE_26MHZPAL        2

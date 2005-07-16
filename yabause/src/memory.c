@@ -304,14 +304,10 @@ u8 FASTCALL MappedMemoryReadByte(u32 addr) {
          // Cache/Non-Cached
          return ReadByteList[(addr >> 16) & 0xFFF](addr);
       }
+/*
       case 0x2:
       {
          // Purge Area
-         break;
-      }
-      case 0x3:
-      {
-         // Address Array
          break;
       }
       case 0x4:
@@ -338,6 +334,7 @@ u8 FASTCALL MappedMemoryReadByte(u32 addr) {
          }
          break;
       }
+*/
       default:
       {
          return UnhandledMemoryReadByte(addr);
@@ -359,14 +356,10 @@ u16 FASTCALL MappedMemoryReadWord(u32 addr) {
          // Cache/Non-Cached
          return ReadWordList[(addr >> 16) & 0xFFF](addr);
       }
+/*
       case 0x2:
       {
          // Purge Area
-         break;
-      }
-      case 0x3:
-      {
-         // Address Array
          break;
       }
       case 0x4:
@@ -393,6 +386,7 @@ u16 FASTCALL MappedMemoryReadWord(u32 addr) {
          }
          break;
       }
+*/
       default:
       {
          return UnhandledMemoryReadWord(addr);
@@ -414,22 +408,26 @@ u32 FASTCALL MappedMemoryReadLong(u32 addr)  {
          // Cache/Non-Cached
          return ReadLongList[(addr >> 16) & 0xFFF](addr);
       }
+/*
       case 0x2:
       {
          // Purge Area
          break;
       }
+*/
       case 0x3:
       {
          // Address Array
-         break;
+         return AddressArrayReadLong(addr);
       }
+/*
       case 0x4:
       case 0x6:
       {
          // Data Array
          break;
       }
+*/
       case 0x7:
       {
          if (addr >= 0xFFFFFE00)
@@ -469,14 +467,10 @@ void FASTCALL MappedMemoryWriteByte(u32 addr, u8 val)  {
          WriteByteList[(addr >> 16) & 0xFFF](addr, val);
          return;
       }
+/*
       case 0x2:
       {
          // Purge Area
-         return;
-      }
-      case 0x3:
-      {
-         // Address Array
          return;
       }
       case 0x4:
@@ -503,6 +497,7 @@ void FASTCALL MappedMemoryWriteByte(u32 addr, u8 val)  {
          }
          return;
       }
+*/
       default:
       {
          UnhandledMemoryWriteByte(addr, val);
@@ -524,14 +519,10 @@ void FASTCALL MappedMemoryWriteWord(u32 addr, u16 val)  {
          WriteWordList[(addr >> 16) & 0xFFF](addr, val);
          return;
       }
+/*
       case 0x2:
       {
          // Purge Area
-         return;
-      }
-      case 0x3:
-      {
-         // Address Array
          return;
       }
       case 0x4:
@@ -558,6 +549,7 @@ void FASTCALL MappedMemoryWriteWord(u32 addr, u16 val)  {
          }
          return;
       }
+*/
       default:
       {
          UnhandledMemoryWriteWord(addr, val);
@@ -587,14 +579,17 @@ void FASTCALL MappedMemoryWriteLong(u32 addr, u32 val)  {
       case 0x3:
       {
          // Address Array
+         AddressArrayWriteLong(addr, val);
          return;
       }
+/*
       case 0x4:
       case 0x6:
       {
          // Data Array
          return;
       }
+*/
       case 0x7:
       {
          if (addr >= 0xFFFFFE00)

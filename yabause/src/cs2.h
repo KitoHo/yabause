@@ -244,7 +244,7 @@ void FASTCALL 	Cs2WriteByte(u32, u8);
 void FASTCALL 	Cs2WriteWord(u32, u16);
 void FASTCALL 	Cs2WriteLong(u32, u32);
 
-void Cs2Run(unsigned long);
+void Cs2Exec(unsigned long);
 void Cs2Execute(void);
 void Cs2Reset(void);
 void Cs2SetTiming(int);
@@ -327,19 +327,19 @@ void Cs2CmdE0(void);                       // 0xE0
 void Cs2CmdE1(void);                       // 0xE1
 void Cs2CmdE2(void);                       // 0xE2
 
-u8 Cs2FADToTrack(u32);
-u32 Cs2TrackToFAD(u16);
-void Cs2SetupDefaultPlayStats(u8);
-block_struct * Cs2AllocateBlock(unsigned char *);
-void Cs2FreeBlock(block_struct *);
-void Cs2SortBlocks(partition_struct *);
-partition_struct * Cs2GetPartition(filter_struct *);
-partition_struct * Cs2FilterData(filter_struct *, int);
-int Cs2CopyDirRecord(unsigned char *, dirrec_struct *);
-int Cs2ReadFileSystem(filter_struct *, unsigned long, int);
-void Cs2SetupFileInfoTransfer(unsigned long);
-partition_struct * Cs2ReadUnFilteredSector(unsigned long);
-partition_struct * Cs2ReadFilteredSector(unsigned long);
+u8 Cs2FADToTrack(u32 val);
+u32 Cs2TrackToFAD(u16 trackandindex);
+void Cs2SetupDefaultPlayStats(u8 track_number);
+block_struct * Cs2AllocateBlock(u8 * blocknum);
+void Cs2FreeBlock(block_struct * blk);
+void Cs2SortBlocks(partition_struct * part);
+partition_struct * Cs2GetPartition(filter_struct * curfilter);
+partition_struct * Cs2FilterData(filter_struct * curfilter, int isaudio);
+int Cs2CopyDirRecord(u8 * buffer, dirrec_struct * dirrec);
+int Cs2ReadFileSystem(filter_struct * curfilter, u32 fid, int isoffset);
+void Cs2SetupFileInfoTransfer(unsigned long fid);
+partition_struct * Cs2ReadUnFilteredSector(unsigned long rufsFAD);
+partition_struct * Cs2ReadFilteredSector(unsigned long rfsFAD);
 unsigned char Cs2GetRegionID(void);
 
 int Cs2SaveState(FILE *);

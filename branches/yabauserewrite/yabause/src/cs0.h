@@ -20,7 +20,6 @@
 #ifndef CS0_H
 #define CS0_H
 
-#include <stdio.h>
 #include "memory.h"
 
 #define CART_NONE               0
@@ -33,6 +32,7 @@
 #define CART_DRAM32MBIT         7
 #define CART_NETLINK            8
 
+/*
 typedef struct {
 	int carttype;
 	void * biosarea;
@@ -43,7 +43,7 @@ typedef struct {
 
 extern Cs0 * Cs0Area;
 
-void Cs0Init(const char *, int);
+int Cs0Init(const char *, int);
 void Cs0DeInit(void);
 
 u8 FASTCALL 	Cs0ReadByte(u32);
@@ -55,5 +55,6 @@ void FASTCALL 	Cs0WriteLong(u32, u32);
 
 int Cs0SaveState(FILE *);
 int Cs0LoadState(FILE *, int, int);
+*/
 
 #endif

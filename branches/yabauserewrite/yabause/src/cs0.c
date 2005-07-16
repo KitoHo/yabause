@@ -20,9 +20,10 @@
 #include <stdlib.h>
 #include "cs0.h"
 
-Cs0 * Cs0Area;
+//Cs0 * Cs0Area;
 
 int Cs0Init(const char * file, int type) {
+/*
 	Cs0Area = (Cs0 *) malloc(sizeof(Cs0));
 
 	if (Cs0Area == NULL)
@@ -60,19 +61,22 @@ int Cs0Init(const char * file, int type) {
 	}
 
 	Cs0Area->carttype = type;
-
+*/
 	return 0;
 }
 
 void Cs0DeInit(void) {
+/*
 	Cs0Area->biosmi->Delete(Cs0Area->biosarea);
 	Cs0Area->drammi->Delete(Cs0Area->dramarea);
 	free(Cs0Area->biosmi);
 	free(Cs0Area->drammi);
 	free(Cs0Area);
+*/
 }
 
 void FASTCALL Cs0WriteByte(u32 addr, u8 val) {
+/*
 	switch (addr >> 20) {
 	case 0x00:  
 		if ((addr & 0x80000) == 0) // EEPROM
@@ -107,9 +111,11 @@ void FASTCALL Cs0WriteByte(u32 addr, u8 val) {
 	default:   // The rest doesn't matter
 		break;
 	}
+*/
 }
 
 u8 FASTCALL Cs0ReadByte(u32 addr) {
+/*
 	u8 val = 0xFF;
 
 	switch (addr >> 20) {
@@ -159,9 +165,12 @@ u8 FASTCALL Cs0ReadByte(u32 addr) {
 	}
 
 	return val;
+*/
+   return 0;
 }
 
 void FASTCALL Cs0WriteWord(u32 addr, u16 val) {
+/*
 	switch (addr >> 20) {
 	case 0x00:  
 		if ((addr & 0x80000) == 0) // EEPROM
@@ -196,9 +205,11 @@ void FASTCALL Cs0WriteWord(u32 addr, u16 val) {
 	default:   // The rest doesn't matter
 		break;
 	}
+*/
 }
 
 u16 FASTCALL Cs0ReadWord(u32 addr) {
+/*
 	u16 val = 0xFFFF;
 
 	switch (addr >> 20) {
@@ -250,9 +261,12 @@ u16 FASTCALL Cs0ReadWord(u32 addr) {
 	}
 
 	return val;
+*/
+   return 0;
 }
 
 void FASTCALL Cs0WriteLong(u32 addr, u32 val) {
+/*
 	switch (addr >> 20) {
 	case 0x00:  
 		if ((addr & 0x80000) == 0) // EEPROM
@@ -287,9 +301,11 @@ void FASTCALL Cs0WriteLong(u32 addr, u32 val) {
 	default:   // The rest doesn't matter
 		break;
 	}
+*/
 }
 
 u32 FASTCALL Cs0ReadLong(u32 addr) {
+/*
 	u32 val = 0xFFFFFFFF;
 
 	switch (addr >> 20) {
@@ -341,9 +357,13 @@ u32 FASTCALL Cs0ReadLong(u32 addr) {
 	}
 
 	return val;
+*/
+
+   return 0;
 }
 
 int Cs0SaveState(FILE * fp) {
+/*
 	int offset;
 
 	offset = StateWriteHeader(fp, "CS0 ", 1);
@@ -354,9 +374,12 @@ int Cs0SaveState(FILE * fp) {
 	// Write the areas associated with the cart type here
 
 	return StateFinishHeader(fp, offset);
+*/
+   return 0;
 }
 
 int Cs0LoadState(FILE * fp, int version, int size) {
+/*
 	int oldtype = Cs0Area->carttype;
 	// Read cart type
 	fread((void *) &Cs0Area->carttype, 4, 1, fp);
@@ -367,4 +390,6 @@ int Cs0LoadState(FILE * fp, int version, int size) {
 	// Read the areas associated with the cart type here
 
 	return size;
+*/
+   return 0;
 }

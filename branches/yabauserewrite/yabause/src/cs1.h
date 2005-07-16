@@ -23,6 +23,7 @@
 #include "cs0.h"
 #include "memory.h"
 
+/*
 typedef struct {
 	int cartid;
 	int carttype;
@@ -32,6 +33,7 @@ typedef struct {
 } Cs1;
 
 extern Cs1 * Cs1Area;
+*/
 
 void Cs1Init(const char * file, int type);
 void Cs1DeInit(void);

@@ -155,7 +155,7 @@ u32 FASTCALL SH2Exec(SH2_struct *context, u32 cycles)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void SH2SendInterrupt(SH2_struct *context, unsigned char vector, unsigned char level)
+void SH2SendInterrupt(SH2_struct *context, u8 vector, u8 level)
 {
    unsigned long i, i2;
    interrupt_struct tmp;
@@ -288,7 +288,15 @@ u16 FASTCALL OnchipReadWord(u32 addr) {
 //////////////////////////////////////////////////////////////////////////////
 
 u32 FASTCALL OnchipReadLong(u32 addr) {
-   // stub
+   switch(addr)
+   {
+      case 0x1E0:
+         return CurrentSH2->onchip.BCR1;
+      default:
+         fprintf(stderr, "Unhandled Onchip long read %08X\n", addr);
+         return 0;
+   }
+
    return 0;
 }
 
@@ -307,7 +315,34 @@ void FASTCALL OnchipWriteWord(u32 addr, u16 val) {
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL OnchipWriteLong(u32 addr, u32 val)  {
-   // stub
+   switch (addr)
+   {
+      case 0x1E0:
+         CurrentSH2->onchip.BCR1 &= 0x8000;
+         CurrentSH2->onchip.BCR1 |= val & 0x1FF7;
+         return;
+      case 0x1E4:
+         CurrentSH2->onchip.BCR2 = val & 0xFC;
+         return;
+      case 0x1E8:
+         CurrentSH2->onchip.WCR = val;
+         return;
+      default:
+         fprintf(stderr, "Unhandled Onchip long write %08X\n", addr);
+         break;
+   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+u32 FASTCALL AddressArrayReadLong(u32 addr) {
+   return CurrentSH2->AddressArray[(addr & 0x3FC) >> 2];
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FASTCALL AddressArrayWriteLong(u32 addr, u32 val)  {
+   CurrentSH2->AddressArray[(addr & 0x3FC) >> 2] = val;
 }
 
 //////////////////////////////////////////////////////////////////////////////

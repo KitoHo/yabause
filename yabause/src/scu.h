@@ -53,6 +53,10 @@ typedef struct {
 	/* SCU registers */
 	u32 RSEL;
 	u32 VER;
+
+        /* internal variables */
+        u32 timer0;
+        u32 timer1;
 } Scu;
 
 extern Scu * ScuRegs;
@@ -68,5 +72,36 @@ u32 FASTCALL	ScuReadLong(u32);
 void FASTCALL	ScuWriteByte(u32, u8);
 void FASTCALL	ScuWriteWord(u32, u16);
 void FASTCALL	ScuWriteLong(u32, u32);
+
+void ScuSendVBlankIN(void);
+void ScuSendVBlankOUT(void);
+void ScuSendHBlankIN(void);
+void ScuSendTimer0(void);
+void ScuSendTimer1(void);
+void ScuSendDSPEnd(void);
+void ScuSendSoundRequest(void);
+void ScuSendSystemManager(void);
+void ScuSendPadInterrupt(void);
+void ScuSendLevel2DMAEnd(void);
+void ScuSendLevel1DMAEnd(void);
+void ScuSendLevel0DMAEnd(void);
+void ScuSendDMAIllegal(void);
+void ScuSendDrawEnd(void);
+void ScuSendExternalInterrupt00(void);
+void ScuSendExternalInterrupt01(void);
+void ScuSendExternalInterrupt02(void);
+void ScuSendExternalInterrupt03(void);
+void ScuSendExternalInterrupt04(void);
+void ScuSendExternalInterrupt05(void);
+void ScuSendExternalInterrupt06(void);
+void ScuSendExternalInterrupt07(void);
+void ScuSendExternalInterrupt08(void);
+void ScuSendExternalInterrupt09(void);
+void ScuSendExternalInterrupt10(void);
+void ScuSendExternalInterrupt11(void);
+void ScuSendExternalInterrupt12(void);
+void ScuSendExternalInterrupt13(void);
+void ScuSendExternalInterrupt14(void);
+void ScuSendExternalInterrupt15(void);
 
 #endif

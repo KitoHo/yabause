@@ -48,10 +48,10 @@ SH2Interface_struct SH2Interpreter = {
 void FASTCALL delay(SH2_struct * sh, unsigned long addr) {
         switch ((addr >> 20) & 0x0FF) {
            case 0x000: // Bios              
-                       sh->instruction = T2ReadWord(BiosRom, sh->regs.PC & 0x7FFFF);
+                       sh->instruction = T2ReadWord(BiosRom, addr & 0x7FFFF);
                        break;
            case 0x002: // Low Work Ram
-                       sh->instruction = T2ReadWord(LowWram, sh->regs.PC & 0xFFFFF);
+                       sh->instruction = T2ReadWord(LowWram, addr & 0xFFFFF);
                        break;
            case 0x020: // CS0
 //                       sh->instruction = memoire->getWord(addr);
@@ -72,7 +72,7 @@ void FASTCALL delay(SH2_struct * sh, unsigned long addr) {
            case 0x06D: 
            case 0x06E: 
            case 0x06F:
-                       sh->instruction = T2ReadWord(HighWram, sh->regs.PC & 0xFFFFF);
+                       sh->instruction = T2ReadWord(HighWram, addr & 0xFFFFF);
                        break;
            default:
                        break;

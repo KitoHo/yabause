@@ -25,6 +25,7 @@
 #include "SDL.h"
 #include "cs0.h"
 #include "cs2.h"
+#include "scsp.h"
 #include "scu.h"
 #include "smpc.h"
 #include "vdp2.h"
@@ -313,8 +314,9 @@ int YabauseInit(int sh2coretype, int gfxcoretype, int sndcoretype,
    if (ScuInit() != 0)
       return -1;
 
-   // Initialize M68K here
-   // Initialize SCSP here
+   if (ScspInit(sndcoretype) != 0)
+      return -1;
+
    // Initialize VDP1 here
    if (Vdp2Init(gfxcoretype) != 0)
       return -1;
@@ -352,6 +354,7 @@ void YabauseDeInit() {
 
   Cs2DeInit();
   ScuDeInit();
+  ScspDeInit();
   Vdp2DeInit();
   SmpcDeInit();
 }
@@ -362,6 +365,8 @@ void YabauseReset() {
    SH2Reset(MSH2);
    YabStopSlave();
    Cs2Reset();
+   ScspReset();
+   yabsys.IsM68KRunning = 0;
    ScuReset();
    Vdp2Reset();
    SmpcReset();
@@ -386,13 +391,13 @@ int YabauseExec() {
    {
       // HBlankOUT
       Vdp2HBlankOUT();
-//      ((Scsp *)soundr)->run();
+      ScspExec();
       yabsys.DecilineCount = 0;
       yabsys.LineCount++;
       if (yabsys.LineCount == 224)
       {
          // VBlankIN
-//         ((Smpc *) smpc)->INTBACKEnd();
+         SmpcINTBACKEnd();
          Vdp2VBlankIN();
       }
       else if (yabsys.LineCount == 263)
@@ -415,7 +420,7 @@ int YabauseExec() {
       yabsys.CycleCountII %= yabsys.Duf;
    }
 
-//   ((Scsp *)soundr)->run68k(170);
+   M68KExec(170);
 
    MSH2->cycles %= yabsys.DecilineStop;
    if (yabsys.IsSSH2Running) 

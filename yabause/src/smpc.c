@@ -23,6 +23,7 @@
 #include "smpc.h"
 #include "cs2.h"
 #include "debug.h"
+#include "scsp.h"
 #include "scu.h"
 #include "vdp1.h"
 #include "vdp2.h"
@@ -99,15 +100,15 @@ void SmpcSSHOFF() {
 //////////////////////////////////////////////////////////////////////////////
 
 void SmpcSNDON() {
-//   sm->soundr->reset68k();  
-//   sm->soundr->is68kOn = true;
+   M68KReset();
+   yabsys.IsM68KRunning = 1;
    SmpcRegs->OREG[31] = 0x6;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void SmpcSNDOFF() {
-//   sm->soundr->is68kOn = false;
+   yabsys.IsM68KRunning = 0;
    SmpcRegs->OREG[31] = 0x7;
 }
 
@@ -118,7 +119,7 @@ void SmpcCKCHG352() {
    Vdp1Reset();  
    Vdp2Reset();  
    ScuReset();  
-//   ((Scsp *) sm->getScsp())->reset();  
+   ScspReset();  
 
    // Clear VDP1/VDP2 ram
 
@@ -134,7 +135,7 @@ void SmpcCKCHG320() {
    Vdp1Reset();  
    Vdp2Reset();  
    ScuReset();  
-//   ((Scsp *) sm->getScsp())->reset();  
+   ScspReset();  
 
    // Clear VDP1/VDP2 ram
 

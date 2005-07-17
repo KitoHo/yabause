@@ -26,6 +26,7 @@
 #include "cs2.h"
 #include "debug.h"
 #include "sh2core.h"
+#include "smpc.h"
 
 ////////////////////////////////////////////////////////////////
 
@@ -297,6 +298,12 @@ void MappedMemoryInit() {
                                 &HighWramMemoryWriteByte,
                                 &HighWramMemoryWriteWord,
                                 &HighWramMemoryWriteLong);
+   FillMemoryArea(0x010, 0x018, &SmpcReadByte,
+                                &SmpcReadWord,
+                                &SmpcReadLong,
+                                &SmpcWriteByte,
+                                &SmpcWriteWord,
+                                &SmpcWriteLong);
 }
 
 ////////////////////////////////////////////////////////////////

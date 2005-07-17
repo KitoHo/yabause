@@ -25,6 +25,7 @@ typedef struct
    u32 Duf;
    u32 CycleCountII;
    int IsSSH2Running;
+   int IsM68KRunning;
 } yabsys_struct;
 
 extern yabsys_struct yabsys;

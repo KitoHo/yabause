@@ -26,6 +26,7 @@
 #include "cs2.h"
 #include "debug.h"
 #include "sh2core.h"
+#include "scsp.h"
 #include "smpc.h"
 
 ////////////////////////////////////////////////////////////////
@@ -280,6 +281,12 @@ void MappedMemoryInit() {
                                 &BiosRomMemoryWriteByte,
                                 &BiosRomMemoryWriteWord,
                                 &BiosRomMemoryWriteLong);
+   FillMemoryArea(0x010, 0x018, &SmpcReadByte,
+                                &SmpcReadWord,
+                                &SmpcReadLong,
+                                &SmpcWriteByte,
+                                &SmpcWriteWord,
+                                &SmpcWriteLong);
    FillMemoryArea(0x020, 0x02F, &LowWramMemoryReadByte,
                                 &LowWramMemoryReadWord,
                                 &LowWramMemoryReadLong,
@@ -292,18 +299,24 @@ void MappedMemoryInit() {
                                 &Cs2WriteByte,
                                 &Cs2WriteWord,
                                 &Cs2WriteLong);
+   FillMemoryArea(0x5A0, 0x5B0, &SoundRamReadByte,
+                                &SoundRamReadWord,
+                                &SoundRamReadLong,
+                                &SoundRamWriteByte,
+                                &SoundRamWriteWord,
+                                &SoundRamWriteLong);
+   FillMemoryArea(0x5B0, 0x5C0, &scsp_r_b,
+                                &scsp_r_w,
+                                &scsp_r_d,
+                                &scsp_w_b,
+                                &scsp_w_w,
+                                &scsp_w_d);
    FillMemoryArea(0x600, 0x7FF, &HighWramMemoryReadByte,
                                 &HighWramMemoryReadWord,
                                 &HighWramMemoryReadLong,
                                 &HighWramMemoryWriteByte,
                                 &HighWramMemoryWriteWord,
                                 &HighWramMemoryWriteLong);
-   FillMemoryArea(0x010, 0x018, &SmpcReadByte,
-                                &SmpcReadWord,
-                                &SmpcReadLong,
-                                &SmpcWriteByte,
-                                &SmpcWriteWord,
-                                &SmpcWriteLong);
 }
 
 ////////////////////////////////////////////////////////////////

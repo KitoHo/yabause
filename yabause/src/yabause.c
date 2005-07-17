@@ -26,6 +26,7 @@
 #include "cs0.h"
 #include "cs2.h"
 #include "scu.h"
+#include "smpc.h"
 #include "vdp2.h"
 #include "yui.h"
 
@@ -291,49 +292,48 @@ void YabauseChangeTiming(int freqtype) {
 int YabauseInit(int sh2coretype, int gfxcoretype, int sndcoretype,
                 int cdcoretype, unsigned char regionid, const char *biospath,
                 const char *cdpath, const char *savepath, const char *mpegpath) {
-  // Initialize Both cores
-  if (SH2Init(sh2coretype) != 0)
-     return -1;
+   // Initialize Both cores
+   if (SH2Init(sh2coretype) != 0)
+      return -1;
 
-  if ((BiosRom = T2MemoryInit(0x80000)) == NULL)
-     return -1;
+   if ((BiosRom = T2MemoryInit(0x80000)) == NULL)
+      return -1;
 
-  if ((HighWram = T2MemoryInit(0x100000)) == NULL)
-     return -1;
+   if ((HighWram = T2MemoryInit(0x100000)) == NULL)
+      return -1;
 
-  if ((LowWram = T2MemoryInit(0x100000)) == NULL)
-     return -1;
+   if ((LowWram = T2MemoryInit(0x100000)) == NULL)
+      return -1;
 
-  // Initialize CS0 area here
-  // Initialize CS1 area here
-  if (Cs2Init(CART_NONE, cdcoretype, cdpath, mpegpath) != 0)
-     return -1;
+   // Initialize CS0 area here
+   // Initialize CS1 area here
+   if (Cs2Init(CART_NONE, cdcoretype, cdpath, mpegpath) != 0)
+      return -1;
 
-  if (ScuInit() != 0)
-     return -1;
+   if (ScuInit() != 0)
+      return -1;
 
-  // Initialize M68K here
-  // Initialize SCSP here
-  // Initialize VDP1 here
-  // Initialize VDP2 here
+   // Initialize M68K here
+   // Initialize SCSP here
+   // Initialize VDP1 here
+   if (Vdp2Init(gfxcoretype) != 0)
+      return -1;
 
-  if (Vdp2Init(gfxcoretype) != 0)
-     return -1;
+   if (SmpcInit(regionid) != 0)
+      return -1;
 
-  // Initialize SMPC here
+   MappedMemoryInit();
 
-  MappedMemoryInit();
+   YabauseChangeTiming(CLKTYPE_26MHZNTSC);
 
-  YabauseChangeTiming(CLKTYPE_26MHZNTSC);
+   if (LoadBios(biospath) != 0)
+      return -2;
 
-  if (LoadBios(biospath) != 0)
-     return -2;
+   // Load save ram here
 
-  // Load save ram here
+   YabauseReset();
 
-  YabauseReset();
-
-  return 0;
+   return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -353,13 +353,20 @@ void YabauseDeInit() {
   Cs2DeInit();
   ScuDeInit();
   Vdp2DeInit();
+  SmpcDeInit();
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void YabauseReset() {
    SH2Reset(MSH2);
-   SH2Reset(SSH2);
+   YabStopSlave();
+   Cs2Reset();
+   ScuReset();
+   Vdp2Reset();
+   SmpcReset();
+
+   SH2PowerOn(MSH2);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -400,7 +407,7 @@ int YabauseExec() {
 
    while (yabsys.CycleCountII > yabsys.Duf)
    {
-//      ((Smpc *) smpc)->execute2(10);
+      SmpcExec(10);
       Cs2Exec(10);
 //      msh->run(10);
 //      ssh->run(10);
@@ -415,6 +422,20 @@ int YabauseExec() {
       SSH2->cycles %= yabsys.DecilineStop;
 
    return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void YabStartSlave(void) {
+   SH2PowerOn(SSH2);
+   yabsys.IsSSH2Running = 1;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void YabStopSlave(void) {
+   SH2Reset(SSH2);
+   yabsys.IsSSH2Running = 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////

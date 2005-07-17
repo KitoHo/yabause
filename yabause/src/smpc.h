@@ -14,62 +14,43 @@
 #define REGION_CENTRALSOUTHAMERICAPAL   13
 
 typedef struct {
-	u8 IREG0;
-	u8 IREG1;
-	u8 IREG2;
-	u8 IREG3;
-	u8 IREG4;
-	u8 IREG5;
-	u8 IREG6;
-
-	u8 padding[8];
-
+        u8 IREG[7];
+        u8 padding[8];
 	u8 COMREG;
-
-	u8 OREG0;
-	u8 OREG1;
-	u8 OREG2;
-	u8 OREG3;
-	u8 OREG4;
-	u8 OREG5;
-	u8 OREG6;
-	u8 OREG7;
-	u8 OREG8;
-	u8 OREG9;
-	u8 OREG10;
-	u8 OREG11;
-	u8 OREG12;
-	u8 OREG13;
-	u8 OREG14;
-	u8 OREG15;
-	u8 OREG16;
-	u8 OREG17;
-	u8 OREG18;
-	u8 OREG19;
-	u8 OREG20;
-	u8 OREG21;
-	u8 OREG22;
-	u8 OREG23;
-	u8 OREG24;
-	u8 OREG25;
-	u8 OREG26;
-	u8 OREG27;
-	u8 OREG28;
-	u8 OREG29;
-	u8 OREG30;
-	u8 OREG31;
-
+        u8 OREG[32];
 	u8 SR;
 	u8 SF;
+        u8 padding2[8];
+        u8 PDR[2];
+        u8 DDR[2];
+        u8 IOSEL;
+        u8 EXLE;
 } Smpc;
 
 extern Smpc * SmpcRegs;
 extern u8 * SmpcRegsT;
 
-int SmpcInit(void);
-void SmpcDeInit(void);
+typedef struct {
+   u8 dotsel; // 0 -> 320 | 1 -> 352
+   u8 mshnmi;
+   u8 sndres;
+   u8 cdres;
+   u8 sysres;
+   u8 resb;
+   u8 ste;
+   u8 resd;
+   u8 intback;
+   u8 intbackIreg0;
+   u8 firstPeri;
+   u8 regionid;
+   u8 SMEM[4];
+   s32 timing;
+} SmpcInternal;
 
+int SmpcInit(u8 regionid);
+void SmpcDeInit(void);
 void SmpcReset(void);
+void SmpcExec(s32 t);
 
 u8 FASTCALL	SmpcReadByte(u32);
 u16 FASTCALL	SmpcReadWord(u32);

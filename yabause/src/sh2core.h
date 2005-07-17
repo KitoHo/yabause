@@ -123,6 +123,7 @@ extern SH2_struct *SSH2;
 int SH2Init(int coreid);
 void SH2DeInit();
 void SH2Reset(SH2_struct *context);
+void SH2PowerOn(SH2_struct *context);
 u32 FASTCALL SH2Exec(SH2_struct *context, u32 cycles);
 void SH2SendInterrupt(SH2_struct *context, u8 vector, u8 level);
 void SH2Step(SH2_struct *context);

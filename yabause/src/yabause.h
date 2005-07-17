@@ -9,11 +9,13 @@
 #define CLKTYPE_28MHZPAL        3
 
 int YabauseInit(int sh2coretype, int gfxcoretype, int sndcoretype,
-                int cdcoretype, unsigned char regionid, const char *biospath,
+                int cdcoretype, u8 regionid, const char *biospath,
                 const char *cdpath, const char *savepath, const char *mpegpath);
 void YabauseDeInit();
 void YabauseReset();
 int YabauseExec();
+void YabStartSlave(void);
+void YabStopSlave(void);
 
 typedef struct
 {
@@ -26,5 +28,6 @@ typedef struct
 } yabsys_struct;
 
 extern yabsys_struct yabsys;
+extern unsigned short buttonbits;
 
 #endif

@@ -105,10 +105,6 @@ void SH2Reset(SH2_struct *context)
    context->regs.MACL = 0x00000000;
    context->regs.PR = 0x00000000;
 
-   // Get PC/Stack initial values
-   context->regs.PC = T2ReadLong(BiosRom, 0);
-   context->regs.R[15] = T2ReadLong(BiosRom, 4);
-
    // Internal variables
    context->delay = 0x00000000;
    context->cycles = 0;
@@ -122,6 +118,13 @@ void SH2Reset(SH2_struct *context)
 
    // Reset Onchip modules
    OnchipReset(context);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void SH2PowerOn(SH2_struct *context) {
+   context->regs.PC = MappedMemoryReadLong(context->regs.VBR);
+   context->regs.R[15] = MappedMemoryReadLong(context->regs.VBR+4);
 }
 
 //////////////////////////////////////////////////////////////////////////////

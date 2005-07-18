@@ -1457,6 +1457,7 @@ void ScuDspClearCodeBreakpoints() {
 //////////////////////////////////////////////////////////////////////////////
 
 u8 FASTCALL ScuReadByte(u32 addr) {
+   addr &= 0xFF;
    // long access only
    return 0;
 }
@@ -1464,6 +1465,7 @@ u8 FASTCALL ScuReadByte(u32 addr) {
 //////////////////////////////////////////////////////////////////////////////
 
 u16 FASTCALL ScuReadWord(u32 addr) {
+   addr &= 0xFF;
    // long access only
    return 0;
 }
@@ -1471,6 +1473,7 @@ u16 FASTCALL ScuReadWord(u32 addr) {
 //////////////////////////////////////////////////////////////////////////////
 
 u32 FASTCALL ScuReadLong(u32 addr) {
+   addr &= 0xFF;
    switch(addr) {
       case 0:
          return ScuRegs->D0R;
@@ -1516,18 +1519,21 @@ u32 FASTCALL ScuReadLong(u32 addr) {
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL ScuWriteByte(u32 addr, u8 val) {
+   addr &= 0xFF;
    // long access only
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL ScuWriteWord(u32 addr, u16 val) {
+   addr &= 0xFF;
    // long access only
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL ScuWriteLong(u32 addr, u32 val) {
+   addr &= 0xFF;
    switch(addr) {
       case 0:
          ScuRegs->D0R = val;

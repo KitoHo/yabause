@@ -29,6 +29,8 @@
 #include "scsp.h"
 #include "scu.h"
 #include "smpc.h"
+#include "vdp1.h"
+#include "vdp2.h"
 
 ////////////////////////////////////////////////////////////////
 
@@ -317,11 +319,36 @@ void MappedMemoryInit() {
                                 &scsp_w_b,
                                 &scsp_w_w,
                                 &scsp_w_d);
-//   initMemoryHandler(0x5C0, 0x5C7, vdp1_1);
-//   initMemoryHandler(0x5D0, 0x5D7, vdp1_2);
-//   initMemoryHandler(0x5E0, 0x5EF, vdp2_1);
-//   initMemoryHandler(0x5F0, 0x5F7, vdp2_2);
-//   initMemoryHandler(0x5F8, 0x5FB, vdp2_3);
+   FillMemoryArea(0x5C0, 0x5C7, &Vdp1RamReadByte,
+                                &Vdp1RamReadWord,
+                                &Vdp1RamReadLong,
+                                &Vdp1RamWriteByte,
+                                &Vdp1RamWriteWord,
+                                &Vdp1RamWriteLong);
+   FillMemoryArea(0x5D0, 0x5D7, &Vdp1ReadByte,
+                                &Vdp1ReadWord,
+                                &Vdp1ReadLong,
+                                &Vdp1WriteByte,
+                                &Vdp1WriteWord,
+                                &Vdp1WriteLong);
+   FillMemoryArea(0x5E0, 0x5EF, &Vdp2RamReadByte,
+                                &Vdp2RamReadWord,
+                                &Vdp2RamReadLong,
+                                &Vdp2RamWriteByte,
+                                &Vdp2RamWriteWord,
+                                &Vdp2RamWriteLong);
+   FillMemoryArea(0x5F0, 0x5F7, &Vdp2ColorRamReadByte,
+                                &Vdp2ColorRamReadWord,
+                                &Vdp2ColorRamReadLong,
+                                &Vdp2ColorRamWriteByte,
+                                &Vdp2ColorRamWriteWord,
+                                &Vdp2ColorRamWriteLong);
+   FillMemoryArea(0x5F8, 0x5FB, &Vdp2ReadByte,
+                                &Vdp2ReadWord,
+                                &Vdp2ReadLong,
+                                &Vdp2WriteByte,
+                                &Vdp2WriteWord,
+                                &Vdp2WriteLong);
    FillMemoryArea(0x5FE, 0x5FE, &ScuReadByte,
                                 &ScuReadWord,
                                 &ScuReadLong,

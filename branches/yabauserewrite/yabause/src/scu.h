@@ -3,6 +3,13 @@
 
 #include "core.h"
 
+typedef struct
+{
+  u32 addr;
+} scucodebreakpoint_struct;
+
+#define MAX_BREAKPOINTS 10
+
 typedef struct {
 	/* DMA registers */
 	u32 D0R;
@@ -57,14 +64,153 @@ typedef struct {
         /* internal variables */
         u32 timer0;
         u32 timer1;
+        scucodebreakpoint_struct codebreakpoint[MAX_BREAKPOINTS];
+        int numcodebreakpoints;
+        void (*BreakpointCallBack)(unsigned long);
+        unsigned char inbreakpoint;
 } Scu;
 
 extern Scu * ScuRegs;
 
+typedef struct {
+  u32 ProgramRam[256];
+  u32 MD[4][64];
+#ifdef WORDS_BIGENDIAN
+  union {
+    struct {
+       u32 unused1:5;
+       u32 PR:1; // Pause cancel flag
+       u32 EP:1; // Temporary stop execution flag
+       u32 unused2:1;
+       u32 T0:1; // D0 bus use DMA execute flag
+       u32 S:1;  // Sine flag
+       u32 Z:1;  // Zero flag
+       u32 C:1;  // Carry flag
+       u32 V:1;  // Overflow flag
+       u32 E:1;  // Program end interrupt flag
+       u32 ES:1; // Program step execute control bit
+       u32 EX:1; // Program execute control bit
+       u32 LE:1; // Program counter load enable bit
+       u32 unused3:7;
+       u32 P:8;  // Program Ram Address
+    } part;
+    u32 all;
+  } ProgControlPort;
+#else
+  union {
+    struct {
+       u32 P:8;  // Program Ram Address
+       u32 unused3:7;
+       u32 LE:1; // Program counter load enable bit
+       u32 EX:1; // Program execute control bit
+       u32 ES:1; // Program step execute control bit
+       u32 E:1;  // Program end interrupt flag
+       u32 V:1;  // Overflow flag
+       u32 C:1;  // Carry flag
+       u32 Z:1;  // Zero flag
+       u32 S:1;  // Sine flag
+       u32 T0:1; // D0 bus use DMA execute flag
+       u32 unused2:1;
+       u32 EP:1; // Temporary stop execution flag
+       u32 PR:1; // Pause cancel flag
+       u32 unused1:5;
+    } part;
+    u32 all;
+  } ProgControlPort;
+#endif
+  u8 PC;
+  u8 TOP;
+  u16 LOP;
+  s32 jmpaddr;
+  unsigned char delayed;
+  u8 DataRamPage;
+  u8 DataRamReadAddress;
+  u8 CT[4];
+  u32 RX;
+  u32 RY;
+  u32 RA0;
+  u32 WA0;
+
+#ifdef WORDS_BIGENDIAN
+  union {
+    struct {
+       long long unused:16;
+       long long H:16;
+       long long L:32;
+    } part;
+    long long all;
+  } AC;
+
+  union {
+    struct {
+       long long unused:16;
+       long long H:16;
+       long long L:32;
+    } part;
+    long long all;
+  } P;
+
+  union {
+    struct {
+       long long unused:16;
+       long long H:16;
+       long long L:32;
+    } part;
+    long long all;
+  } ALU;
+
+  union {
+    struct {
+       long long unused:16;
+       long long H:16;
+       long long L:32;
+    } part;
+    long long all;
+  } MUL;
+#else
+  union {
+    struct {
+       long long L:32;
+       long long H:16;
+       long long unused:16;
+    } part;
+    long long all;
+  } AC;
+
+  union {
+    struct {
+       long long L:32;
+       long long H:16;
+       long long unused:16;
+    } part;
+    long long all;
+  } P;
+
+  union {
+    struct {
+       long long L:32;
+       long long H:16;
+       long long unused:16;
+    } part;
+    long long all;
+  } ALU;
+
+  union {
+    struct {
+       long long L:32;
+       long long H:16;
+       long long unused:16;
+    } part;
+    long long all;
+  } MUL;
+#endif
+
+} scudspregs_struct;
+
 int ScuInit(void);
 void ScuDeInit(void);
-
 void ScuReset(void);
+void ScuExec(u32 timing);
 
 u8 FASTCALL	ScuReadByte(u32);
 u16 FASTCALL	ScuReadWord(u32);

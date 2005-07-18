@@ -46,13 +46,15 @@ typedef struct {
 	u16 LOPR;
 	u16 COPR;
 	u16 MODR;
+
+	u32 addr;
+	int disptoggle;
 } Vdp1;
 
 extern Vdp1 * Vdp1Regs;
 
 int Vdp1Init(int coreid);
 void Vdp1DeInit(void);
-
 void Vdp1Reset(void);
 
 u8 FASTCALL	Vdp1ReadByte(u32);
@@ -61,5 +63,17 @@ u32 FASTCALL	Vdp1ReadLong(u32);
 void FASTCALL	Vdp1WriteByte(u32, u8);
 void FASTCALL	Vdp1WriteWord(u32, u16);
 void FASTCALL	Vdp1WriteLong(u32, u32);
+
+void Vdp1Draw(void);
+
+void Vdp1NormalSpriteDraw(void);
+void Vdp1ScaledSpriteDraw(void);
+void Vdp1DistortedSpriteDraw(void);
+void Vdp1PolygonDraw(void);
+void Vdp1PolylineDraw(void);
+void Vdp1LineDraw(void);
+void Vdp1UserClipping(void);
+void Vdp1SystemClipping(void);
+void Vdp1LocalCoordinate(void);
 
 #endif

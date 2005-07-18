@@ -197,6 +197,7 @@ void Vdp2VBlankOUT(void) {
 
   if (Vdp2Regs->TVMD & 0x8000) {
      // draw here
+    Vdp1Draw();
   }
 
   ScuSendVBlankOUT();

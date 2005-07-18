@@ -27,6 +27,7 @@
 #include "debug.h"
 #include "sh2core.h"
 #include "scsp.h"
+#include "scu.h"
 #include "smpc.h"
 
 ////////////////////////////////////////////////////////////////
@@ -281,36 +282,52 @@ void MappedMemoryInit() {
                                 &BiosRomMemoryWriteByte,
                                 &BiosRomMemoryWriteWord,
                                 &BiosRomMemoryWriteLong);
-   FillMemoryArea(0x010, 0x018, &SmpcReadByte,
+   FillMemoryArea(0x010, 0x017, &SmpcReadByte,
                                 &SmpcReadWord,
                                 &SmpcReadLong,
                                 &SmpcWriteByte,
                                 &SmpcWriteWord,
                                 &SmpcWriteLong);
+//     initMemoryHandler( 0x18,  0x1F, ram);
    FillMemoryArea(0x020, 0x02F, &LowWramMemoryReadByte,
                                 &LowWramMemoryReadWord,
                                 &LowWramMemoryReadLong,
                                 &LowWramMemoryWriteByte,
                                 &LowWramMemoryWriteWord,
                                 &LowWramMemoryWriteLong);
-   FillMemoryArea(0x580, 0x590, &Cs2ReadByte,
+//   initMemoryHandler(0x100, 0x17F, minit);
+//   initMemoryHandler(0x180, 0x1FF, sinit);
+//   initMemoryHandler(0x200, 0x3FF, cs0);
+//   initMemoryHandler(0x400, 0x4FF, cs1);
+   FillMemoryArea(0x580, 0x58F, &Cs2ReadByte,
                                 &Cs2ReadWord,
                                 &Cs2ReadLong,
                                 &Cs2WriteByte,
                                 &Cs2WriteWord,
                                 &Cs2WriteLong);
-   FillMemoryArea(0x5A0, 0x5B0, &SoundRamReadByte,
+   FillMemoryArea(0x5A0, 0x5AF, &SoundRamReadByte,
                                 &SoundRamReadWord,
                                 &SoundRamReadLong,
                                 &SoundRamWriteByte,
                                 &SoundRamWriteWord,
                                 &SoundRamWriteLong);
-   FillMemoryArea(0x5B0, 0x5C0, &scsp_r_b,
+   FillMemoryArea(0x5B0, 0x5BF, &scsp_r_b,
                                 &scsp_r_w,
                                 &scsp_r_d,
                                 &scsp_w_b,
                                 &scsp_w_w,
                                 &scsp_w_d);
+//   initMemoryHandler(0x5C0, 0x5C7, vdp1_1);
+//   initMemoryHandler(0x5D0, 0x5D7, vdp1_2);
+//   initMemoryHandler(0x5E0, 0x5EF, vdp2_1);
+//   initMemoryHandler(0x5F0, 0x5F7, vdp2_2);
+//   initMemoryHandler(0x5F8, 0x5FB, vdp2_3);
+   FillMemoryArea(0x5FE, 0x5FE, &ScuReadByte,
+                                &ScuReadWord,
+                                &ScuReadLong,
+                                &ScuWriteByte,
+                                &ScuWriteWord,
+                                &ScuWriteLong);
    FillMemoryArea(0x600, 0x7FF, &HighWramMemoryReadByte,
                                 &HighWramMemoryReadWord,
                                 &HighWramMemoryReadLong,

@@ -416,7 +416,7 @@ int YabauseExec() {
       Cs2Exec(10);
 //      msh->run(10);
 //      ssh->run(10);
-//      ((Scu *)scu)->run(10);
+      ScuExec(10);
       yabsys.CycleCountII %= yabsys.Duf;
    }
 

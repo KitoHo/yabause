@@ -84,7 +84,8 @@ install_sh = @install_sh@
 yabause_arch = @yabause_arch@
 yabause_yui = @yabause_yui@
 bin_PROGRAMS = yabause
-yabause_SOURCES = cdbase.c memory.c scu.c smpc.c sh2core.c vdp1.c vdp1.h memory.h smpc.h scu.h sh2core.h sh2int.c sh2int.h yabause.c yabause.h scsp.h yui.c
+yabause_SOURCES = cdbase.c memory.c scu.c smpc.c sh2core.c vdp1.c vdp1.h memory.h smpc.h scu.h sh2core.h sh2int.c sh2int.h yabause.c yabause.h scsp.h yui.c cs2.c cs2.h vdp2.c vdp2.h scsp.c scsp.h c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c c68k/c68k_ini.inc
+BUILT_SOURCES = c68k/c68k_ini.inc
 subdir = src
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_CLEAN_FILES =
@@ -93,7 +94,9 @@ PROGRAMS = $(bin_PROGRAMS)
 
 am_yabause_OBJECTS = cdbase.$(OBJEXT) memory.$(OBJEXT) scu.$(OBJEXT) \
 	smpc.$(OBJEXT) sh2core.$(OBJEXT) vdp1.$(OBJEXT) \
-	sh2int.$(OBJEXT) yabause.$(OBJEXT) yui.$(OBJEXT)
+	sh2int.$(OBJEXT) yabause.$(OBJEXT) yui.$(OBJEXT) cs2.$(OBJEXT) \
+	vdp2.$(OBJEXT) scsp.$(OBJEXT) c68kexec.$(OBJEXT) c68k.$(OBJEXT) \
+	gen68k.$(OBJEXT)
 yabause_OBJECTS = $(am_yabause_OBJECTS)
 yabause_LDADD = $(LDADD)
 yabause_DEPENDENCIES =
@@ -106,10 +109,13 @@ LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
-@AMDEP_TRUE@DEP_FILES = ./$(DEPDIR)/cdbase.Po ./$(DEPDIR)/memory.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/scu.Po ./$(DEPDIR)/sh2core.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/sh2int.Po ./$(DEPDIR)/smpc.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/vdp1.Po ./$(DEPDIR)/yabause.Po \
+@AMDEP_TRUE@DEP_FILES = ./$(DEPDIR)/c68k.Po ./$(DEPDIR)/c68kexec.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/cdbase.Po ./$(DEPDIR)/cs2.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/gen68k.Po ./$(DEPDIR)/memory.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/scsp.Po ./$(DEPDIR)/scu.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/sh2core.Po ./$(DEPDIR)/sh2int.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/smpc.Po ./$(DEPDIR)/vdp1.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/vdp2.Po ./$(DEPDIR)/yabause.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/yui.Po
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -120,7 +126,8 @@ DIST_SOURCES = $(yabause_SOURCES)
 DIST_COMMON = Makefile.am Makefile.in
 SOURCES = $(yabause_SOURCES)
 
-all: all-am
+all: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
 .SUFFIXES: .c .o .obj
@@ -153,6 +160,9 @@ uninstall-binPROGRAMS:
 
 clean-binPROGRAMS:
 	-test -z "$(bin_PROGRAMS)" || rm -f $(bin_PROGRAMS)
+c68kexec.$(OBJEXT): c68k/c68kexec.c
+c68k.$(OBJEXT): c68k/c68k.c
+gen68k.$(OBJEXT): c68k/gen68k.c
 yabause$(EXEEXT): $(yabause_OBJECTS) $(yabause_DEPENDENCIES) 
 	@rm -f yabause$(EXEEXT)
 	$(LINK) $(yabause_LDFLAGS) $(yabause_OBJECTS) $(yabause_LDADD) $(LIBS)
@@ -163,13 +173,19 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/c68k.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/c68kexec.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdbase.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cs2.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen68k.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/memory.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/scsp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/scu.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sh2core.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sh2int.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/smpc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vdp1.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vdp2.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/yabause.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/yui.Po@am__quote@
 
@@ -187,6 +203,42 @@ distclean-depend:
 @AMDEP_TRUE@	depfile='$(DEPDIR)/$*.Po' tmpdepfile='$(DEPDIR)/$*.TPo' @AMDEPBACKSLASH@
 @AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 	$(COMPILE) -c `cygpath -w $<`
+
+c68kexec.o: c68k/c68kexec.c
+@AMDEP_TRUE@	source='c68k/c68kexec.c' object='c68kexec.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@	depfile='$(DEPDIR)/c68kexec.Po' tmpdepfile='$(DEPDIR)/c68kexec.TPo' @AMDEPBACKSLASH@
+@AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o c68kexec.o `test -f 'c68k/c68kexec.c' || echo '$(srcdir)/'`c68k/c68kexec.c
+
+c68kexec.obj: c68k/c68kexec.c
+@AMDEP_TRUE@	source='c68k/c68kexec.c' object='c68kexec.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@	depfile='$(DEPDIR)/c68kexec.Po' tmpdepfile='$(DEPDIR)/c68kexec.TPo' @AMDEPBACKSLASH@
+@AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o c68kexec.obj `cygpath -w c68k/c68kexec.c`
+
+c68k.o: c68k/c68k.c
+@AMDEP_TRUE@	source='c68k/c68k.c' object='c68k.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@	depfile='$(DEPDIR)/c68k.Po' tmpdepfile='$(DEPDIR)/c68k.TPo' @AMDEPBACKSLASH@
+@AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o c68k.o `test -f 'c68k/c68k.c' || echo '$(srcdir)/'`c68k/c68k.c
+
+c68k.obj: c68k/c68k.c
+@AMDEP_TRUE@	source='c68k/c68k.c' object='c68k.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@	depfile='$(DEPDIR)/c68k.Po' tmpdepfile='$(DEPDIR)/c68k.TPo' @AMDEPBACKSLASH@
+@AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o c68k.obj `cygpath -w c68k/c68k.c`
+
+gen68k.o: c68k/gen68k.c
+@AMDEP_TRUE@	source='c68k/gen68k.c' object='gen68k.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@	depfile='$(DEPDIR)/gen68k.Po' tmpdepfile='$(DEPDIR)/gen68k.TPo' @AMDEPBACKSLASH@
+@AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o gen68k.o `test -f 'c68k/gen68k.c' || echo '$(srcdir)/'`c68k/gen68k.c
+
+gen68k.obj: c68k/gen68k.c
+@AMDEP_TRUE@	source='c68k/gen68k.c' object='gen68k.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@	depfile='$(DEPDIR)/gen68k.Po' tmpdepfile='$(DEPDIR)/gen68k.TPo' @AMDEPBACKSLASH@
+@AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o gen68k.obj `cygpath -w c68k/gen68k.c`
 CCDEPMODE = @CCDEPMODE@
 uninstall-info-am:
 
@@ -282,6 +334,7 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
+	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 clean: clean-am
 
 clean-am: clean-binPROGRAMS clean-generic mostlyclean-am
@@ -330,6 +383,10 @@ uninstall-am: uninstall-binPROGRAMS uninstall-info-am
 	mostlyclean-generic tags uninstall uninstall-am \
 	uninstall-binPROGRAMS uninstall-info-am
 
+c68k/c68k_ini.inc: c68k/gen68k
+	cd c68k && ./gen68k
+c68k/gen68k: c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c
+	$(COMPILE) -DC68K_GEN c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c -o c68k/gen68k
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

@@ -45,12 +45,12 @@ void ScspReset(void);
 void M68KExec(unsigned long cycles);
 void ScspExec(void);
 
-void scsp_w_b(u32, u8);
-void scsp_w_w(u32, u16);
-void scsp_w_d(u32, u32);
-u8 scsp_r_b(u32);
-u16 scsp_r_w(u32);
-u32 scsp_r_d(u32);
+void FASTCALL scsp_w_b(u32, u8);
+void FASTCALL scsp_w_w(u32, u16);
+void FASTCALL scsp_w_d(u32, u32);
+u8 FASTCALL scsp_r_b(u32);
+u16 FASTCALL scsp_r_w(u32);
+u32 FASTCALL scsp_r_d(u32);
 
 void scsp_init(u8 *scsp_ram, void (*sint_hand)(u32), void (*mint_hand)(void));
 void scsp_shutdown(void);

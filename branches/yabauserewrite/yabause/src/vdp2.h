@@ -25,12 +25,19 @@
 
 extern u8 * Vdp2Ram;
 
-FASTCALL u8     Vdp2RamReadByte(u32);
-FASTCALL u16    Vdp2RamReadWord(u32);
-FASTCALL u32    Vdp2RamReadLong(u32);
-FASTCALL void   Vdp2RamWriteByte(u32, u8);
-FASTCALL void   Vdp2RamWriteWord(u32, u16);
-FASTCALL void   Vdp2RamWriteLong(u32, u32);
+u8 FASTCALL     Vdp2RamReadByte(u32);
+u16 FASTCALL    Vdp2RamReadWord(u32);
+u32 FASTCALL    Vdp2RamReadLong(u32);
+void FASTCALL   Vdp2RamWriteByte(u32, u8);
+void FASTCALL   Vdp2RamWriteWord(u32, u16);
+void FASTCALL   Vdp2RamWriteLong(u32, u32);
+
+u8 FASTCALL     Vdp2ColorRamReadByte(u32);
+u16 FASTCALL    Vdp2ColorRamReadWord(u32);
+u32 FASTCALL    Vdp2ColorRamReadLong(u32);
+void FASTCALL   Vdp2ColorRamWriteByte(u32, u8);
+void FASTCALL   Vdp2ColorRamWriteWord(u32, u16);
+void FASTCALL   Vdp2ColorRamWriteLong(u32, u32);
 
 typedef struct {
    unsigned short TVMD;   // 0x25F80000
@@ -63,11 +70,11 @@ void Vdp2HBlankIN(void);
 void Vdp2HBlankOUT(void);
 void Vdp2VBlankOUT(void);
 
-FASTCALL u8     Vdp2ReadByte(u32);
-FASTCALL u16    Vdp2ReadWord(u32);
-FASTCALL u32    Vdp2ReadLong(u32);
-FASTCALL void   Vdp2WriteByte(u32, u8);
-FASTCALL void   Vdp2WriteWord(u32, u16);
-FASTCALL void   Vdp2WriteLong(u32, u32);
+u8 FASTCALL     Vdp2ReadByte(u32);
+u16 FASTCALL    Vdp2ReadWord(u32);
+u32 FASTCALL    Vdp2ReadLong(u32);
+void FASTCALL   Vdp2WriteByte(u32, u8);
+void FASTCALL   Vdp2WriteWord(u32, u16);
+void FASTCALL   Vdp2WriteLong(u32, u32);
 
 #endif

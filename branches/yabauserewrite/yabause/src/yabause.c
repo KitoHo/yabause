@@ -317,7 +317,9 @@ int YabauseInit(int sh2coretype, int gfxcoretype, int sndcoretype,
    if (ScspInit(sndcoretype) != 0)
       return -1;
 
-   // Initialize VDP1 here
+   if (Vdp1Init(gfxcoretype) != 0)
+      return -1;
+
    if (Vdp2Init(gfxcoretype) != 0)
       return -1;
 
@@ -341,22 +343,25 @@ int YabauseInit(int sh2coretype, int gfxcoretype, int sndcoretype,
 //////////////////////////////////////////////////////////////////////////////
 
 void YabauseDeInit() {
-  SH2DeInit();
+   SH2DeInit();
 
-  if (BiosRom)
-     T2MemoryDeInit(BiosRom);
+   if (BiosRom)
+      T2MemoryDeInit(BiosRom);
 
-  if (HighWram)
-     T2MemoryDeInit(HighWram);
+   if (HighWram)
+      T2MemoryDeInit(HighWram);
 
-  if (LowWram)
-     T2MemoryDeInit(LowWram);
+   if (LowWram)
+      T2MemoryDeInit(LowWram);
 
-  Cs2DeInit();
-  ScuDeInit();
-  ScspDeInit();
-  Vdp2DeInit();
-  SmpcDeInit();
+   // Free CS0 area here
+   // Free CS1 area here
+   Cs2DeInit();
+   ScuDeInit();
+   ScspDeInit();
+   Vdp1DeInit();
+   Vdp2DeInit();
+   SmpcDeInit();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -364,10 +369,15 @@ void YabauseDeInit() {
 void YabauseReset() {
    SH2Reset(MSH2);
    YabStopSlave();
+   memset(HighWram, 0, 0x100000);
+   memset(LowWram, 0, 0x100000);
+   // Reset CS0 area here
+   // Reset CS1 area here
    Cs2Reset();
+   ScuReset();
    ScspReset();
    yabsys.IsM68KRunning = 0;
-   ScuReset();
+   Vdp1Reset();
    Vdp2Reset();
    SmpcReset();
 

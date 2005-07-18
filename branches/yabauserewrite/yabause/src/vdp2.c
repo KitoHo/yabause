@@ -25,48 +25,103 @@
 #include "yabause.h"
 
 u8 * Vdp2Ram;
+u8 * Vdp2ColorRam;
 Vdp2 * Vdp2Regs;
 
 //////////////////////////////////////////////////////////////////////////////
 
 u8 FASTCALL Vdp2RamReadByte(u32 addr) {
+   addr &= 0x7FFFF;
    return T1ReadByte(Vdp2Ram, addr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 u16 FASTCALL Vdp2RamReadWord(u32 addr) {
+   addr &= 0x7FFFF;
    return T1ReadWord(Vdp2Ram, addr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 u32 FASTCALL Vdp2RamReadLong(u32 addr) {
+   addr &= 0x7FFFF;
    return T1ReadLong(Vdp2Ram, addr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL Vdp2RamWriteByte(u32 addr, u8 val) {
+   addr &= 0x7FFFF;
    T1WriteByte(Vdp2Ram, addr, val);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL Vdp2RamWriteWord(u32 addr, u16 val) {
+   addr &= 0x7FFFF;
    T1WriteWord(Vdp2Ram, addr, val);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL Vdp2RamWriteLong(u32 addr, u32 val) {
+   addr &= 0x7FFFF;
    T1WriteLong(Vdp2Ram, addr, val);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+u8 FASTCALL Vdp2ColorRamReadByte(u32 addr) {
+   addr &= 0xFFF;
+   return T2ReadByte(Vdp2ColorRam, addr);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+u16 FASTCALL Vdp2ColorRamReadWord(u32 addr) {
+   addr &= 0xFFF;
+   return T2ReadWord(Vdp2ColorRam, addr);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+u32 FASTCALL Vdp2ColorRamReadLong(u32 addr) {
+   addr &= 0xFFF;
+   return T2ReadLong(Vdp2ColorRam, addr);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FASTCALL Vdp2ColorRamWriteByte(u32 addr, u8 val) {
+   addr &= 0xFFF;
+   T2WriteByte(Vdp2ColorRam, addr, val);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FASTCALL Vdp2ColorRamWriteWord(u32 addr, u16 val) {
+   addr &= 0xFFF;
+   T2WriteWord(Vdp2ColorRam, addr, val);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FASTCALL Vdp2ColorRamWriteLong(u32 addr, u32 val) {
+   addr &= 0xFFF;
+   T2WriteLong(Vdp2ColorRam, addr, val);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 int Vdp2Init(int coreid) {
    if ((Vdp2Regs = (Vdp2 *) calloc(1, sizeof(Vdp2))) == NULL)
+      return -1;
+
+   if ((Vdp2Ram = T1MemoryInit(0x80000)) == NULL)
+      return -1;
+
+   if ((Vdp2ColorRam = T2MemoryInit(0x1000)) == NULL)
       return -1;
 
    Vdp2Reset();
@@ -78,6 +133,12 @@ int Vdp2Init(int coreid) {
 void Vdp2DeInit(void) {
    if (Vdp2Regs)
       free(Vdp2Regs);
+
+   if (Vdp2Ram)
+      T1MemoryDeInit(Vdp2Ram);
+
+   if (Vdp2ColorRam)
+      T2MemoryDeInit(Vdp2ColorRam);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -144,34 +205,40 @@ void Vdp2VBlankOUT(void) {
 //////////////////////////////////////////////////////////////////////////////
 
 u8 FASTCALL Vdp2ReadByte(u32 addr) {
+   addr &= 0x1FF;
    return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 u16 FASTCALL Vdp2ReadWord(u32 addr) {
+   addr &= 0x1FF;
    return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 u32 FASTCALL Vdp2ReadLong(u32 addr) {
+   addr &= 0x1FF;
    return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL Vdp2WriteByte(u32 addr, u8 val) {
+   addr &= 0x1FF;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
+   addr &= 0x1FF;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL Vdp2WriteLong(u32 addr, u32 val) {
+   addr &= 0x1FF;
 }
 
 //////////////////////////////////////////////////////////////////////////////

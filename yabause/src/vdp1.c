@@ -181,3 +181,121 @@ void FASTCALL Vdp1WriteLong(u32 addr, u32 val) {
 
 //////////////////////////////////////////////////////////////////////////////
 
+void Vdp1Draw(void) {
+	u32 returnAddr;
+	unsigned long commandCounter;
+	u16 command = T1ReadWord(Vdp1Ram, Vdp1Regs->addr);
+
+	//YglReset();
+
+	Vdp1Regs->addr = 0;
+	returnAddr = 0xFFFFFFFF;
+	commandCounter = 0;
+
+	if (!Vdp1Regs->PTMR) return;
+
+	if (!Vdp1Regs->disptoggle) return;
+
+	// beginning of a frame (ST-013-R3-061694 page 53)
+	// BEF <- CEF
+	// CEF <- 0
+	Vdp1Regs->EDSR >>= 1;
+
+	while (!(command & 0x8000) && commandCounter < 2000) { // fix me
+
+		// First, process the command
+		if (!(command & 0x4000)) { // if (!skip)
+			switch (command & 0x000F) {
+			case 0: // normal sprite draw
+				Vdp1NormalSpriteDraw();
+				break;
+			case 1: // scaled sprite draw
+				Vdp1ScaledSpriteDraw();
+				break;
+			case 2: // distorted sprite draw
+				Vdp1DistortedSpriteDraw();
+				break;
+			case 4: // polygon draw
+				Vdp1PolygonDraw();
+				break;
+			case 5: // polyline draw
+				Vdp1PolylineDraw();
+				break;
+			case 6: // line draw
+				Vdp1LineDraw();
+				break;
+			case 8: // user clipping coordinates
+				Vdp1UserClipping();
+				break;
+			case 9: // system clipping coordinates
+				Vdp1SystemClipping();
+				break;
+			case 10: // local coordinate
+				Vdp1LocalCoordinate();
+				break;
+			default:
+#ifdef VDP1_DEBUG
+				DEBUG("vdp1\t: Bad command: %x\n",  command);
+#endif
+				break;
+			}
+		}
+
+		// Next, determine where to go next
+		switch ((command & 0x3000) >> 12) {
+		case 0: // NEXT, jump to following table
+			Vdp1Regs->addr += 0x20;
+			break;
+		case 1: // ASSIGN, jump to CMDLINK
+			Vdp1Regs->addr = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 2) * 8;
+			break;
+		case 2: // CALL, call a subroutine
+			if (returnAddr == 0xFFFFFFFF)
+				returnAddr = Vdp1Regs->addr + 0x20;
+	
+			Vdp1Regs->addr = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 2) * 8;
+			break;
+		case 3: // RETURN, return from subroutine
+			if (returnAddr != 0xFFFFFFFF) {
+				Vdp1Regs->addr = returnAddr;
+				returnAddr = 0xFFFFFFFF;
+			}
+			else
+				Vdp1Regs->addr += 0x20;
+			break;
+		}
+		command = T1ReadWord(Vdp1Ram, Vdp1Regs->addr);
+		commandCounter++;    
+	}
+	// we set two bits to 1
+	Vdp1Regs->EDSR |= 2;
+	ScuSendDrawEnd();
+}
+
+void Vdp1NormalSpriteDraw(void) {
+}
+
+void Vdp1ScaledSpriteDraw(void) {
+}
+
+void Vdp1DistortedSpriteDraw(void) {
+}
+
+void Vdp1PolygonDraw(void) {
+}
+
+void Vdp1PolylineDraw(void) {
+}
+
+void Vdp1LineDraw(void) {
+}
+
+void Vdp1UserClipping(void) {
+}
+
+void Vdp1SystemClipping(void) {
+}
+
+void Vdp1LocalCoordinate(void) {
+}
+

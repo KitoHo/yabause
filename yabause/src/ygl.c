@@ -1,0 +1,258 @@
+#include "ygl.h"
+
+YglTextureManager * YglTM;
+
+void YglTMInit(unsigned int w, unsigned int h) {
+	unsigned int i;
+
+	YglTM = (YglTextureManager *) malloc(sizeof(YglTextureManager));
+	YglTM->texture = (unsigned int *) malloc(sizeof(unsigned int) * w * h);
+	YglTM->texture[0] = 0xFFFF0000;
+	YglTM->texture[1] = 0xFFFF0000;
+	YglTM->texture[2] = 0xFF00FF00;
+	YglTM->texture[3] = 0xFFFF00FF;
+	YglTM->width = w;
+	YglTM->height = h;
+
+	YglTMReset();
+}
+
+void YglTMDeInit(void) {
+	free(YglTM->texture);
+	free(YglTM);
+}
+
+void YglTMReset(void) {
+	YglTM->currentX = 0;
+	YglTM->currentY = 0;
+	YglTM->yMax = 0;
+}
+
+void YglTMAllocate(YglTexture * output, unsigned int w, unsigned int h, unsigned int * x, unsigned int * y) {
+	if ((YglTM->width - YglTM->currentX) >= w) {
+		*x = YglTM->currentX;
+		*y = YglTM->currentY;
+		output->w = YglTM->width - w;
+		output->textdata = YglTM->texture + YglTM->currentY * YglTM->width + YglTM->currentX;
+		YglTM->currentX += w;
+		if ((YglTM->currentY + h) > YglTM->yMax)
+			YglTM->yMax = YglTM->currentY + h;
+	}
+	else {
+		YglTM->currentX = 0;
+		YglTM->currentY = YglTM->yMax;
+		YglTMAllocate(output, w, h, x, y);
+	}
+}
+
+Ygl * _Ygl;
+
+void YglInit(int width, int height, unsigned int depth) {
+	unsigned int i;
+	char yab_version[64];
+
+	SDL_InitSubSystem( SDL_INIT_VIDEO );
+
+	//set the window title
+	sprintf(yab_version, "Yabause %s", "0.0.5");
+	SDL_WM_SetCaption(yab_version, NULL);
+	
+	SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 4 );
+	SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 4 );
+	SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 4 );
+	SDL_GL_SetAttribute( SDL_GL_ALPHA_SIZE, 4);
+	SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 16 );
+	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
+	if ( SDL_SetVideoMode( 320, 224, 32, SDL_OPENGL ) == NULL ) {
+		fprintf(stderr, "Couldn't set GL mode: %s\n", SDL_GetError());
+		SDL_Quit();
+		return;
+	}
+
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, 320, 224, 0, 1, 0);
+
+	glMatrixMode(GL_TEXTURE);
+	glLoadIdentity();
+	glOrtho(-width, width, -height, height, 1, 0);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+	YglTMInit(width, height);
+
+	_Ygl = (Ygl *) malloc(sizeof(Ygl));
+	_Ygl->depth = depth;
+	_Ygl->levels = (YglLevel *) malloc(sizeof(YglLevel) * depth);
+	for(i = 0;i < depth;i++) {
+		_Ygl->levels->currentQuad = 0;
+		_Ygl->levels->quads = (int *) malloc(8 * 10 * sizeof(int));
+		_Ygl->levels->textcoords = (int *) malloc(8 * 10 * sizeof(int));
+	}
+
+	glGenTextures(1, &_Ygl->texture);
+	glBindTexture(GL_TEXTURE_2D, _Ygl->texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, YglTM->texture);
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+
+	_Ygl->st = 0;
+	_Ygl->msglength = 0;
+}
+
+void YglDeInit(void) {
+	YglTMDeInit();
+	free(_Ygl->levels->quads);
+	free(_Ygl->levels->textcoords);
+	free(_Ygl->levels);
+	free(_Ygl);
+}
+
+int * YglQuad(YglSprite * input, YglTexture * output) {
+	YglLevel * level = _Ygl->levels + input->priority;
+	unsigned int x, y;
+	int * tmp = level->textcoords + level->currentQuad;
+
+	memcpy(level->quads + level->currentQuad, input->vertices, 8 * sizeof(int));
+	level->currentQuad += 8;
+	YglTMAllocate(output, input->w, input->h, &x, &y);
+	if (input->flip & 0x1) {
+		*tmp = *(tmp + 6) = x + input->w;
+		*(tmp + 2) = *(tmp + 4) = x;
+	} else {
+		*tmp = *(tmp + 6) = x;
+		*(tmp + 2) = *(tmp + 4) = x + input->w;
+	}
+	if (input->flip & 0x2) {
+		*(tmp + 1) = *(tmp + 3) = y + input->h;
+		*(tmp + 5) = *(tmp + 7) = y;
+	} else {
+		*(tmp + 1) = *(tmp + 3) = y;
+		*(tmp + 5) = *(tmp + 7) = y + input->h;
+	}
+	switch(input->flip) {
+		case 0:
+			return level->textcoords + level->currentQuad - 8;
+		case 1:
+			return level->textcoords + level->currentQuad - 6;
+		case 2:
+			return level->textcoords + level->currentQuad - 2;
+		case 3:
+			return level->textcoords + level->currentQuad - 4;
+	}
+}
+
+void YglCachedQuad(YglSprite * input, int * cache) {
+	YglLevel * level = _Ygl->levels + input->priority;
+	unsigned int x,y;
+	int * tmp = level->textcoords + level->currentQuad;
+
+	memcpy(level->quads + level->currentQuad, input->vertices, 8 * sizeof(int));
+	level->currentQuad += 8;
+
+	x = *cache;
+	y = *(cache + 1);
+	if (input->flip & 0x1) {
+		*tmp = *(tmp + 6) = x + input->w;
+		*(tmp + 2) = *(tmp + 4) = x;
+	} else {
+		*tmp = *(tmp + 6) = x;
+		*(tmp + 2) = *(tmp + 4) = x + input->w;
+	}
+	if (input->flip & 0x2) {
+		*(tmp + 1) = *(tmp + 3) = y + input->h;
+		*(tmp + 5) = *(tmp + 7) = y;
+	} else {
+		*(tmp + 1) = *(tmp + 3) = y;
+		*(tmp + 5) = *(tmp + 7) = y + input->h;
+	}
+}
+
+void YglRender(void) {
+	YglLevel * level;
+	int i, j;
+
+	glEnable(GL_TEXTURE_2D);
+
+	glBindTexture(GL_TEXTURE_2D, _Ygl->texture);
+	glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, YglTM->width, YglTM->height, GL_RGBA, GL_UNSIGNED_BYTE, YglTM->texture);
+
+	if(_Ygl->st) {
+		int vertices [] = { 0, 0, 320, 0, 320, 224, 0, 224 };
+		int text [] = { 0, 0, YglTM->width, 0, YglTM->width, YglTM->height, 0, YglTM->height };
+		glVertexPointer(2, GL_INT, 0, vertices);
+		glTexCoordPointer(2, GL_INT, 0, text);
+		glDrawArrays(GL_QUADS, 0, 4);
+	} else {
+		for(i = 0;i < _Ygl->depth;i++) {
+			level = _Ygl->levels + i;
+			glVertexPointer(2, GL_INT, 0, level->quads);
+			glTexCoordPointer(2, GL_INT, 0, level->textcoords);
+			glDrawArrays(GL_QUADS, 0, level->currentQuad / 2);
+		}
+	}
+
+	glDisable(GL_TEXTURE_2D);
+
+#ifndef _arch_dreamcast
+	if (_Ygl->msglength > 0) {
+		glColor3f(1.0f, 0.0f, 0.0f);
+		glRasterPos2i(10, 22);
+		for (i = 0; i < _Ygl->msglength; i++) {
+			glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, _Ygl->message[i]);
+		}
+		glColor3f(1, 1, 1);
+	}
+#endif
+
+	SDL_GL_SwapBuffers();
+}
+
+void YglReset(void) {
+	YglLevel * level;
+	int i;
+
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	YglTMReset();
+
+	for(i = 0;i < _Ygl->depth;i++) {
+		level = _Ygl->levels + i;
+		level->currentQuad = 0;
+	}
+	_Ygl->msglength = 0;
+}
+
+void YglShowTexture(void) {
+	_Ygl->st = !_Ygl->st;
+}
+
+void YglChangeResolution(int w, int h) {
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0, w, h, 0, 1, 0);
+}
+
+void YglOnScreenDebugMessage(char *string, ...) {
+	va_list arglist;
+
+	va_start(arglist, string);
+	vsprintf(_Ygl->message, string, arglist);
+	va_end(arglist);
+	_Ygl->msglength = strlen(_Ygl->message);
+}
+
+int * YglIsCached(unsigned long addr) {
+	return NULL;
+}
+
+void YglCache(unsigned long addr, int * val) {
+}
+
+void YglCacheReset(void) {
+}

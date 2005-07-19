@@ -293,6 +293,18 @@ u16 FASTCALL OnchipReadWord(u32 addr) {
 u32 FASTCALL OnchipReadLong(u32 addr) {
    switch(addr)
    {
+      case 0x100:
+         return CurrentSH2->onchip.DVSR;
+      case 0x104: // DVDNT
+         return CurrentSH2->onchip.DVDNTL;
+      case 0x108:
+         return CurrentSH2->onchip.DVCR;
+      case 0x10C:
+         return CurrentSH2->onchip.VCRDIV;
+      case 0x110:
+         return CurrentSH2->onchip.DVDNTH;
+      case 0x114:
+         return CurrentSH2->onchip.DVDNTL;
       case 0x1E0:
          return CurrentSH2->onchip.BCR1;
       default:
@@ -320,6 +332,83 @@ void FASTCALL OnchipWriteWord(u32 addr, u16 val) {
 void FASTCALL OnchipWriteLong(u32 addr, u32 val)  {
    switch (addr)
    {
+      case 0x100:
+         CurrentSH2->onchip.DVSR = val;
+         return;
+      case 0x104: {
+         s32 divisor = (s32) CurrentSH2->onchip.DVSR;
+         if (divisor == 0)
+         {
+            CurrentSH2->onchip.DVDNTL = val;
+            if (val & 0x80000000)
+            {
+               CurrentSH2->onchip.DVDNTH = 0xFFFFFFFF;
+            }
+            else
+            {
+               CurrentSH2->onchip.DVDNTH = 0;
+            }
+            CurrentSH2->onchip.DVCR |= 1;
+#if DEBUG
+            if (CurrentSH2->onchip.DVCR & 0x2)
+               fprintf(stderr, "should be triggering DIVU interrupt\n");
+#endif
+         }
+         else
+         {
+            s32 quotient = ((long) val) / divisor;
+            s32 remainder = ((long) val) % divisor;
+            CurrentSH2->onchip.DVDNTL = quotient;
+            CurrentSH2->onchip.DVDNTH = remainder;
+            CurrentSH2->onchip.DVCR &= ~1;
+         }
+         return;
+      }
+      case 0x108:
+         CurrentSH2->onchip.DVCR = val & 0x3;
+         return;
+      case 0x10C:
+         CurrentSH2->onchip.VCRDIV = val & 0xFFFF;
+         return;
+      case 0x110:
+         CurrentSH2->onchip.DVDNTH = val;
+         return;
+      case 0x114: {
+         s32 divisor = (s32) CurrentSH2->onchip.DVSR;
+         s64 dividend = CurrentSH2->onchip.DVDNTH;
+         dividend <<= 32;
+         dividend |= val;
+
+         if (divisor == 0)
+         {
+            CurrentSH2->onchip.DVDNTL = val;
+            CurrentSH2->onchip.DVCR |= 1;
+#if DEBUG
+            if (CurrentSH2->onchip.DVCR & 0x2)
+               fprintf(stderr, "should be triggering DIVU interrupt\n");
+#endif
+         }
+         else
+         {
+            s64 quotient = dividend / divisor;
+            s32 remainder = dividend % divisor;
+
+            // check for overflow
+            if (quotient >> 32) {
+               CurrentSH2->onchip.DVCR |= 1;
+#if DEBUG
+               if (CurrentSH2->onchip.DVCR & 0x2)
+                  fprintf(stderr, "should be triggering DIVU interrupt\n");
+#endif
+            }
+            else
+               CurrentSH2->onchip.DVCR &= ~1;
+
+            CurrentSH2->onchip.DVDNTL = quotient;
+            CurrentSH2->onchip.DVDNTH = remainder;
+         }
+         return;
+      }
       case 0x1E0:
          CurrentSH2->onchip.BCR1 &= 0x8000;
          CurrentSH2->onchip.BCR1 |= val & 0x1FF7;

@@ -130,6 +130,9 @@ void SH2Step(SH2_struct *context);
 void SH2GetRegisters(SH2_struct *context, sh2regs_struct * r);
 void SH2SetRegisters(SH2_struct *context, sh2regs_struct * r);
 
+void DMAExec(void);
+void DMATransfer(u32 *CHCR, u32 *SAR, u32 *DAR, u32 *TCR, u32 *VCRDMA);
+
 u8 FASTCALL OnchipReadByte(u32 addr);
 u16 FASTCALL OnchipReadWord(u32 addr);
 u32 FASTCALL OnchipReadLong(u32 addr);

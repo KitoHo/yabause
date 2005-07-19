@@ -319,6 +319,16 @@ u32 FASTCALL OnchipReadLong(u32 addr) {
 
 void FASTCALL OnchipWriteByte(u32 addr, u8 val) {
    // stub
+   switch(addr) {
+      case 0x071:
+         CurrentSH2->onchip.DRCR0 = val & 0x3;
+         return;
+      case 0x072:
+         CurrentSH2->onchip.DRCR1 = val & 0x3;
+         return;
+      default:
+         fprintf(stderr, "Unhandled Onchip byte write %08X\n", addr);
+   } 
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -409,6 +419,57 @@ void FASTCALL OnchipWriteLong(u32 addr, u32 val)  {
          }
          return;
       }
+      case 0x180:
+         CurrentSH2->onchip.SAR0 = val;
+         return;
+      case 0x184:
+         CurrentSH2->onchip.DAR0 = val;
+         return;
+      case 0x188:
+         CurrentSH2->onchip.TCR0 = val & 0xFFFFFF;
+         return;
+      case 0x18C:
+         CurrentSH2->onchip.CHCR0 = val & 0xFFFF;
+
+         // If the DMAOR DME bit is set and AE and NMIF bits are cleared,
+         // and CHCR's DE bit is set and TE bit is cleared,
+         // do a dma transfer
+         if ((CurrentSH2->onchip.DMAOR & 7) == 1 && (val & 0x3) == 1)
+            DMAExec();
+         return;
+      case 0x190:
+         CurrentSH2->onchip.SAR1 = val;
+         return;
+      case 0x194:
+         CurrentSH2->onchip.DAR1 = val;
+         return;
+      case 0x198:
+         CurrentSH2->onchip.TCR1 = val & 0xFFFFFF;
+         return;
+      case 0x19C:
+         CurrentSH2->onchip.CHCR1 = val & 0xFFFF;
+
+         // If the DMAOR DME bit is set and AE and NMIF bits are cleared,
+         // and CHCR's DE bit is set and TE bit is cleared,
+         // do a dma transfer
+         if ((CurrentSH2->onchip.DMAOR & 7) == 1 && (val & 0x3) == 1)
+            DMAExec();
+         return;
+      case 0x1A0:
+         CurrentSH2->onchip.VCRDMA0 = val & 0xFFFF;
+         return;
+      case 0x1A8:
+         CurrentSH2->onchip.VCRDMA1 = val & 0xFFFF;
+         return;
+      case 0x1B0:
+         CurrentSH2->onchip.DMAOR = val & 0xF;
+
+         // If the DMAOR DME bit is set and AE and NMIF bits are cleared,
+         // and CHCR's DE bit is set and TE bit is cleared,
+         // do a dma transfer
+         if ((val & 7) == 1)
+            DMAExec();
+         return;
       case 0x1E0:
          CurrentSH2->onchip.BCR1 &= 0x8000;
          CurrentSH2->onchip.BCR1 |= val & 0x1FF7;
@@ -450,3 +511,130 @@ void WDTExec(u32 cycles) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+void DMAExec(void) {
+   // If AE and NMIF bits are set, we can't continue
+   if (CurrentSH2->onchip.DMAOR & 0x6)
+      return;
+
+   if ((CurrentSH2->onchip.CHCR0 & 0x1) && (CurrentSH2->onchip.CHCR1 & 0x1)) { // both channel wants DMA
+      if (CurrentSH2->onchip.DMAOR & 0x8) { // round robin priority
+#if DEBUG
+         fprintf(stderr, "dma\t: FIXME: two channel dma - round robin priority not properly implemented\n");
+#endif
+         DMATransfer(&CurrentSH2->onchip.CHCR0, &CurrentSH2->onchip.SAR0,
+		     &CurrentSH2->onchip.DAR0,  &CurrentSH2->onchip.TCR0,
+		     &CurrentSH2->onchip.VCRDMA0);
+         DMATransfer(&CurrentSH2->onchip.CHCR1, &CurrentSH2->onchip.SAR1,
+		     &CurrentSH2->onchip.DAR1,  &CurrentSH2->onchip.TCR1,
+                     &CurrentSH2->onchip.VCRDMA1);
+      }
+      else { // channel 0 > channel 1 priority
+         DMATransfer(&CurrentSH2->onchip.CHCR0, &CurrentSH2->onchip.SAR0,
+		     &CurrentSH2->onchip.DAR0,  &CurrentSH2->onchip.TCR0,
+		     &CurrentSH2->onchip.VCRDMA0);
+         DMATransfer(&CurrentSH2->onchip.CHCR1, &CurrentSH2->onchip.SAR1,
+		     &CurrentSH2->onchip.DAR1,  &CurrentSH2->onchip.TCR1,
+		     &CurrentSH2->onchip.VCRDMA1);
+      }
+   }
+   else { // only one channel wants DMA
+      if (CurrentSH2->onchip.CHCR0 & 0x1) { // DMA for channel 0
+         DMATransfer(&CurrentSH2->onchip.CHCR0, &CurrentSH2->onchip.SAR0,
+		     &CurrentSH2->onchip.DAR0,  &CurrentSH2->onchip.TCR0,
+		     &CurrentSH2->onchip.VCRDMA0);
+         return;
+      }
+      if (CurrentSH2->onchip.CHCR1 & 0x1) { // DMA for channel 1
+         DMATransfer(&CurrentSH2->onchip.CHCR1, &CurrentSH2->onchip.SAR1,
+		     &CurrentSH2->onchip.DAR1,  &CurrentSH2->onchip.TCR1,
+		     &CurrentSH2->onchip.VCRDMA1);
+         return;
+      }
+   }
+}
+
+void DMATransfer(u32 *CHCR, u32 *SAR, u32 *DAR, u32 *TCR, u32 *VCRDMA)
+{
+   int size;
+   u32 i, i2;
+
+   if (!(*CHCR & 0x2)) { // TE is not set
+      int srcInc;
+      switch(*CHCR & 0x3000) {
+         case 0x0000: srcInc = 0; break;
+         case 0x1000: srcInc = 1; break;
+         case 0x2000: srcInc = -1; break;
+         default: srcInc = 0; break;
+      }
+
+      int destInc;
+      switch(*CHCR & 0xC000) {
+         case 0x0000: destInc = 0; break;
+         case 0x4000: destInc = 1; break;
+         case 0x8000: destInc = -1; break;
+         default: destInc = 0; break;
+      }
+
+      switch (size = ((*CHCR & 0x0C00) >> 10)) {
+         case 0:
+            for (i = 0; i < *TCR; i++) {
+               MappedMemoryWriteByte(*DAR, MappedMemoryReadByte(*SAR));
+               *SAR += srcInc;
+               *DAR += destInc;
+            }
+
+            *TCR = 0;
+            break;
+         case 1:
+            destInc *= 2;
+            srcInc *= 2;
+
+            for (i = 0; i < *TCR; i++) {
+               MappedMemoryWriteWord(*DAR, MappedMemoryReadWord(*SAR));
+               *SAR += srcInc;
+               *DAR += destInc;
+            }
+
+            *TCR = 0;
+            break;
+         case 2:
+            destInc *= 4;
+            srcInc *= 4;
+
+            for (i = 0; i < *TCR; i++) {
+               MappedMemoryWriteLong(*DAR, MappedMemoryReadLong(*SAR));
+               *DAR += destInc;
+               *SAR += srcInc;
+            }
+
+            *TCR = 0;
+            break;
+         case 3:
+            destInc *= 4;
+            srcInc *= 4;
+
+            for (i = 0; i < *TCR; i++) {
+               for(i2 = 0; i2 < 4; i2++) {
+                  MappedMemoryWriteLong(*DAR, MappedMemoryReadLong(*SAR));
+                  *DAR += destInc;
+                  *SAR += srcInc;
+               }
+            }
+
+            *TCR = 0;
+            break;
+      }
+   }
+
+   if (*CHCR & 0x4)
+   {
+#if DEBUG
+      fprintf(stderr, "FIXME should launch an interrupt\n");
+#endif
+      SH2SendInterrupt(CurrentSH2, *VCRDMA, (CurrentSH2->onchip.IPRA & 0xF00) >> 8);
+   }                                                                    
+
+   // Set Transfer End bit
+   *CHCR |= 0x2;
+}

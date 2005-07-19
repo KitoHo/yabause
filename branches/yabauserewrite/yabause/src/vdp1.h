@@ -25,6 +25,22 @@
 
 #define GFXCORE_DEFAULT         -1
 
+typedef struct
+{
+   int id;
+   const char *Name;
+   int (*Init)();
+   void (*DeInit)();
+   int (*Reset)();
+   void FASTCALL (*DrawBitmap)(); // fix me
+   void FASTCALL (*DrawTilemap)(); // fix me
+   void FASTCALL (*DrawRotatedBitmap)(); // fix me
+   void FASTCALL (*DrawRotatedTilemap)(); // fix me
+   void FASTCALL (*DrawSprite)(); // fix me
+   void FASTCALL (*DrawPolygon)(); // fix me
+   void FASTCALL (*DrawLine)(); // fix me
+} VideoInterface_struct;
+
 extern u8 * Vdp1Ram;
 
 u8 FASTCALL	Vdp1RamReadByte(u32);

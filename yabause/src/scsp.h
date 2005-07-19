@@ -7,6 +7,17 @@
 
 typedef struct
 {
+   int id;
+   const char *Name;
+   int (*Init)();
+   void (*DeInit)();
+   int (*Reset)();
+   void (*MixAudio)(u16 num_samples, u16 *buffer);
+   void (*MuteAudioToggle)();
+} SoundInterface_struct;
+
+typedef struct
+{
    unsigned long D[8];
    unsigned long A[8];
    unsigned long SR;

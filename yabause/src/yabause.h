@@ -3,6 +3,16 @@
 
 #include "core.h"
 
+typedef struct
+{
+   int id;
+   const char *Name;
+   int (*Init)();
+   void (*DeInit)();
+   void (*SetPeripheralType)(int port1type, int port2type);
+
+} PeripheralInterface_struct;
+
 #define CLKTYPE_26MHZNTSC       0
 #define CLKTYPE_28MHZNTSC       1
 #define CLKTYPE_26MHZPAL        2

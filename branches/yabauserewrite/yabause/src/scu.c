@@ -87,84 +87,89 @@ void ScuReset(void) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ScuDMA(int mode) {
+void FASTCALL ScuDMA(scudmainfo_struct *dmainfo) {
 /*
-   int i = mode * 0x20;
-   u32 readAddress = getLong(i);
-   u32 writeAddress = getLong(i + 0x4);
-   u32 transferNumber = getLong(i + 0x8);
-   u32 addValue = getLong(i + 0xC);
-   u8 readAdd, writeAdd;
+typedef struct
+{
+   int mode
+   u32 ReadAddress;
+   u32 WriteAddress;
+   u32 TransferNumber;
+   u32 AddValue;
+   u32 ModeAddressUpdate;
+} scudmainfo_struct;
+*/
+   u8 ReadAdd, WriteAdd;
 
-   if (addValue & 0x100)
-      readAdd = 4;
+   if (dmainfo->AddValue & 0x100)
+      ReadAdd = 4;
    else
-      readAdd = 0;
+      ReadAdd = 0;
 
-   switch(addValue & 0x7) {
+   switch(dmainfo->AddValue & 0x7) {
       case 0x0:
-         writeAdd = 0;
+         WriteAdd = 0;
          break;
       case 0x1:
-         writeAdd = 2;
+         WriteAdd = 2;
          break;
       case 0x2:
-         writeAdd = 4;
+         WriteAdd = 4;
          break;
       case 0x3:
-         writeAdd = 8;
+         WriteAdd = 8;
          break;
       case 0x4:
-         writeAdd = 16;
+         WriteAdd = 16;
          break;
       case 0x5:
-         writeAdd = 32;
+         WriteAdd = 32;
          break;
       case 0x6:
-         writeAdd = 64;
+         WriteAdd = 64;
          break;
       case 0x7:
-         writeAdd = 128;
+         WriteAdd = 128;
          break;
    }
 
-   if (getLong(i + 0x14) & 0x1000000) {
+   if (dmainfo->ModeAddressUpdate & 0x1000000) {
       // Indirect DMA
-      u32 tempreadAddress;
-      u32 tempwriteAddress;
-      u32 temptransferNumber;
+      u32 TempReadAddress;
+      u32 TempWriteAddress;
+      u32 TempTransferNumber;
       u32 test, test2;
 
       for (;;) {
          u32 counter = 0;
 
-         temptransferNumber=satmem->getLong(writeAddress);
-         tempwriteAddress=satmem->getLong(writeAddress+4);
-         tempreadAddress=satmem->getLong(writeAddress+8);
-         test = tempwriteAddress & 0x1FFFFFFF;
-         test2 = tempreadAddress & 0x80000000;
+         TempTransferNumber=MappedMemoryReadLong(dmainfo->WriteAddress);
+         TempWriteAddress=MappedMemoryReadLong(dmainfo->WriteAddress+4);
+         TempReadAddress=MappedMemoryReadLong(dmainfo->WriteAddress+8);
+         test = TempWriteAddress & 0x1FFFFFFF;
+         test2 = TempReadAddress & 0x80000000;
 
-         if (mode > 0) {
-            temptransferNumber &= 0xFFF;
+         if (dmainfo->mode > 0) {
+            TempTransferNumber &= 0xFFF;
 
-            if (temptransferNumber == 0)
-               temptransferNumber = 0x1000;
+            if (TempTransferNumber == 0)
+               TempTransferNumber = 0x1000;
          }
          else {
-            if (temptransferNumber == 0)
-               temptransferNumber = 0x100000;
+            if (TempTransferNumber == 0)
+               TempTransferNumber = 0x100000;
          }
 
-         tempreadAddress &= 0x7FFFFFFF;
+         TempReadAddress &= 0x7FFFFFFF;
 
          if ((test >= 0x5A00000) && (test < 0x5FF0000)) {
-            while(counter < temptransferNumber) {
-               unsigned long tmp = satmem->getLong(tempreadAddress);
-               satmem->setWord(tempwriteAddress, tmp >> 16);
-               tempwriteAddress += writeAdd;
-               satmem->setWord(tempwriteAddress, tmp & 0xFFFF);
-               tempwriteAddress += writeAdd;
-               tempreadAddress += readAdd;
+            while(counter < TempTransferNumber) {
+               unsigned long tmp = MappedMemoryReadLong(TempReadAddress);
+               MappedMemoryWriteWord(TempWriteAddress, tmp >> 16);
+               TempWriteAddress += WriteAdd;
+               MappedMemoryWriteWord(TempWriteAddress, tmp & 0xFFFF);
+               TempWriteAddress += WriteAdd;
+               TempReadAddress += ReadAdd;
                counter += 4;
             }
          }
@@ -178,45 +183,45 @@ void ScuDMA(int mode) {
          if (test2)
             break;
 
-         writeAddress+= 0xC;
+         dmainfo->WriteAddress+= 0xC;
       }
 
-      switch(mode) {
+      switch(dmainfo->mode) {
          case 0:
-            sendLevel0DMAEnd();
+            ScuSendLevel0DMAEnd();
             break;
          case 1:
-            sendLevel1DMAEnd();
+            ScuSendLevel1DMAEnd();
             break;
          case 2:
-            sendLevel2DMAEnd();
+            ScuSendLevel2DMAEnd();
             break;
       }
    }
    else {
       // Direct DMA
       unsigned long counter = 0;
-      unsigned long test = writeAddress & 0x1FFFFFFF;
+      unsigned long test = dmainfo->WriteAddress & 0x1FFFFFFF;
 
-      if (mode > 0) {
-         transferNumber &= 0xFFF;
+      if (dmainfo->mode > 0) {
+         dmainfo->TransferNumber &= 0xFFF;
 
-         if (transferNumber == 0)
-            transferNumber = 0x1000;
+         if (dmainfo->TransferNumber == 0)
+            dmainfo->TransferNumber = 0x1000;
       }
       else {
-         if (transferNumber == 0)
-            transferNumber = 0x100000;
+         if (dmainfo->TransferNumber == 0)
+            dmainfo->TransferNumber = 0x100000;
       }
 
       if ((test >= 0x5A00000) && (test < 0x5FF0000)) {
-         while(counter < transferNumber) {
-            unsigned long tmp = satmem->getLong(readAddress);
-            satmem->setWord(writeAddress, tmp >> 16);
-            writeAddress += writeAdd;
-            satmem->setWord(writeAddress, tmp & 0xFFFF);
-            writeAddress += writeAdd;
-            readAddress += readAdd;
+         while(counter < dmainfo->TransferNumber) {
+            unsigned long tmp = MappedMemoryReadLong(dmainfo->ReadAddress);
+            MappedMemoryWriteWord(dmainfo->WriteAddress, tmp >> 16);
+            dmainfo->WriteAddress += WriteAdd;
+            MappedMemoryWriteWord(dmainfo->WriteAddress, tmp & 0xFFFF);
+            dmainfo->WriteAddress += WriteAdd;
+            dmainfo->ReadAddress += ReadAdd;
             counter += 4;
          }
       }
@@ -224,26 +229,25 @@ void ScuDMA(int mode) {
 #if DEBUG
          cerr << "direct DMA, A Bus, not tested yet" << endl;
 #endif
-         while(counter < transferNumber) {
-            satmem->setLong(writeAddress, satmem->getLong(readAddress));
-            readAddress += readAdd;
-            writeAddress += writeAdd;
+         while(counter < dmainfo->TransferNumber) {
+            MappedMemoryWriteLong(dmainfo->WriteAddress, MappedMemoryReadLong(dmainfo->ReadAddress));
+            dmainfo->ReadAddress += ReadAdd;
+            dmainfo->WriteAddress += WriteAdd;
             counter += 4;
          }
       }
-      switch(mode) {
+      switch(dmainfo->mode) {
          case 0:
-            sendLevel0DMAEnd();
+            ScuSendLevel0DMAEnd();
             break;
          case 1:
-            sendLevel1DMAEnd();
+            ScuSendLevel1DMAEnd();
             break;
          case 2:
-            sendLevel2DMAEnd();
+            ScuSendLevel2DMAEnd();
             break;
       }
    }
-*/
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1478,19 +1482,19 @@ u32 FASTCALL ScuReadLong(u32 addr) {
       case 0:
          return ScuRegs->D0R;
       case 4:
-         return ScuRegs->W0R;
+         return ScuRegs->D0W;
       case 8:
          return ScuRegs->D0C;
       case 0x20:
          return ScuRegs->D1R;
       case 0x24:
-         return ScuRegs->W1R;
+         return ScuRegs->D1W;
       case 0x28:
          return ScuRegs->D1C;
       case 0x40:
          return ScuRegs->D2R;
       case 0x44:
-         return ScuRegs->W2R;
+         return ScuRegs->D2W;
       case 0x48:
          return ScuRegs->D2C;
       case 0x7C:
@@ -1539,7 +1543,7 @@ void FASTCALL ScuWriteLong(u32 addr, u32 val) {
          ScuRegs->D0R = val;
          break;
       case 4:
-         ScuRegs->W0R = val;
+         ScuRegs->D0W = val;
          break;
       case 8:
          ScuRegs->D0C = val;
@@ -1549,7 +1553,18 @@ void FASTCALL ScuWriteLong(u32 addr, u32 val) {
          break;
       case 0x10:
          if (val & 0x1)
-            ScuDMA(0);
+         {
+            scudmainfo_struct dmainfo;
+
+            dmainfo.mode = 0;
+            dmainfo.ReadAddress = ScuRegs->D0R;
+            dmainfo.WriteAddress = ScuRegs->D0W;
+            dmainfo.TransferNumber = ScuRegs->D0C;
+            dmainfo.AddValue = ScuRegs->D0AD;
+            dmainfo.ModeAddressUpdate = ScuRegs->D0MD;
+
+            ScuDMA(&dmainfo);
+         }
          ScuRegs->D0EN = val;
          break;
       case 0x14:
@@ -1564,7 +1579,7 @@ void FASTCALL ScuWriteLong(u32 addr, u32 val) {
          ScuRegs->D1R = val;
          break;
       case 0x24:
-         ScuRegs->W1R = val;
+         ScuRegs->D1W = val;
          break;
       case 0x28:
          ScuRegs->D1C = val;
@@ -1574,7 +1589,18 @@ void FASTCALL ScuWriteLong(u32 addr, u32 val) {
          break;
       case 0x30:
          if (val & 0x1)
-            ScuDMA(1);
+         {
+            scudmainfo_struct dmainfo;
+
+            dmainfo.mode = 1;
+            dmainfo.ReadAddress = ScuRegs->D1R;
+            dmainfo.WriteAddress = ScuRegs->D1W;
+            dmainfo.TransferNumber = ScuRegs->D1C;
+            dmainfo.AddValue = ScuRegs->D1AD;
+            dmainfo.ModeAddressUpdate = ScuRegs->D1MD;
+
+            ScuDMA(&dmainfo);
+         }
          ScuRegs->D1EN = val;
          break;
       case 0x34:
@@ -1589,7 +1615,7 @@ void FASTCALL ScuWriteLong(u32 addr, u32 val) {
          ScuRegs->D2R = val;
          break;
       case 0x44:
-         ScuRegs->W2R = val;
+         ScuRegs->D2W = val;
          break;
       case 0x48:
          ScuRegs->D2C = val;
@@ -1599,7 +1625,18 @@ void FASTCALL ScuWriteLong(u32 addr, u32 val) {
          break;
       case 0x50:
          if (val & 0x1)
-            ScuDMA(2);
+         {
+            scudmainfo_struct dmainfo;
+
+            dmainfo.mode = 2;
+            dmainfo.ReadAddress = ScuRegs->D2R;
+            dmainfo.WriteAddress = ScuRegs->D2W;
+            dmainfo.TransferNumber = ScuRegs->D2C;
+            dmainfo.AddValue = ScuRegs->D2AD;
+            dmainfo.ModeAddressUpdate = ScuRegs->D2MD;
+
+            ScuDMA(&dmainfo);
+         }
          ScuRegs->D2EN = val;
          break;
       case 0x54:

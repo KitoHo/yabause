@@ -13,21 +13,21 @@ typedef struct
 typedef struct {
 	/* DMA registers */
 	u32 D0R;
-	u32 W0R;
+        u32 D0W;
 	u32 D0C;
 	u32 D0AD;
 	u32 D0EN;
 	u32 D0MD;
 
 	u32 D1R;
-	u32 W1R;
+        u32 D1W;
 	u32 D1C;
 	u32 D1AD;
 	u32 D1EN;
 	u32 D1MD;
 
 	u32 D2R;
-	u32 W2R;
+        u32 D2W;
 	u32 D2C;
 	u32 D2AD;
 	u32 D2EN;
@@ -206,6 +206,16 @@ typedef struct {
 #endif
 
 } scudspregs_struct;
+
+typedef struct
+{
+   int mode;
+   u32 ReadAddress;
+   u32 WriteAddress;
+   u32 TransferNumber;
+   u32 AddValue;
+   u32 ModeAddressUpdate;
+} scudmainfo_struct;
 
 int ScuInit(void);
 void ScuDeInit(void);

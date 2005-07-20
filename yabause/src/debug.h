@@ -33,4 +33,22 @@ void LogStop(void);
 #define LOG(f, r...)
 #endif
 
+#ifdef CDDEBUG
+#define CDLOG(f, r...) DebugPrintf(MainLog, __FILE__, __LINE__, f, ## r)
+#else
+#define CDLOG(f, r...)
+#endif
+
+#ifdef VDP1_DEBUG
+#define VDP1LOG(f, r...) DebugPrintf(MainLog, __FILE__, __LINE__, f, ## r)
+#else
+#define VDP1LOG(f, r...)
+#endif
+
+#ifdef VDP2_DEBUG
+#define VDP2LOG(f, r...) DebugPrintf(MainLog, __FILE__, __LINE__, f, ## r)
+#else
+#define VDP2LOG(f, r...)
+#endif
+
 #endif

@@ -9,20 +9,34 @@
 typedef struct
 {
    u32 R[16];
-   union
-   {
-      struct
-      {
-         u32 T:1;
-         u32 S:1;
-         u32 reserved0:2;
-         u32 I:4;
-         u32 Q:1;
-         u32 M:1;
-         u32 reserved1:22;
-      } part;
-      u32 all;
-   } SR;
+
+#ifdef WORDS_BIGENDIAN
+  union {
+    struct {
+      u32 reserved1:22;
+      u32 M:1;
+      u32 Q:1;
+      u32 I:4;
+      u32 reserved0:2;
+      u32 S:1;
+      u32 T:1;
+    } part;
+    u32 all;
+  } SR;
+#else
+  union {
+    struct {
+      u32 T:1;
+      u32 S:1;
+      u32 reserved0:2;
+      u32 I:4;
+      u32 Q:1;
+      u32 M:1;
+      u32 reserved1:22;
+    } part;
+    u32 all;
+  } SR;
+#endif
 
    u32 GBR;
    u32 VBR;

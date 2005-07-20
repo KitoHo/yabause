@@ -20,6 +20,7 @@
 
 #include <stdlib.h>
 #include "cs2.h"
+#include "debug.h"
 #include "yui.h"
 
 #define CDB_HIRQ_CMOK      0x0001
@@ -72,6 +73,8 @@ extern CDInterface *CDCoreList[];
 //////////////////////////////////////////////////////////////////////////////
 
 u8 FASTCALL Cs2ReadByte(u32 addr) {
+  addr &= 0xFFFFF; // fix me(I should really have proper mapping)
+
   if(Cs2Area->carttype == CART_NETLINK) {
 /*
      switch (addr) {
@@ -93,6 +96,8 @@ u8 FASTCALL Cs2ReadByte(u32 addr) {
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL Cs2WriteByte(u32 addr, u8 val) {
+  addr &= 0xFFFFF; // fix me(I should really have proper mapping)
+
   if(Cs2Area->carttype == CART_NETLINK) {
 /*
      switch (addr) {
@@ -120,6 +125,7 @@ void FASTCALL Cs2WriteByte(u32 addr, u8 val) {
 
 u16 FASTCALL Cs2ReadWord(u32 addr) {
   u16 val = 0;
+  addr &= 0xFFFFF; // fix me(I should really have proper mapping)
 
   switch(addr) {
     case 0x90008:
@@ -144,9 +150,7 @@ u16 FASTCALL Cs2ReadWord(u32 addr) {
                   Cs2Area->reg.HIRQ = val;
 
                   val &= Cs2Area->reg.HIRQMASK;
-//#if CDDEBUG
-//                  fprintf(stderr, "cs2\t: Hirq read, Hirq mask = %x - ret: %x\n", Memory::getWord(0x9000C), val);
-//#endif
+//                  CDLOG("cs2\t: Hirq read, Hirq mask = %x - ret: %x\n", Memory::getWord(0x9000C), val);
                   return val;
     case 0x9000C: 
     case 0x9000E: return Cs2Area->reg.HIRQMASK;
@@ -220,9 +224,7 @@ u16 FASTCALL Cs2ReadWord(u32 addr) {
                   }
                   break;
     default:
-#if DEBUG
-             cerr << "cs2\t: Undocumented register read " << hex << addr << endl;
-#endif
+             LOG("cs2\t: Undocumented register read %08X\n", addr);
 //             val = T3ReadWord(Cs2Area->mem, addr);
              break;
   }
@@ -233,6 +235,8 @@ u16 FASTCALL Cs2ReadWord(u32 addr) {
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL Cs2WriteWord(u32 addr, u16 val) {
+  addr &= 0xFFFFF; // fix me(I should really have proper mapping)
+
   switch(addr) {
     case 0x90008:
     case 0x9000A:
@@ -260,11 +264,9 @@ void FASTCALL Cs2WriteWord(u32 addr, u16 val) {
     case 0x9002A: Cs2Area->reg.MPEGRGB = val;
                   return;
     default:
-#if DEBUG
-             cerr << "cs2\t:Undocumented register write " << hex << addr << endl;
-#endif
+             LOG("cs2\t:Undocumented register write %08X\n", addr);
 //                  T3WriteWord(Cs2Area->mem, addr, val);
-                  break;
+             break;
   }
 }
 
@@ -273,6 +275,7 @@ void FASTCALL Cs2WriteWord(u32 addr, u16 val) {
 u32 FASTCALL Cs2ReadLong(u32 addr) {
   long i;
   u32 val = 0;
+  addr &= 0xFFFFF; // fix me(I should really have proper mapping)
 
   switch(addr) {
     case 0x90008:
@@ -377,9 +380,7 @@ u32 FASTCALL Cs2ReadLong(u32 addr) {
                                Cs2Area->datatranspartition->size -= Cs2Area->cdwnum;
                                Cs2Area->datatranspartition->numblocks -= Cs2Area->datasectstotrans;
 
-#if CDDEBUG
-                               fprintf(stderr, "cs2\t: datatranspartition->size = %x\n", Cs2Area->datatranspartition->size);
-#endif
+                               CDLOG("cs2\t: datatranspartition->size = %x\n", Cs2Area->datatranspartition->size);
                             }
                             break;
                     default: break;
@@ -387,9 +388,7 @@ u32 FASTCALL Cs2ReadLong(u32 addr) {
 
 	          break;
     default:
-#if DEBUG
-             cerr << "cs2\t: Undocumented register read " << hex << addr << endl;
-#endif
+             LOG("cs2\t: Undocumented register read %08X\n", addr);
 //             val = T3ReadLong(Cs2Area->mem, addr);
              break;
   }
@@ -400,9 +399,7 @@ u32 FASTCALL Cs2ReadLong(u32 addr) {
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL Cs2WriteLong(u32 addr, u32 val) {
-#if CDDEBUG
-   fprintf(stderr, "cs2\t: Long writing isn't implemented\n");
-#endif
+   LOG("cs2\t: Long writing isn't implemented\n");
 //   T3WriteLong(Cs2Area->mem, addr, val);
 }
 
@@ -665,9 +662,9 @@ void Cs2Exec(unsigned long timing) {
             if (playpartition != NULL)
             {
                Cs2Area->FAD++;
-#if CDDEBUG
-               fprintf(stderr, "blocks = %d blockfreespace = %d fad = %x playpartition->size = %x isbufferfull = %x\n", Cs2Area->playpartition->numblocks, Cs2Area->blockfreespace, Cs2Area->FAD, Cs2Area->playpartition->size, Cs2Area->isbufferfull);
-#endif
+
+               CDLOG("blocks = %d blockfreespace = %d fad = %x playpartition->size = %x isbufferfull = %x\n", Cs2Area->playpartition->numblocks, Cs2Area->blockfreespace, Cs2Area->FAD, Cs2Area->playpartition->size, Cs2Area->isbufferfull);
+
                Cs2Area->reg.HIRQ |= CDB_HIRQ_CSCT;
                Cs2Area->isonesectorstored = 1;
 
@@ -677,14 +674,10 @@ void Cs2Exec(unsigned long timing) {
                   Cs2SetTiming(0);
                   Cs2Area->reg.HIRQ |= CDB_HIRQ_PEND;
 
-#if CDDEBUG
-                  fprintf(stderr, "PLAY HAS ENDED\n");
-#endif
+                  CDLOG("PLAY HAS ENDED\n");
                }
                if (Cs2Area->isbufferfull) {
-#if CDDEBUG
-                  fprintf(stderr, "BUFFER IS FULL\n");
-#endif
+                  CDLOG("BUFFER IS FULL\n");
 //                  status = CDB_STAT_PAUSE;
                }
             }
@@ -747,413 +740,248 @@ void Cs2Execute(void) {
 
   switch (instruction) {
     case 0x00:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: getStatus\n");
-#endif
+      CDLOG("cs2\t: Command: getStatus\n");
       Cs2GetStatus();
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x01:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: getHardwareInfo\n");
-#endif
+      CDLOG("cs2\t: Command: getHardwareInfo\n");
       Cs2GetHardwareInfo();
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x02:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: getToc\n");
-#endif
+      CDLOG("cs2\t: Command: getToc\n");
       Cs2GetToc();
       break;
     case 0x03:
-    {
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: getSessionInfo\n");
-#endif
-       Cs2GetSessionInfo();
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
-       break;
-    }
+      CDLOG("cs2\t: Command: getSessionInfo\n");
+      Cs2GetSessionInfo();
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
+      break;
     case 0x04:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: initializeCDSystem %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: initializeCDSystem %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2InitializeCDSystem();
       break;
     case 0x06:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: endDataTransfer %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: endDataTransfer %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2EndDataTransfer();
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x10:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: playDisc %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: playDisc %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2PlayDisc();
       break;
     case 0x11:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: seekDisc %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: seekDisc %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2SeekDisc();
       break;
     case 0x20:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: getSubcodeQRW %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: getSubcodeQRW %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2GetSubcodeQRW();
       break;
     case 0x30:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: setCDDeviceConnection %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: setCDDeviceConnection %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2SetCDDeviceConnection();
       break;
     case 0x32:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: getLastBufferDestination %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: getLastBufferDestination %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2GetLastBufferDestination();
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x40:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: setFilterRange\n");
-#endif
+      CDLOG("cs2\t: Command: setFilterRange\n");
       Cs2SetFilterRange();
       break;
     case 0x42:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: setFilterSubheaderConditions\n");
-#endif
+      CDLOG("cs2\t: Command: setFilterSubheaderConditions\n");
       Cs2SetFilterSubheaderConditions();
       break;
     case 0x43:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: getFilterSubheaderConditions\n");
-#endif
+      CDLOG("cs2\t: Command: getFilterSubheaderConditions\n");
       Cs2GetFilterSubheaderConditions();
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x44:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: setFilterMode\n");
-#endif
+      CDLOG("cs2\t: Command: setFilterMode\n");
       Cs2SetFilterMode();
       break;
     case 0x45:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: getFilterMode\n");
-#endif
+      CDLOG("cs2\t: Command: getFilterMode\n");
       Cs2GetFilterMode();
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x46:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: setFilterConnection\n");
-#endif
+      CDLOG("cs2\t: Command: setFilterConnection\n");
       Cs2SetFilterConnection();
       break;
     case 0x48:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: resetSelector %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: resetSelector %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2ResetSelector();
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x50:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: getBufferSize\n");
-#endif
+      CDLOG("cs2\t: Command: getBufferSize\n");
       Cs2GetBufferSize();
-
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x51:
-//#if CDDEBUG
-//      fprintf(stderr, "cs2\t: Command: getSectorNumber %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-//#endif
+//      CDLOG("cs2\t: Command: getSectorNumber %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2GetSectorNumber();
-
-//#if CDDEBUG
-//      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-//#endif
+//      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x52:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: calculateActualSize %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: calculateActualSize %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2CalculateActualSize();
-
       break;
     case 0x53:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: getActualSize\n");
-#endif
+      CDLOG("cs2\t: Command: getActualSize\n");
       Cs2GetActualSize();
-
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x54:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: getSectorInfo %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: getSectorInfo %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2GetSectorInfo();
-
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x60:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: setSectorLength %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: setSectorLength %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2SetSectorLength();
       break;
     case 0x61:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: getSectorData %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: getSectorData %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2GetSectorData();
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x62:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: deleteSectorData %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: deleteSectorData %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2DeleteSectorData();
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x63:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: getThenDeleteSectorData %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: getThenDeleteSectorData %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2GetThenDeleteSectorData();
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x64:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: putSectorData %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: putSectorData %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2PutSectorData();
       break;
     case 0x67:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: getCopyError\n");
-#endif
+      CDLOG("cs2\t: Command: getCopyError\n");
       Cs2GetCopyError();
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x70:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: changeDirectory %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: changeDirectory %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2ChangeDirectory();
-
       break;
     case 0x71:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: readDirectory %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: readDirectory %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2ReadDirectory();
-
       break;
     case 0x72:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: getFileSystemScope\n");
-#endif
+      CDLOG("cs2\t: Command: getFileSystemScope\n");
       Cs2GetFileSystemScope();
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x73:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: getFileInfo %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: getFileInfo %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2GetFileInfo();
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x74:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: readFile\n");
-#endif
+      CDLOG("cs2\t: Command: readFile\n");
       Cs2ReadFile();
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x75:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: abortFile\n");
-#endif
+      CDLOG("cs2\t: Command: abortFile\n");
       Cs2AbortFile();
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x90:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: mpegGetStatus\n");
-#endif
+      CDLOG("cs2\t: Command: mpegGetStatus\n");
       Cs2MpegGetStatus();
       break;
     case 0x91:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: mpegGetInterrupt\n");
-#endif
-       Cs2MpegGetInterrupt();
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: mpegGetInterrupt\n");
+      Cs2MpegGetInterrupt();
+      CDLOG("cs2\t: ret: %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       break;
     case 0x92:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: mpegSetInterruptMask\n");
-#endif
+      CDLOG("cs2\t: Command: mpegSetInterruptMask\n");
       Cs2MpegSetInterruptMask();
       break;
     case 0x93: 
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: mpegInit\n");
-#endif
+      CDLOG("cs2\t: Command: mpegInit\n");
       Cs2MpegInit();
       break;
     case 0x94:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: mpegSetMode\n");
-#endif
+      CDLOG("cs2\t: Command: mpegSetMode\n");
       Cs2MpegSetMode();
-
       break;
     case 0x95:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: mpegPlay\n");
-#endif
+      CDLOG("cs2\t: Command: mpegPlay\n");
       Cs2MpegPlay();
       break;
     case 0x96:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: mpegSetDecodingMethod\n");
-#endif
-       Cs2MpegSetDecodingMethod();
-       break;
+      CDLOG("cs2\t: Command: mpegSetDecodingMethod\n");
+      Cs2MpegSetDecodingMethod();
+      break;
     case 0x9A:      
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: mpegSetConnection\n");
-#endif
-       Cs2MpegSetConnection();
-       break;
+      CDLOG("cs2\t: Command: mpegSetConnection\n");
+      Cs2MpegSetConnection();
+      break;
     case 0x9B:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: mpegGetConnection\n");
-#endif
+      CDLOG("cs2\t: Command: mpegGetConnection\n");
       Cs2MpegGetConnection();
-
       break;
     case 0x9D:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: mpegSetStream\n");
-#endif
+      CDLOG("cs2\t: Command: mpegSetStream\n");
       Cs2MpegSetStream();
       break;
     case 0x9E:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: mpegGetStream\n");
-#endif
+      CDLOG("cs2\t: Command: mpegGetStream\n");
       Cs2MpegGetStream();
       break;
     case 0xA0:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: mpegDisplay\n");
-#endif
+      CDLOG("cs2\t: Command: mpegDisplay\n");
       Cs2MpegDisplay();
       break;
     case 0xA1:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: mpegSetWindow\n");
-#endif
-       Cs2MpegSetWindow();
-       break;
+      CDLOG("cs2\t: Command: mpegSetWindow\n");
+      Cs2MpegSetWindow();
+      break;
     case 0xA2:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: mpegSetBorderColor\n");
-#endif
+      CDLOG("cs2\t: Command: mpegSetBorderColor\n");
       Cs2MpegSetBorderColor();
       break;
     case 0xA3:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: mpegSetFade\n");
-#endif
+      CDLOG("cs2\t: Command: mpegSetFade\n");
       Cs2MpegSetFade();
       break;
     case 0xA4:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: mpegSetVideoEffects\n");
-#endif
+      CDLOG("cs2\t: Command: mpegSetVideoEffects\n");
       Cs2MpegSetVideoEffects();
       break;
     case 0xAF:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: mpegSetLSI\n");
-#endif
+      CDLOG("cs2\t: Command: mpegSetLSI\n");
       Cs2MpegSetLSI();
       break;
     case 0xE0:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: cmdE0 %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif
+      CDLOG("cs2\t: Command: cmdE0 %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2CmdE0();
       break;
     case 0xE1:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: cmdE1 %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif 
+      CDLOG("cs2\t: Command: cmdE1 %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2CmdE1();
       break;
     case 0xE2:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command: cmdE2 %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
-#endif 
+      CDLOG("cs2\t: Command: cmdE2 %04x %04x %04x %04x %04x\n", Cs2Area->reg.HIRQ, Cs2Area->reg.CR1, Cs2Area->reg.CR2, Cs2Area->reg.CR3, Cs2Area->reg.CR4);
       Cs2CmdE2();
       break;
     default:
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: Command %02x not implemented\n", instruction);
-#endif
+      CDLOG("cs2\t: Command %02x not implemented\n", instruction);
       break;
   }
 }
@@ -1367,9 +1195,7 @@ void Cs2PlayDisc(void) {
   else
   {
      // Default Mode
-#if CDDEBUG
-     fprintf(stderr, "playdisc Default Mode is not implemented\n");
-#endif
+     CDLOG("playdisc Default Mode is not implemented\n");
   }
 
   // Convert End Position to playendFAD
@@ -1396,7 +1222,7 @@ void Cs2PlayDisc(void) {
   // setup play mode here
 #if CDDEBUG
   if (pdpmode != 0)
-     fprintf(stderr, "cs2\t: playDisc: Unsupported play mode = %02X\n", pdpmode);
+     CDLOG("cs2\t: playDisc: Unsupported play mode = %02X\n", pdpmode);
 #endif
 
   Cs2SetTiming(1);
@@ -1421,9 +1247,7 @@ void Cs2SeekDisc(void) {
         Cs2Area->status = CDB_STAT_PAUSE;
      else
      {
-#if CDDEBUG
-        fprintf(stderr, "cs2\t: seekDisc - FAD Mode not supported\n");
-#endif
+        CDLOG("cs2\t: seekDisc - FAD Mode not supported\n");
      }
   }
   else
@@ -1813,9 +1637,7 @@ void Cs2GetSectorInfo(void) {
      }
      else
      {
-#if CDDEBUG
-        fprintf(stderr, "cs2\t: getSectorInfo: Unsupported Partition Number\n");
-#endif
+        CDLOG("cs2\t: getSectorInfo: Unsupported Partition Number\n");
      }
   }
 
@@ -1911,16 +1733,12 @@ void Cs2DeleteSectorData(void) {
      if (dsdsectoffset == 0xFFFF)
      {
         // delete last sector 
-#if CDDEBUG
-        fprintf(stderr, "cs2\t:deleteSectorData: FIXME - sector offset of 0xFFFF not supported\n");
-#endif
+        CDLOG("cs2\t:deleteSectorData: FIXME - sector offset of 0xFFFF not supported\n");
      }
      else if (dsdsectnum == 0xFFFF)
      {
         // delete sector x sectors from last?
-#if CDDEBUG
-        fprintf(stderr, "cs2\t:deleteSectorData: FIXME - sector number of 0xFFFF not supported\n");
-#endif
+        CDLOG("cs2\t:deleteSectorData: FIXME - sector number of 0xFFFF not supported\n");
         // calculate which sector we want to delete
         dsdsectoffset = Cs2Area->partition[dsdbufno].numblocks - dsdsectoffset - 1;
         // I think this is right
@@ -2034,9 +1852,7 @@ void Cs2ChangeDirectory(void) {
      if (Cs2ReadFileSystem(Cs2Area->filter + cdfilternum, ((Cs2Area->reg.CR3 & 0xFF) << 16) | Cs2Area->reg.CR4, 0) != 0)
      {
         // fix me
-#if CDDEBUG
-        fprintf(stderr, "cs2\t: ReadFileSystem failed\n");
-#endif
+        CDLOG("cs2\t: ReadFileSystem failed\n");
      }
   }
 
@@ -2060,9 +1876,7 @@ void Cs2ReadDirectory(void) {
      if (Cs2ReadFileSystem(Cs2Area->filter + rdfilternum, ((Cs2Area->reg.CR3 & 0xFF) << 8) | Cs2Area->reg.CR4, 1) != 0)
      {
         // fix me
-#if CDDEBUG
-        fprintf(stderr, "cs2\t: ReadFileSystem failed\n");
-#endif
+        CDLOG("cs2\t: ReadFileSystem failed\n");
      }
   }
 
@@ -2663,9 +2477,7 @@ partition_struct * Cs2FilterData(filter_struct * curfilter, int isaudio)
         if (curfilter->mode & 0x08)
         {
            // Coding Information Check
-#if CDDEBUG
-           fprintf(stderr, "cs2\t: FilterData: Coding Information Check. Coding Information = %02X. Filter's Coding Information Mask = %02X, Coding Information Value = %02X\n", Cs2Area->workblock.ci, curfilter->cimask, curfilter->cival);
-#endif
+           CDLOG("cs2\t: FilterData: Coding Information Check. Coding Information = %02X. Filter's Coding Information Mask = %02X, Coding Information Value = %02X\n", Cs2Area->workblock.ci, curfilter->cimask, curfilter->cival);
            if ((Cs2Area->workblock.ci & curfilter->cimask) != curfilter->cival)
               condresults = 0;
         }
@@ -2673,9 +2485,7 @@ partition_struct * Cs2FilterData(filter_struct * curfilter, int isaudio)
         if (curfilter->mode & 0x10)
         {
            // Reverse Subheader Conditions
-#if CDDEBUG
-           fprintf(stderr, "cs2\t: FilterData: Reverse Subheader Conditions\n");
-#endif
+           CDLOG("cs2\t: FilterData: Reverse Subheader Conditions\n");
            condresults ^= 1;
         }
      }
@@ -2883,9 +2693,7 @@ int Cs2ReadFileSystem(filter_struct * curfilter, u32 fid, int isoffset)
       if (Cs2Area->curdirsect == 0) return -1;
 
 //      rfspartition = ReadUnFilteredSector(??);
-#if CDDEBUG
-      fprintf(stderr, "cs2\t: fix me: readDirectory not working\n");
-#endif
+      CDLOG("cs2\t: fix me: readDirectory not working\n");
       return -1;
 
       fid_offset = fid;
@@ -2922,9 +2730,7 @@ int Cs2ReadFileSystem(filter_struct * curfilter, u32 fid, int isoffset)
       else
       {
          // Read in new directory record of specified directory
-#if CDDEBUG
-         fprintf(stderr, "cs2\t: fix me: only root directory supported for changeDirectory\n");
-#endif
+         CDLOG("cs2\t: fix me: only root directory supported for changeDirectory\n");
          return -1;
       }
    }
@@ -3003,7 +2809,7 @@ int Cs2ReadFileSystem(filter_struct * curfilter, u32 fid, int isoffset)
 //#if CDDEBUG
 //  for (i = 0; i < MAX_FILES; i++)
 //  {
-//     fprintf(stderr, "fileinfo[%d].name = %s\n", i, fileinfo[i].name);
+//     CDLOG("fileinfo[%d].name = %s\n", i, fileinfo[i].name);
 //  }
 //#endif
 

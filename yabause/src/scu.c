@@ -174,9 +174,7 @@ typedef struct
             }
          }
          else {
-#if DEBUG
-            cerr << "indirect DMA, A Bus, not implemented" << endl;
-#endif
+            LOG("indirect DMA, A Bus, not implemented\n");
          }
 
 
@@ -226,9 +224,7 @@ typedef struct
          }
       }
       else {
-#if DEBUG
-         cerr << "direct DMA, A Bus, not tested yet" << endl;
-#endif
+         LOG("direct DMA, A Bus, not tested yet\n");
          while(counter < dmainfo->TransferNumber) {
             MappedMemoryWriteLong(dmainfo->WriteAddress, MappedMemoryReadLong(dmainfo->ReadAddress));
             dmainfo->ReadAddress += ReadAdd;
@@ -985,9 +981,7 @@ void ScuExec(u32 timing) {
                      ScuSendDSPEnd();
                   }
 
-#if DEBUG
-                  fprintf(stderr, "dsp has ended\n");
-#endif
+                  LOG("dsp has ended\n");
 
                   break;
                default: break;
@@ -995,9 +989,7 @@ void ScuExec(u32 timing) {
             break;
          }
          default: 
-#if DEBUG
-            fprintf(stderr, "scu\t: Invalid DSP opcode %08X at offset %02X\n", instruction, ScuDsp->PC);
-#endif
+            LOG("scu\t: Invalid DSP opcode %08X at offset %02X\n", instruction, ScuDsp->PC);
             break;
       }
 
@@ -1569,9 +1561,7 @@ void FASTCALL ScuWriteLong(u32 addr, u32 val) {
          break;
       case 0x14:
          if ((val & 0x7) != 7) {
-#if DEBUG
-            fprintf(stderr, "scu\t: DMA mode 0 interrupt start factor not implemented\n");
-#endif
+            LOG("scu\t: DMA mode 0 interrupt start factor not implemented\n");
          }
          ScuRegs->D0MD = val;
          break;
@@ -1605,9 +1595,7 @@ void FASTCALL ScuWriteLong(u32 addr, u32 val) {
          break;
       case 0x34:
          if ((val & 0x7) != 7) {
-#if DEBUG
-            fprintf(stderr, "scu\t: DMA mode 1 interrupt start factor not implemented\n");
-#endif
+            LOG("scu\t: DMA mode 1 interrupt start factor not implemented\n");
          }
          ScuRegs->D1MD = val;
          break;
@@ -1641,9 +1629,7 @@ void FASTCALL ScuWriteLong(u32 addr, u32 val) {
          break;
       case 0x54:
          if ((val & 0x7) != 7) {
-#if DEBUG
-            fprintf(stderr, "scu\t: DMA mode 2 interrupt start factor not implemented\n");
-#endif
+            LOG("scu\t: DMA mode 2 interrupt start factor not implemented\n");
          }
          ScuRegs->D2MD = val;
          break;
@@ -1656,20 +1642,16 @@ void FASTCALL ScuWriteLong(u32 addr, u32 val) {
          if (ScuDsp->ProgControlPort.part.LE) {
             // set pc
             ScuDsp->PC = (unsigned char)ScuDsp->ProgControlPort.part.P;
-#if DEBUG
-            fprintf(stderr, "scu\t: DSP set pc = %02X\n", ScuDsp->PC);
-#endif
+            LOG("scu\t: DSP set pc = %02X\n", ScuDsp->PC);
          }
 
 #if DEBUG
          if (ScuDsp->ProgControlPort.part.EX)
-            fprintf(stderr, "scu\t: DSP executing: PC = %02X\n", ScuDsp->PC);
+            LOG("scu\t: DSP executing: PC = %02X\n", ScuDsp->PC);
 #endif
          break;
       case 0x84: // DSP Program Ram Data Port
-//#if DEBUG
-//         fprintf(stderr, "scu\t: wrote %08X to DSP Program ram offset %02X\n", val, ScuDsp->PC);
-//#endif
+//         LOG("scu\t: wrote %08X to DSP Program ram offset %02X\n", val, ScuDsp->PC);
          ScuDsp->ProgramRam[ScuDsp->PC] = val;
          ScuDsp->PC++;
          break;
@@ -1678,9 +1660,7 @@ void FASTCALL ScuWriteLong(u32 addr, u32 val) {
          ScuDsp->DataRamReadAddress = val & 0x3F;
          break;
       case 0x8C: // DSP Data Ram Data Port
-//#if DEBUG
-//         fprintf(stderr, "scu\t: wrote %08X to DSP Data Ram Data Port Page %d offset %02X\n", val, ScuDsp->DataRamPage, ScuDsp->DataRamReadAddress);
-//#endif
+//         LOG("scu\t: wrote %08X to DSP Data Ram Data Port Page %d offset %02X\n", val, ScuDsp->DataRamPage, ScuDsp->DataRamReadAddress);
          if (!ScuDsp->ProgControlPort.part.EX) {
             ScuDsp->MD[ScuDsp->DataRamPage][ScuDsp->DataRamReadAddress] = val;
             ScuDsp->DataRamReadAddress++;

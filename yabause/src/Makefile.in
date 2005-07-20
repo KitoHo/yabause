@@ -84,7 +84,14 @@ install_sh = @install_sh@
 yabause_arch = @yabause_arch@
 yabause_yui = @yabause_yui@
 bin_PROGRAMS = yabause
-yabause_SOURCES = cdbase.c memory.c scu.c smpc.c sh2core.c memory.h smpc.h scu.h sh2core.h sh2int.c sh2int.h yabause.c yabause.h scsp.h yui.c cs2.c cs2.h vdp1.c vdp1.h vdp2.c vdp2.h scsp.c scsp.h c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c c68k/c68k_ini.inc core.h
+yabause_SOURCES = \
+	c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c c68k/c68k_ini.inc \
+	cdbase.c cdbase.h core.h cs0.c cs0.h cs1.c cs1.h cs2.c cs2.h \
+	debug.c debug.h memory.c memory.h \
+	scu.c scu.h sh2core.c sh2core.h sh2d.c sh2d.h sh2int.c sh2int.h \
+	smpc.c smpc.h scsp.c scsp.h vdp1.c vdp1.h vdp2.c vdp2.h \
+	yabause.c yabause.h ygl.h ygl.c yui.h yui.c
+
 BUILT_SOURCES = c68k/c68k_ini.inc
 subdir = src
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
@@ -92,11 +99,12 @@ CONFIG_CLEAN_FILES =
 bin_PROGRAMS = yabause$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS)
 
-am_yabause_OBJECTS = cdbase.$(OBJEXT) memory.$(OBJEXT) scu.$(OBJEXT) \
-	smpc.$(OBJEXT) sh2core.$(OBJEXT) sh2int.$(OBJEXT) \
-	yabause.$(OBJEXT) yui.$(OBJEXT) cs2.$(OBJEXT) vdp1.$(OBJEXT) \
-	vdp2.$(OBJEXT) scsp.$(OBJEXT) c68kexec.$(OBJEXT) c68k.$(OBJEXT) \
-	gen68k.$(OBJEXT)
+am_yabause_OBJECTS = c68kexec.$(OBJEXT) c68k.$(OBJEXT) gen68k.$(OBJEXT) \
+	cdbase.$(OBJEXT) cs0.$(OBJEXT) cs1.$(OBJEXT) cs2.$(OBJEXT) \
+	debug.$(OBJEXT) memory.$(OBJEXT) scu.$(OBJEXT) \
+	sh2core.$(OBJEXT) sh2d.$(OBJEXT) sh2int.$(OBJEXT) \
+	smpc.$(OBJEXT) scsp.$(OBJEXT) vdp1.$(OBJEXT) vdp2.$(OBJEXT) \
+	yabause.$(OBJEXT) ygl.$(OBJEXT) yui.$(OBJEXT)
 yabause_OBJECTS = $(am_yabause_OBJECTS)
 yabause_LDADD = $(LDADD)
 yabause_DEPENDENCIES =
@@ -110,13 +118,15 @@ LIBS = @LIBS@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 @AMDEP_TRUE@DEP_FILES = ./$(DEPDIR)/c68k.Po ./$(DEPDIR)/c68kexec.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/cdbase.Po ./$(DEPDIR)/cs2.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/gen68k.Po ./$(DEPDIR)/memory.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/scsp.Po ./$(DEPDIR)/scu.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/sh2core.Po ./$(DEPDIR)/sh2int.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/cdbase.Po ./$(DEPDIR)/cs0.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/cs1.Po ./$(DEPDIR)/cs2.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/debug.Po ./$(DEPDIR)/gen68k.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/memory.Po ./$(DEPDIR)/scsp.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/scu.Po ./$(DEPDIR)/sh2core.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/sh2d.Po ./$(DEPDIR)/sh2int.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/smpc.Po ./$(DEPDIR)/vdp1.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/vdp2.Po ./$(DEPDIR)/yabause.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/yui.Po
+@AMDEP_TRUE@	./$(DEPDIR)/ygl.Po ./$(DEPDIR)/yui.Po
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
@@ -176,17 +186,22 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/c68k.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/c68kexec.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdbase.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cs0.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cs1.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cs2.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/debug.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen68k.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/memory.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/scsp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/scu.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sh2core.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sh2d.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sh2int.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/smpc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vdp1.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vdp2.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/yabause.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ygl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/yui.Po@am__quote@
 
 distclean-depend:

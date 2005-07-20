@@ -278,6 +278,7 @@ void OnchipReset(SH2_struct *context) {
 
 u8 FASTCALL OnchipReadByte(u32 addr) {
    // stub
+   fprintf(stderr, "Unhandled Onchip byte read %08X\n", addr);
    return 0;
 }
 
@@ -285,6 +286,7 @@ u8 FASTCALL OnchipReadByte(u32 addr) {
 
 u16 FASTCALL OnchipReadWord(u32 addr) {
    // stub
+   fprintf(stderr, "Unhandled Onchip word read %08X\n", addr);
    return 0;
 }
 
@@ -335,6 +337,7 @@ void FASTCALL OnchipWriteByte(u32 addr, u8 val) {
 
 void FASTCALL OnchipWriteWord(u32 addr, u16 val) {
    // stub
+   fprintf(stderr, "Unhandled Onchip word write %08X\n", addr);
 }
 
 //////////////////////////////////////////////////////////////////////////////

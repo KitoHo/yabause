@@ -387,6 +387,7 @@ u8 FASTCALL MappedMemoryReadByte(u32 addr) {
          // Data Array
          break;
       }
+*/
       case 0x7:
       {
          if (addr >= 0xFFFFFE00)
@@ -405,7 +406,6 @@ u8 FASTCALL MappedMemoryReadByte(u32 addr) {
          }
          break;
       }
-*/
       default:
       {
          return UnhandledMemoryReadByte(addr);
@@ -439,6 +439,7 @@ u16 FASTCALL MappedMemoryReadWord(u32 addr) {
          // Data Array
          break;
       }
+*/
       case 0x7:
       {
          if (addr >= 0xFFFFFE00)
@@ -457,7 +458,6 @@ u16 FASTCALL MappedMemoryReadWord(u32 addr) {
          }
          break;
       }
-*/
       default:
       {
          return UnhandledMemoryReadWord(addr);
@@ -550,6 +550,7 @@ void FASTCALL MappedMemoryWriteByte(u32 addr, u8 val)  {
          // Data Array
          return;
       }
+*/
       case 0x7:
       {
          if (addr >= 0xFFFFFE00)
@@ -568,7 +569,6 @@ void FASTCALL MappedMemoryWriteByte(u32 addr, u8 val)  {
          }
          return;
       }
-*/
       default:
       {
          UnhandledMemoryWriteByte(addr, val);
@@ -602,6 +602,7 @@ void FASTCALL MappedMemoryWriteWord(u32 addr, u16 val)  {
          // Data Array
          return;
       }
+*/
       case 0x7:
       {
          if (addr >= 0xFFFFFE00)
@@ -620,7 +621,6 @@ void FASTCALL MappedMemoryWriteWord(u32 addr, u16 val)  {
          }
          return;
       }
-*/
       default:
       {
          UnhandledMemoryWriteWord(addr, val);

@@ -20,6 +20,7 @@
 
 #include <stdlib.h>
 #include "vdp2.h"
+#include "debug.h"
 #include "scu.h"
 #include "sh2core.h"
 #include "yabause.h"
@@ -206,6 +207,7 @@ void Vdp2VBlankOUT(void) {
 //////////////////////////////////////////////////////////////////////////////
 
 u8 FASTCALL Vdp2ReadByte(u32 addr) {
+   LOG("VDP2 register byte read = %08X\n", addr);
    addr &= 0x1FF;
    return 0;
 }
@@ -214,12 +216,31 @@ u8 FASTCALL Vdp2ReadByte(u32 addr) {
 
 u16 FASTCALL Vdp2ReadWord(u32 addr) {
    addr &= 0x1FF;
+
+   switch (addr)
+   {
+      case 0x000:
+         return Vdp2Regs->TVMD;
+      case 0x004:
+         // if TVMD's DISP bit is cleared, TVSTAT's VBLANK bit is always set
+         if (Vdp2Regs->TVMD & 0x8000)
+            return Vdp2Regs->TVSTAT;
+         else
+            return (Vdp2Regs->TVSTAT | 0x8);
+      default:
+      {
+         LOG("Unhandled VDP2 word read: %08X\n", addr);
+         break;
+      }
+   }
+
    return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 u32 FASTCALL Vdp2ReadLong(u32 addr) {
+   LOG("VDP2 register long read = %08X\n", addr);
    addr &= 0x1FF;
    return 0;
 }
@@ -227,6 +248,7 @@ u32 FASTCALL Vdp2ReadLong(u32 addr) {
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL Vdp2WriteByte(u32 addr, u8 val) {
+   LOG("VDP2 register byte write = %08X\n", addr);
    addr &= 0x1FF;
 }
 
@@ -234,11 +256,72 @@ void FASTCALL Vdp2WriteByte(u32 addr, u8 val) {
 
 void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
    addr &= 0x1FF;
+
+   switch (addr)
+   {
+      case 0x000:
+         Vdp2Regs->TVMD = val;
+         return;
+      case 0x02:
+         Vdp2Regs->EXTEN = val;
+         return;
+      case 0x0E:
+         Vdp2Regs->RAMCTL = val;
+         return;
+      case 0x20:
+         Vdp2Regs->BGON = val;
+         return;
+      case 0x28:
+         Vdp2Regs->CHCTLA = val;
+         return;
+      case 0x2A:
+         Vdp2Regs->CHCTLB = val;
+         return;
+      case 0x2C:
+         Vdp2Regs->BMPNA = val;
+         return;
+      case 0x3C:
+         Vdp2Regs->MPOFN = val;
+         return;
+      case 0x48:
+         Vdp2Regs->MPABN2 = val;
+         return;
+      case 0x4A:
+         Vdp2Regs->MPCDN2 = val;
+         return;
+      case 0xAC:
+         Vdp2Regs->BKTAU = val;
+         return;
+      case 0xAE:
+         Vdp2Regs->BKTAL = val;
+         return;
+      case 0xE4:
+         Vdp2Regs->CRAOFA = val;
+         return;
+      case 0xE6:
+         Vdp2Regs->CRAOFB = val;
+         return;     
+      case 0xF8:
+         Vdp2Regs->PRINA = val;
+         return;
+      case 0xFA:
+         Vdp2Regs->PRINB = val;
+         return;
+      case 0xFC:
+         Vdp2Regs->PRIR = val;
+         return;
+      default:
+      {
+         LOG("Unhandled VDP2 word write: %08X\n", addr);
+         break;
+      }
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL Vdp2WriteLong(u32 addr, u32 val) {
+   LOG("VDP2 register long write = %08X\n", addr);
    addr &= 0x1FF;
 }
 

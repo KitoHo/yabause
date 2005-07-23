@@ -663,7 +663,7 @@ void Cs2Exec(unsigned long timing) {
             {
                Cs2Area->FAD++;
 
-               CDLOG("blocks = %d blockfreespace = %d fad = %x playpartition->size = %x isbufferfull = %x\n", Cs2Area->playpartition->numblocks, Cs2Area->blockfreespace, Cs2Area->FAD, Cs2Area->playpartition->size, Cs2Area->isbufferfull);
+               CDLOG("blocks = %d blockfreespace = %d fad = %x playpartition->size = %x isbufferfull = %x\n", playpartition->numblocks, Cs2Area->blockfreespace, Cs2Area->FAD, playpartition->size, Cs2Area->isbufferfull);
 
                Cs2Area->reg.HIRQ |= CDB_HIRQ_CSCT;
                Cs2Area->isonesectorstored = 1;

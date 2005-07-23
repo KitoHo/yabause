@@ -384,6 +384,14 @@ u32 FASTCALL OnchipReadLong(u32 addr) {
          return CurrentSH2->onchip.DVDNTH;
       case 0x114:
          return CurrentSH2->onchip.DVDNTL;
+      case 0x11C: // DVDNTL mirror
+         return CurrentSH2->onchip.DVDNTL;
+      case 0x18C:
+         return CurrentSH2->onchip.CHCR0;
+      case 0x19C:
+         return CurrentSH2->onchip.CHCR1;
+      case 0x1B0:
+         return CurrentSH2->onchip.DMAOR;
       case 0x1E0:
          return CurrentSH2->onchip.BCR1;
       default:

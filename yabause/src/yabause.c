@@ -20,13 +20,14 @@
 
 #include <sys/types.h>
 #include "yabause.h"
-#include "sh2core.h"
-#include "memory.h"
-#include "SDL.h"
 #include "cs0.h"
 #include "cs2.h"
+#include "debug.h"
+#include "memory.h"
+#include "SDL.h"
 #include "scsp.h"
 #include "scu.h"
+#include "sh2core.h"
 #include "smpc.h"
 #include "vdp2.h"
 #include "yui.h"
@@ -44,81 +45,55 @@ void keyDown(int key)
   switch (key) {
         case SDLK_RIGHT:
 		buttonbits &= 0x7FFF;
-#ifdef DEBUG
-		cerr << "Right" << endl;
-#endif
+                LOG("Right\n");
 		break;
         case SDLK_LEFT:
 		buttonbits &= 0xBFFF;
-#ifdef DEBUG
-		cerr << "Left" << endl;
-#endif
+                LOG("Left\n");
 		break;
         case SDLK_DOWN:
 		buttonbits &= 0xDFFF;
-#ifdef DEBUG
-		cerr << "Down" << endl;
-#endif
+                LOG("Down\n");
 		break;
         case SDLK_UP:
 		buttonbits &= 0xEFFF;
-#ifdef DEBUG
-		cerr << "Up" << endl;
-#endif
+                LOG("Up\n");
 		break;
 	case SDLK_j:
 		buttonbits &= 0xF7FF;
-#ifdef DEBUG
-		cerr << "Start" << endl;
-#endif
+                LOG("Start\n");
 		break;
 	case SDLK_k:
 		buttonbits &= 0xFBFF;
-#ifdef DEBUG
-		cerr << "A" << endl;
-#endif
+                LOG("A\n");
 		break;
 	case SDLK_m:
 		buttonbits &= 0xFDFF;
-#ifdef DEBUG
-		cerr << "C" << endl;
-#endif
+                LOG("C\n");
 		break;
 	case SDLK_l:
 		buttonbits &= 0xFEFF;
-#ifdef DEBUG
-		cerr << "B" << endl;
-#endif
+                LOG("B\n");
 		break;
 	case SDLK_z:
 		buttonbits &= 0xFF7F;
-#ifdef DEBUG
-		cerr << "Right Trigger" << endl;
-#endif
+                LOG("Right Trigger\n");
 		break;
 	case SDLK_u:
 		buttonbits &= 0xFFBF;
-#ifdef DEBUG
-		cerr << "X" << endl;
-#endif
+                LOG("X\n");
 		break;
 	case SDLK_i:
 		buttonbits &= 0xFFDF;
-#ifdef DEBUG
-		cerr << "Y" << endl;
-#endif
+                LOG("Y\n");
 		break;
 	case SDLK_o:
 		buttonbits &= 0xFFEF;
-#ifdef DEBUG
-		cerr << "Z" << endl;
-#endif
+                LOG("Z\n");
 		break;
 	case SDLK_x:
 		buttonbits &= 0xFFF7;
-#ifdef DEBUG
-		cerr << "LTrig" << endl;
-#endif
+                LOG("Left Trigger\n");
 		break;
 	default:
 		break;
@@ -397,7 +372,7 @@ int YabauseExec() {
       // HBlankIN
       Vdp2HBlankIN();
    }
-   else if (yabsys.DecilineCount == 9)
+   else if (yabsys.DecilineCount == 10)
    {
       // HBlankOUT
       Vdp2HBlankOUT();
@@ -457,6 +432,7 @@ void YabStopSlave(void) {
 
 int main(int argc, char *argv[]) {
    int i;
+//   LogStart();
 
    //handle command line arguments
    for (i = 1; i < argc; ++i) {
@@ -486,6 +462,7 @@ int main(int argc, char *argv[]) {
 
    YabauseDeInit();
    SDL_Quit();
+//   LogStop();
    return 0;
 }
 

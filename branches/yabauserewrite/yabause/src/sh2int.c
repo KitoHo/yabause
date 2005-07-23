@@ -2276,6 +2276,9 @@ int SH2InterpreterInit() {
       opcodes[i] = decode(i);
    }
 
+   SH2ClearCodeBreakpoints(MSH2);
+   SH2ClearCodeBreakpoints(SSH2);
+
    return 0;
 }
 
@@ -2296,7 +2299,8 @@ int SH2InterpreterReset() {
 
 FASTCALL u32 SH2InterpreterExec(SH2_struct *context, u32 cycles) {
    while(context->cycles < cycles) {
-      // handle breakpoints here
+      SH2HandleBreakpoints(context);
+
       switch ((context->regs.PC >> 20) & 0x0FF) {
          case 0x000: // Bios
             context->instruction = T2ReadWord(BiosRom, context->regs.PC & 0x7FFFF);

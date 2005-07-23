@@ -110,6 +110,13 @@ typedef struct
 
 typedef struct
 {
+  unsigned long addr;
+} codebreakpoint_struct;
+
+#define MAX_BREAKPOINTS 10
+
+typedef struct
+{
    sh2regs_struct regs;
    Onchip_struct onchip;
    interrupt_struct interrupts[MAX_INTERRUPTS];
@@ -119,6 +126,10 @@ typedef struct
    u32 cycles;
    u8 isslave;
    u16 instruction;
+   codebreakpoint_struct codebreakpoint[MAX_BREAKPOINTS];
+   int numcodebreakpoints;
+   void (*BreakpointCallBack)(void *, unsigned long);
+   unsigned char inbreakpoint;
 } SH2_struct;
 
 typedef struct
@@ -143,6 +154,26 @@ void SH2SendInterrupt(SH2_struct *context, u8 vector, u8 level);
 void SH2Step(SH2_struct *context);
 void SH2GetRegisters(SH2_struct *context, sh2regs_struct * r);
 void SH2SetRegisters(SH2_struct *context, sh2regs_struct * r);
+
+void SH2SetBreakpointCallBack(SH2_struct *context, void (*func)(SH2_struct *, unsigned long));
+int SH2AddCodeBreakpoint(SH2_struct *context, unsigned long addr);
+int SH2DelCodeBreakpoint(SH2_struct *context, unsigned long addr);
+codebreakpoint_struct *SH2GetBreakpointList(SH2_struct *context);
+void SH2ClearCodeBreakpoints(SH2_struct *context);
+
+static inline void SH2HandleBreakpoints(SH2_struct *context)
+{
+   int i;
+
+   for (i=0; i < context->numcodebreakpoints; i++) {
+      if ((context->regs.PC == context->codebreakpoint[i].addr) && context->inbreakpoint == 0) {
+         context->inbreakpoint = 1;
+         if (context->BreakpointCallBack)
+             context->BreakpointCallBack(context, context->codebreakpoint[i].addr);
+         context->inbreakpoint = 0;
+      }
+   }
+}
 
 void DMAExec(void);
 void DMATransfer(u32 *CHCR, u32 *SAR, u32 *DAR, u32 *TCR, u32 *VCRDMA);

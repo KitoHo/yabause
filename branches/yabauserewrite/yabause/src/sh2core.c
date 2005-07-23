@@ -226,6 +226,83 @@ void SH2SetRegisters(SH2_struct *context, sh2regs_struct * r)
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+void SH2SetBreakpointCallBack(SH2_struct *context, void (*func)(SH2_struct *, unsigned long)) {
+   context->BreakpointCallBack = func;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+int SH2AddCodeBreakpoint(SH2_struct *context, unsigned long addr) {
+   if (context->numcodebreakpoints < MAX_BREAKPOINTS) {
+      context->codebreakpoint[context->numcodebreakpoints].addr = addr;
+      context->numcodebreakpoints++;
+
+      return 0;
+   }
+
+   return -1;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void SH2SortCodeBreakpoints(SH2_struct *context) {
+   int i, i2;
+   unsigned long tmp;
+
+   for (i = 0; i < (MAX_BREAKPOINTS-1); i++)
+   {
+      for (i2 = i+1; i2 < MAX_BREAKPOINTS; i2++)
+      {
+         if (context->codebreakpoint[i].addr == 0xFFFFFFFF &&
+             context->codebreakpoint[i2].addr != 0xFFFFFFFF)
+         {
+            tmp = context->codebreakpoint[i].addr;
+            context->codebreakpoint[i].addr = context->codebreakpoint[i2].addr;
+            context->codebreakpoint[i2].addr = tmp;
+         }
+      }
+   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+int SH2DelCodeBreakpoint(SH2_struct *context, unsigned long addr) {
+   int i;
+
+   if (context->numcodebreakpoints > 0) {
+      for (i = 0; i < context->numcodebreakpoints; i++) {
+         if (context->codebreakpoint[i].addr == addr)
+         {
+            context->codebreakpoint[i].addr = 0xFFFFFFFF;
+            SH2SortCodeBreakpoints(context);
+            context->numcodebreakpoints--;
+            return 0;
+         }
+      }
+   }
+
+   return -1;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+codebreakpoint_struct *SH2GetBreakpointList(SH2_struct *context) {
+   return context->codebreakpoint;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void SH2ClearCodeBreakpoints(SH2_struct *context) {
+   int i;
+   for (i = 0; i < MAX_BREAKPOINTS; i++) {
+      context->codebreakpoint[i].addr = 0xFFFFFFFF;
+   }
+
+   context->numcodebreakpoints = 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
 // Onchip specific
 //////////////////////////////////////////////////////////////////////////////
 

@@ -22,10 +22,15 @@
 #include <windows.h>
 #include <commctrl.h>
 #include "SDL.h"
+#undef FASTCALL
+#include "../memory.h"
+#include "../sh2core.h"
+#include "../sh2d.h"
 #include "../yui.h"
+#include "../sndsdl.h"
 #include "resource.h"
 #include "settings.h"
-//#include "cd.hh"
+#include "cd.h"
 
 int stop;
 int yabwinw;
@@ -88,6 +93,19 @@ LRESULT CALLBACK SCUDSPDebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
 
 SH2Interface_struct *SH2CoreList[] = {
 &SH2Interpreter,
+NULL
+};
+
+CDInterface *CDCoreList[] = {
+&DummyCD,
+&ISOCD,
+&SPTICD,
+NULL
+};
+
+SoundInterface_struct *SNDCoreList[] = {
+&SNDDummy,
+&SNDSDL,
 NULL
 };
 
@@ -264,12 +282,13 @@ int YuiInit(int (*yab_main)()) {
    YabWin = hWnd;
 
    // remove me
-   SDL_InitSubSystem( SDL_INIT_VIDEO );
-	
+//   SDL_InitSubSystem( SDL_INIT_VIDEO );
+   SDL_Init(SDL_INIT_VIDEO);
+
    stop = 0;
 
-   if (YabauseInit(SH2CORE_DEFAULT, GFXCORE_DEFAULT, SNDCORE_DEFAULT,
-                   CDCORE_DEFAULT, REGION_AUTODETECT, biosfilename, cdrompath,
+   if (YabauseInit(SH2CORE_DEFAULT, GFXCORE_DEFAULT, SNDCORE_SDL,
+                   CDCORE_SPTI, REGION_AUTODETECT, biosfilename, cdrompath,
                    backupramfilename, mpegromfilename) == -1)
       return -1;
 
@@ -593,7 +612,7 @@ void SH2UpdateCodeList(HWND hDlg, unsigned long addr)
    offset = addr - (12 * 2);
 
    for (i=0; i < 24; i++) // amount of lines
-   {   
+   {
       SH2Disasm(offset, MappedMemoryReadWord(offset), 0, buf);
 
       SendMessage(GetDlgItem(hDlg, IDC_LISTBOX2), LB_ADDSTRING, 0,
@@ -648,20 +667,12 @@ LRESULT CALLBACK MemDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
 
 //////////////////////////////////////////////////////////////////////////////
 
-void BreakpointHandler (unsigned char slave, unsigned long addr)
+void BreakpointHandler (SH2_struct *context, unsigned long addr)
 {
    MessageBox (NULL, "Breakpoint Reached", "Notice",  MB_OK | MB_ICONINFORMATION);
 
-   if (!slave)
-   {
-      debugsh = MSH2;
-      DialogBox(y_hInstance, "SH2DebugDlg", YabWin, (DLGPROC)SH2DebugDlgProc);
-   }
-   else
-   {
-      debugsh = SSH2;
-      DialogBox(y_hInstance, "SH2DebugDlg", YabWin, (DLGPROC)SH2DebugDlgProc);
-   }
+   debugsh = context;
+   DialogBox(y_hInstance, "SH2DebugDlg", YabWin, (DLGPROC)SH2DebugDlgProc);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -674,13 +685,13 @@ LRESULT CALLBACK SH2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
       case WM_INITDIALOG:
       {
          sh2regs_struct sh2regs;
-/*
          codebreakpoint_struct *cbp;
          char tempstr[10];
+         int i;
 
          cbp = SH2GetBreakpointList(debugsh);
 
-         for (int i = 0; i < MAX_BREAKPOINTS; i++)
+         for (i = 0; i < MAX_BREAKPOINTS; i++)
          {
             if (cbp[i].addr != 0xFFFFFFFF)
             {
@@ -688,16 +699,14 @@ LRESULT CALLBACK SH2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                SendMessage(GetDlgItem(hDlg, IDC_LISTBOX3), LB_ADDSTRING, 0, (LPARAM)tempstr);
             }
          }
-*/
+
 //         if (proc->paused())
 //         {
             SH2GetRegisters(debugsh, &sh2regs);
             SH2UpdateRegList(hDlg, &sh2regs);
             SH2UpdateCodeList(hDlg, sh2regs.PC);
 //         }
-/*
          SH2SetBreakpointCallBack(debugsh, &BreakpointHandler);
-*/
          return TRUE;
       }
       case WM_COMMAND:
@@ -731,7 +740,6 @@ LRESULT CALLBACK SH2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             }
             case IDC_ADDBP1:
             {
-/*
                char bptext[10];
                unsigned long addr=0;
                memset(bptext, 0, 10);
@@ -745,12 +753,10 @@ LRESULT CALLBACK SH2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                   if (SH2AddCodeBreakpoint(debugsh, addr) == 0)
                      SendMessage(GetDlgItem(hDlg, IDC_LISTBOX3), LB_ADDSTRING, 0, (LPARAM)bptext);
                }
-*/
                break;
             }
             case IDC_DELBP1:
             {
-/*
                LRESULT ret;
                char bptext[10];
                unsigned long addr=0;
@@ -759,10 +765,9 @@ LRESULT CALLBACK SH2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                {
                   SendMessage(GetDlgItem(hDlg, IDC_LISTBOX3), LB_GETTEXT, 0, (LPARAM)bptext);
                   sscanf(bptext, "%X", &addr);
-                  debugsh->DelCodeBreakpoint(addr);
+                  SH2DelCodeBreakpoint(debugsh, addr);
                   SendMessage(GetDlgItem(hDlg, IDC_LISTBOX3), LB_DELETESTRING, ret, 0);
                }
-*/
                break;
             }
             case IDC_LISTBOX1:

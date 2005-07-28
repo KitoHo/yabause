@@ -83,7 +83,6 @@
 #include "c68k/c68k.h"
 #include "memory.h"
 #include "scu.h"
-#include "SDL.h"
 #include "yabause.h"
 
 ////////////////////////////////////////////////////////////////
@@ -1689,7 +1688,7 @@ static void scsp_slot_update_E_16B_R(slot_t *slot)
 
 		SCSP_OUT_16B_R
 
-		SCSP_UPDATE_PHASE
+                SCSP_UPDATE_PHASE
 		SCSP_UPDATE_ENV
 		SCSP_UPDATE_LFO
 	}
@@ -2496,19 +2495,16 @@ void scsp_init(u8 *scsp_ram, void (*sint_hand)(u32), void (*mint_hand)(void))
 // Yabause specific start
 u8 *SoundRam;
 ScspInternal *ScspInternalVars;
+static SoundInterface_struct *SNDCore=NULL;
+extern SoundInterface_struct *SNDCoreList[];
 
-#define SOUNDBLOCKSIZE  735
 #define NUMSOUNDBLOCKS  2
 
 struct sounddata {
   u32 *data32;
 } scspchannel[2];
 
-static u16 *stereodata16;
-static unsigned long soundpos;
-static unsigned long soundblknum;
-static unsigned long soundlen;
-static unsigned long soundbufsize;
+static unsigned long scspsoundlen;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -2558,22 +2554,6 @@ void c68k_interrupt_handler(u32 level) {
 void scu_interrupt_handler(void) {
   // send interrupt to scu
   ScuSendSoundRequest();
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void ScspMixAudio(void *userdata, Uint8 *stream, int len) {
-   int i;
-   Uint8 *soundbuf=(Uint8 *)stereodata16;
-
-   for (i = 0; i < len; i++)
-   {
-      if (soundpos >= soundbufsize)
-         soundpos = 0;
-
-      stream[i] = soundbuf[soundpos];
-      soundpos++;
-   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2664,8 +2644,6 @@ void FASTCALL SoundRamWriteLong(u32 addr, u32 val) {
 int ScspInit(int coreid) {
    int i;
 
-   SDL_AudioSpec fmt;
-
    if ((SoundRam = T2MemoryInit(0x80000)) == NULL)
       return -1;
 
@@ -2693,61 +2671,49 @@ int ScspInit(int coreid) {
    ScspInternalVars->BreakpointCallBack = NULL;
    ScspInternalVars->inbreakpoint = 0;
 
-//   if (SDL_InitSubSystem(SDL_INIT_AUDIO) != 0);
-//      return -1;
-
-   fmt.freq = 44100;
-   fmt.format = AUDIO_S16SYS;
-   fmt.channels = 2;
-   fmt.samples = 1024;
-   fmt.callback = ScspMixAudio;
-   fmt.userdata = NULL;
-
-   soundlen = fmt.freq / 60; // or 50 for PAL
-   soundbufsize = soundlen * NUMSOUNDBLOCKS * 2 * 2;
-
-//   if (SDL_OpenAudio(&fmt, NULL) != 0)
-//      return -1;
-
-   // clear our channel structure
-   memset(&scspchannel, 0, sizeof(scspchannel));
-
    // Allocate enough memory for each channel buffer(may have to change)
-   if ((scspchannel[0].data32 = (u32 *)malloc(sizeof(u32) * soundlen)) == NULL)
+   scspsoundlen = 44100 / 60; // assume it's NTSC timing
+
+   if ((scspchannel[0].data32 = (u32 *)calloc(scspsoundlen, sizeof(u32))) == NULL)
       return -1;
 
-   if ((scspchannel[1].data32 = (u32 *)malloc(sizeof(u32) * soundlen)) == NULL)
+   if ((scspchannel[1].data32 = (u32 *)calloc(scspsoundlen, sizeof(u32))) == NULL)
       return -1;
 
-   if ((stereodata16 = (u16 *)malloc(soundbufsize)) == NULL)
+   // So which core do we want?
+   if (coreid == SNDCORE_DEFAULT)
+      coreid = 0; // Assume we want the first one
+
+   // Go through core list and find the id
+   for (i = 0; SNDCoreList[i] != NULL; i++)
+   {
+      if (SNDCoreList[i]->id == coreid)
+      {
+         // Set to current core
+         SNDCore = SNDCoreList[i];
+         break;
+      }
+   }
+
+   if (SNDCore == NULL)
       return -1;
 
-   memset(scspchannel[0].data32, 0, soundlen * 4);
-   memset(scspchannel[1].data32, 0, soundlen * 4);
-   memset(stereodata16, 0, soundbufsize);
+   SNDCore->Init();
 
-   soundpos = 0;
-   soundblknum = 0;
-
-//   SDL_PauseAudio(0);
-
-//  debugfp = fopen("scsp.raw", "wb");
    return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void ScspDeInit(void) {
-   SDL_CloseAudio();
-
    if (scspchannel[0].data32)
       free(scspchannel[0].data32);
 
    if (scspchannel[1].data32)
       free(scspchannel[1].data32);
 
-   if (stereodata16)
-      free(stereodata16);
+   if (SNDCore)
+      SNDCore->DeInit();
 
    scsp_shutdown();
 
@@ -2765,6 +2731,23 @@ void M68KReset(void) {
 
 void ScspReset(void) {
    scsp_reset();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+int ScspChangeVerticalFrequency(int vertfreq) {
+   scspsoundlen = 44100 / vertfreq;
+
+   // Reallocate the sound buffers
+   if ((scspchannel[0].data32 = (u32 *)realloc(scspchannel[0].data32, scspsoundlen * sizeof(u32))) == NULL)
+      return -1;
+
+   if ((scspchannel[1].data32 = (u32 *)realloc(scspchannel[1].data32, scspsoundlen * sizeof(u32))) == NULL)
+      return -1;
+
+   SNDCore->ChangeVerticalFrequency(vertfreq);
+
+   return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2809,8 +2792,8 @@ void M68KStep() {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Convert32to16s(long *srcL, long *srcR, short *dst, unsigned long len) {
-   unsigned long i;
+void ScspConvert32uto16s(s32 *srcL, s32 *srcR, s16 *dst, u32 len) {
+   u32 i;
 
    for (i = 0; i < len; i++)
    {
@@ -2838,22 +2821,11 @@ void ScspExec() {
 
    if (ScspInternalVars->scsptiming1 >= 263) // fix me
    {
-      memset(scspchannel[0].data32, 0, 4 * soundlen);
-      memset(scspchannel[1].data32, 0, 4 * soundlen);
+      memset(scspchannel[0].data32, 0, 4 * scspsoundlen);
+      memset(scspchannel[1].data32, 0, 4 * scspsoundlen);
 
-      scsp_update((s32 *)scspchannel[0].data32, (s32 *)scspchannel[1].data32, soundlen);
-
-//      SDL_LockAudio();
-      // check to see if we're falling behind/getting ahead
-
-      Convert32to16s((long *)scspchannel[0].data32, (long *)scspchannel[1].data32, ((short *)stereodata16 + (soundblknum * soundlen * 2)), soundlen);
-
-      soundblknum++;
-      soundblknum &= (NUMSOUNDBLOCKS - 1);
-
-//      if (debugfp) fwrite((void *)stereodata16, 1, SOUNDBLOCKSIZE * 2 * NUMSOUNDBLOCKS, debugfp);
-
-//      SDL_UnlockAudio();
+      scsp_update((s32 *)scspchannel[0].data32, (s32 *)scspchannel[1].data32, scspsoundlen);
+      SNDCore->UpdateAudio(scspchannel[0].data32, (s32 *)scspchannel[1].data32, scspsoundlen);
 
       ScspInternalVars->scsptiming1 -= 263;
       ScspInternalVars->scsptiming2 = 0;
@@ -2895,13 +2867,13 @@ void M68KSetRegisters(m68kregs_struct *regs) {
 //////////////////////////////////////////////////////////////////////////////
 
 void ScspMuteAudio() {
-   SDL_PauseAudio(1);
+   SNDCore->MuteAudio();
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void ScspUnMuteAudio() {
-   SDL_PauseAudio(0);
+   SNDCore->UnMuteAudio();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -3048,9 +3020,76 @@ int Scsp::loadState(FILE *fp, int version, int size) {
 
    return size;
 }
+*/
+
+//////////////////////////////////////////////////////////////////////////////
+// Dummy Sound Interface
+//////////////////////////////////////////////////////////////////////////////
+
+int SNDDummyInit();
+void SNDDummyDeInit();
+int SNDDummyReset();
+int SNDDummyChangeVerticalFrequency(int vertfreq);
+void SNDDummyUpdateAudio(u32 *leftchanbuffer, u32 *rightchanbuffer, u32 num_samples);
+void SNDDummyMuteAudio();
+void SNDDummyUnMuteAudio();
+
+SoundInterface_struct SNDDummy = {
+SNDCORE_DUMMY,
+"Dummy Sound Interface",
+SNDDummyInit,
+SNDDummyDeInit,
+SNDDummyReset,
+SNDDummyChangeVerticalFrequency,
+SNDDummyUpdateAudio,
+SNDDummyMuteAudio,
+SNDDummyUnMuteAudio
+};
 
 //////////////////////////////////////////////////////////////////////////////
 
-*/
+int SNDDummyInit()
+{
+   return 0;
+}
 
+//////////////////////////////////////////////////////////////////////////////
+
+void SNDDummyDeInit()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+int SNDDummyReset()
+{
+   return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+int SNDDummyChangeVerticalFrequency(int vertfreq)
+{
+   return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void SNDDummyUpdateAudio(u32 *leftchanbuffer, u32 *rightchanbuffer, u32 num_samples)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void SNDDummyMuteAudio()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void SNDDummyUnMuteAudio()
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
 

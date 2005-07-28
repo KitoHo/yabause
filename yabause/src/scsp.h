@@ -4,6 +4,7 @@
 #include "core.h"
 
 #define SNDCORE_DEFAULT -1
+#define SNDCORE_DUMMY   0
 
 typedef struct
 {
@@ -12,28 +13,30 @@ typedef struct
    int (*Init)();
    void (*DeInit)();
    int (*Reset)();
-   void (*MixAudio)(u16 num_samples, u16 *buffer);
-   void (*MuteAudioToggle)();
+   int (*ChangeVerticalFrequency)(int vertfreq);
+   void (*UpdateAudio)(u32 *leftchanbuffer, u32 *rightchanbuffer, u32 num_samples);
+   void (*MuteAudio)();
+   void (*UnMuteAudio)();
 } SoundInterface_struct;
 
 typedef struct
 {
-   unsigned long D[8];
-   unsigned long A[8];
-   unsigned long SR;
-   unsigned long PC;
+   u32 D[8];
+   u32 A[8];
+   u32 SR;
+   u32 PC;
 } m68kregs_struct;
 
 typedef struct
 {
-  unsigned long addr;
+  u32 addr;
 } m68kcodebreakpoint_struct;
 
 #define MAX_BREAKPOINTS 10
 
 typedef struct
 {
-  unsigned long scsptiming1;
+  u32 scsptiming1;
   float scsptiming2;
 
   m68kcodebreakpoint_struct codebreakpoint[MAX_BREAKPOINTS];
@@ -41,6 +44,8 @@ typedef struct
   void (*BreakpointCallBack)(unsigned long);
   unsigned char inbreakpoint;
 } ScspInternal;
+
+extern SoundInterface_struct SNDDummy;
 
 u8 FASTCALL SoundRamReadByte(u32 addr);
 u16 FASTCALL SoundRamReadWord(u32 addr);
@@ -55,6 +60,7 @@ void M68KReset(void);
 void ScspReset(void);
 void M68KExec(unsigned long cycles);
 void ScspExec(void);
+void ScspConvert32uto16s(s32 *srcL, s32 *srcR, s16 *dst, u32 len);
 
 void FASTCALL scsp_w_b(u32, u8);
 void FASTCALL scsp_w_w(u32, u16);

@@ -1,4 +1,5 @@
 #include "yui.h"
+#include "sndsdl.h"
 
 SH2Interface_struct *SH2CoreList[] = {
 &SH2Interpreter,
@@ -8,6 +9,12 @@ NULL
 CDInterface *CDCoreList[] = {
 &DummyCD,
 &ISOCD,
+NULL
+};
+
+SoundInterface_struct *SNDCoreList[] = {
+&SNDDummy,
+&SNDSDL,
 NULL
 };
 

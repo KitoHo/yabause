@@ -18,6 +18,11 @@ SoundInterface_struct *SNDCoreList[] = {
 NULL
 };
 
+VideoInterface_struct *VIDCoreList[] = {
+&VIDDummy,
+NULL
+};
+
 int stop;
 
 const char * bios = "jap.rom";

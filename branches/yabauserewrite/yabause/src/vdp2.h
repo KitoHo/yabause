@@ -62,6 +62,8 @@ typedef struct {
    unsigned short PRIR;   // 0x25F800FC
 } Vdp2;
 
+extern Vdp2 * Vdp2Regs;
+
 int Vdp2Init(int coreid);
 void Vdp2DeInit(void);
 void Vdp2Reset(void);

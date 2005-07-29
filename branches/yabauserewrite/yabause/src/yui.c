@@ -41,7 +41,7 @@ void YuiQuit(void) {
 int YuiInit(int (*yab_main)()) {
    stop = 0;
 
-   if (YabauseInit(SH2CORE_DEFAULT, GFXCORE_DEFAULT, SNDCORE_DEFAULT,
+   if (YabauseInit(SH2CORE_DEFAULT, VIDCORE_DEFAULT, SNDCORE_DEFAULT,
                    CDCORE_DEFAULT, REGION_AUTODETECT, bios, iso,
                    NULL, NULL) == -1)
       return -1;

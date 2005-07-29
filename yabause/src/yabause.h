@@ -18,7 +18,7 @@ typedef struct
 #define CLKTYPE_26MHZPAL        2
 #define CLKTYPE_28MHZPAL        3
 
-int YabauseInit(int sh2coretype, int gfxcoretype, int sndcoretype,
+int YabauseInit(int sh2coretype, int vidcoretype, int sndcoretype,
                 int cdcoretype, u8 regionid, const char *biospath,
                 const char *cdpath, const char *savepath, const char *mpegpath);
 void YabauseDeInit();

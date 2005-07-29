@@ -23,22 +23,38 @@
 
 #include "memory.h"
 
-#define GFXCORE_DEFAULT         -1
+#define VIDCORE_DEFAULT         -1
+#define VIDCORE_DUMMY           0
 
 typedef struct
 {
    int id;
    const char *Name;
-   int (*Init)();
-   void (*DeInit)();
-   int (*Reset)();
-   void FASTCALL (*DrawBitmap)(); // fix me
-   void FASTCALL (*DrawTilemap)(); // fix me
-   void FASTCALL (*DrawRotatedBitmap)(); // fix me
-   void FASTCALL (*DrawRotatedTilemap)(); // fix me
-   void FASTCALL (*DrawSprite)(); // fix me
-   void FASTCALL (*DrawPolygon)(); // fix me
-   void FASTCALL (*DrawLine)(); // fix me
+   int (*Init)(void);
+   void (*DeInit)(void);
+   // VDP1 specific
+   int (*Vdp1Reset)(void);
+   void (*Vdp1DrawStart)(void);
+   void (*Vdp1DrawEnd)(void);
+   void (*Vdp1NormalSpriteDraw)(void);
+   void (*Vdp1ScaledSpriteDraw)(void);
+   void (*Vdp1DistortedSpriteDraw)(void);
+   void (*Vdp1PolygonDraw)(void);
+   void (*Vdp1PolylineDraw)(void);
+   void (*Vdp1LineDraw)(void);
+   void (*Vdp1UserClipping)(void);
+   void (*Vdp1SystemClipping)(void);
+   void (*Vdp1LocalCoordinate)(void);
+   // VDP2 specific
+   int (*Vdp2Reset)(void);
+   void (*Vdp2DrawEnd)(void);
+   void (*Vdp2DrawBackScreen)(void);
+   void (*Vdp2DrawLineColorScreen)(void);
+   void (*Vdp2DrawNBG0)(void);
+   void (*Vdp2DrawNBG1)(void);
+   void (*Vdp2DrawNBG2)(void);
+   void (*Vdp2DrawNBG3)(void);
+   void (*Vdp2DrawRBG0)(void);
 } VideoInterface_struct;
 
 extern u8 * Vdp1Ram;
@@ -69,6 +85,25 @@ typedef struct {
 
 extern Vdp1 * Vdp1Regs;
 
+typedef struct
+{
+   u16 CMDCTRL;
+   u16 CMDLINK;
+   u16 CMDPMOD;
+   u16 CMDCOLR;
+   u16 CMDSRCA;
+   u16 CMDSIZE;
+   u16 CMDXA;
+   u16 CMDYA;
+   u16 CMDXB;
+   u16 CMDYB;
+   u16 CMDXC;
+   u16 CMDYC;
+   u16 CMDXD;
+   u16 CMDYD;
+   u16 CMDGRDA;   
+} vdp1cmd_struct;
+
 int Vdp1Init(int coreid);
 void Vdp1DeInit(void);
 void Vdp1Reset(void);
@@ -81,15 +116,4 @@ void FASTCALL	Vdp1WriteWord(u32, u16);
 void FASTCALL	Vdp1WriteLong(u32, u32);
 
 void Vdp1Draw(void);
-
-void Vdp1NormalSpriteDraw(void);
-void Vdp1ScaledSpriteDraw(void);
-void Vdp1DistortedSpriteDraw(void);
-void Vdp1PolygonDraw(void);
-void Vdp1PolylineDraw(void);
-void Vdp1LineDraw(void);
-void Vdp1UserClipping(void);
-void Vdp1SystemClipping(void);
-void Vdp1LocalCoordinate(void);
-
 #endif

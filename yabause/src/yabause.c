@@ -265,7 +265,7 @@ void YabauseChangeTiming(int freqtype) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-int YabauseInit(int sh2coretype, int gfxcoretype, int sndcoretype,
+int YabauseInit(int sh2coretype, int vidcoretype, int sndcoretype,
                 int cdcoretype, unsigned char regionid, const char *biospath,
                 const char *cdpath, const char *savepath, const char *mpegpath) {
    // Initialize Both cores
@@ -292,10 +292,10 @@ int YabauseInit(int sh2coretype, int gfxcoretype, int sndcoretype,
    if (ScspInit(sndcoretype) != 0)
       return -1;
 
-   if (Vdp1Init(gfxcoretype) != 0)
+   if (Vdp1Init(vidcoretype) != 0)
       return -1;
 
-   if (Vdp2Init(gfxcoretype) != 0)
+   if (Vdp2Init(vidcoretype) != 0)
       return -1;
 
    if (SmpcInit(regionid) != 0)

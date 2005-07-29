@@ -287,7 +287,7 @@ int YuiInit(int (*yab_main)()) {
 
    stop = 0;
 
-   if (YabauseInit(SH2CORE_DEFAULT, GFXCORE_DEFAULT, SNDCORE_SDL,
+   if (YabauseInit(SH2CORE_DEFAULT, VIDCORE_DEFAULT, SNDCORE_SDL,
                    CDCORE_SPTI, REGION_AUTODETECT, biosfilename, cdrompath,
                    backupramfilename, mpegromfilename) == -1)
       return -1;

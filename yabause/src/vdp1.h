@@ -57,6 +57,8 @@ typedef struct
    void (*Vdp2DrawRBG0)(void);
 } VideoInterface_struct;
 
+extern VideoInterface_struct VIDDummy;
+
 extern u8 * Vdp1Ram;
 
 u8 FASTCALL	Vdp1RamReadByte(u32);

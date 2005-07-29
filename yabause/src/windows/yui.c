@@ -109,6 +109,11 @@ SoundInterface_struct *SNDCoreList[] = {
 NULL
 };
 
+VideoInterface_struct *VIDCoreList[] = {
+&VIDDummy,
+NULL
+};
+
 void YuiSetBiosFilename(const char *bios) {
 }
 

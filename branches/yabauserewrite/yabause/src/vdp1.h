@@ -47,6 +47,7 @@ typedef struct
    void (*Vdp1LocalCoordinate)(void);
    // VDP2 specific
    int (*Vdp2Reset)(void);
+   void (*Vdp2DrawStart)(void);
    void (*Vdp2DrawEnd)(void);
    void (*Vdp2DrawBackScreen)(void);
    void (*Vdp2DrawLineColorScreen)(void);
@@ -57,6 +58,7 @@ typedef struct
    void (*Vdp2DrawRBG0)(void);
 } VideoInterface_struct;
 
+extern VideoInterface_struct *VIDCore;
 extern VideoInterface_struct VIDDummy;
 
 extern u8 * Vdp1Ram;
@@ -69,20 +71,33 @@ void FASTCALL	Vdp1RamWriteWord(u32, u16);
 void FASTCALL	Vdp1RamWriteLong(u32, u32);
 
 typedef struct {
-	u16 TVHR;
-	u16 FBCR;
-	u16 PTMR;
-	u16 EWDR;
-	u16 EWLR;
-	u16 EWRR;
-	u16 ENDR;
-	u16 EDSR;
-	u16 LOPR;
-	u16 COPR;
-	u16 MODR;
+   u16 TVMR;
+   u16 FBCR;
+   u16 PTMR;
+   u16 EWDR;
+   u16 EWLR;
+   u16 EWRR;
+   u16 ENDR;
+   u16 EDSR;
+   u16 LOPR;
+   u16 COPR;
+   u16 MODR;
 
-	u32 addr;
-	int disptoggle;
+   u32 addr;
+   int disptoggle;
+
+   u16 localX;
+   u16 localY;
+
+   u16 systemclipX1;
+   u16 systemclipY1;
+   u16 systemclipX2;
+   u16 systemclipY2;
+
+   u16 userclipX1;
+   u16 userclipY1;
+   u16 userclipX2;
+   u16 userclipY2;
 } Vdp1;
 
 extern Vdp1 * Vdp1Regs;
@@ -118,4 +133,5 @@ void FASTCALL	Vdp1WriteWord(u32, u16);
 void FASTCALL	Vdp1WriteLong(u32, u32);
 
 void Vdp1Draw(void);
+void FASTCALL Vdp1ReadCommand(vdp1cmd_struct *cmd, u32 addr);
 #endif

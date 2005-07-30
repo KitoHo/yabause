@@ -107,7 +107,7 @@ void FASTCALL undecoded(SH2_struct * sh) {
         {
            int vectnum;
 
-           fprintf(stderr, "Master SH2 Illegal Opcode: %04X, regs.PC: %08X. Jumping to Exception Service Routine.\n", sh->instruction, sh->regs.PC);
+           fprintf(stderr, "Master SH2 Illegal Opcode: %04X, regs.PC: %08X. Jumping to Exception Service Routine.\n", (unsigned int)sh->instruction, (unsigned int)sh->regs.PC);
 
            // Save regs.SR on stack
            sh->regs.R[15]-=4;

@@ -878,7 +878,7 @@ void ScuExec(u32 timing) {
                            ScuDsp->delayed = 0; 
                         }
 
-                        fprintf(stderr, "scu\t: JMP NS: S = %d, jmpaddr = %08X\n", ScuDsp->ProgControlPort.part.S, ScuDsp->jmpaddr);
+                        fprintf(stderr, "scu\t: JMP NS: S = %d, jmpaddr = %08X\n", (unsigned int)ScuDsp->ProgControlPort.part.S, (unsigned int)ScuDsp->jmpaddr);
                         break;
                      case 0x43: // JMP NZS, Imm
                         if (!ScuDsp->ProgControlPort.part.Z || !ScuDsp->ProgControlPort.part.S)
@@ -887,7 +887,7 @@ void ScuExec(u32 timing) {
                            ScuDsp->delayed = 0; 
                         }
 
-                        fprintf(stderr, "scu\t: JMP NZS: Z = %d, S = %d, jmpaddr = %08X\n", ScuDsp->ProgControlPort.part.Z, ScuDsp->ProgControlPort.part.S, ScuDsp->jmpaddr);
+                        fprintf(stderr, "scu\t: JMP NZS: Z = %d, S = %d, jmpaddr = %08X\n", (unsigned int)ScuDsp->ProgControlPort.part.Z, (unsigned int)ScuDsp->ProgControlPort.part.S, (unsigned int)ScuDsp->jmpaddr);
                         break;
                      case 0x44: // JMP NC, Imm
                         if (!ScuDsp->ProgControlPort.part.C)
@@ -903,7 +903,7 @@ void ScuExec(u32 timing) {
                            ScuDsp->delayed = 0; 
                         }
 
-                        fprintf(stderr, "scu\t: JMP NT0: T0 = %d, jmpaddr = %08X\n", ScuDsp->ProgControlPort.part.T0, ScuDsp->jmpaddr);
+                        fprintf(stderr, "scu\t: JMP NT0: T0 = %d, jmpaddr = %08X\n", (unsigned int)ScuDsp->ProgControlPort.part.T0, (unsigned int)ScuDsp->jmpaddr);
                         break;
                      case 0x61: // JMP Z,Imm
                         if (ScuDsp->ProgControlPort.part.Z)
@@ -919,7 +919,7 @@ void ScuExec(u32 timing) {
                            ScuDsp->delayed = 0; 
                         }
 
-                        fprintf(stderr, "scu\t: JMP S: S = %d, jmpaddr = %08X\n", ScuDsp->ProgControlPort.part.S, ScuDsp->jmpaddr);
+                        fprintf(stderr, "scu\t: JMP S: S = %d, jmpaddr = %08X\n", (unsigned int)ScuDsp->ProgControlPort.part.S, (unsigned int)ScuDsp->jmpaddr);
                         break;
                      case 0x63: // JMP ZS, Imm
                         if (ScuDsp->ProgControlPort.part.Z || ScuDsp->ProgControlPort.part.S)
@@ -928,7 +928,7 @@ void ScuExec(u32 timing) {
                            ScuDsp->delayed = 0; 
                         }
 
-                        fprintf(stderr, "scu\t: JMP ZS: Z = %d, S = %d, jmpaddr = %08X\n", ScuDsp->ProgControlPort.part.Z, ScuDsp->ProgControlPort.part.S, ScuDsp->jmpaddr);
+                        fprintf(stderr, "scu\t: JMP ZS: Z = %d, S = %d, jmpaddr = %08X\n", ScuDsp->ProgControlPort.part.Z, (unsigned int)ScuDsp->ProgControlPort.part.S, (unsigned int)ScuDsp->jmpaddr);
                         break;
                      case 0x64: // JMP C, Imm
                         if (ScuDsp->ProgControlPort.part.C)
@@ -1230,7 +1230,7 @@ void ScuDspDisasm(u8 addr, char *outstring){
          switch ((instruction >> 12) & 0x3)
          {
             case 1:
-               sprintf(outstring, "MOV #$%02X, %s", instruction & 0xFF, disd1busdest((instruction >> 8) & 0xF));
+               sprintf(outstring, "MOV #$%02X, %s", (unsigned int)instruction & 0xFF, disd1busdest((instruction >> 8) & 0xF));
                outstring+=strlen(outstring);                             
                break;
             case 3:
@@ -1246,41 +1246,41 @@ void ScuDspDisasm(u8 addr, char *outstring){
          {
             switch ((instruction >> 19) & 0x3F) {
                case 0x01:
-                  sprintf(outstring, "MVI #$%05X,%s,NZ", instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
+                  sprintf(outstring, "MVI #$%05X,%s,NZ", (unsigned int)instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
                   break;
                case 0x02:
-                  sprintf(outstring, "MVI #$%05X,%s,NS", instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
+                  sprintf(outstring, "MVI #$%05X,%s,NS", (unsigned int)instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
                   break;
                case 0x03:
-                  sprintf(outstring, "MVI #$%05X,%s,NZS", instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
+                  sprintf(outstring, "MVI #$%05X,%s,NZS", (unsigned int)instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
                   break;
                case 0x04:
-                  sprintf(outstring, "MVI #$%05X,%s,NC", instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
+                  sprintf(outstring, "MVI #$%05X,%s,NC", (unsigned int)instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
                   break;
                case 0x08:
-                  sprintf(outstring, "MVI #$%05X,%s,NT0", instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
+                  sprintf(outstring, "MVI #$%05X,%s,NT0", (unsigned int)instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
                   break;
                case 0x21:
-                  sprintf(outstring, "MVI #$%05X,%s,Z", instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
+                  sprintf(outstring, "MVI #$%05X,%s,Z", (unsigned int)instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
                   break;
                case 0x22:
-                  sprintf(outstring, "MVI #$%05X,%s,S", instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
+                  sprintf(outstring, "MVI #$%05X,%s,S", (unsigned int)instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
                   break;
                case 0x23:
-                  sprintf(outstring, "MVI #$%05X,%s,ZS", instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
+                  sprintf(outstring, "MVI #$%05X,%s,ZS", (unsigned int)instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
                   break;
                case 0x24:
-                  sprintf(outstring, "MVI #$%05X,%s,C", instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
+                  sprintf(outstring, "MVI #$%05X,%s,C", (unsigned int)instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
                   break;
                case 0x28:
-                  sprintf(outstring, "MVI #$%05X,%s,T0", instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
+                  sprintf(outstring, "MVI #$%05X,%s,T0", (unsigned int)instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
                   break;
                default: break;
             }
          }
          else
          {
-            sprintf(outstring, "MVI #$%05X,%s", instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
+            sprintf(outstring, "MVI #$%05X,%s", (unsigned int)instruction & 0x7FFFF, disloadimdest((instruction >> 26) & 0xF));
          }
 
          break;
@@ -1292,37 +1292,37 @@ void ScuDspDisasm(u8 addr, char *outstring){
             case 0x01: // Jump Commands
                switch ((instruction >> 19) & 0x7F) {
                   case 0x00:
-                     sprintf(outstring, "JMP $%02X", instruction & 0xFF);
+                     sprintf(outstring, "JMP $%02X", (unsigned int)instruction & 0xFF);
                      break;
                   case 0x41:
-                     sprintf(outstring, "JMP NZ,$%02X", instruction & 0xFF);
+                     sprintf(outstring, "JMP NZ,$%02X", (unsigned int)instruction & 0xFF);
                      break;
                   case 0x42:
-                     sprintf(outstring, "JMP NS,$%02X", instruction & 0xFF);
+                     sprintf(outstring, "JMP NS,$%02X", (unsigned int)instruction & 0xFF);
                      break;
                   case 0x43:
-                     sprintf(outstring, "JMP NZS,$%02X", instruction & 0xFF);
+                     sprintf(outstring, "JMP NZS,$%02X", (unsigned int)instruction & 0xFF);
                      break;
                   case 0x44:
-                     sprintf(outstring, "JMP NC,$%02X", instruction & 0xFF);
+                     sprintf(outstring, "JMP NC,$%02X", (unsigned int)instruction & 0xFF);
                      break;
                   case 0x48:
-                     sprintf(outstring, "JMP NT0,$%02X", instruction & 0xFF);
+                     sprintf(outstring, "JMP NT0,$%02X", (unsigned int)instruction & 0xFF);
                      break;
                   case 0x61:
-                     sprintf(outstring, "JMP Z,$%02X", instruction & 0xFF);
+                     sprintf(outstring, "JMP Z,$%02X", (unsigned int)instruction & 0xFF);
                      break;
                   case 0x62:
-                     sprintf(outstring, "JMP S,$%02X", instruction & 0xFF);
+                     sprintf(outstring, "JMP S,$%02X", (unsigned int)instruction & 0xFF);
                      break;
                   case 0x63:
-                     sprintf(outstring, "JMP ZS,$%02X", instruction & 0xFF);
+                     sprintf(outstring, "JMP ZS,$%02X", (unsigned int)instruction & 0xFF);
                      break;
                   case 0x64:
-                     sprintf(outstring, "JMP C,$%02X", instruction & 0xFF);
+                     sprintf(outstring, "JMP C,$%02X", (unsigned int)instruction & 0xFF);
                      break;
                   case 0x68:
-                     sprintf(outstring, "JMP T0,$%02X", instruction & 0xFF);
+                     sprintf(outstring, "JMP T0,$%02X", (unsigned int)instruction & 0xFF);
                      break;
                   default:
                      sprintf(outstring, "Unknown JMP");
@@ -1347,7 +1347,7 @@ void ScuDspDisasm(u8 addr, char *outstring){
          }
          break;
       default: 
-         sprintf(outstring, "Invalid opcode", instruction, ScuDsp->PC);
+         sprintf(outstring, "Invalid opcode", (unsigned int)instruction, (unsigned int)ScuDsp->PC);
          break;
    }
 }

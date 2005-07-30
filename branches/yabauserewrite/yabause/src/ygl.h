@@ -60,7 +60,8 @@ typedef struct {
 
 extern Ygl * _Ygl;
 
-void YglInit(int, int, unsigned int);
+int YglInit(int, int, unsigned int);
+void YglDeInit(void);
 int * YglQuad(YglSprite *, YglTexture *);
 void YglCachedQuad(YglSprite *, int *);
 void YglRender(void);

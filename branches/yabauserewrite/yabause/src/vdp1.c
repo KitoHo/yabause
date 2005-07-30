@@ -87,6 +87,8 @@ int Vdp1Init(int coreid) {
    if ((Vdp1Ram = T1MemoryInit(0x80000)) == NULL)
       return -1;
 
+   Vdp1Regs->disptoggle = 1;
+
    // So which core do we want?
    if (coreid == VIDCORE_DEFAULT)
       coreid = 0; // Assume we want the first one
@@ -105,7 +107,8 @@ int Vdp1Init(int coreid) {
    if (VIDCore == NULL)
       return -1;
 
-   VIDCore->Init();
+   if (VIDCore->Init() != 0)
+      return -1;
 
    return 0;
 }
@@ -178,7 +181,7 @@ void FASTCALL Vdp1WriteWord(u32 addr, u16 val) {
    addr &= 0xFF;
    switch(addr) {
       case 0x0:
-         Vdp1Regs->TVHR = val;
+         Vdp1Regs->TVMR = val;
          break;
       case 0x2:
          Vdp1Regs->FBCR = val;
@@ -213,9 +216,9 @@ void FASTCALL Vdp1WriteLong(u32 addr, u32 val) {
 //////////////////////////////////////////////////////////////////////////////
 
 void Vdp1Draw(void) {
-   u32 returnAddr;
-   u32 commandCounter;
-   u16 command = T1ReadWord(Vdp1Ram, Vdp1Regs->addr);
+   u32 returnAddr=0;
+   u32 commandCounter=0;
+   u16 command;
 
    VIDCore->Vdp1DrawStart();
 
@@ -233,6 +236,8 @@ void Vdp1Draw(void) {
    // BEF <- CEF
    // CEF <- 0
    Vdp1Regs->EDSR >>= 1;
+
+   command = T1ReadWord(Vdp1Ram, Vdp1Regs->addr);
 
    while (!(command & 0x8000) && commandCounter < 2000) { // fix me
       // First, process the command
@@ -326,225 +331,6 @@ void FASTCALL Vdp1ReadCommand(vdp1cmd_struct *cmd, u32 addr) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-/*
-void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, u32 * textdata, u32 z) {
-   u32 charAddr = cmd->CMDSRCA * 8;
-   u32 dot;
-   u8 SPD = ((cmd->CMDPMOD & 0x40) != 0);
-   u32 alpha = 0xFF;
-   VDP1LOG("Making new sprite %08X\n", charAddr);
-
-   switch(cmd->CMDPMOD & 0x7) {
-      case 0:
-         alpha = 0xFF;
-         break;
-      case 3:
-         alpha = 0x80;
-         break;
-      default:
-         VDP1LOG("unimplemented color calculation: %X\n", (cmd->CMDPMOD & 0x7));
-         break;
-   }
-
-   switch((cmd->CMDPMOD >> 3) & 0x7) {
-      case 0:
-      {
-         // 4 bpp Bank mode
-         u32 colorBank = cmd->CMDCOLR & 0xFFF0;
-         u32 colorOffset = (Vdp2Regs->CRAOFB >> 4) & 0x7;
-         u16 i;
-
-         for(i = 0;i < h;i++) {
-            u16 j;
-            j = 0;
-            while(j < w) {
-               dot = T1ReadByte(Vdp1Ram, charAddr);
-
-               // Pixel 1
-               if (((dot >> 4) == 0) && !SPD) *textdata++ = 0;
-               else *textdata++ = cram->getColor((dot >> 4) + colorBank, alpha, colorOffset);
-               j += 1;
-
-               // Pixel 2
-               if (((dot & 0xF) == 0) && !SPD) *textdata++ = 0;
-               else *textdata++ = cram->getColor((dot & 0xF) + colorBank, alpha, colorOffset);
-               j += 1;
-
-               charAddr += 1;
-            }
-            textdata += z;
-         }
-         break;
-      }
-      case 1:
-      {
-         // 4 bpp LUT mode
-         u32 temp;
-         u32 colorLut = cmd->CMDCOLR * 8;
-         u16 i;
-
-         for(i = 0;i < h;i++) {
-            u16 j;
-            j = 0;
-            while(j < w) {
-               dot = T1ReadByte(Vdp1Ram, charAddr);
-
-               if (((dot >> 4) == 0) && !SPD) *textdata++ = 0;
-               else {
-                  temp = vram->getWord((dot >> 4) * 2 + colorLut);
-                  *textdata++ = SAT2YAB1(alpha, temp);
-               }
-
-               j += 1;
-
-               if (((dot & 0xF) == 0) && !SPD) *textdata++ = 0;
-               else {
-                  temp = vram->getWord((dot & 0xF) * 2 + colorLut);
-                  *textdata++ = SAT2YAB1(alpha, temp);
-               }
-
-               j += 1;
-
-               charAddr += 1;
-            }
-            textdata += z;
-         }
-         break;
-      }
-      case 2:
-      {
-         // 8 bpp(64 color) Bank mode
-         u32 colorBank = cmd->CMDCOLR & 0xFFC0;
-         u32 colorOffset = (Vdp2Regs->CRAOFB >> 4) & 0x7;
-         u16 i, j;
-
-         for(i = 0;i < h;i++) {
-            for(j = 0;j < w;j++) {
-               dot = T1ReadByte(Vdp1Ram, charAddr) & 0x3F;               
-               charAddr++;
-
-               if ((dot == 0) && !SPD) *textdata++ = 0;
-               else *textdata++ = cram->getColor(dot + colorBank, alpha, colorOffset);
-            }
-            textdata += z;
-         }
-
-         break;
-      }
-      case 3:
-      {
-         // 8 bpp(128 color) Bank mode
-         u32 colorBank = cmd->CMDCOLR & 0xFF80;
-         u32 colorOffset = (Vdp2Regs->CRAOFB >> 4) & 0x7;
-         u16 i, j;
-
-         for(i = 0;i < h;i++) {
-            for(j = 0;j < w;j++) {
-               dot = T1ReadByte(Vdp1Ram, charAddr) & 0x7F;               
-               charAddr++;
-
-               if ((dot == 0) && !SPD) *textdata++ = 0;
-               else *textdata++ = cram->getColor(dot + colorBank, alpha, colorOffset);
-            }
-            textdata += z;
-         }
-         break;
-      }
-      case 4:
-      {
-         // 8 bpp(256 color) Bank mode
-         u32 colorBank = cmd->CMDCOLR & 0xFF00;
-         u32 colorOffset = (Vdp2Regs->CRAOFB >> 4) & 0x7;
-         u16 i, j;
-
-         for(i = 0;i < h;i++) {
-            for(j = 0;j < w;j++) {
-               dot = T1ReadByte(Vdp1Ram, charAddr);               
-               charAddr++;
-
-               if ((dot == 0) && !SPD) *textdata++ = 0;
-               else *textdata++ = cram->getColor(dot + colorBank, alpha, colorOffset);
-            }
-            textdata += z;
-         }
-
-         break;
-      }
-      case 5:
-      {
-         // 16 bpp Bank mode
-         u16 i, j;
-
-         for(i = 0;i < h;i++) {
-            for(j = 0;j < w;j++) {
-               dot = T1ReadWord(Vdp1Ram, charAddr);               
-               charAddr += 2;
-
-               if ((dot == 0) && !SPD) *textdata++ = 0;
-               else *textdata++ = SAT2YAB1(alpha, dot);
-            }
-            textdata += z;
-         }
-         break;
-      }
-      default:
-         VDP1LOG("Unimplemented sprite color mode: %X\n", (cmd->CMDPMOD >> 3) & 0x7);
-         break;
-   }
-}
-*/
-//////////////////////////////////////////////////////////////////////////////
-/*
-void FASTCALL Vdp1ReadPriority(vdp1cmd_struct *cmd) {
-   u8 SPCLMD = Vdp2Regs->SPCTL;
-   u8 sprite_register;
-
-   // if we don't know what to do with a sprite, we put it on top
-   priority = 7;
-
-   if ((SPCLMD & 0x20) && (cmd->CMDCOLR & 0x8000)) {
-      // RGB data, use register 0
-      priority = vdp2reg->getWord(0xF0) & 0x7;
-   } else {
-      u8 sprite_type = SPCLMD & 0xF;
-      switch(sprite_type) {
-         case 0:
-            sprite_register = ((cmd->CMDCOLR & 0x8000) | (~cmd->CMDCOLR & 0x4000)) >> 14;
-//            priority = vdp2reg->getByte(0xF0 + sprite_register) & 0x7;
-            break;
-         case 1:
-            sprite_register = ((cmd->CMDCOLR & 0xC000) | (~cmd->CMDCOLR & 0x2000)) >> 13;
-//            priority = vdp2reg->getByte(0xF0 + sprite_register) & 0x7;
-            break;
-         case 3:
-            sprite_register = ((cmd->CMDCOLR & 0x4000) | (~cmd->CMDCOLR & 0x2000)) >> 13;
-//            priority = vdp2reg->getByte(0xF0 + sprite_register) & 0x7;
-            break;
-         case 4:
-            sprite_register = ((cmd->CMDCOLR & 0x4000) | (~cmd->CMDCOLR & 0x2000)) >> 13;
-//            priority = vdp2reg->getByte(0xF0 + sprite_register) & 0x7;
-            break;
-         case 5:
-            sprite_register = ((cmd->CMDCOLR & 0x6000) | (~cmd->CMDCOLR & 0x1000)) >> 12;
-//            priority = vdp2reg->getByte(0xF0 + sprite_register) & 0x7;
-            break;
-         case 6:
-            sprite_register = ((cmd->CMDCOLR & 0x6000) | (~cmd->CMDCOLR & 0x1000)) >> 12;
-            priority = vdp2reg->getByte(0xF0 + sprite_register) & 0x7;
-            break;
-         case 7:
-            sprite_register = ((cmd->CMDCOLR & 0x6000) | (~cmd->CMDCOLR & 0x1000)) >> 12;
-//            priority = vdp2reg->getByte(0xF0 + sprite_register) & 0x7;
-            break;
-         default:
-            VDP1LOG("sprite type %d not implemented\n", sprite_type);
-            break;
-      }
-   }
-}
-*/
-
-//////////////////////////////////////////////////////////////////////////////
 // Dummy Video Interface
 //////////////////////////////////////////////////////////////////////////////
 
@@ -563,6 +349,7 @@ void VIDDummyVdp1UserClipping(void);
 void VIDDummyVdp1SystemClipping(void);
 void VIDDummyVdp1LocalCoordinate(void);
 int VIDDummyVdp2Reset(void);
+void VIDDummyVdp2DrawStart(void);
 void VIDDummyVdp2DrawEnd(void);
 void VIDDummyVdp2DrawBackScreen(void);
 void VIDDummyVdp2DrawLineColorScreen(void);
@@ -590,6 +377,7 @@ VIDDummyVdp1UserClipping,
 VIDDummyVdp1SystemClipping,
 VIDDummyVdp1LocalCoordinate,
 VIDDummyVdp2Reset,
+VIDDummyVdp2DrawStart,
 VIDDummyVdp2DrawEnd,
 VIDDummyVdp2DrawBackScreen,
 VIDDummyVdp2DrawLineColorScreen,
@@ -691,6 +479,12 @@ void VIDDummyVdp1LocalCoordinate(void)
 int VIDDummyVdp2Reset(void)
 {
    return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void VIDDummyVdp2DrawStart(void)
+{
 }
 
 //////////////////////////////////////////////////////////////////////////////

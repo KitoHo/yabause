@@ -102,40 +102,40 @@ void DummyDeInit(Dummy * d) {}
 ////////////////////////////////////////////////////////////////
 
 u8 FASTCALL UnhandledMemoryReadByte(u32 addr) {
-   fprintf(stderr, "Unhandled byte read %08X\n", addr);
+   fprintf(stderr, "Unhandled byte read %08X\n", (unsigned int)addr);
    return 0;
 }
 
 ////////////////////////////////////////////////////////////////
 
 u16 FASTCALL UnhandledMemoryReadWord(u32 addr) {
-   fprintf(stderr, "Unhandled word read %08X\n", addr);
+   fprintf(stderr, "Unhandled word read %08X\n", (unsigned int)addr);
    return 0;
 }
 
 ////////////////////////////////////////////////////////////////
 
 u32 FASTCALL UnhandledMemoryReadLong(u32 addr)  {
-   fprintf(stderr, "Unhandled long read %08X\n", addr);
+   fprintf(stderr, "Unhandled long read %08X\n", (unsigned int)addr);
    return 0;
 }
 
 ////////////////////////////////////////////////////////////////
 
 void FASTCALL UnhandledMemoryWriteByte(u32 addr, u8 val)  {
-   fprintf(stderr, "Unhandled byte write %08X\n", addr);
+   fprintf(stderr, "Unhandled byte write %08X\n", (unsigned int)addr);
 }
 
 ////////////////////////////////////////////////////////////////
 
 void FASTCALL UnhandledMemoryWriteWord(u32 addr, u16 val)  {
-   fprintf(stderr, "Unhandled word write %08X\n", addr);
+   fprintf(stderr, "Unhandled word write %08X\n", (unsigned int)addr);
 }
 
 ////////////////////////////////////////////////////////////////
 
 void FASTCALL UnhandledMemoryWriteLong(u32 addr, u32 val)  {
-   fprintf(stderr, "Unhandled long write %08X\n", addr);
+   fprintf(stderr, "Unhandled long write %08X\n", (unsigned int)addr);
 }
 
 ////////////////////////////////////////////////////////////////

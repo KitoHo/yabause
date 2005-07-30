@@ -23,6 +23,7 @@
 #include "debug.h"
 #include "scu.h"
 #include "sh2core.h"
+#include "vdp1.h"
 #include "yabause.h"
 
 u8 * Vdp2Ram;
@@ -115,6 +116,39 @@ void FASTCALL Vdp2ColorRamWriteLong(u32 addr, u32 val) {
 
 //////////////////////////////////////////////////////////////////////////////
 
+u32 Vdp2ColorRamGetColor(u32 addr, int alpha, u32 colorOffset) {
+/*
+   switch(mode) {
+      case 0: {
+         u32 tmp;
+         addr *= 2; // thanks Runik!
+         addr += colorOffset * 0x200;
+         tmp = T2ReadWord(Vdp2ColorRam, addr);
+         return SAT2YAB1(alpha, tmp);
+      }
+      case 1: {
+         u32 tmp;
+         addr *= 2; // thanks Runik!
+         addr += colorOffset * 0x200;
+         tmp = T2ReadWord(Vdp2ColorRam, addr);
+         return SAT2YAB1(alpha, tmp);
+      }
+      case 2: {
+         u32 tmp1, tmp2;
+         addr *= 4;
+         addr += colorOffset * 0x400;
+         tmp1 = T2ReadWord(Vdp2ColorRam, addr);
+         tmp2 = T2ReadWord(Vdp2ColorRam, addr+2);
+         return SAT2YAB2(alpha, tmp1, tmp2);
+      }
+      default: break;
+   }
+*/
+   return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 int Vdp2Init(int coreid) {
    if ((Vdp2Regs = (Vdp2 *) calloc(1, sizeof(Vdp2))) == NULL)
       return -1;
@@ -158,8 +192,10 @@ void Vdp2Reset(void) {
    Vdp2Regs->MPCDN2 = 0x0000;
    Vdp2Regs->BKTAU = 0x0000;
    Vdp2Regs->BKTAL = 0x0000;
+   Vdp2Regs->SPCTL = 0x0000;
    Vdp2Regs->CRAOFA = 0x0000;
    Vdp2Regs->CRAOFB = 0x0000;
+   Vdp2Regs->PRISA = 0x0000;
    Vdp2Regs->PRINA = 0x0000;
    Vdp2Regs->PRINB = 0x0000;
    Vdp2Regs->PRIR = 0x0000;
@@ -196,12 +232,16 @@ void Vdp2HBlankOUT(void) {
 void Vdp2VBlankOUT(void) {
    Vdp2Regs->TVSTAT = (Vdp2Regs->TVSTAT & ~0x0008) | 0x0002;
 
-  if (Vdp2Regs->TVMD & 0x8000) {
-     // draw here
-    Vdp1Draw();
-  }
+   VIDCore->Vdp2DrawStart();
 
-  ScuSendVBlankOUT();
+   if (Vdp2Regs->TVMD & 0x8000) {
+      // draw here
+      Vdp1Draw();
+   }
+
+   VIDCore->Vdp2DrawEnd();
+
+   ScuSendVBlankOUT();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -295,12 +335,18 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
       case 0xAE:
          Vdp2Regs->BKTAL = val;
          return;
+      case 0xE0:
+         Vdp2Regs->SPCTL = val;
+         return;
       case 0xE4:
          Vdp2Regs->CRAOFA = val;
          return;
       case 0xE6:
          Vdp2Regs->CRAOFB = val;
          return;     
+      case 0xF0:
+         Vdp2Regs->PRISA = val;
+         return;
       case 0xF8:
          Vdp2Regs->PRINA = val;
          return;

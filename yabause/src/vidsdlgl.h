@@ -20,6 +20,8 @@
 #ifndef VIDSDLGL_H
 #define VIDSDLGL_H
 
+#include "vdp1.h"
+
 #define VIDCORE_SDLGL   1
 
 extern VideoInterface_struct VIDSDLGL;

@@ -55,8 +55,10 @@ typedef struct {
    unsigned short MPCDN2; // 0x25F8004A
    unsigned short BKTAU;  // 0x25F800AC
    unsigned short BKTAL;  // 0x25F800AE
+   unsigned short SPCTL;  // 0x25F800E0
    unsigned short CRAOFA; // 0x25F800E4
    unsigned short CRAOFB; // 0x25F800E6
+   unsigned short PRISA;  // 0x25F800F0
    unsigned short PRINA;  // 0x25F800F8
    unsigned short PRINB;  // 0x25F800FA
    unsigned short PRIR;   // 0x25F800FC
@@ -64,6 +66,7 @@ typedef struct {
 
 extern Vdp2 * Vdp2Regs;
 
+u32 Vdp2ColorRamGetColor(u32 addr, int alpha, u32 colorOffset);
 int Vdp2Init(int coreid);
 void Vdp2DeInit(void);
 void Vdp2Reset(void);

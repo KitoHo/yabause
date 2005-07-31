@@ -593,12 +593,11 @@ void VIDSDLGLVdp1DistortedSpriteDraw(void)
    tmp |= cmd.CMDCOLR;
 
    if (sprite.w > 0 && sprite.h > 1) {
-/*
       if ((c = YglIsCached(tmp)) != NULL) {
          YglCachedQuad(&sprite, c);
          return;
       } 
-*/
+
       c = YglQuad(&sprite, &texture);
       YglCache(tmp, c);
 

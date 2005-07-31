@@ -1,5 +1,6 @@
 #include "yui.h"
 #include "sndsdl.h"
+#include "vidsdlgl.h"
 
 SH2Interface_struct *SH2CoreList[] = {
 &SH2Interpreter,
@@ -20,6 +21,7 @@ NULL
 
 VideoInterface_struct *VIDCoreList[] = {
 &VIDDummy,
+&VIDSDLGL,
 NULL
 };
 
@@ -46,9 +48,9 @@ void YuiQuit(void) {
 int YuiInit(int (*yab_main)()) {
    stop = 0;
 
-   if (YabauseInit(SH2CORE_DEFAULT, VIDCORE_DEFAULT, SNDCORE_DEFAULT,
+   if (YabauseInit(SH2CORE_DEFAULT, VIDCORE_SDLGL, SNDCORE_SDL,
                    CDCORE_DEFAULT, REGION_AUTODETECT, bios, iso,
-                   NULL, NULL) == -1)
+                   NULL, NULL) != 0)
       return -1;
 
    while (!stop)

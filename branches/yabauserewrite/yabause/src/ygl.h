@@ -12,6 +12,8 @@
 #ifndef YGL_H
 #define YGL_H
 
+#include "core.h"
+
 typedef struct {
 	int vertices[8];
 	unsigned int w;
@@ -71,8 +73,8 @@ void YglChangeResolution(int, int);
 void YglOnScreenDebugMessage(char *, ...);
 
 
-int * YglIsCached(unsigned long);
-void YglCache(unsigned long, int *);
+int * YglIsCached(u32);
+void YglCache(u32, int *);
 void YglCacheReset(void);
 
 #endif

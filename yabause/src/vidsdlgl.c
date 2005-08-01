@@ -405,58 +405,55 @@ void VIDSDLGLVdp1DrawEnd(void)
 
 void VIDSDLGLVdp1NormalSpriteDraw(void)
 {
-/*
-   fprintf(stderr, "Normal Sprite\n");
-   s32 x, y;
-   u8 dir;
-//   unsigned int *texture.textdata;
-   s32 vertices[8];
-   u32 z;
-
-   Vdp1ReadCommand(addr);
-
-   x = cmd.CMDXA + localX;
-   y = cmd.CMDYA + localY;
-//   w = ((CMDSIZE >> 8) & 0x3F) * 8;
-//   h = CMDSIZE & 0xFF;
-//   ww = power_of_two(w);
-//   hh = power_of_two(h);
-
-   dir = (cmd.CMDCTRL & 0x30) >> 4;
-
-   vertices[0] = (s32)((float)x * vdp1wratio);
-   vertices[1] = (s32)((float)y * vdp1hratio);
-   vertices[2] = (s32)((float)(x + w) * vdp1wratio);
-   vertices[3] = (s32)((float)y * vdp1hratio);
-   vertices[4] = (s32)((float)(x + w) * vdp1wratio);
-   vertices[5] = (s32)((float)(y + h) * vdp1hratio);
-   vertices[6] = (s32)((float)x * vdp1wratio);
-   vertices[7] = (s32)((float)(y + h) * vdp1hratio);
-
-//   Vdp1ReadPriority();
+   vdp1cmd_struct cmd;
+   YglSprite sprite;
+   YglTexture texture;
    int * c;
-   unsigned long tmp = CMDSRCA;
-   tmp <<= 16;
-   tmp |= CMDCOLR;
+   u32 tmp;
+   s16 x, y;
 
-   if (w > 0 && h > 1) {
-      if ((c = cache.isCached(tmp)) != NULL) {
-         satmem->vdp2_3->ygl.cachedQuad(priority, vertices, c, w, h, dir);
+   fprintf(stderr, "Normal Sprite\n");
+
+   Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
+
+   x = cmd.CMDXA + Vdp1Regs->localX;
+   y = cmd.CMDYA + Vdp1Regs->localY;
+   sprite.w = ((cmd.CMDSIZE >> 8) & 0x3F) * 8;
+   sprite.h = cmd.CMDSIZE & 0xFF;
+
+   sprite.flip = (cmd.CMDCTRL & 0x30) >> 4;
+
+   sprite.vertices[0] = (int)((float)x * vdp1wratio);
+   sprite.vertices[1] = (int)((float)y * vdp1hratio);
+   sprite.vertices[2] = (int)((float)(x + sprite.w) * vdp1wratio);
+   sprite.vertices[3] = (int)((float)y * vdp1hratio);
+   sprite.vertices[4] = (int)((float)(x + sprite.w) * vdp1wratio);
+   sprite.vertices[5] = (int)((float)(y + sprite.h) * vdp1hratio);
+   sprite.vertices[6] = (int)((float)x * vdp1wratio);
+   sprite.vertices[7] = (int)((float)(y + sprite.h) * vdp1hratio);
+
+   Vdp1ReadPriority(&cmd, &sprite);
+
+   tmp = cmd.CMDSRCA;
+   tmp <<= 16;
+   tmp |= cmd.CMDCOLR;
+
+   if (sprite.w > 0 && sprite.h > 1) {
+      if ((c = YglIsCached(tmp)) != NULL) {
+         YglCachedQuad(&sprite, c);
          return;
       } 
-      c = satmem->vdp2_3->ygl.quad(priority, vertices, &texture.textdata, w, h, &z, dir);
-      cache.cache(tmp, c);
+      c = YglQuad(&sprite, &texture);
+      YglCache(tmp, c);
 
-      readTexture(texture.textdata, z);
+      Vdp1ReadTexture(&cmd, &sprite, &texture);
    }
-*/
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void VIDSDLGLVdp1ScaledSpriteDraw(void)
 {
-/*
    vdp1cmd_struct cmd;
    YglSprite sprite;
    YglTexture texture;
@@ -557,7 +554,6 @@ void VIDSDLGLVdp1ScaledSpriteDraw(void)
 
       Vdp1ReadTexture(&cmd, &sprite, &texture);
    }
-*/
 }
 
 //////////////////////////////////////////////////////////////////////////////

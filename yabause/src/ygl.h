@@ -47,6 +47,7 @@ typedef struct {
 	int * quads;
 	int * textcoords;
 	int currentQuad;
+	int maxQuad;
 } YglLevel;
 
 typedef struct {

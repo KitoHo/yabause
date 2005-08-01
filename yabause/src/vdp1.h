@@ -110,14 +110,14 @@ typedef struct
    u16 CMDCOLR;
    u16 CMDSRCA;
    u16 CMDSIZE;
-   u16 CMDXA;
-   u16 CMDYA;
-   u16 CMDXB;
-   u16 CMDYB;
-   u16 CMDXC;
-   u16 CMDYC;
-   u16 CMDXD;
-   u16 CMDYD;
+   s16 CMDXA;
+   s16 CMDYA;
+   s16 CMDXB;
+   s16 CMDYB;
+   s16 CMDXC;
+   s16 CMDYC;
+   s16 CMDXD;
+   s16 CMDYD;
    u16 CMDGRDA;   
 } vdp1cmd_struct;
 

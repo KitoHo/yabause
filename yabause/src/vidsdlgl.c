@@ -368,6 +368,9 @@ int VIDSDLGLInit(void)
    SetSaturnResolution(320, 224);
    Vdp1SetTextureRatio(1, 1);
 
+   vdp1wratio = 1;
+   vdp1hratio = 1;
+
    return 0;
 }
 
@@ -566,8 +569,6 @@ void VIDSDLGLVdp1DistortedSpriteDraw(void)
    YglTexture texture;
    int * c;
    u32 tmp;
-
-   fprintf(stderr, "Distorted Sprite\n");
 
    Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
 

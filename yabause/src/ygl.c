@@ -130,9 +130,10 @@ int YglInit(int width, int height, unsigned int depth) {
       return -1;
    for(i = 0;i < depth;i++) {
       _Ygl->levels[i].currentQuad = 0;
-      _Ygl->levels[i].maxQuad = 8;
+      _Ygl->levels[i].maxQuad = 8 * 2000;
       if ((_Ygl->levels[i].quads = (int *) malloc(_Ygl->levels[i].maxQuad * sizeof(int))) == NULL)
          return -1;
+
       if ((_Ygl->levels[i].textcoords = (int *) malloc(_Ygl->levels[i].maxQuad * sizeof(int))) == NULL)
          return -1;
    }

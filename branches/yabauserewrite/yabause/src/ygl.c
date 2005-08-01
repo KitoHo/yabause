@@ -130,9 +130,10 @@ int YglInit(int width, int height, unsigned int depth) {
       return -1;
    for(i = 0;i < depth;i++) {
       _Ygl->levels[i].currentQuad = 0;
-      if ((_Ygl->levels[i].quads = (int *) malloc(8 * 10 * sizeof(int))) == NULL)
+      _Ygl->levels[i].maxQuad = 8;
+      if ((_Ygl->levels[i].quads = (int *) malloc(_Ygl->levels[i].maxQuad * sizeof(int))) == NULL)
          return -1;
-      if ((_Ygl->levels[i].textcoords = (int *) malloc(8 * 10 * sizeof(int))) == NULL)
+      if ((_Ygl->levels[i].textcoords = (int *) malloc(_Ygl->levels[i].maxQuad * sizeof(int))) == NULL)
          return -1;
    }
 
@@ -190,6 +191,12 @@ int * YglQuad(YglSprite * input, YglTexture * output) {
    level = &_Ygl->levels[input->priority];
    tmp = level->textcoords + level->currentQuad;
 
+   if (level->currentQuad == level->maxQuad) {
+      level->maxQuad += 8;
+      level->quads = (int *) realloc(level->quads, level->maxQuad * sizeof(int));
+      level->textcoords = (int *) realloc(level->textcoords, level->maxQuad * sizeof(int));
+   }
+
    memcpy(level->quads + level->currentQuad, input->vertices, 8 * sizeof(int));
    level->currentQuad += 8;
    YglTMAllocate(output, input->w, input->h, &x, &y);
@@ -231,6 +238,12 @@ void YglCachedQuad(YglSprite * input, int * cache) {
    unsigned int x,y;
    int * tmp = level->textcoords + level->currentQuad;
 
+   if (level->currentQuad == level->maxQuad) {
+      level->maxQuad += 8;
+      level->quads = (int *) realloc(level->quads, level->maxQuad * sizeof(int));
+      level->textcoords = (int *) realloc(level->textcoords, level->maxQuad * sizeof(int));
+   }
+
    memcpy(level->quads + level->currentQuad, input->vertices, 8 * sizeof(int));
    level->currentQuad += 8;
 
@@ -261,6 +274,7 @@ void YglRender(void) {
    glEnable(GL_TEXTURE_2D);
 
    glBindTexture(GL_TEXTURE_2D, _Ygl->texture);
+
    glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, YglTM->width, YglTM->height, GL_RGBA, GL_UNSIGNED_BYTE, YglTM->texture);
 
    if(_Ygl->st) {

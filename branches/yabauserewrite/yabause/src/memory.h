@@ -128,7 +128,12 @@ extern u8 *HighWram;
 extern u8 *LowWram;
 extern u8 *BiosRom;
 
+int MappedMemoryLoad(const char *filename, u32 addr);
+int MappedMemorySave(const char *filename, u32 addr, u32 size);
+void MappedMemoryLoadExec(const char *filename, u32 pc);
+
 int LoadBios(const char *filename);
 int LoadBackupRam(const char *filename);
+void FormatBackupRam();
 
 #endif

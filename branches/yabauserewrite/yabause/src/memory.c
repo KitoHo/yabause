@@ -53,6 +53,7 @@ static readlongfunc ReadLongList[0x1000];
 u8 *HighWram;
 u8 *LowWram;
 u8 *BiosRom;
+u8 *BupRam;
 
 ////////////////////////////////////////////////////////////////
 
@@ -689,6 +690,72 @@ void FASTCALL MappedMemoryWriteLong(u32 addr, u32 val)  {
 
 ////////////////////////////////////////////////////////////////
 
+int MappedMemoryLoad(const char *filename, u32 addr) {
+   FILE *fp;
+   unsigned long filesize;
+   unsigned char *buffer;
+   unsigned long i;
+
+   if ((fp = fopen(filename, "rb")) == NULL)
+      return -1;
+
+   // Calculate file size
+   fseek(fp, 0, SEEK_END);
+   filesize = ftell(fp);
+   fseek(fp, 0, SEEK_SET);
+
+   if ((buffer = (unsigned char *)malloc(filesize)) == NULL)
+   {
+      fclose(fp);
+      return -2;
+   }
+
+   fread((void *)buffer, 1, filesize, fp);
+   fclose(fp);
+
+   for (i = 0; i < filesize; i++)
+      MappedMemoryWriteByte(addr+i, buffer[i]);
+
+   free(buffer);
+
+   return 0;
+}
+
+////////////////////////////////////////////////////////////////
+
+int MappedMemorySave(const char *filename, u32 addr, u32 size) {
+   FILE *fp;
+   unsigned char *buffer;
+   unsigned long i;
+
+   if ((fp = fopen(filename, "wb")) == NULL)
+      return -1;
+
+   if ((buffer = (unsigned char *)malloc(size)) == NULL)
+   {
+      fclose(fp);
+      return -2;
+   }
+
+   for (i = 0; i < size; i++)
+      buffer[i] = MappedMemoryReadByte(addr+i);
+
+   fwrite((void *)buffer, 1, size, fp);
+   fclose(fp);
+   free(buffer);
+
+   return 0;
+}
+
+////////////////////////////////////////////////////////////////
+
+void MappedMemoryLoadExec(const char *filename, u32 pc) {
+  MappedMemoryLoad(filename, pc);
+  MSH2->regs.PC = pc;
+}
+
+////////////////////////////////////////////////////////////////
+
 int LoadBios(const char *filename) {
    FILE *fp;
    unsigned long filesize;
@@ -735,3 +802,24 @@ int LoadBackupRam(const char *filename) {
 
 ////////////////////////////////////////////////////////////////
 
+void FormatBackupRam() {
+  int i, i2;
+  unsigned char header[32] = {
+  0xFF, 'B', 0xFF, 'a', 0xFF, 'c', 0xFF, 'k',
+  0xFF, 'U', 0xFF, 'p', 0xFF, 'R', 0xFF, 'a',
+  0xFF, 'm', 0xFF, ' ', 0xFF, 'F', 0xFF, 'o',
+  0xFF, 'r', 0xFF, 'm', 0xFF, 'a', 0xFF, 't'
+  };
+
+  // Fill in header
+  for(i2 = 0; i2 < 4; i2++) {
+     for(i = 0; i < 32; i++)
+        T1WriteByte(BupRam, (i2 * 32) + i, header[i]);
+  }
+
+  // Clear the rest
+  for(i = 0x80; i < 0x10000; i+=2) {
+     T1WriteByte(BupRam, i, 0xFF);
+     T1WriteByte(BupRam, i+1, 0x00);
+  }
+}

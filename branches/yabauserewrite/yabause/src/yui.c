@@ -1,9 +1,15 @@
 #include "yui.h"
 #include "sndsdl.h"
 #include "vidsdlgl.h"
+#include "persdl.h"
 
 SH2Interface_struct *SH2CoreList[] = {
 &SH2Interpreter,
+NULL
+};
+
+PerInterface_struct *PERCoreList[] = {
+&PERSDL,
 NULL
 };
 
@@ -45,17 +51,17 @@ void YuiQuit(void) {
    stop = 1;
 }
 
-int YuiInit(int (*yab_main)()) {
+int YuiInit(void) {
    stop = 0;
 
-   if (YabauseInit(SH2CORE_DEFAULT, VIDCORE_SDLGL, SNDCORE_SDL,
+   if (YabauseInit(PERCORE_SDL, SH2CORE_DEFAULT, VIDCORE_SDLGL, SNDCORE_SDL,
                    CDCORE_DEFAULT, REGION_AUTODETECT, bios, iso,
                    NULL, NULL) != 0)
       return -1;
 
    while (!stop)
    {
-      if (yab_main() != 0)
+      if (PERCore->HandleEvents() != 0)
          return -1;
    }
 

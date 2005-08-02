@@ -31,201 +31,11 @@
 #include "smpc.h"
 #include "vdp2.h"
 #include "yui.h"
+#include "peripheral.h"
 
 //////////////////////////////////////////////////////////////////////////////
-
-unsigned short buttonbits = 0xFFFF;
 
 yabsys_struct yabsys;
-
-//////////////////////////////////////////////////////////////////////////////
-
-void keyDown(int key)
-{
-  switch (key) {
-        case SDLK_RIGHT:
-		buttonbits &= 0x7FFF;
-                LOG("Right\n");
-		break;
-        case SDLK_LEFT:
-		buttonbits &= 0xBFFF;
-                LOG("Left\n");
-		break;
-        case SDLK_DOWN:
-		buttonbits &= 0xDFFF;
-                LOG("Down\n");
-		break;
-        case SDLK_UP:
-		buttonbits &= 0xEFFF;
-                LOG("Up\n");
-		break;
-	case SDLK_j:
-		buttonbits &= 0xF7FF;
-                LOG("Start\n");
-		break;
-	case SDLK_k:
-		buttonbits &= 0xFBFF;
-                LOG("A\n");
-		break;
-	case SDLK_m:
-		buttonbits &= 0xFDFF;
-                LOG("C\n");
-		break;
-	case SDLK_l:
-		buttonbits &= 0xFEFF;
-                LOG("B\n");
-		break;
-	case SDLK_z:
-		buttonbits &= 0xFF7F;
-                LOG("Right Trigger\n");
-		break;
-	case SDLK_u:
-		buttonbits &= 0xFFBF;
-                LOG("X\n");
-		break;
-	case SDLK_i:
-		buttonbits &= 0xFFDF;
-                LOG("Y\n");
-		break;
-	case SDLK_o:
-		buttonbits &= 0xFFEF;
-                LOG("Z\n");
-		break;
-	case SDLK_x:
-		buttonbits &= 0xFFF7;
-                LOG("Left Trigger\n");
-		break;
-	default:
-		break;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void keyUp(int key)
-{
-  switch (key) {
-        case SDLK_RIGHT:
-		buttonbits |= ~0x7FFF;
-		break;
-        case SDLK_LEFT:
-		buttonbits |= ~0xBFFF;
-		break;
-        case SDLK_DOWN:
-		buttonbits |= ~0xDFFF;
-		break;
-        case SDLK_UP:
-		buttonbits |= ~0xEFFF;
-		break;
-	case SDLK_j:
-		buttonbits |= ~0xF7FF;
-		break;
-	case SDLK_k:
-		buttonbits |= ~0xFBFF;
-		break;
-	case SDLK_m:
-		buttonbits |= ~0xFDFF;
-		break;
-	case SDLK_l:
-		buttonbits |= ~0xFEFF;
-		break;
-	case SDLK_z:
-		buttonbits |= ~0xFF7F;
-		break;
-	case SDLK_u:
-		buttonbits |= ~0xFFBF;
-		break;
-	case SDLK_i:
-		buttonbits |= ~0xFFDF;
-		break;
-	case SDLK_o:
-		buttonbits |= ~0xFFEF;
-		break;
-	case SDLK_x:
-		buttonbits |= ~0xFFF7;
-		break;
-	default:
-		break;
-  }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-int handleEvents() {
-    SDL_Event event;
-      if (SDL_PollEvent(&event)) {
-	switch(event.type) {
-	case SDL_QUIT:
-                YuiQuit();
-		break;
-	case SDL_KEYDOWN:
-	  switch(event.key.keysym.sym) {
-                case SDLK_F1:
-                        break;
-
-                case SDLK_F2:
-                        break;
-
-                case SDLK_F4:
-                        break;
-
-                case SDLK_1:
-                        break;
-
-                case SDLK_2:
-			break;
-
-                case SDLK_3:
-			break;
-
-                case SDLK_4:
-			break;
-
-                case SDLK_5:
-			break;
-
-                case SDLK_6:
-			break;
-
-		case SDLK_h:
-                        YuiHideShow();
-			break;
-			
-		case SDLK_q:
-                        YuiQuit();
-                        break;
-		case SDLK_p:
-			break;
-		case SDLK_t:
-			break;
-		case SDLK_r:
-			break;
-		default:
-			keyDown(event.key.keysym.sym);
-			break;
-	  }
-	  break;
-	case SDL_KEYUP:
-	  switch(event.key.keysym.sym) {
-		case SDLK_q:
-		case SDLK_p:
-		case SDLK_r:
-			break;
-		default:
-			keyUp(event.key.keysym.sym);
-			break;
-	  }
-	  break;
-	default:
-		break;
-	}
-      }
-      else {
-         if (YabauseExec() != 0)
-            return -1;
-      }
-      return 0;
-}
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -265,7 +75,8 @@ void YabauseChangeTiming(int freqtype) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-int YabauseInit(int sh2coretype, int vidcoretype, int sndcoretype,
+int YabauseInit(int percoretype,
+		int sh2coretype, int vidcoretype, int sndcoretype,
                 int cdcoretype, unsigned char regionid, const char *biospath,
                 const char *cdpath, const char *savepath, const char *mpegpath) {
    // Initialize Both cores
@@ -279,6 +90,10 @@ int YabauseInit(int sh2coretype, int vidcoretype, int sndcoretype,
       return -1;
 
    if ((LowWram = T2MemoryInit(0x100000)) == NULL)
+      return -1;
+
+   // Initialize input core
+   if (PerInit(percoretype) != 0)
       return -1;
 
    // Initialize CS0 area here
@@ -457,7 +272,7 @@ int main(int argc, char *argv[]) {
       }
    }
 
-   if (YuiInit(&handleEvents) != 0)
+   if (YuiInit() != 0)
       fprintf(stderr, "Error running Yabause\n");
 
    YabauseDeInit();

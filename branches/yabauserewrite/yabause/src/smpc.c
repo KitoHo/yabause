@@ -33,6 +33,8 @@ Smpc * SmpcRegs;
 u8 * SmpcRegsT;
 SmpcInternal * SmpcInternalVars;
 
+extern u16 buttonbits;
+
 //////////////////////////////////////////////////////////////////////////////
 
 int SmpcInit(u8 regionid) {

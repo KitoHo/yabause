@@ -412,7 +412,7 @@ void VIDSDLGLVdp1NormalSpriteDraw(void)
    u32 tmp;
    s16 x, y;
 
-   fprintf(stderr, "Normal Sprite\n");
+   //fprintf(stderr, "Normal Sprite\n");
 
    Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
 
@@ -462,7 +462,7 @@ void VIDSDLGLVdp1ScaledSpriteDraw(void)
    s16 rw=0, rh=0;
    s16 x, y;
 
-   fprintf(stderr, "Scaled Sprite\n");
+   //fprintf(stderr, "Scaled Sprite\n");
 
    Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
 

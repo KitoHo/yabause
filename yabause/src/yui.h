@@ -12,7 +12,7 @@
 /* This function should be the "main" function of the program.
  * The function passed as an argument is the main emulation
    function and should be called as often as possible */
-int YuiInit(int (*)());
+int YuiInit(void);
 
 /* quit yui_init */
 void YuiQuit(void);

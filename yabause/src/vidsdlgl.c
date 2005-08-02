@@ -95,6 +95,8 @@ VIDSDLGLVdp2DrawRBG0
 static float vdp1wratio=1;
 static float vdp1hratio=1;
 
+u32 Vdp2ColorRamGetColor(u32 addr, int alpha, u32 colorOffset);
+
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, YglTexture *texture) {
@@ -344,6 +346,38 @@ void Vdp1SetTextureRatio(int vdp2widthratio, int vdp2heightratio) {
 
    vdp1wratio = (float)vdp2widthratio / vdp1w;
    vdp1hratio = (float)vdp2heightratio / vdp1w;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+u32 Vdp2ColorRamGetColor(u32 addr, int alpha, u32 colorOffset) {
+   switch(Vdp2Internal.ColorMode) {
+      case 0: {
+         u32 tmp;
+         addr *= 2; // thanks Runik!
+         addr += colorOffset * 0x200;
+         tmp = T2ReadWord(Vdp2ColorRam, addr);
+         return SAT2YAB1(alpha, tmp);
+      }
+      case 1: {
+         u32 tmp;
+         addr *= 2; // thanks Runik!
+         addr += colorOffset * 0x200;
+         tmp = T2ReadWord(Vdp2ColorRam, addr);
+         return SAT2YAB1(alpha, tmp);
+      }
+      case 2: {
+         u32 tmp1, tmp2;
+         addr *= 4;
+         addr += colorOffset * 0x400;
+         tmp1 = T2ReadWord(Vdp2ColorRam, addr);
+         tmp2 = T2ReadWord(Vdp2ColorRam, addr+2);
+         return SAT2YAB2(alpha, tmp1, tmp2);
+      }
+      default: break;
+   }
+
+   return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -616,6 +650,52 @@ void VIDSDLGLVdp1DistortedSpriteDraw(void)
 
 void VIDSDLGLVdp1PolygonDraw(void)
 {
+   s16 X[4];
+   s16 Y[4];
+   u16 color;
+   u16 CMDPMOD;
+   u8 alpha;
+   YglSprite polygon;
+   YglTexture texture;
+
+   X[0] = Vdp1Regs->localX + T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0xC);
+   Y[0] = Vdp1Regs->localY + T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0xE);
+   X[1] = Vdp1Regs->localX + T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x10);
+   Y[1] = Vdp1Regs->localY + T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x12);
+   X[2] = Vdp1Regs->localX + T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x14);
+   Y[2] = Vdp1Regs->localY + T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x16);
+   X[3] = Vdp1Regs->localX + T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x18);
+   Y[3] = Vdp1Regs->localY + T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1A);
+
+   color = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x6);
+   CMDPMOD = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
+
+   alpha = 0xFF;
+
+   if ((CMDPMOD & 0x7) == 0x3)
+      alpha = 0x80;
+
+   if ((color & 0x8000) == 0)
+      alpha = 0;
+
+   polygon.priority = Vdp2Regs->PRISA & 0x7;
+
+   polygon.vertices[0] = (int)((float)X[0] * vdp1wratio);
+   polygon.vertices[1] = (int)((float)Y[0] * vdp1hratio);
+   polygon.vertices[2] = (int)((float)X[1] * vdp1wratio);
+   polygon.vertices[3] = (int)((float)Y[1] * vdp1hratio);
+   polygon.vertices[4] = (int)((float)X[2] * vdp1wratio);
+   polygon.vertices[5] = (int)((float)Y[2] * vdp1hratio);
+   polygon.vertices[6] = (int)((float)X[3] * vdp1wratio);
+   polygon.vertices[7] = (int)((float)Y[3] * vdp1hratio);
+
+   polygon.w = 1;
+   polygon.h = 1;
+   polygon.flip = 0;
+
+   YglQuad(&polygon, &texture);
+
+   *texture.textdata = SAT2YAB1(alpha,color);
 }
 
 //////////////////////////////////////////////////////////////////////////////

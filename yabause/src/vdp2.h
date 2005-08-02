@@ -24,6 +24,7 @@
 #include "memory.h"
 
 extern u8 * Vdp2Ram;
+extern u8 * Vdp2ColorRam;
 
 u8 FASTCALL     Vdp2RamReadByte(u32);
 u16 FASTCALL    Vdp2RamReadWord(u32);
@@ -40,33 +41,38 @@ void FASTCALL   Vdp2ColorRamWriteWord(u32, u16);
 void FASTCALL   Vdp2ColorRamWriteLong(u32, u32);
 
 typedef struct {
-   unsigned short TVMD;   // 0x25F80000
-   unsigned short EXTEN;  // 0x25F80002
-   unsigned short TVSTAT; // 0x25F80004
-   unsigned short HCNT;   // 0x25F80008
-   unsigned short VCNT;   // 0x25F8000A
-   unsigned short RAMCTL; // 0x25F8000E
-   unsigned short BGON;   // 0x25F80020
-   unsigned short CHCTLA; // 0x25F80028
-   unsigned short CHCTLB; // 0x25F8002A
-   unsigned short BMPNA;  // 0x25F8002C
-   unsigned short MPOFN;  // 0x25F8003C
-   unsigned short MPABN2; // 0x25F80048
-   unsigned short MPCDN2; // 0x25F8004A
-   unsigned short BKTAU;  // 0x25F800AC
-   unsigned short BKTAL;  // 0x25F800AE
-   unsigned short SPCTL;  // 0x25F800E0
-   unsigned short CRAOFA; // 0x25F800E4
-   unsigned short CRAOFB; // 0x25F800E6
-   unsigned short PRISA;  // 0x25F800F0
-   unsigned short PRINA;  // 0x25F800F8
-   unsigned short PRINB;  // 0x25F800FA
-   unsigned short PRIR;   // 0x25F800FC
+   u16 TVMD;   // 0x25F80000
+   u16 EXTEN;  // 0x25F80002
+   u16 TVSTAT; // 0x25F80004
+   u16 HCNT;   // 0x25F80008
+   u16 VCNT;   // 0x25F8000A
+   u16 RAMCTL; // 0x25F8000E
+   u16 BGON;   // 0x25F80020
+   u16 CHCTLA; // 0x25F80028
+   u16 CHCTLB; // 0x25F8002A
+   u16 BMPNA;  // 0x25F8002C
+   u16 MPOFN;  // 0x25F8003C
+   u16 MPABN2; // 0x25F80048
+   u16 MPCDN2; // 0x25F8004A
+   u16 BKTAU;  // 0x25F800AC
+   u16 BKTAL;  // 0x25F800AE
+   u16 SPCTL;  // 0x25F800E0
+   u16 CRAOFA; // 0x25F800E4
+   u16 CRAOFB; // 0x25F800E6
+   u16 PRISA;  // 0x25F800F0
+   u16 PRINA;  // 0x25F800F8
+   u16 PRINB;  // 0x25F800FA
+   u16 PRIR;   // 0x25F800FC
 } Vdp2;
 
 extern Vdp2 * Vdp2Regs;
 
-u32 Vdp2ColorRamGetColor(u32 addr, int alpha, u32 colorOffset);
+typedef struct {
+   int ColorMode;
+} Vdp2Internal_struct;
+
+extern Vdp2Internal_struct Vdp2Internal;
+
 int Vdp2Init(int coreid);
 void Vdp2DeInit(void);
 void Vdp2Reset(void);

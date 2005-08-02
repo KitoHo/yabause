@@ -29,6 +29,7 @@
 u8 * Vdp2Ram;
 u8 * Vdp2ColorRam;
 Vdp2 * Vdp2Regs;
+Vdp2Internal_struct Vdp2Internal;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -116,39 +117,6 @@ void FASTCALL Vdp2ColorRamWriteLong(u32 addr, u32 val) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-u32 Vdp2ColorRamGetColor(u32 addr, int alpha, u32 colorOffset) {
-/*
-   switch(mode) {
-      case 0: {
-         u32 tmp;
-         addr *= 2; // thanks Runik!
-         addr += colorOffset * 0x200;
-         tmp = T2ReadWord(Vdp2ColorRam, addr);
-         return SAT2YAB1(alpha, tmp);
-      }
-      case 1: {
-         u32 tmp;
-         addr *= 2; // thanks Runik!
-         addr += colorOffset * 0x200;
-         tmp = T2ReadWord(Vdp2ColorRam, addr);
-         return SAT2YAB1(alpha, tmp);
-      }
-      case 2: {
-         u32 tmp1, tmp2;
-         addr *= 4;
-         addr += colorOffset * 0x400;
-         tmp1 = T2ReadWord(Vdp2ColorRam, addr);
-         tmp2 = T2ReadWord(Vdp2ColorRam, addr+2);
-         return SAT2YAB2(alpha, tmp1, tmp2);
-      }
-      default: break;
-   }
-*/
-   return 0;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
 int Vdp2Init(int coreid) {
    if ((Vdp2Regs = (Vdp2 *) calloc(1, sizeof(Vdp2))) == NULL)
       return -1;
@@ -199,6 +167,8 @@ void Vdp2Reset(void) {
    Vdp2Regs->PRINA = 0x0000;
    Vdp2Regs->PRINB = 0x0000;
    Vdp2Regs->PRIR = 0x0000;
+
+   Vdp2Internal.ColorMode = 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -302,58 +272,59 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
       case 0x000:
          Vdp2Regs->TVMD = val;
          return;
-      case 0x02:
+      case 0x002:
          Vdp2Regs->EXTEN = val;
          return;
-      case 0x0E:
+      case 0x00E:
          Vdp2Regs->RAMCTL = val;
+         Vdp2Internal.ColorMode = (val >> 12) & 0x3;
          return;
-      case 0x20:
+      case 0x020:
          Vdp2Regs->BGON = val;
          return;
-      case 0x28:
+      case 0x028:
          Vdp2Regs->CHCTLA = val;
          return;
-      case 0x2A:
+      case 0x02A:
          Vdp2Regs->CHCTLB = val;
          return;
-      case 0x2C:
+      case 0x02C:
          Vdp2Regs->BMPNA = val;
          return;
-      case 0x3C:
+      case 0x03C:
          Vdp2Regs->MPOFN = val;
          return;
-      case 0x48:
+      case 0x048:
          Vdp2Regs->MPABN2 = val;
          return;
-      case 0x4A:
+      case 0x04A:
          Vdp2Regs->MPCDN2 = val;
          return;
-      case 0xAC:
+      case 0x0AC:
          Vdp2Regs->BKTAU = val;
          return;
-      case 0xAE:
+      case 0x0AE:
          Vdp2Regs->BKTAL = val;
          return;
-      case 0xE0:
+      case 0x0E0:
          Vdp2Regs->SPCTL = val;
          return;
-      case 0xE4:
+      case 0x0E4:
          Vdp2Regs->CRAOFA = val;
          return;
-      case 0xE6:
+      case 0x0E6:
          Vdp2Regs->CRAOFB = val;
          return;     
-      case 0xF0:
+      case 0x0F0:
          Vdp2Regs->PRISA = val;
          return;
-      case 0xF8:
+      case 0x0F8:
          Vdp2Regs->PRINA = val;
          return;
-      case 0xFA:
+      case 0x0FA:
          Vdp2Regs->PRINB = val;
          return;
-      case 0xFC:
+      case 0x0FC:
          Vdp2Regs->PRIR = val;
          return;
       default:
@@ -372,3 +343,5 @@ void FASTCALL Vdp2WriteLong(u32 addr, u32 val) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+

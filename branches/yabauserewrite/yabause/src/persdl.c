@@ -71,6 +71,9 @@ int PERSDLHandleEvents(void) {
 		case SDL_KEYUP:
 			PERSDLKeyReleased[event.key.keysym.sym]();
 			break;
+		case SDL_VIDEORESIZE:
+			VIDCore->Resize(event.resize.w, event.resize.h);
+			break;
 		default:
 			break;
 		}

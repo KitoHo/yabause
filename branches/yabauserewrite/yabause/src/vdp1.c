@@ -336,6 +336,7 @@ void FASTCALL Vdp1ReadCommand(vdp1cmd_struct *cmd, u32 addr) {
 
 int VIDDummyInit(void);
 void VIDDummyDeInit(void);
+void VIDDummyResize(unsigned int, unsigned int);
 int VIDDummyVdp1Reset(void);
 void VIDDummyVdp1DrawStart(void);
 void VIDDummyVdp1DrawEnd(void);
@@ -364,6 +365,7 @@ VIDCORE_DUMMY,
 "Dummy Video Interface",
 VIDDummyInit,
 VIDDummyDeInit,
+VIDDummyResize,
 VIDDummyVdp1Reset,
 VIDDummyVdp1DrawStart,
 VIDDummyVdp1DrawEnd,
@@ -398,6 +400,12 @@ int VIDDummyInit(void)
 //////////////////////////////////////////////////////////////////////////////
 
 void VIDDummyDeInit(void)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void VIDDummyResize(unsigned int i, unsigned int j)
 {
 }
 

@@ -38,6 +38,7 @@
 
 int VIDSDLGLInit(void);
 void VIDSDLGLDeInit(void);
+void VIDSDLGLResize(unsigned int, unsigned int);
 int VIDSDLGLVdp1Reset(void);
 void VIDSDLGLVdp1DrawStart(void);
 void VIDSDLGLVdp1DrawEnd(void);
@@ -66,6 +67,7 @@ VIDCORE_SDLGL,
 "SDL/OpenGL Video Interface",
 VIDSDLGLInit,
 VIDSDLGLDeInit,
+VIDSDLGLResize,
 VIDSDLGLVdp1Reset,
 VIDSDLGLVdp1DrawStart,
 VIDSDLGLVdp1DrawEnd,
@@ -379,6 +381,14 @@ int VIDSDLGLInit(void)
 void VIDSDLGLDeInit(void)
 {
    YglDeInit();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void VIDSDLGLResize(unsigned int w, unsigned int h)
+{
+   SDL_SetVideoMode(w, h, 32, SDL_OPENGL | SDL_RESIZABLE);
+   glViewport(0, 0, w, h);
 }
 
 //////////////////////////////////////////////////////////////////////////////

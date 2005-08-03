@@ -94,6 +94,8 @@ VIDSDLGLVdp2DrawRBG0
 
 static float vdp1wratio=1;
 static float vdp1hratio=1;
+static int bswidth;
+static int bsheight;
 
 u32 Vdp2ColorRamGetColor(u32 addr, int alpha, u32 colorOffset);
 
@@ -390,8 +392,8 @@ void SetSaturnResolution(int width, int height) {
 //   ((NBG2 *)nbg2)->setTextureRatio(width, height);
 //   ((NBG3 *)nbg3)->setTextureRatio(width, height);
 
-//   bswidth=width;
-//   bsheight=height;
+   bswidth=width;
+   bsheight=height;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -777,6 +779,43 @@ void VIDSDLGLVdp2DrawEnd(void)
 
 void VIDSDLGLVdp2DrawBackScreen(void)
 {
+   u32 scrAddr;
+   int dot, y;
+
+   if (Vdp2Regs->VRSIZE & 0x8000)
+      scrAddr = (((Vdp2Regs->BKTAU & 0x7) << 16) | Vdp2Regs->BKTAL) * 2;
+   else
+      scrAddr = (((Vdp2Regs->BKTAU & 0x3) << 16) | Vdp2Regs->BKTAL) * 2;
+
+   if (Vdp2Regs->BKTAU & 0x8000) {
+      glBegin(GL_LINES);
+
+      for(y = 0; y < bsheight; y++)
+      {
+         dot = T1ReadWord(Vdp2Ram, scrAddr);
+         scrAddr += 2;
+
+         glColor3ub((dot & 0x1F) << 3, (dot & 0x3E0) >> 2, (dot & 0x7C00) >> 7);
+
+         glVertex2f(0, y);
+         glVertex2f(bswidth, y);
+      }
+      glEnd();
+      glColor3ub(0xFF, 0xFF, 0xFF);
+   }
+   else {
+      dot = T1ReadWord(Vdp2Ram, scrAddr);
+
+      glColor3ub((dot & 0x1F) << 3, (dot & 0x3E0) >> 2, (dot & 0x7C00) >> 7);
+
+      glBegin(GL_QUADS);
+      glVertex2i(0, 0);
+      glVertex2i(bswidth, 0);
+      glVertex2i(bswidth, bsheight);
+      glVertex2i(0, bsheight);
+      glEnd();
+      glColor3ub(0xFF, 0xFF, 0xFF);
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////////

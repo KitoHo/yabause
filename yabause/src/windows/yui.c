@@ -28,6 +28,8 @@
 #include "../sh2d.h"
 #include "../yui.h"
 #include "../sndsdl.h"
+#include "../vidsdlgl.h"
+#include "../persdl.h"
 #include "resource.h"
 #include "settings.h"
 #include "cd.h"
@@ -96,6 +98,11 @@ SH2Interface_struct *SH2CoreList[] = {
 NULL
 };
 
+PerInterface_struct *PERCoreList[] = {
+&PERSDL,
+NULL
+};
+
 CDInterface *CDCoreList[] = {
 &DummyCD,
 &ISOCD,
@@ -111,44 +118,34 @@ NULL
 
 VideoInterface_struct *VIDCoreList[] = {
 &VIDDummy,
+&VIDSDLGL,
 NULL
 };
+
+//////////////////////////////////////////////////////////////////////////////
 
 void YuiSetBiosFilename(const char *bios) {
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void YuiSetIsoFilename(const char *iso) {
 }
 
-const char * yui_bios(void) {
-        return biosfilename;
-}
-
-const char * yui_saveram(void) {
-        return backupramfilename;
-}
-
-const char * yui_mpegrom(void) {
-        return mpegromfilename;
-}
-
-unsigned char yui_region(void) {
-        return regionid;
-}
+//////////////////////////////////////////////////////////////////////////////
 
 void YuiHideShow(void) {
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void YuiQuit(void) {
 	stop = 1;
 }
 
-//void yui_errormsg(Exception error, SuperH sh2opcodes) {
-//   cerr << error << endl;
-//   cerr << sh2opcodes << endl;
-//}
+//////////////////////////////////////////////////////////////////////////////
 
-int YuiInit(int (*yab_main)()) {
+int YuiInit(void) {
    WNDCLASS                    MyWndClass;
    HWND                        hWnd;
    DWORD inifilenamesize=0;
@@ -286,25 +283,23 @@ int YuiInit(int (*yab_main)()) {
 
    YabWin = hWnd;
 
-   // remove me
-//   SDL_InitSubSystem( SDL_INIT_VIDEO );
-   SDL_Init(SDL_INIT_VIDEO);
-
    stop = 0;
 
-   if (YabauseInit(SH2CORE_DEFAULT, VIDCORE_DEFAULT, SNDCORE_SDL,
-                   CDCORE_SPTI, REGION_AUTODETECT, biosfilename, cdrompath,
+   if (YabauseInit(PERCORE_SDL, SH2CORE_DEFAULT, VIDCORE_SDLGL, SNDCORE_SDL,
+                   CDCORE_SPTI, regionid, biosfilename, cdrompath,
                    backupramfilename, mpegromfilename) == -1)
       return -1;
 
    while (!stop)
    {
-      if (yab_main() != 0)
+      if (PERCore->HandleEvents() != 0)
          return -1;
    }
 
    return 0;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 LRESULT CALLBACK WindowProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 {
@@ -393,6 +388,8 @@ LRESULT CALLBACK WindowProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 
     return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 LRESULT CALLBACK MemTransferDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                                     LPARAM lParam)
@@ -495,7 +492,7 @@ LRESULT CALLBACK MemTransferDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                if (SendMessage(GetDlgItem(hDlg, IDC_DOWNLOADMEM), BM_GETCHECK, 0, 0) == BST_CHECKED)
                {
                   // Let's do a ram dump
-//                  yabausemem->save(mtrnsfilename, mtrnssaddress, mtrnseaddress - mtrnssaddress);
+                  MappedMemorySave(mtrnsfilename, mtrnssaddress, mtrnseaddress - mtrnssaddress);
                   mtrnsreadwrite = 0;
                }
                else
@@ -506,12 +503,12 @@ LRESULT CALLBACK MemTransferDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                   // Is this a program?
                   if (SendMessage(GetDlgItem(hDlg, IDC_CHECKBOX1), BM_GETCHECK, 0, 0) == BST_CHECKED)
                   {
-//                     yabausemem->loadExec(mtrnsfilename, mtrnssaddress);
+                     MappedMemoryLoadExec(mtrnsfilename, mtrnssaddress);
                      mtrnssetpc = TRUE;
                   }
                   else
                   {
-//                     yabausemem->load(mtrnsfilename, mtrnssaddress);
+                     MappedMemoryLoad(mtrnsfilename, mtrnssaddress);
                      mtrnssetpc = FALSE;
                   }
                }
@@ -555,6 +552,8 @@ LRESULT CALLBACK MemTransferDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
 
    return FALSE;
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void SH2UpdateRegList(HWND hDlg, sh2regs_struct *regs)
 {
@@ -606,6 +605,8 @@ void SH2UpdateRegList(HWND hDlg, sh2regs_struct *regs)
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 }
 
+//////////////////////////////////////////////////////////////////////////////
+
 void SH2UpdateCodeList(HWND hDlg, unsigned long addr)
 {
    int i;
@@ -627,6 +628,8 @@ void SH2UpdateCodeList(HWND hDlg, unsigned long addr)
 
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX2), LB_SETCURSEL,12,0);
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 LRESULT CALLBACK MemDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                                  LPARAM lParam)

@@ -316,7 +316,7 @@ void FASTCALL Vdp1ReadCommand(vdp1cmd_struct *cmd, u32 addr) {
    cmd->CMDCTRL = T1ReadWord(Vdp1Ram, addr);
    cmd->CMDLINK = T1ReadWord(Vdp1Ram, addr + 0x2);
    cmd->CMDPMOD = T1ReadWord(Vdp1Ram, addr + 0x4);
-   cmd->CMDCOLR = T1ReadWord(Vdp1Ram, addr + 0x5);
+   cmd->CMDCOLR = T1ReadWord(Vdp1Ram, addr + 0x6);
    cmd->CMDSRCA = T1ReadWord(Vdp1Ram, addr + 0x8);
    cmd->CMDSIZE = T1ReadWord(Vdp1Ram, addr + 0xA);
    cmd->CMDXA = T1ReadWord(Vdp1Ram, addr + 0xC);

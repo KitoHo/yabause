@@ -163,7 +163,7 @@ void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, YglTexture
 
                if (((dot >> 4) == 0) && !SPD) *texture->textdata++ = 0;
                else {
-                  temp = T1ReadByte(Vdp1Ram, (dot >> 4) * 2 + colorLut);
+                  temp = T1ReadWord(Vdp1Ram, (dot >> 4) * 2 + colorLut);
                   *texture->textdata++ = SAT2YAB1(alpha, temp);
                }
 
@@ -171,7 +171,7 @@ void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, YglTexture
 
                if (((dot & 0xF) == 0) && !SPD) *texture->textdata++ = 0;
                else {
-                  temp = T1ReadByte(Vdp1Ram, (dot & 0xF) * 2 + colorLut);
+                  temp = T1ReadWord(Vdp1Ram, (dot & 0xF) * 2 + colorLut);
                   *texture->textdata++ = SAT2YAB1(alpha, temp);
                }
 

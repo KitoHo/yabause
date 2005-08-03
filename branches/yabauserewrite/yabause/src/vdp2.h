@@ -44,6 +44,7 @@ typedef struct {
    u16 TVMD;   // 0x25F80000
    u16 EXTEN;  // 0x25F80002
    u16 TVSTAT; // 0x25F80004
+   u16 VRSIZE; // 0x25F80006
    u16 HCNT;   // 0x25F80008
    u16 VCNT;   // 0x25F8000A
    u16 RAMCTL; // 0x25F8000E

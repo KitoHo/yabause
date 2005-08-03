@@ -150,6 +150,7 @@ void Vdp2Reset(void) {
    Vdp2Regs->TVMD = 0x0000;
    Vdp2Regs->EXTEN = 0x0000;
    Vdp2Regs->TVSTAT = Vdp2Regs->TVSTAT & 0x1;
+   Vdp2Regs->VRSIZE = 0x0000; // fix me(version should be set)
    Vdp2Regs->RAMCTL = 0x0000;
    Vdp2Regs->BGON = 0x0000;
    Vdp2Regs->CHCTLA = 0x0000;
@@ -205,7 +206,8 @@ void Vdp2VBlankOUT(void) {
    VIDCore->Vdp2DrawStart();
 
    if (Vdp2Regs->TVMD & 0x8000) {
-      // draw here
+      VIDCore->Vdp2DrawBackScreen();
+      // draw other screens here
       Vdp1Draw();
    }
 
@@ -237,6 +239,8 @@ u16 FASTCALL Vdp2ReadWord(u32 addr) {
             return Vdp2Regs->TVSTAT;
          else
             return (Vdp2Regs->TVSTAT | 0x8);
+      case 0x006:         
+         return Vdp2Regs->VRSIZE;
       default:
       {
          LOG("Unhandled VDP2 word read: %08X\n", addr);
@@ -274,6 +278,9 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
          return;
       case 0x002:
          Vdp2Regs->EXTEN = val;
+         return;
+      case 0x006:
+         Vdp2Regs->VRSIZE = val;
          return;
       case 0x00E:
          Vdp2Regs->RAMCTL = val;

@@ -50,13 +50,12 @@ typedef struct
    int (*Vdp2Reset)(void);
    void (*Vdp2DrawStart)(void);
    void (*Vdp2DrawEnd)(void);
-   void (*Vdp2DrawBackScreen)(void);
-   void (*Vdp2DrawLineColorScreen)(void);
-   void (*Vdp2DrawNBG0)(void);
-   void (*Vdp2DrawNBG1)(void);
-   void (*Vdp2DrawNBG2)(void);
-   void (*Vdp2DrawNBG3)(void);
-   void (*Vdp2DrawRBG0)(void);
+   void (*Vdp2DrawScreens)(void);
+   void FASTCALL (*Vdp2SetPriorityNBG0)(int);
+   void FASTCALL (*Vdp2SetPriorityNBG1)(int);
+   void FASTCALL (*Vdp2SetPriorityNBG2)(int);
+   void FASTCALL (*Vdp2SetPriorityNBG3)(int);
+   void FASTCALL (*Vdp2SetPriorityRBG0)(int);
 } VideoInterface_struct;
 
 extern VideoInterface_struct *VIDCore;

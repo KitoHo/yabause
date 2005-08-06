@@ -352,13 +352,12 @@ void VIDDummyVdp1LocalCoordinate(void);
 int VIDDummyVdp2Reset(void);
 void VIDDummyVdp2DrawStart(void);
 void VIDDummyVdp2DrawEnd(void);
-void VIDDummyVdp2DrawBackScreen(void);
-void VIDDummyVdp2DrawLineColorScreen(void);
-void VIDDummyVdp2DrawNBG0(void);
-void VIDDummyVdp2DrawNBG1(void);
-void VIDDummyVdp2DrawNBG2(void);
-void VIDDummyVdp2DrawNBG3(void);
-void VIDDummyVdp2DrawRBG0(void);
+void VIDDummyVdp2DrawScreens(void);
+void FASTCALL VIDDummyVdp2SetPriorityNBG0(int priority);
+void FASTCALL VIDDummyVdp2SetPriorityNBG1(int priority);
+void FASTCALL VIDDummyVdp2SetPriorityNBG2(int priority);
+void FASTCALL VIDDummyVdp2SetPriorityNBG3(int priority);
+void FASTCALL VIDDummyVdp2SetPriorityRBG0(int priority);
 
 VideoInterface_struct VIDDummy = {
 VIDCORE_DUMMY,
@@ -381,13 +380,12 @@ VIDDummyVdp1LocalCoordinate,
 VIDDummyVdp2Reset,
 VIDDummyVdp2DrawStart,
 VIDDummyVdp2DrawEnd,
-VIDDummyVdp2DrawBackScreen,
-VIDDummyVdp2DrawLineColorScreen,
-VIDDummyVdp2DrawNBG0,
-VIDDummyVdp2DrawNBG1,
-VIDDummyVdp2DrawNBG2,
-VIDDummyVdp2DrawNBG3,
-VIDDummyVdp2DrawRBG0
+VIDDummyVdp2DrawScreens,
+VIDDummyVdp2SetPriorityNBG0,
+VIDDummyVdp2SetPriorityNBG1,
+VIDDummyVdp2SetPriorityNBG2,
+VIDDummyVdp2SetPriorityNBG3,
+VIDDummyVdp2SetPriorityRBG0
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -503,45 +501,38 @@ void VIDDummyVdp2DrawEnd(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void VIDDummyVdp2DrawBackScreen(void)
+void VIDDummyVdp2DrawScreens(void)
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void VIDDummyVdp2DrawLineColorScreen(void)
+void FASTCALL VIDDummyVdp2SetPriorityNBG0(int priority)
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void VIDDummyVdp2DrawNBG0(void)
+void FASTCALL VIDDummyVdp2SetPriorityNBG1(int priority)
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void VIDDummyVdp2DrawNBG1(void)
+void FASTCALL VIDDummyVdp2SetPriorityNBG2(int priority)
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void VIDDummyVdp2DrawNBG2(void)
+void FASTCALL VIDDummyVdp2SetPriorityNBG3(int priority)
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void VIDDummyVdp2DrawNBG3(void)
+void FASTCALL VIDDummyVdp2SetPriorityRBG0(int priority)
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
-void VIDDummyVdp2DrawRBG0(void)
-{
-}
-
-//////////////////////////////////////////////////////////////////////////////
-

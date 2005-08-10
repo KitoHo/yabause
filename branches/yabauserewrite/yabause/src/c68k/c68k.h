@@ -49,7 +49,11 @@ extern "C" {
 //#define C68K_AUTOVECTOR_CALLBACK
 
 #undef FASTCALL
+#ifdef __i386__
 #define FASTCALL __attribute__((regparm(3)))
+#else
+#define FASTCALL
+#endif
 
 // 68K core types definitions
 //////////////////////////////

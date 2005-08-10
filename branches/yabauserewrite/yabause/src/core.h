@@ -5,7 +5,11 @@
 #include <string.h>
 
 #ifndef FASTCALL
+#ifdef __i386__
 #define FASTCALL __attribute__((regparm(3)))
+#else
+#define FASTCALL
+#endif
 #endif
 
 #if defined(__LP64__)

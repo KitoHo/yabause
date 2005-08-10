@@ -13,12 +13,20 @@ static inline u8 T1ReadByte(u8 * mem, u32 addr) {
 }
 
 static inline u16 T1ReadWord(u8 * mem, u32 addr) {
+#ifdef WORDS_BIGENDIAN
+	return *((u16 *) (mem + addr));
+#else
         return (mem[addr] << 8) | mem[addr + 1];
+#endif
 }
 
 static inline u32 T1ReadLong(u8 * mem, u32 addr)  {
+#ifdef WORDS_BIGENDIAN
+	return *((u32 *) (mem + addr));
+#else
         return (mem[addr] << 24 | mem[addr + 1] << 16 |
                 mem[addr + 2] << 8 | mem[addr + 3]);
+#endif
 }
 
 static inline void T1WriteByte(u8 * mem, u32 addr, u8 val)  {
@@ -26,15 +34,23 @@ static inline void T1WriteByte(u8 * mem, u32 addr, u8 val)  {
 }
 
 static inline void T1WriteWord(u8 * mem, u32 addr, u16 val)  {
+#ifdef WORDS_BIGENDIAN
+	*((u16 *) (mem + addr)) = val;
+#else
         mem[addr] = val >> 8;
         mem[addr + 1] = val & 0xFF;
+#endif
 }
 
 static inline void T1WriteLong(u8 * mem, u32 addr, u32 val)  {
+#ifdef WORDS_BIGENDIAN
+	*((u32 *) (mem + addr)) = val;
+#else
         mem[addr] = val >> 24;
         mem[addr + 1] = (val >> 16) & 0xFF;
         mem[addr + 2] = (val >> 8) & 0xFF;
         mem[addr + 3] = val & 0xFF;
+#endif
 }
 
 /* Type 2 Memory, faster for word (16 bits) accesses */
@@ -43,7 +59,11 @@ static inline void T1WriteLong(u8 * mem, u32 addr, u32 val)  {
 #define T2MemoryDeInit(x) (T1MemoryDeInit(x))
 
 static inline u8 T2ReadByte(u8 * mem, u32 addr) {
+#ifdef WORDS_BIGENDIAN
+	return mem[addr];
+#else
         return mem[addr ^ 1];
+#endif
 }
 
 static inline u16 T2ReadWord(u8 * mem, u32 addr) {
@@ -51,11 +71,19 @@ static inline u16 T2ReadWord(u8 * mem, u32 addr) {
 }
 
 static inline u32 T2ReadLong(u8 * mem, u32 addr)  {
+#ifdef WORDS_BIGENDIAN
+	return *((u32 *) (mem + addr));
+#else
         return *((u16 *) (mem + addr)) << 16 | *((u16 *) (mem + addr + 2));
+#endif
 }
 
 static inline void T2WriteByte(u8 * mem, u32 addr, u8 val)  {
+#ifdef WORDS_BIGENDIAN
+	mem[addr] = val;
+#else
         mem[addr ^ 1] = val;
+#endif
 }
 
 static inline void T2WriteWord(u8 * mem, u32 addr, u16 val)  {
@@ -63,8 +91,12 @@ static inline void T2WriteWord(u8 * mem, u32 addr, u16 val)  {
 }
 
 static inline void T2WriteLong(u8 * mem, u32 addr, u32 val)  {
+#ifdef WORDS_BIGENDIAN
+	*((u32 *) (mem + addr)) = val;
+#else
         *((u16 *) (mem + addr)) = val >> 16;
         *((u16 *) (mem + addr + 2)) = val & 0xFFFF;
+#endif
 }
 
 /* Type 3 Memory, faster for long (32 bits) accesses */
@@ -78,27 +110,51 @@ T3Memory * T3MemoryInit(u32);
 void T3MemoryDeInit(T3Memory *);
 
 static inline u8 T3ReadByte(T3Memory * mem, u32 addr) {
+#ifdef WORDS_BIGENDIAN
+	return mem->mem[addr];
+#else
 	return (mem->mem - addr - 1)[0];
+#endif
 }
 
 static inline u16 T3ReadWord(T3Memory * mem, u32 addr) {
+#ifdef WORDS_BIGENDIAN
+        return *((u16 *) (mem->mem + addr));
+#else
 	return ((u16 *) (mem->mem - addr - 2))[0];
+#endif
 }
 
 static inline u32 T3ReadLong(T3Memory * mem, u32 addr)  {
+#ifdef WORDS_BIGENDIAN
+	return *((u32 *) (mem->mem + addr));
+#else
 	return ((u32 *) (mem->mem - addr - 4))[0];
+#endif
 }
 
 static inline void T3WriteByte(T3Memory * mem, u32 addr, u8 val)  {
+#ifdef WORDS_BIGENDIAN
+	mem->mem[addr] = val;
+#else
 	(mem->mem - addr - 1)[0] = val;
+#endif
 }
 
 static inline void T3WriteWord(T3Memory * mem, u32 addr, u16 val)  {
+#ifdef WORDS_BIGENDIAN
+	*((u16 *) (mem->mem + addr)) = val;
+#else
 	((u16 *) (mem->mem - addr - 2))[0] = val;
+#endif
 }
 
 static inline void T3WriteLong(T3Memory * mem, u32 addr, u32 val)  {
+#ifdef WORDS_BIGENDIAN
+	*((u32 *) (mem->mem + addr)) = val;
+#else
 	((u32 *) (mem->mem - addr - 4))[0] = val;
+#endif
 }
 
 /* Dummy memory, always returns 0 */

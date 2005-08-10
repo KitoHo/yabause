@@ -123,6 +123,7 @@ void SH2Reset(SH2_struct *context)
 //////////////////////////////////////////////////////////////////////////////
 
 void SH2PowerOn(SH2_struct *context) {
+   printf("POWER ON!\n");
    context->regs.PC = MappedMemoryReadLong(context->regs.VBR);
    context->regs.R[15] = MappedMemoryReadLong(context->regs.VBR+4);
 }

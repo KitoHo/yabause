@@ -137,6 +137,7 @@ typedef struct
    int cob;
 
    float coordincx, coordincy;
+   void FASTCALL (* PlaneAddr)(void *, int);
 } vdp2draw_struct;
 
 u32 Vdp2ColorRamGetColor(u32 addr, int alpha, u32 colorOffset);
@@ -680,7 +681,7 @@ void Vdp2DrawMap(vdp2draw_struct *info, YglTexture *texture) {
       info->x = X;
       for(j = 0;j < info->mapwh;j++) {
          info->y = Y;
-//         planeAddr(info->mapwh * i + j);
+         info->PlaneAddr(info, info->mapwh * i + j);
          Vdp2DrawPlane(info, texture);
       }
    }
@@ -1121,6 +1122,61 @@ void Vdp2DrawLineColorScreen(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
+void FASTCALL Vdp2NBG0PlaneAddr(vdp2draw_struct *info, int i) {
+   u32 offset = (Vdp2Regs->MPOFN & 0x7) << 6;
+   u32 tmp=0;
+
+   switch(i)
+   {
+      case 0:
+         tmp = offset | (Vdp2Regs->MPABN0 & 0xFF);
+         break;
+      case 1:
+         tmp = offset | (Vdp2Regs->MPABN0 >> 8);
+         break;
+      case 2:
+         tmp = offset | (Vdp2Regs->MPCDN0 & 0xFF);
+         break;
+      case 3:
+         tmp = offset | (Vdp2Regs->MPCDN0 >> 8);
+         break;
+   }
+
+   int deca = info->planeh + info->planew - 2;
+   int multi = info->planeh * info->planew;
+
+   //if (Vdp2Regs->VRSIZE & 0x8000) {
+      if (info->patterndatasize == 1) {
+         if (info->patternwh == 1)
+            info->addr = ((tmp & 0x3F) >> deca) * (multi * 0x2000);
+         else
+            info->addr = (tmp >> deca) * (multi * 0x800);
+      }
+      else {
+         if (info->patternwh == 1)
+            info->addr = ((tmp & 0x1F) >> deca) * (multi * 0x4000);
+         else
+            info->addr = ((tmp & 0x7F) >> deca) * (multi * 0x1000);
+      }
+   /*}
+   else {
+      if (info->patterndatasize == 1) {
+         if (info->patternwh == 1)
+            info->addr = ((tmp & 0x1F) >> deca) * (multi * 0x2000);
+         else
+            info->addr = ((tmp & 0x7F) >> deca) * (multi * 0x800);
+      }
+      else {
+         if (info->patternwh == 1)
+            info->addr = ((tmp & 0xF) >> deca) * (multi * 0x4000);
+         else
+            info->addr = ((tmp & 0x3F) >> deca) * (multi * 0x1000);
+      }
+   }*/
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void Vdp2DrawNBG0(void)
 {
    vdp2draw_struct info;
@@ -1240,6 +1296,7 @@ void Vdp2DrawNBG0(void)
    info.coordincy = (float) 65536 / (Vdp2Regs->ZMYN0.all & 0x7FF00);
 
    info.priority = nbg0priority;
+   info.PlaneAddr = (void FASTCALL (*)(void *, int))&Vdp2NBG0PlaneAddr;
 
    if (!(info.enable & vdp2disptoggle) || (info.priority == 0))
       return;

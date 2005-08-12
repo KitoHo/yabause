@@ -171,15 +171,23 @@ void Vdp2Reset(void) {
    Vdp2Regs->SCYDN1 = 0x0000;
    Vdp2Regs->ZMXN1.all = 0x00000000;
    Vdp2Regs->ZMYN1.all = 0x00000000;
+   Vdp2Regs->SCXN2 = 0x0000;
+   Vdp2Regs->SCYN2 = 0x0000;
+   Vdp2Regs->SCXN3 = 0x0000;
+   Vdp2Regs->SCYN3 = 0x0000;
+   Vdp2Regs->ZMCTL = 0x0000;
    Vdp2Regs->BKTAU = 0x0000;
    Vdp2Regs->BKTAL = 0x0000;
    Vdp2Regs->SPCTL = 0x0000;
    Vdp2Regs->CRAOFA = 0x0000;
    Vdp2Regs->CRAOFB = 0x0000;
+   Vdp2Regs->CCCTL = 0x0000;
    Vdp2Regs->PRISA = 0x0000;
    Vdp2Regs->PRINA = 0x0000;
    Vdp2Regs->PRINB = 0x0000;
    Vdp2Regs->PRIR = 0x0000;
+   Vdp2Regs->CCRNA = 0x0000;
+   Vdp2Regs->CCRNB = 0x0000;
    Vdp2Regs->CLOFEN = 0x0000;
    Vdp2Regs->CLOFSL = 0x0000;
    Vdp2Regs->COAR = 0x0000;
@@ -485,6 +493,21 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
       case 0x08E:
          Vdp2Regs->ZMYN1.part.D = val;
          return;
+      case 0x090:
+         Vdp2Regs->SCXN2 = val;
+         return;
+      case 0x092:
+         Vdp2Regs->SCYN2 = val;
+         return;
+      case 0x094:
+         Vdp2Regs->SCXN3 = val;
+         return;
+      case 0x096:
+         Vdp2Regs->SCYN3 = val;
+         return;
+      case 0x098:
+         Vdp2Regs->ZMCTL = val;
+         return;
       case 0x0AC:
          Vdp2Regs->BKTAU = val;
          return;
@@ -499,6 +522,9 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
          return;
       case 0x0E6:
          Vdp2Regs->CRAOFB = val;
+         return;     
+      case 0x0EC:
+         Vdp2Regs->CCCTL = val;
          return;     
       case 0x0F0:
          Vdp2Regs->PRISA = val;
@@ -516,6 +542,12 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
       case 0x0FC:
          VIDCore->Vdp2SetPriorityRBG0(val & 0x7);
          Vdp2Regs->PRIR = val;
+         return;
+      case 0x108:
+         Vdp2Regs->CCRNA = val;
+         return;
+      case 0x10A:
+         Vdp2Regs->CCRNB = val;
          return;
       case 0x110:
          Vdp2Regs->CLOFEN = val;

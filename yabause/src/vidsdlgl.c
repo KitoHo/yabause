@@ -429,7 +429,7 @@ u32 Vdp2ColorRamGetColor(u32 addr, int alpha, u32 colorOffset)
          u32 tmp;
          addr *= 2; // thanks Runik!
          addr += colorOffset * 0x200;
-         tmp = T2ReadWord(Vdp2ColorRam, addr);
+         tmp = T2ReadWord(Vdp2ColorRam, addr & 0xFFF);
          return SAT2YAB1(alpha, tmp);
       }
       case 1:
@@ -437,7 +437,7 @@ u32 Vdp2ColorRamGetColor(u32 addr, int alpha, u32 colorOffset)
          u32 tmp;
          addr *= 2; // thanks Runik!
          addr += colorOffset * 0x200;
-         tmp = T2ReadWord(Vdp2ColorRam, addr);
+         tmp = T2ReadWord(Vdp2ColorRam, addr & 0xFFF);
          return SAT2YAB1(alpha, tmp);
       }
       case 2:
@@ -445,6 +445,7 @@ u32 Vdp2ColorRamGetColor(u32 addr, int alpha, u32 colorOffset)
          u32 tmp1, tmp2;
          addr *= 4;
          addr += colorOffset * 0x400;
+         addr &= 0xFFF;
          tmp1 = T2ReadWord(Vdp2ColorRam, addr);
          tmp2 = T2ReadWord(Vdp2ColorRam, addr+2);
          return SAT2YAB2(alpha, tmp1, tmp2);

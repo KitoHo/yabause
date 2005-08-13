@@ -16,6 +16,7 @@ NULL
 CDInterface *CDCoreList[] = {
 &DummyCD,
 &ISOCD,
+&ArchCD,
 NULL
 };
 
@@ -34,14 +35,21 @@ NULL
 int stop;
 
 const char * bios = "jap.rom";
-const char * iso = 0;
+const char * iso_or_cd = 0;
+int cdcore = CDCORE_DEFAULT;
 
 void YuiSetBiosFilename(const char * biosfilename) {
         bios = biosfilename;
 }
 
 void YuiSetIsoFilename(const char * isofilename) {
-	iso = isofilename;
+	cdcore = CDCORE_DEFAULT;
+	iso_or_cd = isofilename;
+}
+
+void YuiSetCdromFilename(const char * cdromfilename) {
+	cdcore = CDCORE_ARCH;
+	iso_or_cd = cdromfilename;
 }
 
 void YuiHideShow(void) {
@@ -55,7 +63,7 @@ int YuiInit(void) {
    stop = 0;
 
    if (YabauseInit(PERCORE_SDL, SH2CORE_DEFAULT, VIDCORE_SDLGL, SNDCORE_SDL,
-                   CDCORE_DEFAULT, REGION_AUTODETECT, bios, iso,
+                   cdcore, REGION_AUTODETECT, bios, iso_or_cd,
                    NULL, NULL) != 0)
       return -1;
 

@@ -86,6 +86,7 @@ yabause_yui = @yabause_yui@
 bin_PROGRAMS = yabause
 yabause_SOURCES = \
 	c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c c68k/c68k_ini.inc \
+	$(yabause_arch)/cd.h $(yabause_arch)/cd.c \
 	cdbase.c cdbase.h core.h cs0.c cs0.h cs1.c cs1.h cs2.c cs2.h \
 	debug.c debug.h memory.c memory.h peripheral.h peripheral.c \
 	persdl.c persdl.h \
@@ -102,12 +103,13 @@ bin_PROGRAMS = yabause$(EXEEXT)
 PROGRAMS = $(bin_PROGRAMS)
 
 am_yabause_OBJECTS = c68kexec.$(OBJEXT) c68k.$(OBJEXT) gen68k.$(OBJEXT) \
-	cdbase.$(OBJEXT) cs0.$(OBJEXT) cs1.$(OBJEXT) cs2.$(OBJEXT) \
-	debug.$(OBJEXT) memory.$(OBJEXT) peripheral.$(OBJEXT) \
-	persdl.$(OBJEXT) scu.$(OBJEXT) sh2core.$(OBJEXT) sh2d.$(OBJEXT) \
-	sh2int.$(OBJEXT) smpc.$(OBJEXT) scsp.$(OBJEXT) sndsdl.$(OBJEXT) \
-	vdp1.$(OBJEXT) vdp2.$(OBJEXT) vidsdlgl.$(OBJEXT) \
-	yabause.$(OBJEXT) ygl.$(OBJEXT) yui.$(OBJEXT)
+	cd.$(OBJEXT) cdbase.$(OBJEXT) cs0.$(OBJEXT) cs1.$(OBJEXT) \
+	cs2.$(OBJEXT) debug.$(OBJEXT) memory.$(OBJEXT) \
+	peripheral.$(OBJEXT) persdl.$(OBJEXT) scu.$(OBJEXT) \
+	sh2core.$(OBJEXT) sh2d.$(OBJEXT) sh2int.$(OBJEXT) \
+	smpc.$(OBJEXT) scsp.$(OBJEXT) sndsdl.$(OBJEXT) vdp1.$(OBJEXT) \
+	vdp2.$(OBJEXT) vidsdlgl.$(OBJEXT) yabause.$(OBJEXT) \
+	ygl.$(OBJEXT) yui.$(OBJEXT)
 yabause_OBJECTS = $(am_yabause_OBJECTS)
 yabause_LDADD = $(LDADD)
 yabause_DEPENDENCIES =
@@ -121,17 +123,18 @@ LIBS = @LIBS@
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 @AMDEP_TRUE@DEP_FILES = ./$(DEPDIR)/c68k.Po ./$(DEPDIR)/c68kexec.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/cdbase.Po ./$(DEPDIR)/cs0.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/cs1.Po ./$(DEPDIR)/cs2.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/debug.Po ./$(DEPDIR)/gen68k.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/memory.Po ./$(DEPDIR)/peripheral.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/persdl.Po ./$(DEPDIR)/scsp.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/scu.Po ./$(DEPDIR)/sh2core.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/sh2d.Po ./$(DEPDIR)/sh2int.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/smpc.Po ./$(DEPDIR)/sndsdl.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/vdp1.Po ./$(DEPDIR)/vdp2.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/vidsdlgl.Po ./$(DEPDIR)/yabause.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/ygl.Po ./$(DEPDIR)/yui.Po
+@AMDEP_TRUE@	./$(DEPDIR)/cd.Po ./$(DEPDIR)/cdbase.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/cs0.Po ./$(DEPDIR)/cs1.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/cs2.Po ./$(DEPDIR)/debug.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/gen68k.Po ./$(DEPDIR)/memory.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/peripheral.Po ./$(DEPDIR)/persdl.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/scsp.Po ./$(DEPDIR)/scu.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/sh2core.Po ./$(DEPDIR)/sh2d.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/sh2int.Po ./$(DEPDIR)/smpc.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/sndsdl.Po ./$(DEPDIR)/vdp1.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/vdp2.Po ./$(DEPDIR)/vidsdlgl.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/yabause.Po ./$(DEPDIR)/ygl.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/yui.Po
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
@@ -178,6 +181,7 @@ clean-binPROGRAMS:
 c68kexec.$(OBJEXT): c68k/c68kexec.c
 c68k.$(OBJEXT): c68k/c68k.c
 gen68k.$(OBJEXT): c68k/gen68k.c
+cd.$(OBJEXT): $(yabause_arch)/cd.c
 yabause$(EXEEXT): $(yabause_OBJECTS) $(yabause_DEPENDENCIES) 
 	@rm -f yabause$(EXEEXT)
 	$(LINK) $(yabause_LDFLAGS) $(yabause_OBJECTS) $(yabause_LDADD) $(LIBS)
@@ -190,6 +194,7 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/c68k.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/c68kexec.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cd.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cdbase.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cs0.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cs1.Po@am__quote@
@@ -263,6 +268,18 @@ gen68k.obj: c68k/gen68k.c
 @AMDEP_TRUE@	depfile='$(DEPDIR)/gen68k.Po' tmpdepfile='$(DEPDIR)/gen68k.TPo' @AMDEPBACKSLASH@
 @AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o gen68k.obj `cygpath -w c68k/gen68k.c`
+
+cd.o: $(yabause_arch)/cd.c
+@AMDEP_TRUE@	source='$(yabause_arch)/cd.c' object='cd.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@	depfile='$(DEPDIR)/cd.Po' tmpdepfile='$(DEPDIR)/cd.TPo' @AMDEPBACKSLASH@
+@AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cd.o `test -f '$(yabause_arch)/cd.c' || echo '$(srcdir)/'`$(yabause_arch)/cd.c
+
+cd.obj: $(yabause_arch)/cd.c
+@AMDEP_TRUE@	source='$(yabause_arch)/cd.c' object='cd.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@	depfile='$(DEPDIR)/cd.Po' tmpdepfile='$(DEPDIR)/cd.TPo' @AMDEPBACKSLASH@
+@AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cd.obj `cygpath -w $(yabause_arch)/cd.c`
 CCDEPMODE = @CCDEPMODE@
 uninstall-info-am:
 

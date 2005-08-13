@@ -26,6 +26,7 @@
 #define CDCORE_DEFAULT -1
 #define CDCORE_DUMMY    0
 #define CDCORE_ISO      1
+#define CDCORE_ARCH     2
 
 typedef struct
 {
@@ -53,5 +54,7 @@ long ISOCDReadTOC(unsigned long *);
 int ISOCDReadSectorFAD(unsigned long, void *);
 
 extern CDInterface ISOCD;
+
+extern CDInterface ArchCD;
 
 #endif

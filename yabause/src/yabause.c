@@ -256,7 +256,7 @@ void YabStopSlave(void) {
 
 int main(int argc, char *argv[]) {
    int i;
-//   LogStart();
+   LogStart();
 
    //handle command line arguments
    for (i = 1; i < argc; ++i) {
@@ -278,6 +278,12 @@ int main(int argc, char *argv[]) {
             YuiSetIsoFilename(argv[i + 1]);
          else if (strstr(argv[i], "--iso="))
             YuiSetIsoFilename(argv[i] + strlen("--iso="));
+
+         //set cdrom
+         else if (0 == strcmp(argv[i], "-c") && argv[i + 1])
+            YuiSetCdromFilename(argv[i + 1]);
+         else if (strstr(argv[i], "--cdrom="))
+            YuiSetCdromFilename(argv[i] + strlen("--cdrom="));
       }
    }
 
@@ -286,7 +292,7 @@ int main(int argc, char *argv[]) {
 
    YabauseDeInit();
    SDL_Quit();
-//   LogStop();
+   LogStop();
    return 0;
 }
 

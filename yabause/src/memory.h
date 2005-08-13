@@ -183,6 +183,7 @@ void FASTCALL MappedMemoryWriteLong(u32 addr, u32 val);
 extern u8 *HighWram;
 extern u8 *LowWram;
 extern u8 *BiosRom;
+extern u8 *BupRam;
 
 int MappedMemoryLoad(const char *filename, u32 addr);
 int MappedMemorySave(const char *filename, u32 addr, u32 size);

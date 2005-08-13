@@ -56,8 +56,25 @@ typedef struct
    u8 RDR;     // 0xFFFFFE05
    u8 TIER;    // 0xFFFFFE10
    u8 FTCSR;   // 0xFFFFFE11
-   u16 FRC;    // 0xFFFFFE12
-               // 0xFFFFFE13
+
+#ifdef WORDS_BIGENDIAN
+  union {
+    struct {
+      u16 H:8; // 0xFFFFFE12
+      u16 L:8; // 0xFFFFFE13
+    } part;
+    u16 all;
+  } FRC;
+#else
+  union {
+    struct {
+      u16 L:8; // 0xFFFFFE13
+      u16 H:8; // 0xFFFFFE12
+    } part;
+    u16 all;
+  } FRC;
+#endif
+
    u8 TCR;     // 0xFFFFFE16
    u16 FICR;   // 0xFFFFFE18
                // 0xFFFFFE19
@@ -119,6 +136,21 @@ typedef struct
 {
    sh2regs_struct regs;
    Onchip_struct onchip;
+
+   struct
+   {
+      u32 leftover;
+      u32 div;
+   } frc;
+
+   struct
+   {
+        int enable;
+        int interval;
+        u32 leftover;
+        u32 div;
+   } wdt;
+
    interrupt_struct interrupts[MAX_INTERRUPTS];
    u32 NumberOfInterrupts;
    u32 AddressArray[0x100];
@@ -155,7 +187,7 @@ void SH2Step(SH2_struct *context);
 void SH2GetRegisters(SH2_struct *context, sh2regs_struct * r);
 void SH2SetRegisters(SH2_struct *context, sh2regs_struct * r);
 
-void SH2SetBreakpointCallBack(SH2_struct *context, void (*func)(SH2_struct *, unsigned long));
+void SH2SetBreakpointCallBack(SH2_struct *context, void (*func)(void *, unsigned long));
 int SH2AddCodeBreakpoint(SH2_struct *context, unsigned long addr);
 int SH2DelCodeBreakpoint(SH2_struct *context, unsigned long addr);
 codebreakpoint_struct *SH2GetBreakpointList(SH2_struct *context);
@@ -187,5 +219,8 @@ void FASTCALL OnchipWriteLong(u32 addr, u32 val);
 
 u32 FASTCALL AddressArrayReadLong(u32 addr);
 void FASTCALL AddressArrayWriteLong(u32 addr, u32 val);
+
+void FASTCALL MSH2InputCaptureWriteWord(u32 addr, u16 data);
+void FASTCALL SSH2InputCaptureWriteWord(u32 addr, u16 data);
 
 #endif

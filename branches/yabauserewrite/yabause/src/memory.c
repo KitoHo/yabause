@@ -249,6 +249,44 @@ void FASTCALL BiosRomMemoryWriteLong(u32 addr, u32 val)  {
 
 ////////////////////////////////////////////////////////////////
 
+u8 FASTCALL BupRamMemoryReadByte(u32 addr) {
+   return T1ReadByte(BupRam, addr & 0xFFFF);
+}
+
+////////////////////////////////////////////////////////////////
+
+u16 FASTCALL BupRamMemoryReadWord(u32 addr) {
+   LOG("bup\t: BackupRam read word - %08X\n", addr);
+   return 0;
+}
+
+////////////////////////////////////////////////////////////////
+
+u32 FASTCALL BupRamMemoryReadLong(u32 addr)  {
+   LOG("bup\t: BackupRam read long - %08X\n", addr);
+   return 0;
+}
+
+////////////////////////////////////////////////////////////////
+
+void FASTCALL BupRamMemoryWriteByte(u32 addr, u8 val)  {
+   T1WriteByte(BupRam, (addr & 0xFFFF) | 0x1, val);
+}
+
+////////////////////////////////////////////////////////////////
+
+void FASTCALL BupRamMemoryWriteWord(u32 addr, u16 val)  {
+   LOG("bup\t: BackupRam write word - %08X\n", addr);
+}
+
+////////////////////////////////////////////////////////////////
+
+void FASTCALL BupRamMemoryWriteLong(u32 addr, u32 val)  {
+   LOG("bup\t: BackupRam write long - %08X\n", addr);
+}
+
+////////////////////////////////////////////////////////////////
+
 void FillMemoryArea(unsigned short start, unsigned short end,
                     readbytefunc r8func, readwordfunc r16func,
                     readlongfunc r32func, writebytefunc w8func,
@@ -291,15 +329,30 @@ void MappedMemoryInit() {
                                 &SmpcWriteByte,
                                 &SmpcWriteWord,
                                 &SmpcWriteLong);
-//     initMemoryHandler( 0x18,  0x1F, ram);
+   FillMemoryArea(0x018, 0x01F, &BupRamMemoryReadByte,
+                                &BupRamMemoryReadWord,
+                                &BupRamMemoryReadLong,
+                                &BupRamMemoryWriteByte,
+                                &BupRamMemoryWriteWord,
+                                &BupRamMemoryWriteLong);
    FillMemoryArea(0x020, 0x02F, &LowWramMemoryReadByte,
                                 &LowWramMemoryReadWord,
                                 &LowWramMemoryReadLong,
                                 &LowWramMemoryWriteByte,
                                 &LowWramMemoryWriteWord,
                                 &LowWramMemoryWriteLong);
-//   initMemoryHandler(0x100, 0x17F, minit);
-//   initMemoryHandler(0x180, 0x1FF, sinit);
+   FillMemoryArea(0x100, 0x17F, &UnhandledMemoryReadByte,
+                                &UnhandledMemoryReadWord,
+                                &UnhandledMemoryReadLong,
+                                &UnhandledMemoryWriteByte,
+                                &SSH2InputCaptureWriteWord,
+                                &UnhandledMemoryWriteLong);
+   FillMemoryArea(0x180, 0x1FF, &UnhandledMemoryReadByte,
+                                &UnhandledMemoryReadWord,
+                                &UnhandledMemoryReadLong,
+                                &UnhandledMemoryWriteByte,
+                                &MSH2InputCaptureWriteWord,
+                                &UnhandledMemoryWriteLong);
 //   initMemoryHandler(0x200, 0x3FF, cs0);
 //   initMemoryHandler(0x400, 0x4FF, cs1);
    FillMemoryArea(0x580, 0x58F, &Cs2ReadByte,
@@ -780,7 +833,7 @@ int LoadBios(const char *filename) {
    if ((buffer = (unsigned char *)malloc(filesize)) == NULL)
    {
       fclose(fp);
-      return -3;
+      return -1;
    }
 
    fread((void *)buffer, 1, filesize, fp);
@@ -797,6 +850,33 @@ int LoadBios(const char *filename) {
 ////////////////////////////////////////////////////////////////
 
 int LoadBackupRam(const char *filename) {
+   FILE *fp;
+   unsigned long filesize;
+   unsigned char *buffer;
+   unsigned long i;
+
+   if ((fp = fopen(filename, "rb")) == NULL)
+      return -1;
+
+   // Calculate file size
+   fseek(fp, 0, SEEK_END);
+   filesize = ftell(fp);
+   fseek(fp, 0, SEEK_SET);
+
+   if ((buffer = (unsigned char *)malloc(filesize)) == NULL)
+   {
+      fclose(fp);
+      return -1;
+   }
+
+   fread((void *)buffer, 1, filesize, fp);
+   fclose(fp);
+
+   for (i = 0; i < filesize; i++)
+      T1WriteByte(BupRam, i, buffer[i]);
+
+   free(buffer);
+
    return 0;
 }
 

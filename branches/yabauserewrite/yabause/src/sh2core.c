@@ -1,4 +1,4 @@
-/*  Copyright 2003-2004 Guillaume Duhamel
+/*  Copyright 2003-2005 Guillaume Duhamel
     Copyright 2004-2005 Theo Berkau
 
     This file is part of Yabause.
@@ -21,6 +21,7 @@
 // SH2 Shared Code
 #include <stdlib.h>
 #include "sh2core.h"
+#include "debug.h"
 #include "memory.h"
 
 SH2_struct *MSH2=NULL;
@@ -109,6 +110,14 @@ void SH2Reset(SH2_struct *context)
    context->delay = 0x00000000;
    context->cycles = 0;
 
+   context->frc.leftover = 0;
+   context->frc.div = 8;
+
+   context->wdt.enable = 0;
+   context->wdt.interval = 1;
+   context->wdt.div = 2;
+   context->wdt.leftover = 0;
+
    // Reset Interrupts
    memset((void *)context->interrupts, 0, sizeof(interrupt_struct) * MAX_INTERRUPTS);
    context->NumberOfInterrupts = 0;
@@ -123,7 +132,6 @@ void SH2Reset(SH2_struct *context)
 //////////////////////////////////////////////////////////////////////////////
 
 void SH2PowerOn(SH2_struct *context) {
-   printf("POWER ON!\n");
    context->regs.PC = MappedMemoryReadLong(context->regs.VBR);
    context->regs.R[15] = MappedMemoryReadLong(context->regs.VBR+4);
 }
@@ -228,7 +236,7 @@ void SH2SetRegisters(SH2_struct *context, sh2regs_struct * r)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void SH2SetBreakpointCallBack(SH2_struct *context, void (*func)(SH2_struct *, unsigned long)) {
+void SH2SetBreakpointCallBack(SH2_struct *context, void (*func)(void *, unsigned long)) {
    context->BreakpointCallBack = func;
 }
 
@@ -316,7 +324,7 @@ void OnchipReset(SH2_struct *context) {
    context->onchip.RDR = 0x00;
    context->onchip.TIER = 0x01;
    context->onchip.FTCSR = 0x00;
-   context->onchip.FRC = 0x0000;
+   context->onchip.FRC.all = 0x0000;
    context->onchip.TCR = 0x00;
    context->onchip.FICR = 0x0000;
    context->onchip.IPRB = 0x0000;
@@ -355,8 +363,19 @@ void OnchipReset(SH2_struct *context) {
 //////////////////////////////////////////////////////////////////////////////
 
 u8 FASTCALL OnchipReadByte(u32 addr) {
-   // stub
-   fprintf(stderr, "Unhandled Onchip byte read %08X\n", addr);
+   switch(addr)
+   {
+      case 0x011:
+         return CurrentSH2->onchip.FTCSR;
+      case 0x012:         
+         return CurrentSH2->onchip.FRC.part.H;
+      case 0x013:
+         return CurrentSH2->onchip.FRC.part.L;
+      default:
+         fprintf(stderr, "Unhandled Onchip byte read %08X\n", (int)addr);
+         break;
+   }
+
    return 0;
 }
 
@@ -364,7 +383,7 @@ u8 FASTCALL OnchipReadByte(u32 addr) {
 
 u16 FASTCALL OnchipReadWord(u32 addr) {
    // stub
-   fprintf(stderr, "Unhandled Onchip word read %08X\n", addr);
+   fprintf(stderr, "Unhandled Onchip word read %08X\n", (int)addr);
    return 0;
 }
 
@@ -396,7 +415,7 @@ u32 FASTCALL OnchipReadLong(u32 addr) {
       case 0x1E0:
          return CurrentSH2->onchip.BCR1;
       default:
-         fprintf(stderr, "Unhandled Onchip long read %08X\n", addr);
+         fprintf(stderr, "Unhandled Onchip long read %08X\n", (int)addr);
          return 0;
    }
 
@@ -406,16 +425,51 @@ u32 FASTCALL OnchipReadLong(u32 addr) {
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL OnchipWriteByte(u32 addr, u8 val) {
-   // stub
    switch(addr) {
+      case 0x010:
+         CurrentSH2->onchip.TIER = (val & 0x8E) | 0x1;
+         return;
+      case 0x011:
+         CurrentSH2->onchip.FTCSR = (CurrentSH2->onchip.FTCSR & (val & 0xFE)) | (val & 0x1);
+      case 0x016:
+         CurrentSH2->onchip.TCR = val & 0x83;
+
+         switch (val & 3)
+         {
+            case 0:
+               CurrentSH2->frc.div = 8;
+               break;
+            case 1:
+               CurrentSH2->frc.div = 32;
+               break;
+            case 2:
+               CurrentSH2->frc.div = 128;
+               break;
+            case 3:
+               LOG("FRT external input clock not implemented.\n");
+               break;
+         }
+         return;
+      case 0x060:
+         CurrentSH2->onchip.IPRB = val & 0xFF00;
+         return;
       case 0x071:
          CurrentSH2->onchip.DRCR0 = val & 0x3;
          return;
       case 0x072:
          CurrentSH2->onchip.DRCR1 = val & 0x3;
          return;
+      case 0x0E2:
+         CurrentSH2->onchip.IPRA = val & 0xFFF0;
+         return;
+      case 0x0E4:
+         CurrentSH2->onchip.VCRWDT = ((val & 0x7F) << 8) | (CurrentSH2->onchip.VCRWDT & 0x00FF);
+         return;
+      case 0x0E5:
+         CurrentSH2->onchip.VCRWDT = (CurrentSH2->onchip.VCRWDT & 0xFF00) | (val & 0x7F);
+         return;
       default:
-         fprintf(stderr, "Unhandled Onchip byte write %08X\n", addr);
+         fprintf(stderr, "Unhandled Onchip byte write %08X\n", (int)addr);
    } 
 }
 
@@ -423,7 +477,7 @@ void FASTCALL OnchipWriteByte(u32 addr, u8 val) {
 
 void FASTCALL OnchipWriteWord(u32 addr, u16 val) {
    // stub
-   fprintf(stderr, "Unhandled Onchip word write %08X\n", addr);
+   fprintf(stderr, "Unhandled Onchip word write %08X\n", (int)addr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -570,7 +624,7 @@ void FASTCALL OnchipWriteLong(u32 addr, u32 val)  {
          CurrentSH2->onchip.WCR = val;
          return;
       default:
-         fprintf(stderr, "Unhandled Onchip long write %08X\n", addr);
+         fprintf(stderr, "Unhandled Onchip long write %08X\n", (int)addr);
          break;
    }
 }
@@ -590,7 +644,33 @@ void FASTCALL AddressArrayWriteLong(u32 addr, u32 val)  {
 //////////////////////////////////////////////////////////////////////////////
 
 void FRTExec(u32 cycles) {
-   // stub
+   u32 frcold;
+   u32 frctemp;
+
+   frcold = frctemp = (u32)CurrentSH2->onchip.FRC.all;
+   
+   // Increment FRC
+   frctemp += ((CurrentSH2->cycles + CurrentSH2->frc.leftover) / CurrentSH2->frc.div);
+   CurrentSH2->frc.leftover = (CurrentSH2->cycles + CurrentSH2->frc.leftover) % CurrentSH2->frc.div;
+
+   // Check to see if there is or was a Output Compare A match here
+
+   // Check to see if there is or was a Output Compare B match here
+
+   // If FRC overflows, set overflow flag
+   if (frctemp > 0xFFFF)
+   {
+      // Do we need to trigger an interrupt?
+      if (CurrentSH2->onchip.TIER & 0x2)
+      {
+         LOG("Trigger FRT interrupt here\n");
+      }
+
+      CurrentSH2->onchip.FTCSR |= 2;
+   }
+
+   // Write new FRC value
+   CurrentSH2->onchip.FRC.all = frctemp;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -608,9 +688,7 @@ void DMAExec(void) {
 
    if ((CurrentSH2->onchip.CHCR0 & 0x1) && (CurrentSH2->onchip.CHCR1 & 0x1)) { // both channel wants DMA
       if (CurrentSH2->onchip.DMAOR & 0x8) { // round robin priority
-#if DEBUG
-         fprintf(stderr, "dma\t: FIXME: two channel dma - round robin priority not properly implemented\n");
-#endif
+         LOG(stderr, "dma\t: FIXME: two channel dma - round robin priority not properly implemented\n");
          DMATransfer(&CurrentSH2->onchip.CHCR0, &CurrentSH2->onchip.SAR0,
 		     &CurrentSH2->onchip.DAR0,  &CurrentSH2->onchip.TCR0,
 		     &CurrentSH2->onchip.VCRDMA0);
@@ -727,3 +805,43 @@ void DMATransfer(u32 *CHCR, u32 *SAR, u32 *DAR, u32 *TCR, u32 *VCRDMA)
    // Set Transfer End bit
    *CHCR |= 0x2;
 }
+
+//////////////////////////////////////////////////////////////////////////////
+// Input Capture Specific
+//////////////////////////////////////////////////////////////////////////////
+
+void FASTCALL MSH2InputCaptureWriteWord(u32 addr, u16 data)
+{
+   // Set Input Capture Flag
+   MSH2->onchip.FTCSR |= 0x80;
+
+   // Copy FRC register to FICR
+   MSH2->onchip.FICR = MSH2->onchip.FRC.all;
+
+   // Time for an Interrupt?
+   if (MSH2->onchip.TIER & 0x80)
+   {
+      LOG("Trigger MSH2 Input Capture interrupt here\n");
+      SH2SendInterrupt(MSH2, (MSH2->onchip.VCRC >> 8) & 0x7F, (MSH2->onchip.IPRB >> 8) & 0xF);
+   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FASTCALL SSH2InputCaptureWriteWord(u32 addr, u16 data)
+{
+   // Set Input Capture Flag
+   SSH2->onchip.FTCSR |= 0x80;
+
+   // Copy FRC register to FICR
+   SSH2->onchip.FICR = SSH2->onchip.FRC.all;
+
+   // Time for an Interrupt?
+   if (SSH2->onchip.TIER & 0x80)
+   {
+      LOG("Trigger SSH2 Input Capture interrupt here\n");
+      SH2SendInterrupt(SSH2, (SSH2->onchip.VCRC >> 8) & 0x7F, (SSH2->onchip.IPRB >> 8) & 0xF);
+   }
+}
+
+//////////////////////////////////////////////////////////////////////////////

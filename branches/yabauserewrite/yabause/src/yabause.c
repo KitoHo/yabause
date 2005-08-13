@@ -92,6 +92,9 @@ int YabauseInit(int percoretype,
    if ((LowWram = T2MemoryInit(0x100000)) == NULL)
       return -1;
 
+   if ((BupRam = T1MemoryInit(0x10000)) == NULL)
+      return -1;
+
    // Initialize input core
    if (PerInit(percoretype) != 0)
       return -1;
@@ -123,7 +126,10 @@ int YabauseInit(int percoretype,
    if (LoadBios(biospath) != 0)
       return -2;
 
-   // Load save ram here
+   if (LoadBackupRam(savepath) != 0)
+   {
+      FormatBackupRam();
+   }
 
    YabauseReset();
 
@@ -143,6 +149,9 @@ void YabauseDeInit() {
 
    if (LowWram)
       T2MemoryDeInit(LowWram);
+
+   if (BupRam)
+      T1MemoryDeInit(BupRam);
 
    // Free CS0 area here
    // Free CS1 area here

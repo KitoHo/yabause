@@ -26,6 +26,7 @@
 #include "vdp2.h"
 
 u8 * Vdp1Ram;
+u8 * Vdp1FrameBuffer;
 
 VideoInterface_struct *VIDCore=NULL;
 extern VideoInterface_struct *VIDCoreList[];
@@ -74,6 +75,48 @@ void FASTCALL Vdp1RamWriteLong(u32 addr, u32 val) {
 
 //////////////////////////////////////////////////////////////////////////////
 
+u8 FASTCALL Vdp1FrameBufferReadByte(u32 addr) {
+   addr &= 0x3FFFF;
+   return T1ReadByte(Vdp1FrameBuffer, addr);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+u16 FASTCALL Vdp1FrameBufferReadWord(u32 addr) {
+   addr &= 0x3FFFF;
+   return T1ReadWord(Vdp1FrameBuffer, addr);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+u32 FASTCALL Vdp1FrameBufferReadLong(u32 addr) {
+   addr &= 0x3FFFF;
+   return T1ReadLong(Vdp1FrameBuffer, addr);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FASTCALL Vdp1FrameBufferWriteByte(u32 addr, u8 val) {
+   addr &= 0x3FFFF;
+   T1WriteByte(Vdp1FrameBuffer, addr, val);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FASTCALL Vdp1FrameBufferWriteWord(u32 addr, u16 val) {
+   addr &= 0x3FFFF;
+   T1WriteWord(Vdp1FrameBuffer, addr, val);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FASTCALL Vdp1FrameBufferWriteLong(u32 addr, u32 val) {
+   addr &= 0x3FFFF;
+   T1WriteLong(Vdp1FrameBuffer, addr, val);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 Vdp1 * Vdp1Regs;
 
 //////////////////////////////////////////////////////////////////////////////
@@ -85,6 +128,10 @@ int Vdp1Init(int coreid) {
       return -1;
 
    if ((Vdp1Ram = T1MemoryInit(0x80000)) == NULL)
+      return -1;
+
+   // Allocate enough memory for two frames
+   if ((Vdp1FrameBuffer = T1MemoryInit(0x80000)) == NULL)
       return -1;
 
    Vdp1Regs->disptoggle = 1;
@@ -121,6 +168,9 @@ void Vdp1DeInit(void) {
 
    if (Vdp1Ram)
       T1MemoryDeInit(Vdp1Ram);
+
+   if (Vdp1FrameBuffer)
+      T1MemoryDeInit(Vdp1FrameBuffer);
 
    if (VIDCore)
       VIDCore->DeInit();

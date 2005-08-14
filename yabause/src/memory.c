@@ -379,6 +379,12 @@ void MappedMemoryInit() {
                                 &Vdp1RamWriteByte,
                                 &Vdp1RamWriteWord,
                                 &Vdp1RamWriteLong);
+   FillMemoryArea(0x5C8, 0x5CF, &Vdp1FrameBufferReadByte,
+                                &Vdp1FrameBufferReadWord,
+                                &Vdp1FrameBufferReadLong,
+                                &Vdp1FrameBufferWriteByte,
+                                &Vdp1FrameBufferWriteWord,
+                                &Vdp1FrameBufferWriteLong);
    FillMemoryArea(0x5D0, 0x5D7, &Vdp1ReadByte,
                                 &Vdp1ReadWord,
                                 &Vdp1ReadLong,

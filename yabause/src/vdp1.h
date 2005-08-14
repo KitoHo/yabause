@@ -69,6 +69,12 @@ u32 FASTCALL	Vdp1RamReadLong(u32);
 void FASTCALL	Vdp1RamWriteByte(u32, u8);
 void FASTCALL	Vdp1RamWriteWord(u32, u16);
 void FASTCALL	Vdp1RamWriteLong(u32, u32);
+u8 FASTCALL Vdp1FrameBufferReadByte(u32);
+u16 FASTCALL Vdp1FrameBufferReadWord(u32);
+u32 FASTCALL Vdp1FrameBufferReadLong(u32);
+void FASTCALL Vdp1FrameBufferWriteByte(u32, u8);
+void FASTCALL Vdp1FrameBufferWriteWord(u32, u16);
+void FASTCALL Vdp1FrameBufferWriteLong(u32, u32);
 
 typedef struct {
    u16 TVMR;

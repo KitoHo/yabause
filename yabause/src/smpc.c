@@ -40,11 +40,13 @@ extern u16 buttonbits;
 int SmpcInit(u8 regionid) {
    if ((SmpcRegsT = (u8 *) calloc(1, sizeof(Smpc))) == NULL)
       return -1;
-
+ 
    SmpcRegs = (Smpc *) SmpcRegsT;
 
    if ((SmpcInternalVars = (SmpcInternal *) calloc(1, sizeof(SmpcInternal))) == NULL)
       return -1;
+
+   SmpcInternalVars->regionid = regionid;
 
    return 0;
 }
@@ -152,7 +154,7 @@ void SmpcINTBACKStatus(void) {
    // return time, cartidge, zone, etc. data
    int i;
    struct tm times;
-   unsigned char year[4];
+   u8 year[4];
 
    SmpcRegs->OREG[0] = 0x80;   // goto normal startup
    //SmpcRegs->OREG[0] = 0x0;  // goto setclock/setlanguage screen

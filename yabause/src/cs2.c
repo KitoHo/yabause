@@ -66,7 +66,7 @@
   Cs2Area->reg.CR3 = (Cs2Area->pictureinfo << 8) | Cs2Area->mpegaudiostatus; \
   Cs2Area->reg.CR4 = Cs2Area->mpegvideostatus; 
 
-Cs2 * Cs2Area;
+Cs2 * Cs2Area = NULL;
 
 extern CDInterface *CDCoreList[];
 
@@ -458,10 +458,13 @@ int Cs2Init(int carttype, int coreid, const char *cdpath, const char *mpegpath) 
 //////////////////////////////////////////////////////////////////////////////
 
 void Cs2DeInit(void) {
-   if (Cs2Area->cdi != NULL) {
-      Cs2Area->cdi->DeInit();
+   if(Cs2Area != NULL) {
+      if (Cs2Area->cdi != NULL) {
+         Cs2Area->cdi->DeInit();
+      }
+
+      free(Cs2Area);
    }
-   free(Cs2Area);
 }
 
 //////////////////////////////////////////////////////////////////////////////

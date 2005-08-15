@@ -38,10 +38,17 @@
 
 #define COLOR_ADDt(b)		(b>0xFF?0xFF:(b<0?0:b))
 #define COLOR_ADDb(b1,b2)	COLOR_ADDt((signed) (b1) + (b2))
+#ifdef WORDS_BIGENDIAN
+#define COLOR_ADD(l,r,g,b)	(COLOR_ADDb((l >> 24) & 0xFF, r) << 24) | \
+				(COLOR_ADDb((l >> 16) & 0xFF, g) << 16) | \
+				(COLOR_ADDb((l >> 8) & 0xFF, b) << 8) | \
+				(l & 0xFF)
+#else
 #define COLOR_ADD(l,r,g,b)	COLOR_ADDb((l & 0xFF), r) | \
 				(COLOR_ADDb((l >> 8 ) & 0xFF, g) << 8) | \
 				(COLOR_ADDb((l >> 16 ) & 0xFF, b) << 16) | \
 				(l & 0xFF000000)
+#endif
 
 int VIDSDLGLInit(void);
 void VIDSDLGLDeInit(void);

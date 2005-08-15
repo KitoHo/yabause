@@ -91,7 +91,7 @@ void PerLeftPressed(void) {
 }
 
 void PerLeftReleased(void) {
-   buttonbits |= 0xBFFF;
+   buttonbits |= ~0xBFFF;
 }
 
 void PerStartPressed(void) {
@@ -100,7 +100,7 @@ void PerStartPressed(void) {
 }
 
 void PerStartReleased(void) {
-   buttonbits |= 0xF7FF;
+   buttonbits |= ~0xF7FF;
 }
 
 void PerAPressed(void) {
@@ -109,7 +109,7 @@ void PerAPressed(void) {
 }
 
 void PerAReleased(void) {
-   buttonbits |= 0xFBFF;
+   buttonbits |= ~0xFBFF;
 }
 
 void PerBPressed(void) {
@@ -118,7 +118,7 @@ void PerBPressed(void) {
 }
 
 void PerBReleased(void) {
-   buttonbits |= 0xFEFF;
+   buttonbits |= ~0xFEFF;
 }
 
 void PerCPressed(void) {
@@ -127,7 +127,7 @@ void PerCPressed(void) {
 }
 
 void PerCReleased(void) {
-   buttonbits |= 0xFDFF;
+   buttonbits |= ~0xFDFF;
 }
 
 void PerXPressed(void) {
@@ -136,7 +136,7 @@ void PerXPressed(void) {
 }
 
 void PerXReleased(void) {
-   buttonbits |= 0xFFBF;
+   buttonbits |= ~0xFFBF;
 }
 
 void PerYPressed(void) {
@@ -145,7 +145,7 @@ void PerYPressed(void) {
 }
 
 void PerYReleased(void) {
-   buttonbits |= 0xFFDF;
+   buttonbits |= ~0xFFDF;
 }
 
 void PerZPressed(void) {
@@ -154,7 +154,7 @@ void PerZPressed(void) {
 }
 
 void PerZReleased(void) {
-   buttonbits |= 0xFFEF;
+   buttonbits |= ~0xFFEF;
 }
 
 void PerRTriggerPressed(void) {
@@ -163,7 +163,7 @@ void PerRTriggerPressed(void) {
 }
 
 void PerRTriggerReleased(void) {
-   buttonbits |= 0xFF7F;
+   buttonbits |= ~0xFF7F;
 }
 
 void PerLTriggerPressed(void) {
@@ -172,5 +172,5 @@ void PerLTriggerPressed(void) {
 }
 
 void PerLTriggerReleased(void) {
-   buttonbits |= 0xFFF7;
+   buttonbits |= ~0xFFF7;
 }

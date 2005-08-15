@@ -114,6 +114,9 @@ int nbg1priority=0;
 int nbg2priority=0;
 int nbg3priority=0;
 int rbg0priority=0;
+static int sdlglfps;
+static int sdlglframecount;
+static unsigned long sdlglticks;
 
 typedef struct
 {
@@ -342,6 +345,7 @@ void FASTCALL Vdp1ReadPriority(vdp1cmd_struct *cmd, YglSprite *sprite)
 {
    u8 SPCLMD = Vdp2Regs->SPCTL;
    u8 sprite_register;
+   u8 *sprprilist = (u8 *)&Vdp2Regs->PRISA;
 
    // if we don't know what to do with a sprite, we put it on top
    sprite->priority = 7;
@@ -358,31 +362,59 @@ void FASTCALL Vdp1ReadPriority(vdp1cmd_struct *cmd, YglSprite *sprite)
       {
          case 0:
             sprite_register = ((cmd->CMDCOLR & 0x8000) | (~cmd->CMDCOLR & 0x4000)) >> 14;
-//            sprite->priority = vdp2reg->getByte(0xF0 + sprite_register) & 0x7;
+#ifdef WORDS_BIGENDIAN
+            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+#else
+            sprite->priority = sprprilist[sprite_register] & 0x7;
+#endif
             break;
          case 1:
             sprite_register = ((cmd->CMDCOLR & 0xC000) | (~cmd->CMDCOLR & 0x2000)) >> 13;
-//            sprite->priority = vdp2reg->getByte(0xF0 + sprite_register) & 0x7;
+#ifdef WORDS_BIGENDIAN
+            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+#else
+            sprite->priority = sprprilist[sprite_register] & 0x7;
+#endif
             break;
          case 3:
             sprite_register = ((cmd->CMDCOLR & 0x4000) | (~cmd->CMDCOLR & 0x2000)) >> 13;
-//            sprite->priority = vdp2reg->getByte(0xF0 + sprite_register) & 0x7;
+#ifdef WORDS_BIGENDIAN
+            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+#else
+            sprite->priority = sprprilist[sprite_register] & 0x7;
+#endif
             break;
          case 4:
             sprite_register = ((cmd->CMDCOLR & 0x4000) | (~cmd->CMDCOLR & 0x2000)) >> 13;
-//            sprite->priority = vdp2reg->getByte(0xF0 + sprite_register) & 0x7;
+#ifdef WORDS_BIGENDIAN
+            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+#else
+            sprite->priority = sprprilist[sprite_register] & 0x7;
+#endif
             break;
          case 5:
             sprite_register = ((cmd->CMDCOLR & 0x6000) | (~cmd->CMDCOLR & 0x1000)) >> 12;
-//            sprite->priority = vdp2reg->getByte(0xF0 + sprite_register) & 0x7;
+#ifdef WORDS_BIGENDIAN
+            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+#else
+            sprite->priority = sprprilist[sprite_register] & 0x7;
+#endif
             break;
          case 6:
             sprite_register = ((cmd->CMDCOLR & 0x6000) | (~cmd->CMDCOLR & 0x1000)) >> 12;
-//            sprite->priority = vdp2reg->getByte(0xF0 + sprite_register) & 0x7;
+#ifdef WORDS_BIGENDIAN
+            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+#else
+            sprite->priority = sprprilist[sprite_register] & 0x7;
+#endif
             break;
          case 7:
             sprite_register = ((cmd->CMDCOLR & 0x6000) | (~cmd->CMDCOLR & 0x1000)) >> 12;
-//            sprite->priority = vdp2reg->getByte(0xF0 + sprite_register) & 0x7;
+#ifdef WORDS_BIGENDIAN
+            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+#else
+            sprite->priority = sprprilist[sprite_register] & 0x7;
+#endif
             break;
          default:
             VDP1LOG("sprite type %d not implemented\n", sprite_type);
@@ -1134,20 +1166,20 @@ void VIDSDLGLVdp2DrawStart(void)
 void VIDSDLGLVdp2DrawEnd(void)
 {
 /*
-   if (fpstoggle)
-   {
-      //onScreenDebugMessage(-0.9, -0.85, "%02d/60 FPS", fps);
-      ygl.onScreenDebugMessage("%02d/60 FPS", fps);
+//   if (fpstoggle)
+//   {
+      YglOnScreenDebugMessage("%02d/60 FPS", sdlglfps);
 
-      frameCount++;
-      if(SDL_GetTicks() >= ticks + 1000)
+      sdlglframecount++;
+      if(SDL_GetTicks() >= sdlglticks + 1000)
       {
-         fps = frameCount;
-         frameCount = 0;
-         ticks = SDL_GetTicks();
+         sdlglfps = sdlglframecount;
+         sdlglframecount = 0;
+         sdlglticks = SDL_GetTicks();
       }
-   }
+//   }
 */
+
    YglRender();
 }
 

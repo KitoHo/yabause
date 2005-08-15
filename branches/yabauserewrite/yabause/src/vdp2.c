@@ -176,13 +176,41 @@ void Vdp2Reset(void) {
    Vdp2Regs->SCXN3 = 0x0000;
    Vdp2Regs->SCYN3 = 0x0000;
    Vdp2Regs->ZMCTL = 0x0000;
+   Vdp2Regs->SCRCTL = 0x0000;
+   Vdp2Regs->VCSTAU = 0x0000;
+   Vdp2Regs->VCSTAL = 0x0000;
    Vdp2Regs->BKTAU = 0x0000;
    Vdp2Regs->BKTAL = 0x0000;
+   Vdp2Regs->RPMD = 0x0000;
+   Vdp2Regs->RPRCTL = 0x0000;
+   Vdp2Regs->KTCTL = 0x0000;
+   Vdp2Regs->KTAOF = 0x0000;
+   Vdp2Regs->OVPNRA = 0x0000;
+   Vdp2Regs->OVPNRB = 0x0000;
+   Vdp2Regs->WPSX0 = 0x0000;
+   Vdp2Regs->WPSY0 = 0x0000;
+   Vdp2Regs->WPEX0 = 0x0000;
+   Vdp2Regs->WPEY0 = 0x0000;
+   Vdp2Regs->WPSX1 = 0x0000;
+   Vdp2Regs->WPSY1 = 0x0000;
+   Vdp2Regs->WPEX1 = 0x0000;
+   Vdp2Regs->WPEY1 = 0x0000;
+   Vdp2Regs->WCTLA = 0x0000;
+   Vdp2Regs->WCTLB = 0x0000;
+   Vdp2Regs->WCTLC = 0x0000;
+   Vdp2Regs->WCTLD = 0x0000;
    Vdp2Regs->SPCTL = 0x0000;
+   Vdp2Regs->SDCTL = 0x0000;
    Vdp2Regs->CRAOFA = 0x0000;
    Vdp2Regs->CRAOFB = 0x0000;
+   Vdp2Regs->LNCLEN = 0x0000;
+   Vdp2Regs->SFPRMD = 0x0000;
    Vdp2Regs->CCCTL = 0x0000;
+   Vdp2Regs->SFCCMD = 0x0000;
    Vdp2Regs->PRISA = 0x0000;
+   Vdp2Regs->PRISB = 0x0000;
+   Vdp2Regs->PRISC = 0x0000;
+   Vdp2Regs->PRISD = 0x0000;
    Vdp2Regs->PRINA = 0x0000;
    Vdp2Regs->PRINB = 0x0000;
    Vdp2Regs->PRIR = 0x0000;
@@ -308,6 +336,15 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
          return;
       case 0x006:
          Vdp2Regs->VRSIZE = val;
+         return;
+      case 0x008:
+         // HCNT is read-only
+         return;
+      case 0x00A:
+         // VCNT is read-only
+         return;
+      case 0x00C:
+         // Reserved
          return;
       case 0x00E:
          Vdp2Regs->RAMCTL = val;
@@ -508,14 +545,80 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
       case 0x098:
          Vdp2Regs->ZMCTL = val;
          return;
+      case 0x09A:
+         Vdp2Regs->SCRCTL = val;
+         return;
+      case 0x09C:
+         Vdp2Regs->VCSTAU = val;
+         return;
+      case 0x09E:
+         Vdp2Regs->VCSTAL = val;
+         return;
       case 0x0AC:
          Vdp2Regs->BKTAU = val;
          return;
       case 0x0AE:
          Vdp2Regs->BKTAL = val;
          return;
+      case 0x0B0:
+         Vdp2Regs->RPMD = val;
+         return;
+      case 0x0B2:
+         Vdp2Regs->RPRCTL = val;
+         return;
+      case 0x0B4:
+         Vdp2Regs->KTCTL = val;
+         return;
+      case 0x0B6:
+         Vdp2Regs->KTAOF = val;
+         return;
+      case 0x0B8:
+         Vdp2Regs->OVPNRA = val;
+         return;
+      case 0x0BA:
+         Vdp2Regs->OVPNRB = val;
+         return;
+      case 0x0C0:
+         Vdp2Regs->WPSX0 = val;
+         return;
+      case 0x0C2:
+         Vdp2Regs->WPSY0 = val;
+         return;
+      case 0x0C4:
+         Vdp2Regs->WPEX0 = val;
+         return;
+      case 0x0C6:
+         Vdp2Regs->WPEY0 = val;
+         return;
+      case 0x0C8:
+         Vdp2Regs->WPSX1 = val;
+         return;
+      case 0x0CA:
+         Vdp2Regs->WPSY1 = val;
+         return;
+      case 0x0CC:
+         Vdp2Regs->WPEX1 = val;
+         return;
+      case 0x0CE:
+         Vdp2Regs->WPEY1 = val;
+         return;
+      case 0x0D0:
+         Vdp2Regs->WCTLA = val;
+         return;
+      case 0x0D2:
+         Vdp2Regs->WCTLB = val;
+         return;
+      case 0x0D4:
+         Vdp2Regs->WCTLC = val;
+         return;
+      case 0x0D6:
+         Vdp2Regs->WCTLD = val;
+         return;
       case 0x0E0:
          Vdp2Regs->SPCTL = val;
+         return;
+      case 0x0E2:
+         Vdp2Regs->SDCTL = val;
          return;
       case 0x0E4:
          Vdp2Regs->CRAOFA = val;
@@ -523,11 +626,29 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
       case 0x0E6:
          Vdp2Regs->CRAOFB = val;
          return;     
+      case 0x0E8:
+         Vdp2Regs->LNCLEN = val;
+         return;
+      case 0x0EA:
+         Vdp2Regs->SFPRMD = val;
+         return;
       case 0x0EC:
          Vdp2Regs->CCCTL = val;
          return;     
+      case 0x0EE:
+         Vdp2Regs->SFCCMD = val;
+         return;
       case 0x0F0:
          Vdp2Regs->PRISA = val;
+         return;
+      case 0x0F2:
+         Vdp2Regs->PRISB = val;
+         return;
+      case 0x0F4:
+         Vdp2Regs->PRISC = val;
+         return;
+      case 0x0F6:
+         Vdp2Regs->PRISD = val;
          return;
       case 0x0F8:
          VIDCore->Vdp2SetPriorityNBG0(val & 0x7);

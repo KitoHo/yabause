@@ -93,7 +93,8 @@ yabause_SOURCES = \
 	scu.c scu.h sh2core.c sh2core.h sh2d.c sh2d.h sh2int.c sh2int.h \
 	smpc.c smpc.h scsp.c scsp.h sndsdl.c sndsdl.h vdp1.c vdp1.h \
 	vdp2.c vdp2.h vidsdlgl.c vidsdlgl.h \
-	yabause.c yabause.h ygl.h ygl.c yui.h yui.c
+	yabause.c yabause.h ygl.h ygl.c \
+	$(yabause_yui)/yui.h $(yabause_yui)/yui.c
 
 BUILT_SOURCES = c68k/c68k_ini.inc
 subdir = src
@@ -182,6 +183,7 @@ c68kexec.$(OBJEXT): c68k/c68kexec.c
 c68k.$(OBJEXT): c68k/c68k.c
 gen68k.$(OBJEXT): c68k/gen68k.c
 cd.$(OBJEXT): $(yabause_arch)/cd.c
+yui.$(OBJEXT): $(yabause_yui)/yui.c
 yabause$(EXEEXT): $(yabause_OBJECTS) $(yabause_DEPENDENCIES) 
 	@rm -f yabause$(EXEEXT)
 	$(LINK) $(yabause_LDFLAGS) $(yabause_OBJECTS) $(yabause_LDADD) $(LIBS)
@@ -280,6 +282,18 @@ cd.obj: $(yabause_arch)/cd.c
 @AMDEP_TRUE@	depfile='$(DEPDIR)/cd.Po' tmpdepfile='$(DEPDIR)/cd.TPo' @AMDEPBACKSLASH@
 @AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o cd.obj `cygpath -w $(yabause_arch)/cd.c`
+
+yui.o: $(yabause_yui)/yui.c
+@AMDEP_TRUE@	source='$(yabause_yui)/yui.c' object='yui.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@	depfile='$(DEPDIR)/yui.Po' tmpdepfile='$(DEPDIR)/yui.TPo' @AMDEPBACKSLASH@
+@AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o yui.o `test -f '$(yabause_yui)/yui.c' || echo '$(srcdir)/'`$(yabause_yui)/yui.c
+
+yui.obj: $(yabause_yui)/yui.c
+@AMDEP_TRUE@	source='$(yabause_yui)/yui.c' object='yui.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@	depfile='$(DEPDIR)/yui.Po' tmpdepfile='$(DEPDIR)/yui.TPo' @AMDEPBACKSLASH@
+@AMDEP_TRUE@	$(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o yui.obj `cygpath -w $(yabause_yui)/yui.c`
 CCDEPMODE = @CCDEPMODE@
 uninstall-info-am:
 

@@ -381,6 +381,8 @@ u8 FASTCALL OnchipReadByte(u32 addr) {
          return CurrentSH2->onchip.FRC.part.H;
       case 0x013:
          return CurrentSH2->onchip.FRC.part.L;
+      case 0x016:
+         return CurrentSH2->onchip.TCR;
       default:
          fprintf(stderr, "Unhandled Onchip byte read %08X\n", (int)addr);
          break;
@@ -448,6 +450,12 @@ void FASTCALL OnchipWriteByte(u32 addr, u8 val) {
          return;
       case 0x011:
          CurrentSH2->onchip.FTCSR = (CurrentSH2->onchip.FTCSR & (val & 0xFE)) | (val & 0x1);
+      case 0x012:
+         CurrentSH2->onchip.FRC.part.H = val;
+         return;
+      case 0x013:
+         CurrentSH2->onchip.FRC.part.L = val;
+         return;
       case 0x016:
          CurrentSH2->onchip.TCR = val & 0x83;
 
@@ -737,6 +745,8 @@ void DMAExec(void) {
       }
    }
 }
+
+//////////////////////////////////////////////////////////////////////////////
 
 void DMATransfer(u32 *CHCR, u32 *SAR, u32 *DAR, u32 *TCR, u32 *VCRDMA)
 {

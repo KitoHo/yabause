@@ -183,6 +183,7 @@ void SH2Reset(SH2_struct *context);
 void SH2PowerOn(SH2_struct *context);
 u32 FASTCALL SH2Exec(SH2_struct *context, u32 cycles);
 void SH2SendInterrupt(SH2_struct *context, u8 vector, u8 level);
+void SH2NMI(SH2_struct *context);
 void SH2Step(SH2_struct *context);
 void SH2GetRegisters(SH2_struct *context, sh2regs_struct * r);
 void SH2SetRegisters(SH2_struct *context, sh2regs_struct * r);

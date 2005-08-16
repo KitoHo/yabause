@@ -25,6 +25,7 @@
 #include "debug.h"
 #include "scsp.h"
 #include "scu.h"
+#include "sh2core.h"
 #include "vdp1.h"
 #include "vdp2.h"
 #include "yabause.h"
@@ -130,6 +131,10 @@ void SmpcCKCHG352() {
    YabStopSlave();
 
    // change clock
+   YabauseChangeTiming(CLKTYPE_28MHZNTSC); // fix me
+
+   // Send NMI
+   SH2NMI(MSH2);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -146,6 +151,10 @@ void SmpcCKCHG320() {
    YabStopSlave();
 
    // change clock
+   YabauseChangeTiming(CLKTYPE_26MHZNTSC); // fix me
+
+   // Send NMI
+   SH2NMI(MSH2);
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -2354,7 +2354,6 @@ void scsp_reset(void)
 {
 	slot_t *slot;
 
-	memset(scsp.scsp_ram,	0, SCSP_RAM_SIZE);
 	memset(scsp_reg,		0, 0x1000);
 
         scsp.mem4b              = 0;

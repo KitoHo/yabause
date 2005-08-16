@@ -203,6 +203,14 @@ void SH2SendInterrupt(SH2_struct *context, u8 vector, u8 level)
 
 //////////////////////////////////////////////////////////////////////////////
 
+void SH2NMI(SH2_struct *context)
+{
+   context->onchip.ICR |= 0x8000;
+   SH2SendInterrupt(context, 0xB, 0x10);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void SH2Step(SH2_struct *context)
 {
    unsigned long tmp = context->regs.PC;
@@ -365,6 +373,8 @@ void OnchipReset(SH2_struct *context) {
 u8 FASTCALL OnchipReadByte(u32 addr) {
    switch(addr)
    {
+      case 0x004:
+         return CurrentSH2->onchip.SSR;
       case 0x011:
          return CurrentSH2->onchip.FTCSR;
       case 0x012:         
@@ -382,8 +392,15 @@ u8 FASTCALL OnchipReadByte(u32 addr) {
 //////////////////////////////////////////////////////////////////////////////
 
 u16 FASTCALL OnchipReadWord(u32 addr) {
-   // stub
-   fprintf(stderr, "Unhandled Onchip word read %08X\n", (int)addr);
+   switch(addr)
+   {
+      case 0xE0:
+         return CurrentSH2->onchip.ICR;
+      default:
+         fprintf(stderr, "Unhandled Onchip word read %08X\n", (int)addr);
+         return 0;
+   }
+
    return 0;
 }
 

@@ -18,6 +18,7 @@ typedef struct
 #define CLKTYPE_26MHZPAL        2
 #define CLKTYPE_28MHZPAL        3
 
+void YabauseChangeTiming(int freqtype);
 int YabauseInit(int percorettype,
 		int sh2coretype, int vidcoretype, int sndcoretype,
                 int cdcoretype, u8 regionid, const char *biospath,

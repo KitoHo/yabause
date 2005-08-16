@@ -705,8 +705,123 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL Vdp2WriteLong(u32 addr, u32 val) {
-   LOG("VDP2 register long write = %08X\n", addr);
    addr &= 0x1FF;
+
+   switch (addr)
+   {
+      case 0x004:
+         Vdp2Regs->VRSIZE = val & 0xFFFF;
+         return;
+      case 0x010:
+         Vdp2Regs->CYCA0L = val >> 16;
+         Vdp2Regs->CYCA0U = val & 0xFFFF;
+         return;
+      case 0x014:
+         Vdp2Regs->CYCA1L = val >> 16;
+         Vdp2Regs->CYCA1U = val & 0xFFFF;
+         return;
+      case 0x018:
+         Vdp2Regs->CYCB0L = val >> 16;
+         Vdp2Regs->CYCB0U = val & 0xFFFF;
+         return;
+      case 0x01C:
+         Vdp2Regs->CYCB1L = val >> 16;
+         Vdp2Regs->CYCB1U = val & 0xFFFF;
+         return;
+      case 0x028:
+         Vdp2Regs->CHCTLA = val >> 16;
+         Vdp2Regs->CHCTLB = val & 0xFFFF;
+         return;
+      case 0x040:
+         Vdp2Regs->MPABN0 = val >> 16;
+         Vdp2Regs->MPCDN0 = val & 0xFFFF;
+         return;
+      case 0x044:
+         Vdp2Regs->MPABN1 = val >> 16;
+         Vdp2Regs->MPCDN1 = val & 0xFFFF;
+         return;
+      case 0x048:
+         Vdp2Regs->MPABN2 = val >> 16;
+         Vdp2Regs->MPCDN2 = val & 0xFFFF;
+         return;
+      case 0x04C:
+         Vdp2Regs->MPABN3 = val >> 16;
+         Vdp2Regs->MPCDN3 = val & 0xFFFF;
+         return;
+      case 0x070:
+         Vdp2Regs->SCXIN0 = val >> 16;
+         // SCXDN0 here
+         return;
+      case 0x074:
+         Vdp2Regs->SCYIN0 = val >> 16;
+         // SCYDN0 here
+         return;
+      case 0x078:
+         Vdp2Regs->ZMXN0.all = val;
+         return;
+      case 0x07C:
+         Vdp2Regs->ZMYN0.all = val;
+         return;
+      case 0x080:
+         Vdp2Regs->SCXIN1 = val >> 16;
+         // SCXDN1 here
+         return;
+      case 0x084:
+         Vdp2Regs->SCYIN1 = val >> 16;
+         // SCYDN1 here
+         return;
+      case 0x088:
+         Vdp2Regs->ZMXN1.all = val;
+         return;
+      case 0x08C:
+         Vdp2Regs->ZMYN1.all = val;
+         return;
+      case 0x0AC:
+         Vdp2Regs->BKTAU = val >> 16;
+         Vdp2Regs->BKTAL = val & 0xFFFF;
+         return;
+      case 0x0D0:
+         Vdp2Regs->WCTLA = val >> 16;
+         Vdp2Regs->WCTLB = val & 0xFFFF;
+         return;
+      case 0x0E4:
+         Vdp2Regs->CRAOFA = val >> 16;
+         Vdp2Regs->CRAOFB = val & 0xFFFF;
+         return;
+      case 0x0F0:
+         Vdp2Regs->PRISA = val >> 16;
+         Vdp2Regs->PRISB = val & 0xFFFF;
+         return;
+      case 0x0F4:
+         Vdp2Regs->PRISC = val >> 16;
+         Vdp2Regs->PRISD = val & 0xFFFF;
+         return;
+      case 0x0F8:
+         Vdp2Regs->PRINA = val >> 16;
+         Vdp2Regs->PRINB = val & 0xFFFF;
+         VIDCore->Vdp2SetPriorityNBG0(Vdp2Regs->PRINA & 0x7);
+         VIDCore->Vdp2SetPriorityNBG1((Vdp2Regs->PRINA >> 8) & 0x7);
+         VIDCore->Vdp2SetPriorityNBG2(Vdp2Regs->PRINB & 0x7);
+         VIDCore->Vdp2SetPriorityNBG3((Vdp2Regs->PRINB >> 8) & 0x7);
+         return;
+      case 0x100:
+         Vdp2Regs->CCRSA = val >> 16;
+         Vdp2Regs->CCRSB = val & 0xFFFF;
+         return;
+      case 0x104:
+         Vdp2Regs->CCRSC = val >> 16;
+         Vdp2Regs->CCRSD = val & 0xFFFF;
+         return;
+      case 0x108:
+         Vdp2Regs->CCRNA = val >> 16;
+         Vdp2Regs->CCRNB = val & 0xFFFF;
+         return;
+      default:
+      {
+         LOG("Unhandled VDP2 long write: %08X\n", addr);
+         break;
+      }
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////////

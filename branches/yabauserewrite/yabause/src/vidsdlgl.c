@@ -375,57 +375,57 @@ void FASTCALL Vdp1ReadPriority(vdp1cmd_struct *cmd, YglSprite *sprite)
          case 0:
             sprite_register = ((cmd->CMDCOLR & 0x8000) | (~cmd->CMDCOLR & 0x4000)) >> 14;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
-#else
             sprite->priority = sprprilist[sprite_register] & 0x7;
+#else
+            sprite->priority = sprprilist[sprite_register^1] & 0x7;
 #endif
             break;
          case 1:
             sprite_register = ((cmd->CMDCOLR & 0xC000) | (~cmd->CMDCOLR & 0x2000)) >> 13;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
-#else
             sprite->priority = sprprilist[sprite_register] & 0x7;
+#else
+            sprite->priority = sprprilist[sprite_register^1] & 0x7;
 #endif
             break;
          case 3:
             sprite_register = ((cmd->CMDCOLR & 0x4000) | (~cmd->CMDCOLR & 0x2000)) >> 13;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
-#else
             sprite->priority = sprprilist[sprite_register] & 0x7;
+#else
+            sprite->priority = sprprilist[sprite_register^1] & 0x7;
 #endif
             break;
          case 4:
             sprite_register = ((cmd->CMDCOLR & 0x4000) | (~cmd->CMDCOLR & 0x2000)) >> 13;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
-#else
             sprite->priority = sprprilist[sprite_register] & 0x7;
+#else
+            sprite->priority = sprprilist[sprite_register^1] & 0x7;
 #endif
             break;
          case 5:
             sprite_register = ((cmd->CMDCOLR & 0x6000) | (~cmd->CMDCOLR & 0x1000)) >> 12;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
-#else
             sprite->priority = sprprilist[sprite_register] & 0x7;
+#else
+            sprite->priority = sprprilist[sprite_register^1] & 0x7;
 #endif
             break;
          case 6:
             sprite_register = ((cmd->CMDCOLR & 0x6000) | (~cmd->CMDCOLR & 0x1000)) >> 12;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
-#else
             sprite->priority = sprprilist[sprite_register] & 0x7;
+#else
+            sprite->priority = sprprilist[sprite_register^1] & 0x7;
 #endif
             break;
          case 7:
             sprite_register = ((cmd->CMDCOLR & 0x6000) | (~cmd->CMDCOLR & 0x1000)) >> 12;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
-#else
             sprite->priority = sprprilist[sprite_register] & 0x7;
+#else
+            sprite->priority = sprprilist[sprite_register^1] & 0x7;
 #endif
             break;
          default:
@@ -1177,7 +1177,6 @@ void VIDSDLGLVdp2DrawStart(void)
 
 void VIDSDLGLVdp2DrawEnd(void)
 {
-/*
 //   if (fpstoggle)
 //   {
       YglOnScreenDebugMessage("%02d/60 FPS", sdlglfps);
@@ -1190,7 +1189,6 @@ void VIDSDLGLVdp2DrawEnd(void)
          sdlglticks = SDL_GetTicks();
       }
 //   }
-*/
 
    YglRender();
 }

@@ -296,6 +296,10 @@ u16 FASTCALL Vdp2ReadWord(u32 addr) {
             return (Vdp2Regs->TVSTAT | 0x8);
       case 0x006:         
          return Vdp2Regs->VRSIZE;
+      case 0x008:
+         return Vdp2Regs->HCNT;
+      case 0x00A:
+         return Vdp2Regs->VCNT;
       default:
       {
          LOG("Unhandled VDP2 word read: %08X\n", addr);
@@ -329,10 +333,14 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
    switch (addr)
    {
       case 0x000:
+         VIDCore->Vdp2SetResolution(val);
          Vdp2Regs->TVMD = val;
          return;
       case 0x002:
          Vdp2Regs->EXTEN = val;
+         return;
+      case 0x004:
+         // TVSTAT is read-only
          return;
       case 0x006:
          Vdp2Regs->VRSIZE = val;
@@ -664,6 +672,18 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
          VIDCore->Vdp2SetPriorityRBG0(val & 0x7);
          Vdp2Regs->PRIR = val;
          return;
+      case 0x100:
+         Vdp2Regs->CCRSA = val;
+         return;
+      case 0x102:
+         Vdp2Regs->CCRSB = val;
+         return;
+      case 0x104:
+         Vdp2Regs->CCRSC = val;
+         return;
+      case 0x106:
+         Vdp2Regs->CCRSD = val;
+         return;
       case 0x108:
          Vdp2Regs->CCRNA = val;
          return;
@@ -709,8 +729,19 @@ void FASTCALL Vdp2WriteLong(u32 addr, u32 val) {
 
    switch (addr)
    {
+      case 0x000:
+         Vdp2Regs->TVMD = val >> 16;
+         Vdp2Regs->EXTEN = val & 0xFFFF;
+         VIDCore->Vdp2SetResolution(Vdp2Regs->TVMD);
+         return;
       case 0x004:
          Vdp2Regs->VRSIZE = val & 0xFFFF;
+         return;
+      case 0x008:
+         // read-only
+         return;
+      case 0x00C:
+         Vdp2Regs->RAMCTL = val & 0xFFFF;
          return;
       case 0x010:
          Vdp2Regs->CYCA0L = val >> 16;
@@ -728,9 +759,37 @@ void FASTCALL Vdp2WriteLong(u32 addr, u32 val) {
          Vdp2Regs->CYCB1L = val >> 16;
          Vdp2Regs->CYCB1U = val & 0xFFFF;
          return;
+      case 0x020:
+         Vdp2Regs->BGON = val >> 16;
+         Vdp2Regs->MZCTL = val & 0xFFFF;
+         return;
+      case 0x024:
+         Vdp2Regs->SFSEL = val >> 16;
+         Vdp2Regs->SFCODE = val & 0xFFFF;
+         return;
       case 0x028:
          Vdp2Regs->CHCTLA = val >> 16;
          Vdp2Regs->CHCTLB = val & 0xFFFF;
+         return;
+      case 0x02C:
+         Vdp2Regs->BMPNA = val >> 16;
+         Vdp2Regs->BMPNB = val & 0xFFFF;
+         return;
+      case 0x030:
+         Vdp2Regs->PNCN0 = val >> 16;
+         Vdp2Regs->PNCN1 = val & 0xFFFF;
+         return;
+      case 0x034:
+         Vdp2Regs->PNCN2 = val >> 16;
+         Vdp2Regs->PNCN3 = val & 0xFFFF;
+         return;
+      case 0x038:
+         Vdp2Regs->PNCR = val >> 16;
+         Vdp2Regs->PLSZ = val & 0xFFFF;
+         return;
+      case 0x03C:
+         Vdp2Regs->MPOFN = val >> 16;
+         Vdp2Regs->MPOFR = val & 0xFFFF;
          return;
       case 0x040:
          Vdp2Regs->MPABN0 = val >> 16;
@@ -747,6 +806,38 @@ void FASTCALL Vdp2WriteLong(u32 addr, u32 val) {
       case 0x04C:
          Vdp2Regs->MPABN3 = val >> 16;
          Vdp2Regs->MPCDN3 = val & 0xFFFF;
+         return;
+      case 0x050:
+         Vdp2Regs->MPABRA = val >> 16;
+         Vdp2Regs->MPCDRA = val & 0xFFFF;
+         return;
+      case 0x054:
+         Vdp2Regs->MPEFRA = val >> 16;
+         Vdp2Regs->MPGHRA = val & 0xFFFF;
+         return;
+      case 0x058:
+         Vdp2Regs->MPIJRA = val >> 16;
+         Vdp2Regs->MPKLRA = val & 0xFFFF;
+         return;
+      case 0x05C:
+         Vdp2Regs->MPMNRA = val >> 16;
+         Vdp2Regs->MPOPRA = val & 0xFFFF;
+         return;
+      case 0x060:
+         Vdp2Regs->MPABRB = val >> 16;
+         Vdp2Regs->MPCDRB = val & 0xFFFF;
+         return;
+      case 0x064:
+         Vdp2Regs->MPEFRB = val >> 16;
+         Vdp2Regs->MPGHRB = val & 0xFFFF;
+         return;
+      case 0x068:
+         Vdp2Regs->MPIJRB = val >> 16;
+         Vdp2Regs->MPKLRB = val & 0xFFFF;
+         return;
+      case 0x06C:
+         Vdp2Regs->MPMNRB = val >> 16;
+         Vdp2Regs->MPOPRB = val & 0xFFFF;
          return;
       case 0x070:
          Vdp2Regs->SCXIN0 = val >> 16;
@@ -776,6 +867,14 @@ void FASTCALL Vdp2WriteLong(u32 addr, u32 val) {
       case 0x08C:
          Vdp2Regs->ZMYN1.all = val;
          return;
+      case 0x090:
+         Vdp2Regs->SCXN2 = val >> 16;
+         Vdp2Regs->SCYN2 = val & 0xFFFF;
+         return;
+      case 0x094:
+         Vdp2Regs->SCXN3 = val >> 16;
+         Vdp2Regs->SCYN3 = val & 0xFFFF;
+         return;
       case 0x0AC:
          Vdp2Regs->BKTAU = val >> 16;
          Vdp2Regs->BKTAL = val & 0xFFFF;
@@ -784,9 +883,21 @@ void FASTCALL Vdp2WriteLong(u32 addr, u32 val) {
          Vdp2Regs->WCTLA = val >> 16;
          Vdp2Regs->WCTLB = val & 0xFFFF;
          return;
+      case 0x0E0:
+         Vdp2Regs->SPCTL = val >> 16;
+         Vdp2Regs->SDCTL = val & 0xFFFF;
+         return;
       case 0x0E4:
          Vdp2Regs->CRAOFA = val >> 16;
          Vdp2Regs->CRAOFB = val & 0xFFFF;
+         return;
+      case 0x0E8:
+         Vdp2Regs->LNCLEN = val >> 16;
+         Vdp2Regs->SFPRMD = val & 0xFFFF;
+         return;
+      case 0x0EC:
+         Vdp2Regs->CCCTL = val >> 16;
+         Vdp2Regs->SFCCMD = val & 0xFFFF;
          return;
       case 0x0F0:
          Vdp2Regs->PRISA = val >> 16;
@@ -815,6 +926,84 @@ void FASTCALL Vdp2WriteLong(u32 addr, u32 val) {
       case 0x108:
          Vdp2Regs->CCRNA = val >> 16;
          Vdp2Regs->CCRNB = val & 0xFFFF;
+         return;
+      case 0x10C:
+         Vdp2Regs->CCRR = val >> 16;
+         Vdp2Regs->CCRLB = val & 0xFFFF;
+         return;
+      case 0x110:
+         Vdp2Regs->CLOFEN = val >> 16;
+         Vdp2Regs->CLOFSL = val & 0xFFFF;
+         return;
+      case 0x114:
+         Vdp2Regs->COAR = val >> 16;
+         Vdp2Regs->COAG = val & 0xFFFF;
+         return;
+      case 0x118:
+         Vdp2Regs->COAB = val >> 16;
+         Vdp2Regs->COBR = val & 0xFFFF;
+         return;
+      case 0x11C:
+         Vdp2Regs->COBG = val >> 16;
+         Vdp2Regs->COBB = val & 0xFFFF;
+         return;
+      case 0x120:
+      case 0x124:
+      case 0x128:
+      case 0x12C:
+      case 0x130:
+      case 0x134:
+      case 0x138:
+      case 0x13C:
+      case 0x140:
+      case 0x144:
+      case 0x148:
+      case 0x14C:
+      case 0x150:
+      case 0x154:
+      case 0x158:
+      case 0x15C:
+      case 0x160:
+      case 0x164:
+      case 0x168:
+      case 0x16C:
+      case 0x170:
+      case 0x174:
+      case 0x178:
+      case 0x17C:
+      case 0x180:
+      case 0x184:
+      case 0x188:
+      case 0x18C:
+      case 0x190:
+      case 0x194:
+      case 0x198:
+      case 0x19C:
+      case 0x1A0:
+      case 0x1A4:
+      case 0x1A8:
+      case 0x1AC:
+      case 0x1B0:
+      case 0x1B4:
+      case 0x1B8:
+      case 0x1BC:
+      case 0x1C0:
+      case 0x1C4:
+      case 0x1C8:
+      case 0x1CC:
+      case 0x1D0:
+      case 0x1D4:
+      case 0x1D8:
+      case 0x1DC:
+      case 0x1E0:
+      case 0x1E4:
+      case 0x1E8:
+      case 0x1EC:
+      case 0x1F0:
+      case 0x1F4:
+      case 0x1F8:
+      case 0x1FC:
+         // Reserved
          return;
       default:
       {

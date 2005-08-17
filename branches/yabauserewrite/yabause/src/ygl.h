@@ -65,8 +65,8 @@ extern Ygl * _Ygl;
 
 int YglInit(int, int, unsigned int);
 void YglDeInit(void);
-int * YglQuad(YglSprite *, YglTexture *);
-void YglCachedQuad(YglSprite *, int *);
+int YglQuad(YglSprite *, YglTexture *);
+void YglCachedQuad(YglSprite *, int);
 void YglRender(void);
 void YglReset(void);
 void YglShowTexture(void);
@@ -74,8 +74,8 @@ void YglChangeResolution(int, int);
 void YglOnScreenDebugMessage(char *, ...);
 
 
-int * YglIsCached(u32);
-void YglCache(u32, int *);
+int YglIsCached(u32);
+void YglCache(u32, int);
 void YglCacheReset(void);
 
 #endif

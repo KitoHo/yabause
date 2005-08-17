@@ -27,7 +27,7 @@ Ygl * _Ygl;
 typedef struct
 {
    u32 id;
-   int *textdata;
+   int textdata;
 } cache_struct;
 
 static cache_struct *cachelist;
@@ -38,10 +38,6 @@ static int cachelistsize=0;
 void YglTMInit(unsigned int w, unsigned int h) {
    YglTM = (YglTextureManager *) malloc(sizeof(YglTextureManager));
    YglTM->texture = (unsigned int *) malloc(sizeof(unsigned int) * w * h);
-   YglTM->texture[0] = 0xFFFF0000;
-   YglTM->texture[1] = 0xFFFF0000;
-   YglTM->texture[2] = 0xFF00FF00;
-   YglTM->texture[3] = 0xFFFF00FF;
    YglTM->width = w;
    YglTM->height = h;
 
@@ -130,7 +126,7 @@ int YglInit(int width, int height, unsigned int depth) {
       return -1;
    for(i = 0;i < depth;i++) {
       _Ygl->levels[i].currentQuad = 0;
-      _Ygl->levels[i].maxQuad = 8 * 2000;
+      _Ygl->levels[i].maxQuad = 8 * 10;
       if ((_Ygl->levels[i].quads = (int *) malloc(_Ygl->levels[i].maxQuad * sizeof(int))) == NULL)
          return -1;
 
@@ -184,19 +180,20 @@ void YglDeInit(void) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-int * YglQuad(YglSprite * input, YglTexture * output) {
+int YglQuad(YglSprite * input, YglTexture * output) {
    unsigned int x, y;
    YglLevel *level;
    int *tmp;
 
    level = &_Ygl->levels[input->priority];
-   tmp = level->textcoords + level->currentQuad;
 
    if (level->currentQuad == level->maxQuad) {
       level->maxQuad += 8;
       level->quads = (int *) realloc(level->quads, level->maxQuad * sizeof(int));
       level->textcoords = (int *) realloc(level->textcoords, level->maxQuad * sizeof(int));
    }
+
+   tmp = level->textcoords + level->currentQuad;
 
    memcpy(level->quads + level->currentQuad, input->vertices, 8 * sizeof(int));
    level->currentQuad += 8;
@@ -220,24 +217,24 @@ int * YglQuad(YglSprite * input, YglTexture * output) {
 
    switch(input->flip) {
       case 0:
-         return level->textcoords + level->currentQuad - 8;
+         return level->currentQuad - 8;
       case 1:
-         return level->textcoords + level->currentQuad - 6;
+         return level->currentQuad - 6;
       case 2:
-         return level->textcoords + level->currentQuad - 2;
+         return level->currentQuad - 2;
       case 3:
-         return level->textcoords + level->currentQuad - 4;
+         return level->currentQuad - 4;
    }
 
-   return NULL;
+   return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void YglCachedQuad(YglSprite * input, int * cache) {
+void YglCachedQuad(YglSprite * input, int cache) {
    YglLevel * level = _Ygl->levels + input->priority;
    unsigned int x,y;
-   int * tmp = level->textcoords + level->currentQuad;
+   int * tmp;
 
    if (level->currentQuad == level->maxQuad) {
       level->maxQuad += 8;
@@ -245,11 +242,13 @@ void YglCachedQuad(YglSprite * input, int * cache) {
       level->textcoords = (int *) realloc(level->textcoords, level->maxQuad * sizeof(int));
    }
 
+   tmp = level->textcoords + level->currentQuad;
+
    memcpy(level->quads + level->currentQuad, input->vertices, 8 * sizeof(int));
    level->currentQuad += 8;
 
-   x = *cache;
-   y = *(cache + 1);
+   x = *(level->textcoords + cache);
+   y = *(level->textcoords + cache + 1);
    if (input->flip & 0x1) {
       *tmp = *(tmp + 6) = x + input->w;
       *(tmp + 2) = *(tmp + 4) = x;
@@ -352,24 +351,27 @@ void YglOnScreenDebugMessage(char *string, ...) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-int * YglIsCached(u32 addr) {
-   int i=0;
+int YglIsCached(u32 addr) {
+/*
+   int i = 0;
 
    for (i = 0; i < cachelistsize; i++)
    {
       if (addr == cachelist[i].id)
          return cachelist[i].textdata;
    }
-
-   return NULL;
+*/
+   return -1;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void YglCache(u32 addr, int * val) {
+void YglCache(u32 addr, int val) {
+/*
    cachelist[cachelistsize].id = addr;
    cachelist[cachelistsize].textdata = val;
    cachelistsize++;
+*/
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -403,11 +403,18 @@ int VIDDummyVdp2Reset(void);
 void VIDDummyVdp2DrawStart(void);
 void VIDDummyVdp2DrawEnd(void);
 void VIDDummyVdp2DrawScreens(void);
+void VIDDummyVdp2SetResolution(u16 TVMD);
 void FASTCALL VIDDummyVdp2SetPriorityNBG0(int priority);
 void FASTCALL VIDDummyVdp2SetPriorityNBG1(int priority);
 void FASTCALL VIDDummyVdp2SetPriorityNBG2(int priority);
 void FASTCALL VIDDummyVdp2SetPriorityNBG3(int priority);
 void FASTCALL VIDDummyVdp2SetPriorityRBG0(int priority);
+void VIDDummyVdp2ToggleDisplayNBG0(void);
+void VIDDummyVdp2ToggleDisplayNBG1(void);
+void VIDDummyVdp2ToggleDisplayNBG2(void);
+void VIDDummyVdp2ToggleDisplayNBG3(void);
+void VIDDummyVdp2ToggleDisplayRBG0(void);
+
 
 VideoInterface_struct VIDDummy = {
 VIDCORE_DUMMY,
@@ -431,11 +438,17 @@ VIDDummyVdp2Reset,
 VIDDummyVdp2DrawStart,
 VIDDummyVdp2DrawEnd,
 VIDDummyVdp2DrawScreens,
+VIDDummyVdp2SetResolution,
 VIDDummyVdp2SetPriorityNBG0,
 VIDDummyVdp2SetPriorityNBG1,
 VIDDummyVdp2SetPriorityNBG2,
 VIDDummyVdp2SetPriorityNBG3,
-VIDDummyVdp2SetPriorityRBG0
+VIDDummyVdp2SetPriorityRBG0,
+VIDDummyVdp2ToggleDisplayNBG0,
+VIDDummyVdp2ToggleDisplayNBG1,
+VIDDummyVdp2ToggleDisplayNBG2,
+VIDDummyVdp2ToggleDisplayNBG3,
+VIDDummyVdp2ToggleDisplayRBG0
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -557,6 +570,12 @@ void VIDDummyVdp2DrawScreens(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
+void VIDDummyVdp2SetResolution(u16 TVMD)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void FASTCALL VIDDummyVdp2SetPriorityNBG0(int priority)
 {
 }
@@ -586,3 +605,34 @@ void FASTCALL VIDDummyVdp2SetPriorityRBG0(int priority)
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+void VIDDummyVdp2ToggleDisplayNBG0(void)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void VIDDummyVdp2ToggleDisplayNBG1(void)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void VIDDummyVdp2ToggleDisplayNBG2(void)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void VIDDummyVdp2ToggleDisplayNBG3(void)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void VIDDummyVdp2ToggleDisplayRBG0(void)
+{
+}
+
+//////////////////////////////////////////////////////////////////////////////
+

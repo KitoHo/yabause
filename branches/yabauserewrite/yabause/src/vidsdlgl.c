@@ -69,11 +69,17 @@ int VIDSDLGLVdp2Reset(void);
 void VIDSDLGLVdp2DrawStart(void);
 void VIDSDLGLVdp2DrawEnd(void);
 void VIDSDLGLVdp2DrawScreens(void);
+void VIDSDLGLVdp2SetResolution(u16 TVMD);
 void FASTCALL VIDSDLGLVdp2SetPriorityNBG0(int priority);
 void FASTCALL VIDSDLGLVdp2SetPriorityNBG1(int priority);
 void FASTCALL VIDSDLGLVdp2SetPriorityNBG2(int priority);
 void FASTCALL VIDSDLGLVdp2SetPriorityNBG3(int priority);
 void FASTCALL VIDSDLGLVdp2SetPriorityRBG0(int priority);
+void VIDSDLGLVdp2ToggleDisplayNBG0(void);
+void VIDSDLGLVdp2ToggleDisplayNBG1(void);
+void VIDSDLGLVdp2ToggleDisplayNBG2(void);
+void VIDSDLGLVdp2ToggleDisplayNBG3(void);
+void VIDSDLGLVdp2ToggleDisplayRBG0(void);
 
 VideoInterface_struct VIDSDLGL = {
 VIDCORE_SDLGL,
@@ -97,11 +103,17 @@ VIDSDLGLVdp2Reset,
 VIDSDLGLVdp2DrawStart,
 VIDSDLGLVdp2DrawEnd,
 VIDSDLGLVdp2DrawScreens,
+VIDSDLGLVdp2SetResolution,
 VIDSDLGLVdp2SetPriorityNBG0,
 VIDSDLGLVdp2SetPriorityNBG1,
 VIDSDLGLVdp2SetPriorityNBG2,
 VIDSDLGLVdp2SetPriorityNBG3,
-VIDSDLGLVdp2SetPriorityRBG0
+VIDSDLGLVdp2SetPriorityRBG0,
+VIDSDLGLVdp2ToggleDisplayNBG0,
+VIDSDLGLVdp2ToggleDisplayNBG1,
+VIDSDLGLVdp2ToggleDisplayNBG2,
+VIDSDLGLVdp2ToggleDisplayNBG3,
+VIDSDLGLVdp2ToggleDisplayRBG0
 };
 
 static float vdp1wratio=1;
@@ -1987,6 +1999,81 @@ void VIDSDLGLVdp2DrawScreens(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
+void VIDSDLGLVdp2SetResolution(u16 TVMD)
+{
+   int width=0, height=0;
+   int wratio=1, hratio=1;
+
+   // Horizontal Resolution
+   switch (TVMD & 0x7)
+   {
+      case 0:
+         width = 320;
+         wratio = 1;
+         break;
+      case 1:
+         width = 352;
+         wratio = 1;
+         break;
+      case 2:
+         width = 640;
+         wratio = 2;
+         break;
+      case 3:
+         width = 704;
+         wratio = 2;
+         break;
+      case 4:
+         width = 320;
+         wratio = 1;
+         break;
+      case 5:
+         width = 352;
+         wratio = 1;
+         break;
+      case 6:
+         width = 640;
+         wratio = 2;
+         break;
+      case 7:
+         width = 704;
+         wratio = 2;
+         break;
+   }
+
+   // Vertical Resolution
+   switch ((TVMD >> 4) & 0x3)
+   {
+      case 0:
+         height = 224;
+         break;
+      case 1: height = 240;
+                 break;
+      case 2: height = 256;
+                 break;
+      default: break;
+   }
+
+   hratio = 1;
+
+   // Check for interlace
+   switch ((TVMD >> 6) & 0x3)
+   {
+      case 2: // Single-density Interlace
+      case 3: // Double-density Interlace
+         height *= 2;
+         hratio = 2;
+         break;
+      case 0: // Non-interlace
+      default: break;
+   }
+
+   SetSaturnResolution(width, height);
+   Vdp1SetTextureRatio(wratio, hratio);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void FASTCALL VIDSDLGLVdp2SetPriorityNBG0(int priority)
 {
    nbg0priority = priority;
@@ -2021,3 +2108,40 @@ void FASTCALL VIDSDLGLVdp2SetPriorityRBG0(int priority)
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+void VIDSDLGLVdp2ToggleDisplayNBG0(void)
+{
+   vdp2disptoggle ^= 0x1;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void VIDSDLGLVdp2ToggleDisplayNBG1(void)
+{
+   vdp2disptoggle ^= 0x2;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void VIDSDLGLVdp2ToggleDisplayNBG2(void)
+{
+   vdp2disptoggle ^= 0x4;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void VIDSDLGLVdp2ToggleDisplayNBG3(void)
+{
+   vdp2disptoggle ^= 0x8;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void VIDSDLGLVdp2ToggleDisplayRBG0(void)
+{
+   vdp2disptoggle ^= 0x10;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+

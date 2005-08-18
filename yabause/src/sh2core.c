@@ -808,7 +808,7 @@ void DMATransfer(u32 *CHCR, u32 *SAR, u32 *DAR, u32 *TCR, u32 *VCRDMA)
             destInc *= 4;
             srcInc *= 4;
 
-            for (i = 0; i < *TCR; i++) {
+            for (i = 0; i < *TCR; i+=4) {
                for(i2 = 0; i2 < 4; i2++) {
                   MappedMemoryWriteLong(*DAR, MappedMemoryReadLong(*SAR));
                   *DAR += destInc;

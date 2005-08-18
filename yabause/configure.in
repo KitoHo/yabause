@@ -9,6 +9,7 @@ case $target in
 	*linux*) yabause_arch=linux;;
 	*cygwin*) yabause_arch=windows;;
 	*mingw32*) yabause_arch=windows;;
+	*) yabause_arch=".";;
 esac
 AC_SUBST(yabause_arch)
 
@@ -21,16 +22,16 @@ AC_LANG(C)
 
 AC_C_BIGENDIAN
 
-AC_CHECK_TOOL(HAVE_LIBSDL, sdl-config)
+AC_PATH_PROGS(HAVE_LIBSDL, [sdl-config sdl11-config])
 
 if test x$HAVE_LIBSDL = x ; then
 	AC_MSG_ERROR([You need to install SDL])
 else
-	SDL_CXXFLAGS=`$HAVE_LIBSDL --cflags`
+	SDL_CFLAGS=`$HAVE_LIBSDL --cflags`
 	SDL_LIBS=`$HAVE_LIBSDL --libs`
 fi
 
-CXXFLAGS="$CXXFLAGS $SDL_CXXFLAGS"
+CFLAGS="$CFLAGS $SDL_CFLAGS"
 LIBS="$LIBS $SDL_LIBS"
 
 case $target in
@@ -50,7 +51,10 @@ case $target in
 		yabause_yui="."
 		use_gtk=no
 		;;
-	*linux*)
+	*linux* | *freebsd*)
+		AC_PATH_XTRA
+		LIBS="$LIBS $X_LIBS"
+		CFLAGS="$CFLAGS $X_CFLAGS"
 		AC_CHECK_LIB(GL, glEnable, [], [AC_MSG_ERROR("You need to install OpenGL") ])
 		AC_CHECK_LIB(glut, glutGetModifiers, [], [AC_MSG_ERROR("You need to install GLUT")])
 		yabause_yui="."
@@ -59,6 +63,8 @@ case $target in
 	*) 
 		AC_CHECK_LIB(GL, glEnable, [], [AC_MSG_ERROR("You need to install OpenGL") ])
 		AC_CHECK_LIB(glut, glutGetModifiers, [], [AC_MSG_ERROR("You need to install GLUT")])
+		yabause_yui="."
+		use_gtk=no
 		;;
 
 esac
@@ -70,31 +76,20 @@ if test x$use_gtk = xyes ; then
 
 	if test ! x$HAVE_PKG = x ; then
 		yabause_yui="linux"
-		GTK_CXXFLAGS=`$HAVE_PKG gtk+-2.0 --cflags`
+		GTK_CFLAGS=`$HAVE_PKG gtk+-2.0 --cflags`
 		GTK_LIBS=`$HAVE_PKG gtk+-2.0 --libs`
 	fi
 fi
 
 AC_SUBST(yabause_yui)
 
-CXXFLAGS="$CXXFLAGS $GTK_CXXFLAGS"
+CFLAGS="$CFLAGS $GTK_CFLAGS"
 LIBS="$LIBS $GTK_LIBS"
-CFLAGS=$CXXFLAGS
 
 AC_ARG_ENABLE(debug, AC_HELP_STRING(--enable-debug, enable general debug information) , AC_DEFINE(DEBUG))
 AC_ARG_ENABLE(vdp1-debug, AC_HELP_STRING(--enable-vdp1-debug, enable vdp1 debug information) , AC_DEFINE(VDP1_DEBUG))
 AC_ARG_ENABLE(vdp2-debug, AC_HELP_STRING(--enable-vdp2-debug, enable vdp2 debug information) , AC_DEFINE(VDP2_DEBUG))
 AC_ARG_ENABLE(cd-debug, AC_HELP_STRING(--enable-cd-debug, enable cdblock debug information) , AC_DEFINE(CDDEBUG))
-AC_ARG_ENABLE(dynarec, AC_HELP_STRING(--enable-dynarec, [enable dynarec (does nothing for now)]),
-     [case "${enableval}" in
-       yes) dynarec=true ;;
-       no)  dynarec=false ;;
-       *) AC_MSG_ERROR(bad value ${enableval} for --enable-dynarec) ;;
-     esac],[dynarec=false])
-AM_CONDITIONAL(DYNAREC, test x$dynarec = xtrue)
-if test x$dynarec = xtrue ; then
-  AC_DEFINE(DYNAREC)
-fi
 
 AC_CONFIG_FILES([Makefile src/Makefile doc/Makefile])
 AC_OUTPUT

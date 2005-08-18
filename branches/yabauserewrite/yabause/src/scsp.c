@@ -2697,7 +2697,8 @@ int ScspInit(int coreid) {
    if (SNDCore == NULL)
       return -1;
 
-   SNDCore->Init();
+   if (SNDCore->Init() == -1)
+      return -1;
 
    return 0;
 }

@@ -267,7 +267,6 @@ void Vdp2VBlankOUT(void) {
    }
 
    VIDCore->Vdp2DrawEnd();
-
    ScuSendVBlankOUT();
 }
 
@@ -288,6 +287,8 @@ u16 FASTCALL Vdp2ReadWord(u32 addr) {
    {
       case 0x000:
          return Vdp2Regs->TVMD;
+      case 0x002:
+         return Vdp2Regs->EXTEN;
       case 0x004:
          // if TVMD's DISP bit is cleared, TVSTAT's VBLANK bit is always set
          if (Vdp2Regs->TVMD & 0x8000)
@@ -505,8 +506,14 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
       case 0x070:
          Vdp2Regs->SCXIN0 = val;
          return;
+      case 0x072:
+         Vdp2Regs->SCXDN0 = val;
+         return;
       case 0x074:
          Vdp2Regs->SCYIN0 = val;
+         return;
+      case 0x076:
+         Vdp2Regs->SCYDN0 = val;
          return;
       case 0x078:
          Vdp2Regs->ZMXN0.part.I = val;
@@ -523,8 +530,14 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
       case 0x080:
          Vdp2Regs->SCXIN1 = val;
          return;
+      case 0x082:
+         Vdp2Regs->SCXDN1 = val;
+         return;
       case 0x084:
          Vdp2Regs->SCYIN1 = val;
+         return;
+      case 0x086:
+         Vdp2Regs->SCYDN1 = val;
          return;
       case 0x088:
          Vdp2Regs->ZMXN1.part.I = val;
@@ -562,6 +575,24 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
       case 0x09E:
          Vdp2Regs->VCSTAL = val;
          return;
+      case 0x0A0:
+         Vdp2Regs->LSTA0.part.U = val;
+         return;
+      case 0x0A2:
+         Vdp2Regs->LSTA0.part.L = val;
+         return;
+      case 0x0A4:
+         Vdp2Regs->LSTA1.part.U = val;
+         return;
+      case 0x0A6:
+         Vdp2Regs->LSTA1.part.L = val;
+         return;
+      case 0x0A8:
+         Vdp2Regs->LCTA.part.U = val;
+         return;
+      case 0x0AA:
+         Vdp2Regs->LCTA.part.L = val;
+         return;
       case 0x0AC:
          Vdp2Regs->BKTAU = val;
          return;
@@ -585,6 +616,12 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
          return;
       case 0x0BA:
          Vdp2Regs->OVPNRB = val;
+         return;
+      case 0x0BC:
+         Vdp2Regs->RPTA.part.U = val;
+         return;
+      case 0x0BE:
+         Vdp2Regs->RPTA.part.L = val;
          return;
       case 0x0C0:
          Vdp2Regs->WPSX0 = val;
@@ -621,6 +658,18 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
          return;
       case 0x0D6:
          Vdp2Regs->WCTLD = val;
+         return;
+      case 0x0D8:
+         Vdp2Regs->LWTA0.part.U = val;
+         return;
+      case 0x0DA:
+         Vdp2Regs->LWTA0.part.L = val;
+         return;
+      case 0x0DC:
+         Vdp2Regs->LWTA1.part.U = val;
+         return;
+      case 0x0DE:
+         Vdp2Regs->LWTA1.part.L = val;
          return;
       case 0x0E0:
          Vdp2Regs->SPCTL = val;
@@ -672,6 +721,9 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
          VIDCore->Vdp2SetPriorityRBG0(val & 0x7);
          Vdp2Regs->PRIR = val;
          return;
+      case 0x0FE:
+         // Reserved
+         return;
       case 0x100:
          Vdp2Regs->CCRSA = val;
          return;
@@ -689,6 +741,12 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
          return;
       case 0x10A:
          Vdp2Regs->CCRNB = val;
+         return;
+      case 0x10C:
+         Vdp2Regs->CCRR = val;
+         return;
+      case 0x10E:
+         Vdp2Regs->CCRLB = val;
          return;
       case 0x110:
          Vdp2Regs->CLOFEN = val;

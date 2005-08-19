@@ -118,6 +118,10 @@ VIDSDLGLVdp2ToggleDisplayRBG0
 
 static float vdp1wratio=1;
 static float vdp1hratio=1;
+static int vdp1cor=0;
+static int vdp1cog=0;
+static int vdp1cob=0;
+
 static int vdp2width;
 static int vdp2height;
 int vdp2disptoggle=0xFF;
@@ -205,13 +209,13 @@ void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, YglTexture
                dot = T1ReadByte(Vdp1Ram, charAddr);
 
                // Pixel 1
-               if (((dot >> 4) == 0) && !SPD) *texture->textdata++ = 0;
-               else *texture->textdata++ = Vdp2ColorRamGetColor((dot >> 4) + colorBank, alpha, colorOffset);
+               if (((dot >> 4) == 0) && !SPD) *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
+               else *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor((dot >> 4) + colorBank, alpha, colorOffset), vdp1cor, vdp1cog, vdp1cob);
                j += 1;
 
                // Pixel 2
-               if (((dot & 0xF) == 0) && !SPD) *texture->textdata++ = 0;
-               else *texture->textdata++ = Vdp2ColorRamGetColor((dot & 0xF) + colorBank, alpha, colorOffset);
+               if (((dot & 0xF) == 0) && !SPD) *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
+               else *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor((dot & 0xF) + colorBank, alpha, colorOffset), vdp1cor, vdp1cog, vdp1cob);
                j += 1;
 
                charAddr += 1;
@@ -236,21 +240,21 @@ void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, YglTexture
                dot = T1ReadByte(Vdp1Ram, charAddr);
 
                if (((dot >> 4) == 0) && !SPD)
-                  *texture->textdata++ = 0;
+                  *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
                else
                {
                   temp = T1ReadWord(Vdp1Ram, (dot >> 4) * 2 + colorLut);
-                  *texture->textdata++ = SAT2YAB1(alpha, temp);
+                  *texture->textdata++ = COLOR_ADD(SAT2YAB1(alpha, temp), vdp1cor, vdp1cog, vdp1cob);
                }
 
                j += 1;
 
                if (((dot & 0xF) == 0) && !SPD)
-                  *texture->textdata++ = 0;
+                  *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
                else
                {
                   temp = T1ReadWord(Vdp1Ram, (dot & 0xF) * 2 + colorLut);
-                  *texture->textdata++ = SAT2YAB1(alpha, temp);
+                  *texture->textdata++ = COLOR_ADD(SAT2YAB1(alpha, temp), vdp1cor, vdp1cog, vdp1cob);
                }
 
                j += 1;
@@ -275,8 +279,8 @@ void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, YglTexture
                dot = T1ReadByte(Vdp1Ram, charAddr) & 0x3F;               
                charAddr++;
 
-               if ((dot == 0) && !SPD) *texture->textdata++ = 0;
-               else *texture->textdata++ = Vdp2ColorRamGetColor(dot + colorBank, alpha, colorOffset);
+               if ((dot == 0) && !SPD) *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
+               else *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor(dot + colorBank, alpha, colorOffset), vdp1cor, vdp1cog, vdp1cob);
             }
             texture->textdata += texture->w;
          }
@@ -297,8 +301,8 @@ void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, YglTexture
                dot = T1ReadByte(Vdp1Ram, charAddr) & 0x7F;               
                charAddr++;
 
-               if ((dot == 0) && !SPD) *texture->textdata++ = 0;
-               else *texture->textdata++ = Vdp2ColorRamGetColor(dot + colorBank, alpha, colorOffset);
+               if ((dot == 0) && !SPD) *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
+               else *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor(dot + colorBank, alpha, colorOffset), vdp1cor, vdp1cog, vdp1cob);
             }
             texture->textdata += texture->w;
          }
@@ -318,8 +322,8 @@ void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, YglTexture
                dot = T1ReadByte(Vdp1Ram, charAddr);               
                charAddr++;
 
-               if ((dot == 0) && !SPD) *texture->textdata++ = 0;
-               else *texture->textdata++ = Vdp2ColorRamGetColor(dot + colorBank, alpha, colorOffset);
+               if ((dot == 0) && !SPD) *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
+               else *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor(dot + colorBank, alpha, colorOffset), vdp1cor, vdp1cog, vdp1cob);
             }
             texture->textdata += texture->w;
          }
@@ -338,8 +342,8 @@ void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, YglTexture
                dot = T1ReadWord(Vdp1Ram, charAddr);               
                charAddr += 2;
 
-               if ((dot == 0) && !SPD) *texture->textdata++ = 0;
-               else *texture->textdata++ = SAT2YAB1(alpha, dot);
+               if ((dot == 0) && !SPD) *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
+               else *texture->textdata++ = COLOR_ADD(SAT2YAB1(alpha, dot), vdp1cor, vdp1cog, vdp1cob);
             }
             texture->textdata += texture->w;
          }
@@ -854,6 +858,43 @@ int VIDSDLGLVdp1Reset(void)
 void VIDSDLGLVdp1DrawStart(void)
 {
    YglCacheReset();
+
+   if (Vdp2Regs->CLOFEN & 0x40)
+   {
+      // color offset enable
+      if (Vdp2Regs->CLOFSL & 0x40)
+      {
+         // color offset B
+         vdp1cor = Vdp2Regs->COBR & 0xFF;
+         if (Vdp2Regs->COBR & 0x100)
+            vdp1cor |= 0xFFFFFF00;
+
+         vdp1cog = Vdp2Regs->COBG & 0xFF;
+         if (Vdp2Regs->COBG & 0x100)
+            vdp1cog |= 0xFFFFFF00;
+
+         vdp1cob = Vdp2Regs->COBB & 0xFF;
+         if (Vdp2Regs->COBB & 0x100)
+            vdp1cob |= 0xFFFFFF00;
+      }
+      else
+      {
+         // color offset A
+         vdp1cor = Vdp2Regs->COAR & 0xFF;
+         if (Vdp2Regs->COAR & 0x100)
+            vdp1cor |= 0xFFFFFF00;
+
+         vdp1cog = Vdp2Regs->COAG & 0xFF;
+         if (Vdp2Regs->COAG & 0x100)
+            vdp1cog |= 0xFFFFFF00;
+
+         vdp1cob = Vdp2Regs->COAB & 0xFF;
+         if (Vdp2Regs->COAB & 0x100)
+            vdp1cob |= 0xFFFFFF00;
+      }
+   }
+   else // color offset disable
+      vdp1cor = vdp1cog = vdp1cob = 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1115,7 +1156,7 @@ void VIDSDLGLVdp1PolygonDraw(void)
 
    YglQuad(&polygon, &texture);
 
-   *texture.textdata = SAT2YAB1(alpha,color);
+   *texture.textdata = COLOR_ADD(SAT2YAB1(alpha,color), vdp1cor, vdp1cog, vdp1cob);
 }
 
 //////////////////////////////////////////////////////////////////////////////

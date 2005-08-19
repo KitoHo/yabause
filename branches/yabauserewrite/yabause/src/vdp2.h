@@ -182,12 +182,57 @@ typedef struct {
    u16 SCRCTL; // 0x25F8009A
    u16 VCSTAU; // 0x25F8009C
    u16 VCSTAL; // 0x25F8009E
-   u16 LSTA0U; // 0x25F800A0
-   u16 LSTA0L; // 0x25F800A2
-   u16 LSTA1U; // 0x25F800A4
-   u16 LSTA1L; // 0x25F800A6
-   u16 LCTAU;  // 0x25F800A8
-   u16 LCTAL;  // 0x25F800AA
+
+#ifdef WORDS_BIGENDIAN
+  union {
+    struct {
+      u32 U:16; // 0x25F800A0
+      u32 L:16; // 0x25F800A2
+    } part;
+    u32 all;
+  } LSTA0;
+
+  union {
+    struct {
+      u32 U:16; // 0x25F800A4
+      u32 L:16; // 0x25F800A6
+    } part;
+    u32 all;
+  } LSTA1;
+
+  union {
+    struct {
+      u32 U:16; // 0x25F800A8
+      u32 L:16; // 0x25F800AA
+    } part;
+    u32 all;
+  } LCTA;
+#else
+  union {
+    struct {
+      u32 L:16; // 0x25F800A2
+      u32 U:16; // 0x25F800A0
+    } part;
+    u32 all;
+  } LSTA0;
+
+  union {
+    struct {
+      u32 L:16; // 0x25F800A6
+      u32 U:16; // 0x25F800A4
+    } part;
+    u32 all;
+  } LSTA1;
+
+  union {
+    struct {
+      u32 L:16; // 0x25F800AA
+      u32 U:16; // 0x25F800A8
+    } part;
+    u32 all;
+  } LCTA;
+#endif
+
    u16 BKTAU;  // 0x25F800AC
    u16 BKTAL;  // 0x25F800AE
    u16 RPMD;   // 0x25F800B0
@@ -196,8 +241,23 @@ typedef struct {
    u16 KTAOF;  // 0x25F800B6
    u16 OVPNRA; // 0x25F800B8
    u16 OVPNRB; // 0x25F800BA
-   u16 RPTAU;  // 0x25F800BC
-   u16 RPTAL;  // 0x25F800BE
+#ifdef WORDS_BIGENDIAN
+  union {
+    struct {
+      u32 U:16; // 0x25F800BC
+      u32 L:16; // 0x25F800BE
+    } part;
+    u32 all;
+  } RPTA;
+#else
+  union {
+    struct {
+      u32 L:16; // 0x25F800BE
+      u32 U:16; // 0x25F800BC
+    } part;
+    u32 all;
+  } RPTA;
+#endif
    u16 WPSX0;  // 0x25F800C0
    u16 WPSY0;  // 0x25F800C2
    u16 WPEX0;  // 0x25F800C4
@@ -210,10 +270,41 @@ typedef struct {
    u16 WCTLB;  // 0x25F800D2
    u16 WCTLC;  // 0x25F800D4
    u16 WCTLD;  // 0x25F800D6
-   u16 LWTA0U; // 0x25F800D8
-   u16 LWTA0L; // 0x25F800DA
-   u16 LWTA1U; // 0x25F800DC
-   u16 LWTA1L; // 0x25F800DE
+#ifdef WORDS_BIGENDIAN
+  union {
+    struct {
+      u32 U:16; // 0x25F800D8
+      u32 L:16; // 0x25F800DA
+    } part;
+    u32 all;
+  } LWTA0;
+
+  union {
+    struct {
+      u32 U:16; // 0x25F800DC
+      u32 L:16; // 0x25F800DE
+    } part;
+    u32 all;
+  } LWTA1;
+#else
+  union {
+    struct {
+      u32 L:16; // 0x25F800D8
+      u32 U:16; // 0x25F800DA
+    } part;
+    u32 all;
+  } LWTA0;
+
+  union {
+    struct {
+      u32 L:16; // 0x25F800DC
+      u32 U:16; // 0x25F800DE
+    } part;
+    u32 all;
+  } LWTA1;
+#endif
+
+
    u16 SPCTL;  // 0x25F800E0
    u16 SDCTL;  // 0x25F800E2
    u16 CRAOFA; // 0x25F800E4

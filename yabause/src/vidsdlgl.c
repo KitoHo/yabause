@@ -807,6 +807,107 @@ void Vdp2DrawMap(vdp2draw_struct *info, YglTexture *texture)
 
 //////////////////////////////////////////////////////////////////////////////
 
+void Vdp2ReadRotationTable(u32 addr)
+{
+/*
+   s32 i;
+
+   i = T1ReadLong(Vdp2Ram, addr);
+   Xst = (float) (signed) ((i & 0x1FFFFFC0) | (i & 0x10000000 ? 0xF0000000 : 0x00000000)) / 65536;
+   addr += 4;
+
+   i = T1ReadLong(Vdp2Ram, addr);
+   Yst = (float) (signed) ((i & 0x1FFFFFC0) | (i & 0x10000000 ? 0xF0000000 : 0x00000000)) / 65536;
+   addr += 4;
+
+   i = T1ReadLong(Vdp2Ram, addr);
+   Zst = (float) (signed) ((i & 0x1FFFFFC0) | (i & 0x10000000 ? 0xF0000000 : 0x00000000)) / 65536;
+   addr += 4;
+
+   i = T1ReadLong(Vdp2Ram, addr);
+   deltaXst = (float) (signed) ((i & 0x0007FFC0) | (i & 0x00040000 ? 0xFFFC0000 : 0x00000000)) / 65536;
+   addr += 4;
+
+   i = T1ReadLong(Vdp2Ram, addr);
+   deltaYst = (float) (signed) ((i & 0x0007FFC0) | (i & 0x00040000 ? 0xFFFC0000 : 0x00000000)) / 65536;
+   addr += 4;
+
+   i = T1ReadLong(Vdp2Ram, addr);
+   deltaX = (float) (signed) ((i & 0x0007FFC0) | (i & 0x00040000 ? 0xFFFC0000 : 0x00000000)) / 65536;
+   addr += 4;
+
+   i = T1ReadLong(Vdp2Ram, addr);
+   deltaY = (float) (signed) ((i & 0x0007FFC0) | (i & 0x00040000 ? 0xFFFC0000 : 0x00000000)) / 65536;
+   addr += 4;
+
+   i = T1ReadLong(Vdp2Ram, addr);
+   A = (float) (signed) ((i & 0x000FFFC0) | (i & 0x00080000 ? 0xFFF80000 : 0x00000000)) / 65536;
+   addr += 4;
+
+   i = T1ReadLong(Vdp2Ram, addr);
+   B = (float) (signed) ((i & 0x000FFFC0) | ((i & 0x00080000) ? 0xFFF80000 : 0x00000000)) / 65536;
+   addr += 4;
+
+        i = T1ReadLong(Vdp2Ram, addr);
+   C = (float) (signed) ((i & 0x000FFFC0) | (i & 0x00080000 ? 0xFFF80000 : 0x00000000)) / 65536;
+   addr += 4;
+
+   i = T1ReadLong(Vdp2Ram, addr);
+   D = (float) (signed) ((i & 0x000FFFC0) | (i & 0x00080000 ? 0xFFF80000 : 0x00000000)) / 65536;
+   addr += 4;
+
+   i = T1ReadLong(Vdp2Ram, addr);
+   E = (float) (signed) ((i & 0x000FFFC0) | (i & 0x00080000 ? 0xFFF80000 : 0x00000000)) / 65536;
+   addr += 4;
+
+   i = T1ReadLong(Vdp2Ram, addr);
+   F = (float) (signed) ((i & 0x000FFFC0) | (i & 0x00080000 ? 0xFFF80000 : 0x00000000)) / 65536;
+   addr += 4;
+
+   i = T1ReadWord(Vdp2Ram, addr);
+   Px = ((i & 0x3FFF) | (i & 0x2000 ? 0xE000 : 0x0000));
+   addr += 2;
+
+   i = T1ReadWord(Vdp2Ram, addr);
+   Py = ((i & 0x3FFF) | (i & 0x2000 ? 0xE000 : 0x0000));
+   addr += 2;
+
+   i = T1ReadWord(Vdp2Ram, addr);
+   Pz = ((i & 0x3FFF) | (i & 0x2000 ? 0xE000 : 0x0000));
+   addr += 4;
+
+   i = T1ReadWord(Vdp2Ram, addr);
+   Cx = ((i & 0x3FFF) | (i & 0x2000 ? 0xE000 : 0x0000));
+   addr += 2;
+
+   i = T1ReadWord(Vdp2Ram, addr);
+   Cy = ((i & 0x3FFF) | (i & 0x2000 ? 0xE000 : 0x0000));
+   addr += 2;
+
+   i = T1ReadWord(Vdp2Ram, addr);
+   Cz = ((i & 0x3FFF) | (i & 0x2000 ? 0xE000 : 0x0000));
+   addr += 4;
+
+   i = T1ReadLong(Vdp2Ram, addr);
+   Mx = (float) (signed) ((i & 0x3FFFFFC0) | (i & 0x20000000 ? 0xE0000000 : 0x00000000)) / 65536;
+   addr += 4;
+
+   i = T1ReadLong(Vdp2Ram, addr);
+   My = (float) (signed) ((i & 0x3FFFFFC0) | (i & 0x20000000 ? 0xE0000000 : 0x00000000)) / 65536;
+   addr += 4;
+
+   i = T1ReadLong(Vdp2Ram, addr);
+   kx = (float) (signed) ((i & 0x00FFFFFF) | (i & 0x00800000 ? 0xFF800000 : 0x00000000)) / 65536;
+   addr += 4;
+
+   i = T1ReadLong(Vdp2Ram, addr);
+   ky = (float) (signed) ((i & 0x00FFFFFF) | (i & 0x00800000 ? 0xFF800000 : 0x00000000)) / 65536;
+   addr += 4;
+*/
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void SetSaturnResolution(int width, int height)
 {
    YglChangeResolution(width, height);
@@ -1816,7 +1917,7 @@ void Vdp2DrawNBG2(void)
    if (Vdp2Regs->CLOFEN & 0x4)
    {
       // color offset enable
-      if (Vdp2Regs->CLOFSL & 0x2)
+      if (Vdp2Regs->CLOFSL & 0x4)
       {
          // color offset B
          info.cor = Vdp2Regs->COBR & 0xFF;
@@ -1972,7 +2073,7 @@ void Vdp2DrawNBG3(void)
    if (Vdp2Regs->CLOFEN & 0x8)
    {
       // color offset enable
-      if (Vdp2Regs->CLOFSL & 0x2)
+      if (Vdp2Regs->CLOFSL & 0x8)
       {
          // color offset B
          info.cor = Vdp2Regs->COBR & 0xFF;
@@ -2019,8 +2120,245 @@ void Vdp2DrawNBG3(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
+void FASTCALL Vdp2RBG0PlaneAddr(vdp2draw_struct *info, int i)
+{
+   // works only for parameter A for time being
+   u32 offset = (Vdp2Regs->MPOFR & 0x7) << 6;
+   u32 tmp=0;
+
+   switch(i)
+   {
+      case 0:
+         tmp = offset | (Vdp2Regs->MPABRA & 0xFF);
+         break;
+      case 1:
+         tmp = offset | (Vdp2Regs->MPABRA >> 8);
+         break;
+      case 2:
+         tmp = offset | (Vdp2Regs->MPCDRA & 0xFF);
+         break;
+      case 3:
+         tmp = offset | (Vdp2Regs->MPCDRA >> 8);
+         break;
+      case 4:
+         tmp = offset | (Vdp2Regs->MPEFRA & 0xFF);
+         break;
+      case 5:
+         tmp = offset | (Vdp2Regs->MPEFRA >> 8);
+         break;
+      case 6:
+         tmp = offset | (Vdp2Regs->MPGHRA & 0xFF);
+         break;
+      case 7:
+         tmp = offset | (Vdp2Regs->MPGHRA >> 8);
+         break;
+      case 8:
+         tmp = offset | (Vdp2Regs->MPIJRA & 0xFF);
+         break;
+      case 9:
+         tmp = offset | (Vdp2Regs->MPIJRA >> 8);
+         break;
+      case 10:
+         tmp = offset | (Vdp2Regs->MPKLRA & 0xFF);
+         break;
+      case 11:
+         tmp = offset | (Vdp2Regs->MPKLRA >> 8);
+         break;
+      case 12:
+         tmp = offset | (Vdp2Regs->MPMNRA & 0xFF);
+         break;
+      case 13:
+         tmp = offset | (Vdp2Regs->MPMNRA >> 8);
+         break;
+      case 14:
+         tmp = offset | (Vdp2Regs->MPOPRA & 0xFF);
+         break;
+      case 15:
+         tmp = offset | (Vdp2Regs->MPOPRA >> 8);
+         break;
+   }
+
+   int deca = info->planeh + info->planew - 2;
+   int multi = info->planeh * info->planew;
+
+   if (info->patterndatasize == 1)
+   {
+      if (info->patternwh == 1)
+         info->addr = ((tmp & 0x3F) >> deca) * (multi * 0x2000);
+      else
+         info->addr = (tmp >> deca) * (multi * 0x800);
+   }
+   else
+   {
+      if (info->patternwh == 1)
+         info->addr = ((tmp & 0x1F) >> deca) * (multi * 0x4000);
+      else
+         info->addr = ((tmp & 0x7F) >> deca) * (multi * 0x1000);
+   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void Vdp2DrawRBG0(void)
 {
+   vdp2draw_struct info;
+   YglTexture texture;
+   u32 RotTableAddressA;
+   u32 RotTableAddressB;
+
+   // For now, let's treat it like a regular scroll screen
+   RotTableAddressA = RotTableAddressB = Vdp2Regs->RPTA.all << 1;
+   RotTableAddressA &= 0x000FFF7C;
+   RotTableAddressB = (RotTableAddressB & 0x000FFFFC) | 0x00000080;
+
+   Vdp2ReadRotationTable(RotTableAddressA);
+
+   info.enable = Vdp2Regs->BGON & 0x10;
+   info.transparencyenable = !(Vdp2Regs->BGON & 0x1000);
+
+   info.x = 0; // this is obviously wrong
+   info.y = 0; // this is obviously wrong
+
+   info.colornumber = (Vdp2Regs->CHCTLB & 0x7000) >> 12;
+
+   if((info.isbitmap = Vdp2Regs->CHCTLB & 0x200) != 0)
+   {
+      switch((Vdp2Regs->CHCTLB & 0x400) >> 10)
+      {
+         case 0:
+            info.cellw = 512;
+            info.cellh = 256;
+            break;
+         case 1:
+            info.cellw = 512;
+            info.cellh = 512;
+            break;
+      }
+
+      info.charaddr = (Vdp2Regs->MPOFR & 0x7) * 0x20000;
+      info.paladdr = (Vdp2Regs->BMPNB & 0x7) << 4;
+      info.flipfunction = 0;
+      info.specialfunction = 0;
+   }
+   else
+   {
+      u8 PlaneSize;
+      info.mapwh = 4;
+
+      switch(Vdp2Regs->RPMD & 0x3)
+      {
+         case 0:
+            PlaneSize = (Vdp2Regs->PLSZ & 0x300) >> 8;
+            break;
+         case 1:
+            PlaneSize = (Vdp2Regs->PLSZ & 0x3000) >> 12;
+            break;
+         default:
+#if VDP2_DEBUG
+            cerr << "RGB0\t: don't know what to do with plane size" << endl;
+#endif
+            PlaneSize = 0;
+            break;
+      }
+
+      switch(PlaneSize)
+      {
+         case 0:
+            info.planew = info.planeh = 1;
+            break;
+         case 1:
+            info.planew = 2;
+            info.planeh = 1;
+            break;
+         case 2:
+            info.planew = info.planeh = 2;
+            break;
+      }
+
+      if(Vdp2Regs->PNCR & 0x8000)
+         info.patterndatasize = 1;
+      else
+         info.patterndatasize = 2;
+
+      if(Vdp2Regs->CHCTLB & 0x1)
+         info.patternwh = 2;
+      else
+         info.patternwh = 1;
+
+      info.pagewh = 64/info.patternwh;
+      info.cellw = info.cellh = 8;
+      info.supplementdata = Vdp2Regs->PNCR & 0x3FF;
+      info.auxmode = (Vdp2Regs->PNCR & 0x4000) >> 14;
+   }
+
+   if (Vdp2Regs->CCCTL & 0x1000)
+      info.alpha = ((~Vdp2Regs->CCRNA & 0x1F) << 3) + 0x7;
+   else
+      info.alpha = 0xFF;
+
+   info.coloroffset = Vdp2Regs->CRAOFB & 0x7;
+
+   if (Vdp2Regs->CLOFEN & 0x10)
+   {
+      // color offset enable
+      if (Vdp2Regs->CLOFSL & 0x10)
+      {
+         // color offset B
+         info.cor = Vdp2Regs->COBR & 0xFF;
+         if (Vdp2Regs->COBR & 0x100)
+            info.cor |= 0xFFFFFF00;
+
+         info.cog = Vdp2Regs->COBG & 0xFF;
+         if (Vdp2Regs->COBG & 0x100)
+            info.cog |= 0xFFFFFF00;
+
+         info.cob = Vdp2Regs->COBB & 0xFF;
+         if (Vdp2Regs->COBB & 0x100)
+            info.cob |= 0xFFFFFF00;
+      }
+      else
+      {
+         // color offset A
+         info.cor = Vdp2Regs->COAR & 0xFF;
+         if (Vdp2Regs->COAR & 0x100)
+            info.cor |= 0xFFFFFF00;
+
+         info.cog = Vdp2Regs->COAG & 0xFF;
+         if (Vdp2Regs->COAG & 0x100)
+            info.cog |= 0xFFFFFF00;
+
+         info.cob = Vdp2Regs->COAB & 0xFF;
+         if (Vdp2Regs->COAB & 0x100)
+            info.cob |= 0xFFFFFF00;
+      }
+   }
+   else // color offset disable
+      info.cor = info.cog = info.cob = 0;
+ 
+   info.coordincx = info.coordincy = 1;
+
+   info.priority = rbg0priority;
+   info.PlaneAddr = (void FASTCALL (*)(void *, int))&Vdp2RBG0PlaneAddr;
+
+   if (!(info.enable & vdp2disptoggle) || (info.priority == 0))
+      return;
+
+   if (info.isbitmap)
+   {
+      info.vertices[0] = info.x * info.coordincx;
+      info.vertices[1] = info.y * info.coordincy;
+      info.vertices[2] = (info.x + info.cellw) * info.coordincx;
+      info.vertices[3] = info.y * info.coordincy;
+      info.vertices[4] = (info.x + info.cellw) * info.coordincx;
+      info.vertices[5] = (info.y + info.cellh) * info.coordincy;
+      info.vertices[6] = info.x * info.coordincx;
+      info.vertices[7] = (info.y + info.cellh) * info.coordincy;
+
+      YglQuad((YglSprite *)&info, &texture);
+      Vdp2DrawCell(&info, &texture);
+   }
+   else
+      Vdp2DrawMap(&info, &texture);
 }
 
 //////////////////////////////////////////////////////////////////////////////

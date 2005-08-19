@@ -186,7 +186,7 @@ void YuiSetBiosFilename(const char * biosfilename) {
 }
 
 void YuiSetIsoFilename(const char * isofilename) {
-	cdcore = CDCORE_DEFAULT;
+	cdcore = CDCORE_ISO;
 	iso_or_cd = isofilename;
 }
 

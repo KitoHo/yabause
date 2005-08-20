@@ -151,6 +151,7 @@ int DummyCDReadSectorFAD(unsigned long FAD, void * buffer)
 static const char syncHdr[12] = { 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00 };
 static FILE *isofile=NULL;
 static int isofilesize=0;
+static int bytesPerSector = 0;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -161,8 +162,15 @@ int ISOCDInit(const char * iso) {
         fseek(isofile, 0, SEEK_END);
         isofilesize = ftell(isofile);
 	
-        assert(0 == (isofilesize % 2048));
-
+	if (0 == (isofilesize % 2048)) {
+		bytesPerSector = 2048;
+	} else if (0 == (isofilesize % 2352)) {
+		bytesPerSector = 2352;
+	} else {
+		printf("Unsupported CD image!\n");
+		return -1;
+	}
+	
         return 0;
 }
 
@@ -187,7 +195,7 @@ long ISOCDReadTOC(unsigned long * TOC) {
 
 		TOC[99] = 0x41010000;
 		TOC[100] = 0x01010000;
-                TOC[101] = (0x41 << 24) | (isofilesize / 2048);       //this isn't fully correct, but it does the job for now.
+                TOC[101] = (0x41 << 24) | (isofilesize / bytesPerSector);       //this isn't fully correct, but it does the job for now.
       
 		return (0xCC * 2);
 	}
@@ -201,12 +209,22 @@ int ISOCDReadSectorFAD(unsigned long FAD, void *buffer) {
 	int sector = FAD - 150;
 	
         assert(isofile);
-        assert((sector * 2048) < isofilesize);
 	
         memset(buffer, 0, 2352);
-        memcpy(buffer, syncHdr, 12);
-        fseek(isofile, sector * 2048, SEEK_SET);
-        fread((char *)buffer + 0x10, 2048, 1, isofile);
+        
+	if ((sector * bytesPerSector) >= isofilesize) {
+		printf("Warning: Trying to read beyond end of CD image! (sector: %d)\n", sector);
+		return 0;
+	}
+	
+	fseek(isofile, sector * bytesPerSector, SEEK_SET);
+	
+	if (2048 == bytesPerSector) {
+		memcpy(buffer, syncHdr, 12);
+		fread((char *)buffer + 0x10, bytesPerSector, 1, isofile);
+	} else { //2352
+		fread(buffer, bytesPerSector, 1, isofile);
+	}
 	
 	return 1;
 }

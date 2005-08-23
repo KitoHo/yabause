@@ -1402,6 +1402,7 @@ case $target in
 	*linux*) yabause_arch=linux;;
 	*cygwin*) yabause_arch=windows;;
 	*mingw32*) yabause_arch=windows;;
+	*freebsd*) yabause_arch=freebsd;;
 	*) yabause_arch=".";;
 esac
 

@@ -166,11 +166,11 @@ typedef struct
    void FASTCALL (* PlaneAddr)(void *, int);
 } vdp2draw_struct;
 
-u32 Vdp2ColorRamGetColor(u32 addr, int alpha, u32 colorOffset);
+static u32 Vdp2ColorRamGetColor(u32 addr, int alpha, u32 colorOffset);
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, YglTexture *texture)
+static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, YglTexture *texture)
 {
    u32 charAddr = cmd->CMDSRCA * 8;
    u32 dot;
@@ -357,7 +357,7 @@ void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, YglTexture
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FASTCALL Vdp1ReadPriority(vdp1cmd_struct *cmd, YglSprite *sprite)
+static void FASTCALL Vdp1ReadPriority(vdp1cmd_struct *cmd, YglSprite *sprite)
 {
    u8 SPCLMD = Vdp2Regs->SPCTL;
    u8 sprite_register;
@@ -441,7 +441,7 @@ void FASTCALL Vdp1ReadPriority(vdp1cmd_struct *cmd, YglSprite *sprite)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Vdp1SetTextureRatio(int vdp2widthratio, int vdp2heightratio)
+static void Vdp1SetTextureRatio(int vdp2widthratio, int vdp2heightratio)
 {
    float vdp1w;
    float vdp1h;
@@ -475,7 +475,7 @@ void Vdp1SetTextureRatio(int vdp2widthratio, int vdp2heightratio)
 
 //////////////////////////////////////////////////////////////////////////////
 
-u32 Vdp2ColorRamGetColor(u32 addr, int alpha, u32 colorOffset)
+static u32 Vdp2ColorRamGetColor(u32 addr, int alpha, u32 colorOffset)
 {
    switch(Vdp2Internal.ColorMode)
    {
@@ -513,7 +513,7 @@ u32 Vdp2ColorRamGetColor(u32 addr, int alpha, u32 colorOffset)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FASTCALL Vdp2DrawCell(vdp2draw_struct *info, YglTexture *texture)
+static void FASTCALL Vdp2DrawCell(vdp2draw_struct *info, YglTexture *texture)
 {
    u32 color;
    int i, j;
@@ -611,7 +611,7 @@ void FASTCALL Vdp2DrawCell(vdp2draw_struct *info, YglTexture *texture)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Vdp2DrawPattern(vdp2draw_struct *info, YglTexture *texture)
+static void Vdp2DrawPattern(vdp2draw_struct *info, YglTexture *texture)
 {
    u32 cacheaddr = (info->paladdr << 20) | info->charaddr;
    int c;
@@ -663,7 +663,7 @@ void Vdp2DrawPattern(vdp2draw_struct *info, YglTexture *texture)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Vdp2PatternAddr(vdp2draw_struct *info)
+static void Vdp2PatternAddr(vdp2draw_struct *info)
 {
    switch(info->patterndatasize)
    {
@@ -736,7 +736,7 @@ void Vdp2PatternAddr(vdp2draw_struct *info)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Vdp2DrawPage(vdp2draw_struct *info, YglTexture *texture)
+static void Vdp2DrawPage(vdp2draw_struct *info, YglTexture *texture)
 {
    int X, Y;
    int i, j;
@@ -766,7 +766,7 @@ void Vdp2DrawPage(vdp2draw_struct *info, YglTexture *texture)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Vdp2DrawPlane(vdp2draw_struct *info, YglTexture *texture)
+static void Vdp2DrawPlane(vdp2draw_struct *info, YglTexture *texture)
 {
    int X, Y;
    int i, j;
@@ -786,7 +786,7 @@ void Vdp2DrawPlane(vdp2draw_struct *info, YglTexture *texture)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Vdp2DrawMap(vdp2draw_struct *info, YglTexture *texture)
+static void Vdp2DrawMap(vdp2draw_struct *info, YglTexture *texture)
 {
    int i, j;
    int X, Y;
@@ -807,7 +807,7 @@ void Vdp2DrawMap(vdp2draw_struct *info, YglTexture *texture)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Vdp2ReadRotationTable(u32 addr)
+static void Vdp2ReadRotationTable(u32 addr)
 {
 /*
    s32 i;
@@ -908,7 +908,7 @@ void Vdp2ReadRotationTable(u32 addr)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void SetSaturnResolution(int width, int height)
+static void SetSaturnResolution(int width, int height)
 {
    YglChangeResolution(width, height);
 
@@ -1337,7 +1337,7 @@ void VIDSDLGLVdp2DrawEnd(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Vdp2DrawBackScreen(void)
+static void Vdp2DrawBackScreen(void)
 {
    u32 scrAddr;
    int dot, y;
@@ -1382,13 +1382,13 @@ void Vdp2DrawBackScreen(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Vdp2DrawLineColorScreen(void)
+static void Vdp2DrawLineColorScreen(void)
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FASTCALL Vdp2NBG0PlaneAddr(vdp2draw_struct *info, int i)
+static void FASTCALL Vdp2NBG0PlaneAddr(vdp2draw_struct *info, int i)
 {
    u32 offset = (Vdp2Regs->MPOFN & 0x7) << 6;
    u32 tmp=0;
@@ -1450,7 +1450,7 @@ void FASTCALL Vdp2NBG0PlaneAddr(vdp2draw_struct *info, int i)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Vdp2DrawNBG0(void)
+static void Vdp2DrawNBG0(void)
 {
    vdp2draw_struct info;
    YglTexture texture;
@@ -1599,7 +1599,7 @@ void Vdp2DrawNBG0(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FASTCALL Vdp2NBG1PlaneAddr(vdp2draw_struct *info, int i)
+static void FASTCALL Vdp2NBG1PlaneAddr(vdp2draw_struct *info, int i)
 {
    u32 offset = (Vdp2Regs->MPOFN & 0x70) << 2;
    u32 tmp=0;
@@ -1661,7 +1661,7 @@ void FASTCALL Vdp2NBG1PlaneAddr(vdp2draw_struct *info, int i)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Vdp2DrawNBG1(void)
+static void Vdp2DrawNBG1(void)
 {
    vdp2draw_struct info;
    YglTexture texture;
@@ -1803,7 +1803,7 @@ void Vdp2DrawNBG1(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FASTCALL Vdp2NBG2PlaneAddr(vdp2draw_struct *info, int i)
+static void FASTCALL Vdp2NBG2PlaneAddr(vdp2draw_struct *info, int i)
 {
    u32 offset = (Vdp2Regs->MPOFN & 0x700) >> 2;
    u32 tmp=0;
@@ -1865,7 +1865,7 @@ void FASTCALL Vdp2NBG2PlaneAddr(vdp2draw_struct *info, int i)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Vdp2DrawNBG2(void)
+static void Vdp2DrawNBG2(void)
 {
    vdp2draw_struct info;
    YglTexture texture;
@@ -1964,7 +1964,7 @@ void Vdp2DrawNBG2(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FASTCALL Vdp2NBG3PlaneAddr(vdp2draw_struct *info, int i)
+static void FASTCALL Vdp2NBG3PlaneAddr(vdp2draw_struct *info, int i)
 {
    u32 offset = (Vdp2Regs->MPOFN & 0x7000) >> 6;
    u32 tmp=0;
@@ -2020,7 +2020,7 @@ void FASTCALL Vdp2NBG3PlaneAddr(vdp2draw_struct *info, int i)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Vdp2DrawNBG3(void)
+static void Vdp2DrawNBG3(void)
 {
    vdp2draw_struct info;
    YglTexture texture;
@@ -2120,7 +2120,7 @@ void Vdp2DrawNBG3(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FASTCALL Vdp2RBG0PlaneAddr(vdp2draw_struct *info, int i)
+static void FASTCALL Vdp2RBG0PlaneAddr(vdp2draw_struct *info, int i)
 {
    // works only for parameter A for time being
    u32 offset = (Vdp2Regs->MPOFR & 0x7) << 6;
@@ -2199,7 +2199,7 @@ void FASTCALL Vdp2RBG0PlaneAddr(vdp2draw_struct *info, int i)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Vdp2DrawRBG0(void)
+static void Vdp2DrawRBG0(void)
 {
    vdp2draw_struct info;
    YglTexture texture;

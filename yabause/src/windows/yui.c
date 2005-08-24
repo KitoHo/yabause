@@ -29,6 +29,7 @@
 #include "../yui.h"
 #include "../sndsdl.h"
 #include "../vidsdlgl.h"
+#include "../vidsdlsoft.h"
 #include "../persdl.h"
 #include "resource.h"
 #include "settings.h"
@@ -119,6 +120,7 @@ NULL
 VideoInterface_struct *VIDCoreList[] = {
 &VIDDummy,
 &VIDSDLGL,
+&VIDSDLSoft,
 NULL
 };
 
@@ -130,6 +132,11 @@ void YuiSetBiosFilename(const char *bios) {
 //////////////////////////////////////////////////////////////////////////////
 
 void YuiSetIsoFilename(const char *iso) {
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void YuiSetCdromFilename(const char * cdromfilename) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -286,6 +293,7 @@ int YuiInit(void) {
    stop = 0;
 
    if (YabauseInit(PERCORE_SDL, SH2CORE_DEFAULT, VIDCORE_SDLGL, SNDCORE_SDL,
+//   if (YabauseInit(PERCORE_SDL, SH2CORE_DEFAULT, VIDCORE_SDLSOFT, SNDCORE_SDL,
                    CDCORE_SPTI, regionid, biosfilename, cdrompath,
                    backupramfilename, mpegromfilename) == -1)
       return -1;

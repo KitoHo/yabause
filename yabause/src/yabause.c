@@ -24,6 +24,7 @@
 #include "cs2.h"
 #include "debug.h"
 #include "memory.h"
+#include "peripheral.h"
 #include "SDL.h"
 #include "scsp.h"
 #include "scu.h"
@@ -31,8 +32,9 @@
 #include "smpc.h"
 #include "vdp2.h"
 #include "yui.h"
-#include "peripheral.h"
 
+#define DONT_PROFILE
+#include "profile.h"
 //////////////////////////////////////////////////////////////////////////////
 
 yabsys_struct yabsys;
@@ -186,34 +188,50 @@ void YabauseReset() {
 //////////////////////////////////////////////////////////////////////////////
 
 int YabauseExec() {
+   PROFILE_START("Total Emulation");
+   PROFILE_START("MSH2");
    SH2Exec(MSH2, yabsys.DecilineStop);
+   PROFILE_STOP("MSH2");
+
+   PROFILE_START("SSH2");
    if (yabsys.IsSSH2Running)
       SH2Exec(SSH2, yabsys.DecilineStop);
+   PROFILE_STOP("SSH2");
 
    yabsys.DecilineCount++;
    if(yabsys.DecilineCount == 9)
    {
       // HBlankIN
+      PROFILE_START("hblankin");
       Vdp2HBlankIN();
+      PROFILE_STOP("hblankin");
    }
    else if (yabsys.DecilineCount == 10)
    {
       // HBlankOUT
+      PROFILE_START("hblankout");
       Vdp2HBlankOUT();
+      PROFILE_STOP("hblankout");
+      PROFILE_START("SCSP");
       ScspExec();
+      PROFILE_STOP("SCSP");
       yabsys.DecilineCount = 0;
       yabsys.LineCount++;
       if (yabsys.LineCount == 224)
       {
+         PROFILE_START("hblankin");
          // VBlankIN
          SmpcINTBACKEnd();
          Vdp2VBlankIN();
+         PROFILE_STOP("hblankin");
       }
       else if (yabsys.LineCount == 263)
       {
          // VBlankOUT
+         PROFILE_START("VDP1/VDP2");
          Vdp2VBlankOUT();
          yabsys.LineCount = 0;
+         PROFILE_STOP("VDP1/VDP2");
       }
    }
 
@@ -221,19 +239,26 @@ int YabauseExec() {
 
    while (yabsys.CycleCountII > yabsys.Duf)
    {
+      PROFILE_START("SMPC");
       SmpcExec(10);
+      PROFILE_STOP("SMPC");
+      PROFILE_START("CDB");
       Cs2Exec(10);
-//      msh->run(10);
-//      ssh->run(10);
+      PROFILE_STOP("CDB");
+      PROFILE_START("SCU");
       ScuExec(10);
+      PROFILE_STOP("SCU");
       yabsys.CycleCountII %= yabsys.Duf;
    }
 
+   PROFILE_START("68K");
    M68KExec(170);
+   PROFILE_STOP("68K");
 
    MSH2->cycles %= yabsys.DecilineStop;
    if (yabsys.IsSSH2Running) 
       SSH2->cycles %= yabsys.DecilineStop;
+   PROFILE_STOP("Total Emulation");
 
    return 0;
 }
@@ -292,7 +317,9 @@ int main(int argc, char *argv[]) {
 
    YabauseDeInit();
    SDL_Quit();
+   PROFILE_PRINT();
    LogStop();
+
    return 0;
 }
 

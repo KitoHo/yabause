@@ -1,6 +1,7 @@
 #include "yui.h"
 #include "sndsdl.h"
 #include "vidsdlgl.h"
+#include "vidsdlsoft.h"
 #include "persdl.h"
 
 SH2Interface_struct *SH2CoreList[] = {
@@ -29,6 +30,7 @@ NULL
 VideoInterface_struct *VIDCoreList[] = {
 &VIDDummy,
 &VIDSDLGL,
+&VIDSDLSoft,
 NULL
 };
 

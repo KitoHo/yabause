@@ -10,64 +10,65 @@ typedef struct
 
 #define MAX_BREAKPOINTS 10
 
-typedef struct {
-	/* DMA registers */
-	u32 D0R;
-        u32 D0W;
-	u32 D0C;
-	u32 D0AD;
-	u32 D0EN;
-	u32 D0MD;
+typedef struct
+{
+   /* DMA registers */
+   u32 D0R;
+   u32 D0W;
+   u32 D0C;
+   u32 D0AD;
+   u32 D0EN;
+   u32 D0MD;
 
-	u32 D1R;
-        u32 D1W;
-	u32 D1C;
-	u32 D1AD;
-	u32 D1EN;
-	u32 D1MD;
+   u32 D1R;
+   u32 D1W;
+   u32 D1C;
+   u32 D1AD;
+   u32 D1EN;
+   u32 D1MD;
 
-	u32 D2R;
-        u32 D2W;
-	u32 D2C;
-	u32 D2AD;
-	u32 D2EN;
-	u32 D2MD;
+   u32 D2R;
+   u32 D2W;
+   u32 D2C;
+   u32 D2AD;
+   u32 D2EN;
+   u32 D2MD;
 
-	u32 DSTP;
-	u32 DSTA;
+   u32 DSTP;
+   u32 DSTA;
 
-	/* DSP registers */
-	u32 PPAF;
-	u32 PPD;
-	u32 PDA;
-	u32 PDD;
+   /* DSP registers */
+   u32 PPAF;
+   u32 PPD;
+   u32 PDA;
+   u32 PDD;
 
-	/* Timer registers */
-	u32 T0C;
-	u32 T1S;
-	u32 T1MD;
+   /* Timer registers */
+   u32 T0C;
+   u32 T1S;
+   u32 T1MD;
 
-	/* Interrupt registers */
-	u32 IMS;
-	u32 IST;
+   /* Interrupt registers */
+   u32 IMS;
+   u32 IST;
 
-	/* A-bus registers */
-	u32 AIACK;
-	u32 ASR0;
-	u32 ASR1;
-	u32 AREF;
+   /* A-bus registers */
+   u32 AIACK;
+   u32 ASR0;
+   u32 ASR1;
+   u32 AREF;
 
-	/* SCU registers */
-	u32 RSEL;
-	u32 VER;
+   /* SCU registers */
+   u32 RSEL;
+   u32 VER;
 
-        /* internal variables */
-        u32 timer0;
-        u32 timer1;
-        scucodebreakpoint_struct codebreakpoint[MAX_BREAKPOINTS];
-        int numcodebreakpoints;
-        void (*BreakpointCallBack)(unsigned long);
-        unsigned char inbreakpoint;
+   /* internal variables */
+   u32 timer0;
+   u32 timer1;
+   scucodebreakpoint_struct codebreakpoint[MAX_BREAKPOINTS];
+   int numcodebreakpoints;
+   void (*BreakpointCallBack)(u32);
+   u8 inbreakpoint;
 } Scu;
 
 extern Scu * ScuRegs;
@@ -122,7 +123,7 @@ typedef struct {
   u8 TOP;
   u16 LOP;
   s32 jmpaddr;
-  unsigned char delayed;
+  int delayed;
   u8 DataRamPage;
   u8 DataRamReadAddress;
   u8 CT[4];
@@ -134,74 +135,74 @@ typedef struct {
 #ifdef WORDS_BIGENDIAN
   union {
     struct {
-       long long unused:16;
-       long long H:16;
-       long long L:32;
+       s64 unused:16;
+       s64 H:16;
+       s64 L:32;
     } part;
-    long long all;
+    s64 all;
   } AC;
 
   union {
     struct {
-       long long unused:16;
-       long long H:16;
-       long long L:32;
+       s64 unused:16;
+       s64 H:16;
+       s64 L:32;
     } part;
-    long long all;
+    s64 all;
   } P;
 
   union {
     struct {
-       long long unused:16;
-       long long H:16;
-       long long L:32;
+       s64 unused:16;
+       s64 H:16;
+       s64 L:32;
     } part;
-    long long all;
+    s64 all;
   } ALU;
 
   union {
     struct {
-       long long unused:16;
-       long long H:16;
-       long long L:32;
+       s64 unused:16;
+       s64 H:16;
+       s64 L:32;
     } part;
-    long long all;
+    s64 all;
   } MUL;
 #else
   union {
     struct {
-       long long L:32;
-       long long H:16;
-       long long unused:16;
+       s64 L:32;
+       s64 H:16;
+       s64 unused:16;
     } part;
-    long long all;
+    s64 all;
   } AC;
 
   union {
     struct {
-       long long L:32;
-       long long H:16;
-       long long unused:16;
+       s64 L:32;
+       s64 H:16;
+       s64 unused:16;
     } part;
-    long long all;
+    s64 all;
   } P;
 
   union {
     struct {
-       long long L:32;
-       long long H:16;
-       long long unused:16;
+       s64 L:32;
+       s64 H:16;
+       s64 unused:16;
     } part;
-    long long all;
+    s64 all;
   } ALU;
 
   union {
     struct {
-       long long L:32;
-       long long H:16;
-       long long unused:16;
+       s64 L:32;
+       s64 H:16;
+       s64 unused:16;
     } part;
-    long long all;
+    s64 all;
   } MUL;
 #endif
 

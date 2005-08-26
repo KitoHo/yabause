@@ -41,8 +41,8 @@ typedef struct
 
   m68kcodebreakpoint_struct codebreakpoint[MAX_BREAKPOINTS];
   int numcodebreakpoints;
-  void (*BreakpointCallBack)(unsigned long);
-  unsigned char inbreakpoint;
+  void (*BreakpointCallBack)(u32);
+  int inbreakpoint;
 } ScspInternal;
 
 extern SoundInterface_struct SNDDummy;
@@ -58,7 +58,7 @@ int ScspInit(int coreid);
 void ScspDeInit(void);
 void M68KReset(void);
 void ScspReset(void);
-void M68KExec(unsigned long cycles);
+void M68KExec(u32 cycles);
 void ScspExec(void);
 void ScspConvert32uto16s(s32 *srcL, s32 *srcR, s16 *dst, u32 len);
 

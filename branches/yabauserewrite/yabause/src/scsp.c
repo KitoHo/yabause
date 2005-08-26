@@ -1289,16 +1289,13 @@ u16 scsp_get_w(u32 a)
 #ifdef WORDS_BIGENDIAN
 #define SCSP_GET_OUT_8B		\
                 out = (s32) slot->buf8[(slot->fcnt >> SCSP_FREQ_LB)]; 
-//                slog("SCSP_GET_OUT_8B: out = %08X sample = %02X read from SCSP addr = %08x\n", out, slot->buf8[(slot->fcnt >> SCSP_FREQ_LB)], &slot->buf8[(slot->fcnt >> SCSP_FREQ_LB)] - scsp.scsp_ram);
 #else
 #define SCSP_GET_OUT_8B		\
                 out = (s32) slot->buf8[(slot->fcnt >> SCSP_FREQ_LB) ^ 1];
-//                slog("SCSP_GET_OUT_8B: out = %08X sample = %02X read from SCSP addr = %08x\n", out, slot->buf8[(slot->fcnt >> SCSP_FREQ_LB) ^ 1], (unsigned long)&slot->buf8[(slot->fcnt >> SCSP_FREQ_LB) ^ 1] - (unsigned long)scsp.scsp_ram);
 #endif
 
 #define SCSP_GET_OUT_16B	\
                 out = (s32) slot->buf16[slot->fcnt >> SCSP_FREQ_LB];
-//                slog("SCSP_GET_OUT_16B: out = %08X sample = %04X read from SCSP addr = %08x\n", out, slot->buf16[slot->fcnt >> SCSP_FREQ_LB], (unsigned long)&slot->buf16[slot->fcnt >> SCSP_FREQ_LB] - (unsigned long)scsp.scsp_ram);
 
 #define SCSP_GET_ENV		\
 		env = scsp_env_table[slot->ecnt >> SCSP_ENV_LB] - slot->tl;
@@ -2503,7 +2500,7 @@ struct sounddata {
   u32 *data32;
 } scspchannel[2];
 
-static unsigned long scspsoundlen;
+static u32 scspsoundlen;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -2752,16 +2749,16 @@ int ScspChangeVerticalFrequency(int vertfreq) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void M68KExec(unsigned long cycles) {
+void M68KExec(u32 cycles) {
    int i;
    if (yabsys.IsM68KRunning)
    {
       if (ScspInternalVars->numcodebreakpoints == 0)
-         C68k_Exec(&C68K, (unsigned long)((float)cycles / 2.5)); // almost correct
+         C68k_Exec(&C68K, (u32)((float)cycles / 2.5)); // almost correct
       else
       {
-         unsigned long cyclestoexec=(unsigned long)((float)cycles / 2.5);
-         unsigned long cyclesexecuted=0;
+         u32 cyclestoexec=(u32)((float)cycles / 2.5);
+         u32 cyclesexecuted=0;
 
          for (;;)
          {
@@ -2815,8 +2812,8 @@ void ScspConvert32uto16s(s32 *srcL, s32 *srcR, s16 *dst, u32 len) {
 //////////////////////////////////////////////////////////////////////////////
 
 void ScspExec() {
-   scsp_update_timer((unsigned long)(ScspInternalVars->scsptiming2 + 2.7947)); // I should really be using integers, but oh well
-   ScspInternalVars->scsptiming2 = (ScspInternalVars->scsptiming2 + 2.7947) - (float)((unsigned long)(ScspInternalVars->scsptiming2 + 2.7947)); 
+   scsp_update_timer((u32)(ScspInternalVars->scsptiming2 + 2.7947)); // I should really be using integers, but oh well
+   ScspInternalVars->scsptiming2 = (ScspInternalVars->scsptiming2 + 2.7947) - (float)((u32)(ScspInternalVars->scsptiming2 + 2.7947)); 
    ScspInternalVars->scsptiming1++;
 
    if (ScspInternalVars->scsptiming1 >= 263) // fix me
@@ -2878,13 +2875,13 @@ void ScspUnMuteAudio() {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void M68KSetBreakpointCallBack(void (*func)(unsigned long)) {
+void M68KSetBreakpointCallBack(void (*func)(u32)) {
    ScspInternalVars->BreakpointCallBack = func;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-int M68KAddCodeBreakpoint(unsigned long addr) {
+int M68KAddCodeBreakpoint(u32 addr) {
   if (ScspInternalVars->numcodebreakpoints < MAX_BREAKPOINTS) {
      ScspInternalVars->codebreakpoint[ScspInternalVars->numcodebreakpoints].addr = addr;
      ScspInternalVars->numcodebreakpoints++;
@@ -2899,7 +2896,7 @@ int M68KAddCodeBreakpoint(unsigned long addr) {
 
 void M68KSortCodeBreakpoints() {
   int i, i2;
-  unsigned long tmp;
+  u32 tmp;
 
   for (i = 0; i < (MAX_BREAKPOINTS-1); i++)
   {
@@ -2918,7 +2915,7 @@ void M68KSortCodeBreakpoints() {
 
 //////////////////////////////////////////////////////////////////////////////
 
-int M68KDelCodeBreakpoint(unsigned long addr) {
+int M68KDelCodeBreakpoint(u32 addr) {
    int i;
    if (ScspInternalVars->numcodebreakpoints > 0) {
       for (i = 0; i < ScspInternalVars->numcodebreakpoints; i++) {
@@ -2956,7 +2953,7 @@ void M68KClearCodeBreakpoints() {
 /*
 int Scsp::saveState(FILE *fp) {
    int i;
-   unsigned long temp;
+   u32 temp;
    int offset;
 
    offset = stateWriteHeader(fp, "SCSP", 1);
@@ -2992,7 +2989,7 @@ int Scsp::saveState(FILE *fp) {
 
 int Scsp::loadState(FILE *fp, int version, int size) {
    int i;
-   unsigned long temp;
+   u32 temp;
 
    // Read 68k registers first
    fread((void *)&is68kOn, 1, 1, fp);

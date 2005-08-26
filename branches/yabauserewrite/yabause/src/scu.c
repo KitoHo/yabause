@@ -164,7 +164,7 @@ typedef struct
 
          if ((test >= 0x5A00000) && (test < 0x5FF0000)) {
             while(counter < TempTransferNumber) {
-               unsigned long tmp = MappedMemoryReadLong(TempReadAddress);
+               u32 tmp = MappedMemoryReadLong(TempReadAddress);
                MappedMemoryWriteWord(TempWriteAddress, tmp >> 16);
                TempWriteAddress += WriteAdd;
                MappedMemoryWriteWord(TempWriteAddress, tmp & 0xFFFF);
@@ -198,8 +198,8 @@ typedef struct
    }
    else {
       // Direct DMA
-      unsigned long counter = 0;
-      unsigned long test = dmainfo->WriteAddress & 0x1FFFFFFF;
+      u32 counter = 0;
+      u32 test = dmainfo->WriteAddress & 0x1FFFFFFF;
 
       if (dmainfo->mode > 0) {
          dmainfo->TransferNumber &= 0xFFF;
@@ -214,7 +214,7 @@ typedef struct
 
       if ((test >= 0x5A00000) && (test < 0x5FF0000)) {
          while(counter < dmainfo->TransferNumber) {
-            unsigned long tmp = MappedMemoryReadLong(dmainfo->ReadAddress);
+            u32 tmp = MappedMemoryReadLong(dmainfo->ReadAddress);
             MappedMemoryWriteWord(dmainfo->WriteAddress, tmp >> 16);
             dmainfo->WriteAddress += WriteAdd;
             MappedMemoryWriteWord(dmainfo->WriteAddress, tmp & 0xFFFF);
@@ -388,7 +388,7 @@ void writeloadimdest(u8 num, u32 val)
 
 u32 readdmasrc(u8 num, u8 add)
 {
-   unsigned long val;
+   u32 val;
 
    switch(num) {
       case 0x0: // M0
@@ -688,7 +688,7 @@ void ScuExec(u32 timing) {
             switch ((instruction >> 12) & 0x3)
             {
                case 1: // MOV SImm,[d]
-                  writed1busdest((instruction >> 8) & 0xF, (unsigned long)(signed char)(instruction & 0xFF));
+                  writed1busdest((instruction >> 8) & 0xF, (u32)(signed char)(instruction & 0xFF));
                   break;
                case 3: // MOV [s],[d]
                   writed1busdest((instruction >> 8) & 0xF, readgensrc(instruction & 0xF));
@@ -1376,13 +1376,13 @@ void ScuDspSetRegisters(scudspregs_struct *regs) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ScuDspSetBreakpointCallBack(void (*func)(unsigned long)) {
+void ScuDspSetBreakpointCallBack(void (*func)(u32)) {
    ScuRegs->BreakpointCallBack = func;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-int ScuDspAddCodeBreakpoint(unsigned long addr) {
+int ScuDspAddCodeBreakpoint(u32 addr) {
    if (ScuRegs->numcodebreakpoints < MAX_BREAKPOINTS) {
       ScuRegs->codebreakpoint[ScuRegs->numcodebreakpoints].addr = addr;
       ScuRegs->numcodebreakpoints++;
@@ -1397,7 +1397,7 @@ int ScuDspAddCodeBreakpoint(unsigned long addr) {
 
 void ScuDspSortCodeBreakpoints() {
    int i, i2;
-   unsigned long tmp;
+   u32 tmp;
 
    for (i = 0; i < (MAX_BREAKPOINTS-1); i++)
    {
@@ -1416,7 +1416,7 @@ void ScuDspSortCodeBreakpoints() {
 
 //////////////////////////////////////////////////////////////////////////////
 
-int ScuDspDelCodeBreakpoint(unsigned long addr) {
+int ScuDspDelCodeBreakpoint(u32 addr) {
    int i;
 
    if (ScuRegs->numcodebreakpoints > 0) {

@@ -31,159 +31,159 @@
 
 typedef struct
 {
-   long size;
-   unsigned long FAD;
-   unsigned char cn;
-   unsigned char fn;
-   unsigned char sm;
-   unsigned char ci;
-   unsigned char data[2352];
+   s32 size;
+   u32 FAD;
+   u8 cn;
+   u8 fn;
+   u8 sm;
+   u8 ci;
+   u8 data[2352];
 } block_struct;
 
 typedef struct
 {
-   unsigned long FAD;
-   unsigned long range;
-   unsigned char mode;
-   unsigned char chan;
-   unsigned char smmask;
-   unsigned char cimask;
-   unsigned char fid;
-   unsigned char smval;
-   unsigned char cival;
-   unsigned char condtrue;
-   unsigned char condfalse;
+   u32 FAD;
+   u32 range;
+   u8 mode;
+   u8 chan;
+   u8 smmask;
+   u8 cimask;
+   u8 fid;
+   u8 smval;
+   u8 cival;
+   u8 condtrue;
+   u8 condfalse;
 } filter_struct;
 
 typedef struct
 {
-   long size;
+   s32 size;
    block_struct *block[MAX_BLOCKS];
-   unsigned char blocknum[MAX_BLOCKS];
-   unsigned char numblocks;
+   u8 blocknum[MAX_BLOCKS];
+   u8 numblocks;
 } partition_struct;
 
 typedef struct
 {
-  unsigned short groupid;
-  unsigned short userid;
-  unsigned short attributes;
-  unsigned short signature;
-  unsigned char filenumber;
-  unsigned char reserved[5];
+  u16 groupid;
+  u16 userid;
+  u16 attributes;
+  u16 signature;
+  u8 filenumber;
+  u8 reserved[5];
 } xarec_struct;
 
 typedef struct
 {
-  unsigned char recordsize;
-  unsigned char xarecordsize;
-  unsigned long lba;
-  unsigned long size;
-  unsigned char dateyear;
-  unsigned char datemonth;
-  unsigned char dateday;
-  unsigned char datehour;
-  unsigned char dateminute;
-  unsigned char datesecond;
-  unsigned char gmtoffset;
-  unsigned char flags;
-  unsigned char fileunitsize;
-  unsigned char interleavegapsize;
-  unsigned short volumesequencenumber;
-  unsigned char namelength;
+  u8 recordsize;
+  u8 xarecordsize;
+  u32 lba;
+  u32 size;
+  u8 dateyear;
+  u8 datemonth;
+  u8 dateday;
+  u8 datehour;
+  u8 dateminute;
+  u8 datesecond;
+  u8 gmtoffset;
+  u8 flags;
+  u8 fileunitsize;
+  u8 interleavegapsize;
+  u16 volumesequencenumber;
+  u8 namelength;
   char name[32];
   xarec_struct xarecord;
 } dirrec_struct;
 
 typedef struct
 {
-   unsigned char audcon;
-   unsigned char audlay;
-   unsigned char audbufdivnum;
-   unsigned char vidcon;
-   unsigned char vidlay;
-   unsigned char vidbufdivnum;
+   u8 audcon;
+   u8 audlay;
+   u8 audbufdivnum;
+   u8 vidcon;
+   u8 vidlay;
+   u8 vidbufdivnum;
 } mpegcon_struct;
 
 typedef struct
 {
-   unsigned char audstm;
-   unsigned char audstmid;
-   unsigned char audchannum;
-   unsigned char vidstm;
-   unsigned char vidstmid;
-   unsigned char vidchannum;
+   u8 audstm;
+   u8 audstmid;
+   u8 audchannum;
+   u8 vidstm;
+   u8 vidstmid;
+   u8 vidchannum;
 } mpegstm_struct;
 
 typedef struct
 {
-   unsigned long DTR;
-   unsigned short UNKNOWN;
-   unsigned short HIRQ;
-   unsigned short HIRQMASK;
-   unsigned short CR1;
-   unsigned short CR2;
-   unsigned short CR3;
-   unsigned short CR4;
-   unsigned short MPEGRGB;
+   u32 DTR;
+   u16 UNKNOWN;
+   u16 HIRQ;
+   u16 HIRQMASK;
+   u16 CR1;
+   u16 CR2;
+   u16 CR3;
+   u16 CR4;
+   u16 MPEGRGB;
 } blockregs_struct;
 
 typedef struct
 {
-   unsigned char RBR;
-   unsigned char THR;
-   unsigned char IER;
-   unsigned char DLL;
-   unsigned char DLM;
-   unsigned char IIR;
-   unsigned char FCR;
-   unsigned char LCR;
-   unsigned char MCR;
-   unsigned char LSR;
-   unsigned char MSR;
-   unsigned char SCR;
+   u8 RBR;
+   u8 THR;
+   u8 IER;
+   u8 DLL;
+   u8 DLM;
+   u8 IIR;
+   u8 FCR;
+   u8 LCR;
+   u8 MCR;
+   u8 LSR;
+   u8 MSR;
+   u8 SCR;
 } netlinkregs_struct;
 
 typedef struct {
   blockregs_struct reg;
-  unsigned long FAD;
-  unsigned char status;
+  u32 FAD;
+  u8 status;
 
   // cd specific stats
-  unsigned char options;
-  unsigned char repcnt;
-  unsigned char ctrladdr;
-  unsigned char track;
-  unsigned char index;
+  u8 options;
+  u8 repcnt;
+  u8 ctrladdr;
+  u8 track;
+  u8 index;
 
   // mpeg specific stats
-  unsigned char actionstatus;
-  unsigned char pictureinfo;
-  unsigned char mpegaudiostatus;
-  unsigned short mpegvideostatus;
-  unsigned short vcounter;
+  u8 actionstatus;
+  u8 pictureinfo;
+  u8 mpegaudiostatus;
+  u16 mpegvideostatus;
+  u16 vcounter;
 
   // authentication variables
-  unsigned short satauth;
-  unsigned short mpgauth;
+  u16 satauth;
+  u16 mpgauth;
 
   // internal varaibles
-  unsigned long transfercount;
-  unsigned long cdwnum;
-  unsigned long TOC[102];
-  unsigned long playFAD;
-  unsigned long playendFAD;
-  unsigned long getsectsize;
-  unsigned long putsectsize;
-  unsigned long calcsize;
-  long infotranstype;
-  long datatranstype;
+  u32 transfercount;
+  u32 cdwnum;
+  u32 TOC[102];
+  u32 playFAD;
+  u32 playendFAD;
+  u32 getsectsize;
+  u32 putsectsize;
+  u32 calcsize;
+  s32 infotranstype;
+  s32 datatranstype;
   int isonesectorstored;
   int isdiskchanged;
   int isbufferfull;
   int speed1x;
-  unsigned char transfileinfo[12];
-  unsigned char lastbuffer;
+  u8 transfileinfo[12];
+  u8 lastbuffer;
 
   filter_struct filter[MAX_SELECTORS];
   filter_struct *outconcddev;
@@ -191,40 +191,40 @@ typedef struct {
   filter_struct *outconmpegbuf;
   filter_struct *outconmpegrom;
   filter_struct *outconhost;
-  unsigned char outconcddevnum;
-  unsigned char outconmpegfbnum;
-  unsigned char outconmpegbufnum;
-  unsigned char outconmpegromnum;
-  unsigned char outconhostnum;
+  u8 outconcddevnum;
+  u8 outconmpegfbnum;
+  u8 outconmpegbufnum;
+  u8 outconmpegromnum;
+  u8 outconhostnum;
 
   partition_struct partition[MAX_SELECTORS];
 
   partition_struct *datatranspartition;
-  unsigned char datatranspartitionnum;
-  long datatransoffset;
-  unsigned long datanumsecttrans;
-  unsigned short datatranssectpos;
-  unsigned short datasectstotrans;
+  u8 datatranspartitionnum;
+  s32 datatransoffset;
+  u32 datanumsecttrans;
+  u16 datatranssectpos;
+  u16 datasectstotrans;
 
-  unsigned long blockfreespace;
+  u32 blockfreespace;
   block_struct block[MAX_BLOCKS];
   block_struct workblock;
 
-  unsigned long curdirsect;
+  u32 curdirsect;
   dirrec_struct fileinfo[MAX_FILES];
-  unsigned long numfiles;
+  u32 numfiles;
 
   const char *mpegpath;
 
-  unsigned long mpegintmask;
+  u32 mpegintmask;
 
   mpegcon_struct mpegcon[2];
   mpegstm_struct mpegstm[2];
 
   int _command;
-  unsigned long _periodiccycles;
-  unsigned long _periodictiming;
-  unsigned long _commandtiming;
+  u32 _periodiccycles;
+  u32 _periodictiming;
+  u32 _commandtiming;
   CDInterface * cdi;
 
   int carttype;
@@ -244,12 +244,12 @@ void FASTCALL 	Cs2WriteByte(u32, u8);
 void FASTCALL 	Cs2WriteWord(u32, u16);
 void FASTCALL 	Cs2WriteLong(u32, u32);
 
-void Cs2Exec(unsigned long);
+void Cs2Exec(u32);
 void Cs2Execute(void);
 void Cs2Reset(void);
 void Cs2SetTiming(int);
 void Cs2Command(void);
-void Cs2SetCommandTiming(unsigned char cmd);
+void Cs2SetCommandTiming(u8 cmd);
 
 //   command name                             command code
 void Cs2GetStatus(void);                   // 0x00
@@ -337,10 +337,10 @@ partition_struct * Cs2GetPartition(filter_struct * curfilter);
 partition_struct * Cs2FilterData(filter_struct * curfilter, int isaudio);
 int Cs2CopyDirRecord(u8 * buffer, dirrec_struct * dirrec);
 int Cs2ReadFileSystem(filter_struct * curfilter, u32 fid, int isoffset);
-void Cs2SetupFileInfoTransfer(unsigned long fid);
-partition_struct * Cs2ReadUnFilteredSector(unsigned long rufsFAD);
-partition_struct * Cs2ReadFilteredSector(unsigned long rfsFAD);
-unsigned char Cs2GetRegionID(void);
+void Cs2SetupFileInfoTransfer(u32 fid);
+partition_struct * Cs2ReadUnFilteredSector(u32 rufsFAD);
+partition_struct * Cs2ReadFilteredSector(u32 rfsFAD);
+u8 Cs2GetRegionID(void);
 
 int Cs2SaveState(FILE *);
 int Cs2LoadState(FILE *, int, int);

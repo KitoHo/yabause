@@ -92,7 +92,7 @@ VIDSDLSoftVdp2ToggleDisplayRBG0
 static SDL_Surface *SDLframebuffer;
 static int fps;
 static int framecount;
-static unsigned long ticks;
+static u32 ticks;
 
 SDL_Rect vdp2rect = {
 0, 0, 320, 224

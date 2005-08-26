@@ -275,7 +275,7 @@ void YglRender(void) {
 
    glBindTexture(GL_TEXTURE_2D, _Ygl->texture);
 
-   glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, YglTM->width, YglTM->height, GL_RGBA, GL_UNSIGNED_BYTE, YglTM->texture);
+   glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, YglTM->width, YglTM->yMax, GL_RGBA, GL_UNSIGNED_BYTE, YglTM->texture);
 
    if(_Ygl->st) {
       int vertices [] = { 0, 0, 320, 0, 320, 224, 0, 224 };

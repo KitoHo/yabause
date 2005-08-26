@@ -155,7 +155,7 @@ int SPTICDGetStatus() {
 
 #define MSF_TO_FAD(m,s,f) ((m * 4500) + (s * 75) + f)
 
-long SPTICDReadTOC(unsigned long *TOC) {
+s32 SPTICDReadTOC(u32 *TOC) {
 //   FILE *debugfp;
    CDROM_TOC ctTOC;
    DWORD dwNotUsed;
@@ -207,7 +207,7 @@ long SPTICDReadTOC(unsigned long *TOC) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-int SPTICDReadSectorFAD(unsigned long FAD, void *buffer) {
+int SPTICDReadSectorFAD(u32 FAD, void *buffer) {
    // This function is supposed to read exactly 1 -RAW- 2352-byte sector at
    // the specified FAD address to buffer. Should return true if successful,
    // false if there was an error.
@@ -439,13 +439,13 @@ int ASPICDGetStatus() {
 
 //////////////////////////////////////////////////////////////////////////////
 
-long ASPICDReadTOC(unsigned long *TOC) {
+s32 ASPICDReadTOC(u32 *TOC) {
    return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-int ASPICDReadSectorFAD(unsigned long FAD, void *buffer) {
+int ASPICDReadSectorFAD(u32 FAD, void *buffer) {
    // This function is supposed to read exactly 1 -RAW- 2352-byte sector at
    // the specified FAD address to buffer. Should return true if successful,
    // false if there was an error.

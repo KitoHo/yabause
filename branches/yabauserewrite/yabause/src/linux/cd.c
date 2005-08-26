@@ -32,9 +32,9 @@
 
 int LinuxCDInit(const char *);
 int LinuxCDDeInit(void);
-long LinuxCDReadTOC(unsigned long *);
+s32 LinuxCDReadTOC(u32 *);
 int LinuxCDGetStatus(void);
-int LinuxCDReadSectorFAD(unsigned long, void *);
+int LinuxCDReadSectorFAD(u32, void *);
 
 CDInterface ArchCD = {
 	CDCORE_ARCH,
@@ -68,7 +68,7 @@ int LinuxCDDeInit(void) {
 }
 
 
-long LinuxCDReadTOC(unsigned long * TOC)
+s32 LinuxCDReadTOC(u32 * TOC)
 {
    int success;
    struct cdrom_tochdr ctTOC;
@@ -148,8 +148,8 @@ int LinuxCDGetStatus(void) {
 	}
 }
 
-int LinuxCDReadSectorFAD(unsigned long FAD, void *buffer) {
-	unsigned long dwBytesReturned;
+int LinuxCDReadSectorFAD(u32 FAD, void *buffer) {
+        u32 dwBytesReturned;
 	union {
 		struct cdrom_msf msf;
 		char bigbuf[2352];

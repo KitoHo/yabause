@@ -32,16 +32,16 @@
 int SPTICDInit(const char *);
 int SPTICDDeInit();
 int SPTICDGetStatus();
-long SPTICDReadTOC(unsigned long *);
-int SPTICDReadSectorFAD(unsigned long, void *);
+s32 SPTICDReadTOC(u32 *);
+int SPTICDReadSectorFAD(u32, void *);
 
 extern CDInterface SPTICD;
 
 int ASPICDInit(const char *);
 int ASPICDDeInit();
 int ASPICDGetStatus();
-long ASPICDReadTOC(unsigned long *);
-int ASPICDReadSectorFAD(unsigned long, void *);
+s32 ASPICDReadTOC(u32 *);
+int ASPICDReadSectorFAD(u32, void *);
 
 extern CDInterface ASPICD;
 

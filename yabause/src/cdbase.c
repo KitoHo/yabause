@@ -88,7 +88,7 @@ int DummyCDGetStatus()
 
 //////////////////////////////////////////////////////////////////////////////
 
-long DummyCDReadTOC(unsigned long *TOC)
+s32 DummyCDReadTOC(u32 *TOC)
 {
 	// The format of TOC is as follows:
 	// TOC[0] - TOC[98] are meant for tracks 1-99. Each entry has the following
@@ -128,7 +128,7 @@ long DummyCDReadTOC(unsigned long *TOC)
 
 //////////////////////////////////////////////////////////////////////////////
 
-int DummyCDReadSectorFAD(unsigned long FAD, void * buffer)
+int DummyCDReadSectorFAD(u32 FAD, void * buffer)
 {
 	// This function is supposed to read exactly 1 -RAW- 2352-byte sector at
 	// the specified FAD address to buffer. Should return true if successful,
@@ -148,7 +148,7 @@ int DummyCDReadSectorFAD(unsigned long FAD, void * buffer)
 // ISO Interface
 //////////////////////////////////////////////////////////////////////////////
 
-static const char syncHdr[12] = { 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00 };
+static const s8 syncHdr[12] = { 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00 };
 static FILE *isofile=NULL;
 static int isofilesize=0;
 static int bytesPerSector = 0;
@@ -189,7 +189,7 @@ int ISOCDGetStatus() {
 
 //////////////////////////////////////////////////////////////////////////////
 
-long ISOCDReadTOC(unsigned long * TOC) {
+s32 ISOCDReadTOC(u32 * TOC) {
         if (isofile) {
 		memset(TOC, 0xFF, 0xCC * 2);
 
@@ -205,8 +205,8 @@ long ISOCDReadTOC(unsigned long * TOC) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-int ISOCDReadSectorFAD(unsigned long FAD, void *buffer) {
-	int sector = FAD - 150;
+int ISOCDReadSectorFAD(u32 FAD, void *buffer) {
+        int sector = FAD - 150;
 	
         assert(isofile);
 	

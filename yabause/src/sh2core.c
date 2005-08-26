@@ -169,7 +169,7 @@ u32 FASTCALL SH2Exec(SH2_struct *context, u32 cycles)
 
 void SH2SendInterrupt(SH2_struct *context, u8 vector, u8 level)
 {
-   unsigned long i, i2;
+   u32 i, i2;
    interrupt_struct tmp;
 
    // Make sure interrupt doesn't already exist
@@ -213,7 +213,7 @@ void SH2NMI(SH2_struct *context)
 
 void SH2Step(SH2_struct *context)
 {
-   unsigned long tmp = context->regs.PC;
+   u32 tmp = context->regs.PC;
 
    // Execute 1 instruction
    SH2Exec(context, context->cycles+1);
@@ -244,13 +244,13 @@ void SH2SetRegisters(SH2_struct *context, sh2regs_struct * r)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void SH2SetBreakpointCallBack(SH2_struct *context, void (*func)(void *, unsigned long)) {
+void SH2SetBreakpointCallBack(SH2_struct *context, void (*func)(void *, u32)) {
    context->BreakpointCallBack = func;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-int SH2AddCodeBreakpoint(SH2_struct *context, unsigned long addr) {
+int SH2AddCodeBreakpoint(SH2_struct *context, u32 addr) {
    if (context->numcodebreakpoints < MAX_BREAKPOINTS) {
       context->codebreakpoint[context->numcodebreakpoints].addr = addr;
       context->numcodebreakpoints++;
@@ -265,7 +265,7 @@ int SH2AddCodeBreakpoint(SH2_struct *context, unsigned long addr) {
 
 void SH2SortCodeBreakpoints(SH2_struct *context) {
    int i, i2;
-   unsigned long tmp;
+   u32 tmp;
 
    for (i = 0; i < (MAX_BREAKPOINTS-1); i++)
    {
@@ -284,7 +284,7 @@ void SH2SortCodeBreakpoints(SH2_struct *context) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-int SH2DelCodeBreakpoint(SH2_struct *context, unsigned long addr) {
+int SH2DelCodeBreakpoint(SH2_struct *context, u32 addr) {
    int i;
 
    if (context->numcodebreakpoints > 0) {
@@ -534,8 +534,8 @@ void FASTCALL OnchipWriteLong(u32 addr, u32 val)  {
          }
          else
          {
-            s32 quotient = ((long) val) / divisor;
-            s32 remainder = ((long) val) % divisor;
+            s32 quotient = ((s32) val) / divisor;
+            s32 remainder = ((s32) val) % divisor;
             CurrentSH2->onchip.DVDNTL = quotient;
             CurrentSH2->onchip.DVDNTH = remainder;
             CurrentSH2->onchip.DVCR &= ~1;

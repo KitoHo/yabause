@@ -273,7 +273,7 @@ void FASTCALL Cs2WriteWord(u32 addr, u16 val) {
 //////////////////////////////////////////////////////////////////////////////
 
 u32 FASTCALL Cs2ReadLong(u32 addr) {
-  long i;
+  s32 i;
   u32 val = 0;
   addr &= 0xFFFFF; // fix me(I should really have proper mapping)
 
@@ -470,7 +470,7 @@ void Cs2DeInit(void) {
 //////////////////////////////////////////////////////////////////////////////
 
 void Cs2Reset(void) {
-  unsigned long i, i2;
+  u32 i, i2;
 
   switch (Cs2Area->cdi->GetStatus())
   {
@@ -602,7 +602,7 @@ void Cs2Reset(void) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Cs2Exec(unsigned long timing) {
+void Cs2Exec(u32 timing) {
     Cs2Area->_periodiccycles += timing;
 
     if (Cs2Area->_commandtiming > 0) {
@@ -726,7 +726,7 @@ void Cs2SetTiming(int playing) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Cs2SetCommandTiming(unsigned char cmd) {
+void Cs2SetCommandTiming(u8 cmd) {
    switch(cmd) {
       default:
                Cs2Area->_commandtiming = 1;
@@ -1112,11 +1112,11 @@ void Cs2InitializeCDSystem(void) {
 }
 
 void Cs2EndDataTransfer(void) {
-  long i;
+  s32 i;
   if (Cs2Area->cdwnum)
   {
      Cs2Area->reg.CR1 = (Cs2Area->status << 8) | ((Cs2Area->cdwnum >> 17) & 0xFF);
-     Cs2Area->reg.CR2 = (unsigned short)(Cs2Area->cdwnum >> 1);
+     Cs2Area->reg.CR2 = (u16)(Cs2Area->cdwnum >> 1);
      Cs2Area->reg.CR3 = 0;
      Cs2Area->reg.CR4 = 0;
   }
@@ -1344,7 +1344,7 @@ void Cs2GetLastBufferDestination(void) {
 //////////////////////////////////////////////////////////////////////////////
 
 void Cs2SetFilterRange(void) {
-  unsigned char sfrfilternum;
+  u8 sfrfilternum;
 
   sfrfilternum = Cs2Area->reg.CR3 >> 8;
 
@@ -1455,7 +1455,7 @@ void Cs2SetFilterConnection(void) {
 
 void Cs2ResetSelector(void) {
   // still needs a bit of work
-  unsigned long i, i2;
+  u32 i, i2;
 
   if ((Cs2Area->reg.CR1 & 0xFF) == 0)
   {
@@ -2374,7 +2374,7 @@ void Cs2SetupDefaultPlayStats(u8 track_number) {
 //////////////////////////////////////////////////////////////////////////////
 
 block_struct * Cs2AllocateBlock(u8 * blocknum) {
-  unsigned long i;
+  u32 i;
   // find a free block
   for(i = 0; i < 200; i++)
   {
@@ -2408,9 +2408,9 @@ void Cs2FreeBlock(block_struct * blk) {
 //////////////////////////////////////////////////////////////////////////////
 
 void Cs2SortBlocks(partition_struct * part) {
-  unsigned long i, i2;
+  u32 i, i2;
   block_struct * blktmp;
-  unsigned char blktmp2;
+  u8 blktmp2;
 
   for (i = 0; i < (MAX_BLOCKS-1); i++)
   {
@@ -2821,7 +2821,7 @@ int Cs2ReadFileSystem(filter_struct * curfilter, u32 fid, int isoffset)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void Cs2SetupFileInfoTransfer(unsigned long fid) {
+void Cs2SetupFileInfoTransfer(u32 fid) {
   Cs2Area->transfileinfo[0] = (Cs2Area->fileinfo[fid].lba & 0xFF000000) >> 24;
   Cs2Area->transfileinfo[1] = (Cs2Area->fileinfo[fid].lba & 0x00FF0000) >> 16;
   Cs2Area->transfileinfo[2] = (Cs2Area->fileinfo[fid].lba & 0x0000FF00) >> 8;
@@ -2840,7 +2840,7 @@ void Cs2SetupFileInfoTransfer(unsigned long fid) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-partition_struct * Cs2ReadUnFilteredSector(unsigned long rufsFAD) {
+partition_struct * Cs2ReadUnFilteredSector(u32 rufsFAD) {
   partition_struct * rufspartition;
   char syncheader[12] = { 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
                           0xFF, 0xFF, 0xFF, 0x00};
@@ -2927,7 +2927,7 @@ partition_struct * Cs2ReadUnFilteredSector(unsigned long rufsFAD) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-partition_struct * Cs2ReadFilteredSector(unsigned long rfsFAD) {
+partition_struct * Cs2ReadFilteredSector(u32 rfsFAD) {
   char syncheader[12] = { 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
                           0xFF, 0xFF, 0xFF, 0x00};
   int isaudio = 0;
@@ -2967,7 +2967,7 @@ partition_struct * Cs2ReadFilteredSector(unsigned long rfsFAD) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-unsigned char Cs2GetRegionID() {
+u8 Cs2GetRegionID() {
    partition_struct * gripartition;
    char ret = 0;
 

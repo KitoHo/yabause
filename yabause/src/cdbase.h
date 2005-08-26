@@ -22,6 +22,7 @@
 #define CDBASE_H
 
 #include <stdio.h>
+#include "core.h"
 
 #define CDCORE_DEFAULT -1
 #define CDCORE_DUMMY    0
@@ -35,23 +36,23 @@ typedef struct
         int (*Init)(const char *);
         int (*DeInit)();
         int (*GetStatus)();
-        long (*ReadTOC)(unsigned long *TOC);
-        int (*ReadSectorFAD)(unsigned long FAD, void *buffer);
+        s32 (*ReadTOC)(u32 *TOC);
+        int (*ReadSectorFAD)(u32 FAD, void *buffer);
 } CDInterface;
 
 int DummyCDInit(const char *);
 int DummyCDDeInit();
 int DummyCDGetStatus();
-long DummyCDReadTOC(unsigned long *);
-int DummyCDReadSectorFAD(unsigned long, void *);
+s32 DummyCDReadTOC(u32 *);
+int DummyCDReadSectorFAD(u32, void *);
 
 extern CDInterface DummyCD;
 
 int ISOCDInit(const char *);
 int ISOCDDeInit();
 int ISOCDGetStatus();
-long ISOCDReadTOC(unsigned long *);
-int ISOCDReadSectorFAD(unsigned long, void *);
+s32 ISOCDReadTOC(u32 *);
+int ISOCDReadSectorFAD(u32, void *);
 
 extern CDInterface ISOCD;
 

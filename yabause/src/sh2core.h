@@ -127,7 +127,7 @@ typedef struct
 
 typedef struct
 {
-  unsigned long addr;
+  u32 addr;
 } codebreakpoint_struct;
 
 #define MAX_BREAKPOINTS 10
@@ -160,8 +160,8 @@ typedef struct
    u16 instruction;
    codebreakpoint_struct codebreakpoint[MAX_BREAKPOINTS];
    int numcodebreakpoints;
-   void (*BreakpointCallBack)(void *, unsigned long);
-   unsigned char inbreakpoint;
+   void (*BreakpointCallBack)(void *, u32);
+   int inbreakpoint;
 } SH2_struct;
 
 typedef struct
@@ -188,9 +188,9 @@ void SH2Step(SH2_struct *context);
 void SH2GetRegisters(SH2_struct *context, sh2regs_struct * r);
 void SH2SetRegisters(SH2_struct *context, sh2regs_struct * r);
 
-void SH2SetBreakpointCallBack(SH2_struct *context, void (*func)(void *, unsigned long));
-int SH2AddCodeBreakpoint(SH2_struct *context, unsigned long addr);
-int SH2DelCodeBreakpoint(SH2_struct *context, unsigned long addr);
+void SH2SetBreakpointCallBack(SH2_struct *context, void (*func)(void *, u32));
+int SH2AddCodeBreakpoint(SH2_struct *context, u32 addr);
+int SH2DelCodeBreakpoint(SH2_struct *context, u32 addr);
 codebreakpoint_struct *SH2GetBreakpointList(SH2_struct *context);
 void SH2ClearCodeBreakpoints(SH2_struct *context);
 

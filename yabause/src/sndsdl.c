@@ -46,10 +46,10 @@ SNDSDLUnMuteAudio
 #define NUMSOUNDBLOCKS  2
 
 static u16 *stereodata16;
-static unsigned long soundpos;
-static unsigned long soundblknum;
-static unsigned long soundlen;
-static unsigned long soundbufsize;
+static u32 soundpos;
+static u32 soundblknum;
+static u32 soundlen;
+static u32 soundbufsize;
 static SDL_AudioSpec audiofmt;
 
 //////////////////////////////////////////////////////////////////////////////

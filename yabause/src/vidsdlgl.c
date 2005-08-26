@@ -132,7 +132,7 @@ int nbg3priority=0;
 int rbg0priority=0;
 static int sdlglfps;
 static int sdlglframecount;
-static unsigned long sdlglticks;
+static u32 sdlglticks;
 
 typedef struct
 {

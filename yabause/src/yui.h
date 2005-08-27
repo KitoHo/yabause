@@ -29,4 +29,7 @@ void YuiSetBiosFilename(const char *);
 /* Sets ISO filename in the yui - used to specify an ISO from the commandline */
 void YuiSetIsoFilename(const char *);
 
+/* Sets CDROM filename in the yui - used to specify the CDROM from the commandline */
+void YuiSetCdromFilename(const char *);
+
 #endif

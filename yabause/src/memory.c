@@ -23,6 +23,8 @@
 #include <sys/stat.h>
 
 #include "memory.h"
+#include "cs0.h"
+#include "cs1.h"
 #include "cs2.h"
 #include "debug.h"
 #include "sh2core.h"
@@ -392,8 +394,18 @@ void MappedMemoryInit()
                                 &UnhandledMemoryWriteByte,
                                 &MSH2InputCaptureWriteWord,
                                 &UnhandledMemoryWriteLong);
-//   initMemoryHandler(0x200, 0x3FF, cs0);
-//   initMemoryHandler(0x400, 0x4FF, cs1);
+   FillMemoryArea(0x200, 0x3FF, CartridgeArea->Cs0ReadByte,
+                                CartridgeArea->Cs0ReadWord,
+                                CartridgeArea->Cs0ReadLong,
+                                CartridgeArea->Cs0WriteByte,
+                                CartridgeArea->Cs0WriteWord,
+                                CartridgeArea->Cs0WriteLong);
+   FillMemoryArea(0x400, 0x4FF, &Cs1ReadByte,
+                                &Cs1ReadWord,
+                                &Cs1ReadLong,
+                                &Cs1WriteByte,
+                                &Cs1WriteWord,
+                                &Cs1WriteLong);
    FillMemoryArea(0x580, 0x58F, &Cs2ReadByte,
                                 &Cs2ReadWord,
                                 &Cs2ReadLong,
@@ -877,7 +889,7 @@ int LoadBackupRam(const char *filename)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FormatBackupRam()
+void FormatBackupRam(void *mem, u32 size)
 {
    int i, i2;
    u8 header[32] = {
@@ -890,13 +902,13 @@ void FormatBackupRam()
    // Fill in header
    for(i2 = 0; i2 < 4; i2++)
       for(i = 0; i < 32; i++)
-         T1WriteByte(BupRam, (i2 * 32) + i, header[i]);
+         T1WriteByte(mem, (i2 * 32) + i, header[i]);
 
    // Clear the rest
-   for(i = 0x80; i < 0x10000; i+=2)
+   for(i = 0x80; i < size; i+=2)
    {
-      T1WriteByte(BupRam, i, 0xFF);
-      T1WriteByte(BupRam, i+1, 0x00);
+      T1WriteByte(mem, i, 0xFF);
+      T1WriteByte(mem, i+1, 0x00);
    }
 }
 

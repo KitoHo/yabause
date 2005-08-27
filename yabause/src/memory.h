@@ -323,6 +323,6 @@ void MappedMemoryLoadExec(const char *filename, u32 pc);
 
 int LoadBios(const char *filename);
 int LoadBackupRam(const char *filename);
-void FormatBackupRam();
+void FormatBackupRam(void *mem, u32 size);
 
 #endif

@@ -31,30 +31,46 @@
 #define CART_DRAM8MBIT          6
 #define CART_DRAM32MBIT         7
 #define CART_NETLINK            8
+#define CART_ROM16MBIT          9
 
-/*
-typedef struct {
-	int carttype;
-	void * biosarea;
-	void * dramarea;
-	MemoryInterface * biosmi;
-	MemoryInterface * drammi;
-} Cs0;
+typedef struct
+{
+   int carttype;
+   int cartid;
+   const char *filename;
 
-extern Cs0 * Cs0Area;
+   u8 FASTCALL (*Cs0ReadByte)(u32 addr);
+   u16 FASTCALL (*Cs0ReadWord)(u32 addr);
+   u32 FASTCALL (*Cs0ReadLong)(u32 addr);
+   void FASTCALL (*Cs0WriteByte)(u32 addr, u8 val);
+   void FASTCALL (*Cs0WriteWord)(u32 addr, u16 val);
+   void FASTCALL (*Cs0WriteLong)(u32 addr, u32 val);
 
-int Cs0Init(const char *, int);
-void Cs0DeInit(void);
+   u8 FASTCALL (*Cs1ReadByte)(u32 addr);
+   u16 FASTCALL (*Cs1ReadWord)(u32 addr);
+   u32 FASTCALL (*Cs1ReadLong)(u32 addr);
+   void FASTCALL (*Cs1WriteByte)(u32 addr, u8 val);
+   void FASTCALL (*Cs1WriteWord)(u32 addr, u16 val);
+   void FASTCALL (*Cs1WriteLong)(u32 addr, u32 val);
 
-u8 FASTCALL 	Cs0ReadByte(u32);
-u16 FASTCALL 	Cs0ReadWord(u32);
-u32 FASTCALL 	Cs0ReadLong(u32);
-void FASTCALL 	Cs0WriteByte(u32, u8);
-void FASTCALL 	Cs0WriteWord(u32, u16);
-void FASTCALL 	Cs0WriteLong(u32, u32);
+   u8 FASTCALL (*Cs2ReadByte)(u32 addr);
+   u16 FASTCALL (*Cs2ReadWord)(u32 addr);
+   u32 FASTCALL (*Cs2ReadLong)(u32 addr);
+   void FASTCALL (*Cs2WriteByte)(u32 addr, u8 val);
+   void FASTCALL (*Cs2WriteWord)(u32 addr, u16 val);
+   void FASTCALL (*Cs2WriteLong)(u32 addr, u32 val);
 
-int Cs0SaveState(FILE *);
-int Cs0LoadState(FILE *, int, int);
-*/
+   void *rom;
+   void *bupram;
+   void *dram;
+} cartridge_struct;
+
+extern cartridge_struct *CartridgeArea;
+
+int CartInit(const char *filename, int);
+void CartDeInit(void);
+
+int CartSaveState(FILE *fp);
+int CartLoadState(FILE *fp, int version, int size);
 
 #endif

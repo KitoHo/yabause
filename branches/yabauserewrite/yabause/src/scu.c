@@ -88,17 +88,6 @@ void ScuReset(void) {
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL ScuDMA(scudmainfo_struct *dmainfo) {
-/*
-typedef struct
-{
-   int mode
-   u32 ReadAddress;
-   u32 WriteAddress;
-   u32 TransferNumber;
-   u32 AddValue;
-   u32 ModeAddressUpdate;
-} scudmainfo_struct;
-*/
    u8 ReadAdd, WriteAdd;
 
    if (dmainfo->AddValue & 0x100)
@@ -130,6 +119,9 @@ typedef struct
          break;
       case 0x7:
          WriteAdd = 128;
+         break;
+      default:
+         WriteAdd = 0;
          break;
    }
 
@@ -817,7 +809,9 @@ void ScuExec(u32 timing) {
                         case 7: // Add 64
                            addressAdd = 256;
                            break;
-                        default: break;                                     
+                        default:
+                           addressAdd = 0;
+                           break;
                      }
 
 //                     fprintf(stderr, "DMA command format 1: addressAdd = %d transferNumber = %d hold = %d dir = %d\n", addressAdd, transferNumber, hold, direction);
@@ -1347,7 +1341,7 @@ void ScuDspDisasm(u8 addr, char *outstring){
          }
          break;
       default: 
-         sprintf(outstring, "Invalid opcode", (unsigned int)instruction, (unsigned int)ScuDsp->PC);
+         sprintf(outstring, "Invalid opcode");
          break;
    }
 }

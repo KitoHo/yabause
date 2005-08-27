@@ -465,7 +465,7 @@ static void scsp_slot_keyonoff(void)
 }
 
 ////////////////////////////////////////////////////////////////
-// Enveloppe Events Handler 
+// Enveloppe Events Handler
 //
 // Max EG level = 0x3FF      /|\
 //                          / | \
@@ -933,7 +933,7 @@ void scsp_slot_set_w(u32 s, s32 a, u16 d)
 
 u8 scsp_slot_get_b(u32 s, u32 a)
 {
-	slot_t *slot = &(scsp.slot[s]);
+//        slot_t *slot = &(scsp.slot[s]);
 
 	a &= 0x1F;
 
@@ -946,7 +946,7 @@ u8 scsp_slot_get_b(u32 s, u32 a)
 
 u16 scsp_slot_get_w(u32 s, u32 a)
 {
-	slot_t *slot = &(scsp.slot[s]);
+//        slot_t *slot = &(scsp.slot[s]);
 
 	a = (a >> 1) & 0xF;
 

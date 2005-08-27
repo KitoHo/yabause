@@ -1171,7 +1171,7 @@ void CartDeInit(void)
 
       if (CartridgeArea->bupram)
       {
-         u32 size;
+         u32 size=0;
 
          switch (CartridgeArea->carttype)
          {
@@ -1197,8 +1197,11 @@ void CartDeInit(void)
             }
          }
 
-         T123Save(CartridgeArea->bupram, size, 1, CartridgeArea->filename);
-         T1MemoryDeInit(CartridgeArea->bupram);
+         if (size != 0)
+         {
+            T123Save(CartridgeArea->bupram, size, 1, CartridgeArea->filename);
+            T1MemoryDeInit(CartridgeArea->bupram);
+         }
       }
 
       if (CartridgeArea->dram)

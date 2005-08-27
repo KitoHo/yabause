@@ -243,10 +243,7 @@ static inline int T123Save(void * mem, u32 size, int type, const char *filename)
    u32 i;
 
    if ((buffer = (u8 *)malloc(size)) == NULL)
-   {
-      fclose(fp);
       return -1;
-   }
 
    switch (type)
    {
@@ -270,7 +267,6 @@ static inline int T123Save(void * mem, u32 size, int type, const char *filename)
       }
       default:
       {
-         fclose(fp);
          free(buffer);
          return -1;
       }

@@ -22,6 +22,7 @@
 
 #include "sh2core.h"
 #include "sh2int.h"
+#include "cs0.h"
 #include "memory.h"
 
 #define INSTRUCTION_A(x) ((x & 0xF000) >> 12)
@@ -52,6 +53,13 @@ static fetchfunc fetchlist[0x100];
 u32 FASTCALL FetchBios(u32 addr)
 {
    return T2ReadWord(BiosRom, addr & 0x7FFFF);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+u32 FASTCALL FetchCs0(u32 addr)
+{
+   return CartridgeArea->Cs0ReadWord(addr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2267,6 +2275,9 @@ int SH2InterpreterInit() {
             break;
          case 0x002: // Low Work Ram
             fetchlist[i] = FetchLWram;
+            break;
+         case 0x020: // CS0
+            fetchlist[i] = FetchCs0;
             break;
          case 0x060: // High Work Ram
          case 0x061: 

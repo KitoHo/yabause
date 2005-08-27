@@ -302,7 +302,7 @@ void SmpcINTBACK() {
       ScuSendSystemManager();
       return;
    }
-   if (SmpcInternalVars->intbackIreg0 = SmpcRegs->IREG[0]) {
+   if ((SmpcInternalVars->intbackIreg0 = SmpcRegs->IREG[0]) != 0) {
       // Return non-peripheral data
       SmpcInternalVars->firstPeri = 1;
       SmpcInternalVars->intback = SmpcRegs->IREG[1] & 0x8; // does the program want peripheral data too?

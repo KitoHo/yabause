@@ -38,6 +38,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 yabsys_struct yabsys;
+const char *savefilename = NULL;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -97,6 +98,11 @@ int YabauseInit(int percoretype,
    if ((BupRam = T1MemoryInit(0x10000)) == NULL)
       return -1;
 
+   if (LoadBackupRam(savepath) != 0)
+      FormatBackupRam(BupRam, 0x10000);
+   else
+      savefilename = savepath;
+
    // Initialize input core
    if (PerInit(percoretype) != 0)
       return -1;
@@ -129,9 +135,6 @@ int YabauseInit(int percoretype,
    if (LoadBios(biospath) != 0)
       return -2;
 
-   if (LoadBackupRam(savepath) != 0)
-      FormatBackupRam(BupRam, 0x10000);
-
    YabauseReset();
 
    return 0;
@@ -152,7 +155,12 @@ void YabauseDeInit() {
       T2MemoryDeInit(LowWram);
 
    if (BupRam)
+   {
+      if (T123Save(BupRam, 0x10000, 1, savefilename) != 0)
+         fprintf(stderr, "Error saving Backup Ram file \"%s\"\n", savefilename);
+      
       T1MemoryDeInit(BupRam);
+   }
 
    CartDeInit();
    Cs2DeInit();

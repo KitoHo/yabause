@@ -101,8 +101,9 @@ int YabauseInit(int percoretype,
    if (PerInit(percoretype) != 0)
       return -1;
 
-   // Initialize CS0 area here
-   // Initialize CS1 area here
+   if (CartInit(NULL, CART_NONE) != 0) // fix me
+      return -1;
+
    if (Cs2Init(CART_NONE, cdcoretype, cdpath, mpegpath) != 0)
       return -1;
 
@@ -129,9 +130,7 @@ int YabauseInit(int percoretype,
       return -2;
 
    if (LoadBackupRam(savepath) != 0)
-   {
-      FormatBackupRam();
-   }
+      FormatBackupRam(BupRam, 0x10000);
 
    YabauseReset();
 
@@ -155,8 +154,7 @@ void YabauseDeInit() {
    if (BupRam)
       T1MemoryDeInit(BupRam);
 
-   // Free CS0 area here
-   // Free CS1 area here
+   CartDeInit();
    Cs2DeInit();
    ScuDeInit();
    ScspDeInit();

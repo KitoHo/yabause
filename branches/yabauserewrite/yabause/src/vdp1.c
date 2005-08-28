@@ -266,21 +266,25 @@ void FASTCALL Vdp1WriteLong(u32 addr, u32 val) {
 //////////////////////////////////////////////////////////////////////////////
 
 void Vdp1Draw(void) {
-   u32 returnAddr=0;
-   u32 commandCounter=0;
+   u32 returnAddr;
+   u32 commandCounter;
    u16 command;
 
    VIDCore->Vdp1DrawStart();
 
-   Vdp1Regs->addr = 0;
-   returnAddr = 0xFFFFFFFF;
-   commandCounter = 0;
-
    if (!Vdp1Regs->PTMR)
+      return;
+
+   // If TVMD's DISP bit isn't set, don't render
+   if (!(Vdp2Regs->TVMD & 0x8000))
       return;
 
    if (!Vdp1Regs->disptoggle)
       return;
+
+   Vdp1Regs->addr = 0;
+   returnAddr = 0xFFFFFFFF;
+   commandCounter = 0;
 
    // beginning of a frame (ST-013-R3-061694 page 53)
    // BEF <- CEF
@@ -378,6 +382,36 @@ void FASTCALL Vdp1ReadCommand(vdp1cmd_struct *cmd, u32 addr) {
    cmd->CMDXD = T1ReadWord(Vdp1Ram, addr + 0x18);
    cmd->CMDYD = T1ReadWord(Vdp1Ram, addr + 0x1A);
    cmd->CMDGRDA = T1ReadWord(Vdp1Ram, addr + 0x1B);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+int Vdp1SaveState(FILE *fp)
+{
+   int offset;
+
+   offset = StateWriteHeader(fp, "VDP1", 1);
+
+   // Write registers
+   fwrite((void *)&Vdp1Regs, sizeof(Vdp1), 1, fp); // fix me
+
+   // Write VDP1 ram
+   fwrite((void *)Vdp1Ram, 0x80000, 1, fp);
+
+   return StateFinishHeader(fp, offset);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+int Vdp1LoadState(FILE *fp, int version, int size)
+{
+   // Read registers
+   fread((void *)&Vdp1Regs, sizeof(Vdp1), 1, fp); // fix me
+
+   // Read VDP1 ram
+   fread((void *)Vdp1Ram, 0x80000, 1, fp);
+
+   return size;
 }
 
 //////////////////////////////////////////////////////////////////////////////

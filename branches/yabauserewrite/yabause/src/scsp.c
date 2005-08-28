@@ -412,7 +412,7 @@ static void scsp_slot_keyon(slot_t *slot)
 
 		// set buffer, loop start/end address of the slot
 		if (slot->pcm8b)
-		{
+                {
 			slot->buf8 = (s8*) &(scsp.scsp_ram[slot->sa]);
 			if ((slot->sa + (slot->lea >> SCSP_FREQ_LB)) > SCSP_RAM_MASK)
 			{
@@ -1287,14 +1287,14 @@ u16 scsp_get_w(u32 a)
 ////////////////////////////////////////////////////////////////
 
 #ifdef WORDS_BIGENDIAN
-#define SCSP_GET_OUT_8B		\
-                out = (s32) slot->buf8[(slot->fcnt >> SCSP_FREQ_LB)]; 
+#define SCSP_GET_OUT_8B \
+   out = (s32) slot->buf8[(slot->fcnt >> SCSP_FREQ_LB)];
 #else
-#define SCSP_GET_OUT_8B		\
-                out = (s32) slot->buf8[(slot->fcnt >> SCSP_FREQ_LB) ^ 1];
+#define SCSP_GET_OUT_8B \
+   out = (s32) slot->buf8[(slot->fcnt >> SCSP_FREQ_LB) ^ 1];
 #endif
 
-#define SCSP_GET_OUT_16B	\
+#define SCSP_GET_OUT_16B        \
                 out = (s32) slot->buf16[slot->fcnt >> SCSP_FREQ_LB];
 
 #define SCSP_GET_ENV		\
@@ -1397,7 +1397,7 @@ static void scsp_slot_update_8B_L(slot_t *slot)
 	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
 	{
 		// env = [0..0x3FF] - slot->tl
-		SCSP_GET_OUT_8B
+                SCSP_GET_OUT_8B
 		SCSP_GET_ENV
 
 		// don't waste time if no sound...
@@ -2391,6 +2391,8 @@ void scsp_reset(void)
 		slot->ecnt = SCSP_ENV_DE;		// slot off
 		slot->dislr = slot->disll = 31;	// direct level sound off
 		slot->efslr = slot->efsll = 31;	// effect level sound off
+                slot->buf8 = (s8*)&(scsp.scsp_ram[1]);
+                slot->buf16 = (s16*)&(scsp.scsp_ram[0]);
 	}
 }
 

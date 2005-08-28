@@ -678,18 +678,41 @@ void FRTExec(u32 cycles) {
    frctemp += ((CurrentSH2->cycles + CurrentSH2->frc.leftover) / CurrentSH2->frc.div);
    CurrentSH2->frc.leftover = (CurrentSH2->cycles + CurrentSH2->frc.leftover) % CurrentSH2->frc.div;
 
-   // Check to see if there is or was a Output Compare A match here
+   // Check to see if there is or was a Output Compare A match
+   if (frctemp >= CurrentSH2->frc.ocra && frcold < CurrentSH2->frc.ocra)
+   {
+      // Do we need to trigger an interrupt?
+      if (CurrentSH2->onchip.TIER & 0x8)
+         SH2SendInterrupt(CurrentSH2, CurrentSH2->onchip.VCRC & 0x7F, (CurrentSH2->onchip.IPRB & 0xF00) >> 8);
 
-   // Check to see if there is or was a Output Compare B match here
+      // Do we need to clear the FRC?
+      if (CurrentSH2->onchip.FTCSR & 0x1)
+      {
+         frctemp = 0;
+         CurrentSH2->frc.leftover = 0;
+      }
+
+      // Set OCFA flag
+      CurrentSH2->onchip.FTCSR |= 0x8;
+   }
+
+   // Check to see if there is or was a Output Compare B match
+   if (frctemp >= CurrentSH2->frc.ocrb && frcold < CurrentSH2->frc.ocrb)
+   {
+      // Do we need to trigger an interrupt?
+      if (CurrentSH2->onchip.TIER & 0x4)
+         SH2SendInterrupt(CurrentSH2, CurrentSH2->onchip.VCRC & 0x7F, (CurrentSH2->onchip.IPRB & 0xF00) >> 8);
+
+      // Set OCFB flag
+      CurrentSH2->onchip.FTCSR |= 0x4;
+   }
 
    // If FRC overflows, set overflow flag
    if (frctemp > 0xFFFF)
    {
       // Do we need to trigger an interrupt?
       if (CurrentSH2->onchip.TIER & 0x2)
-      {
-         LOG("Trigger FRT interrupt here\n");
-      }
+         SH2SendInterrupt(CurrentSH2, (CurrentSH2->onchip.VCRD >> 8) & 0x7F, (CurrentSH2->onchip.IPRB & 0xF00) >> 8);
 
       CurrentSH2->onchip.FTCSR |= 2;
    }

@@ -443,10 +443,10 @@ static void FASTCALL Vdp1ReadPriority(vdp1cmd_struct *cmd, YglSprite *sprite)
 
 static void Vdp1SetTextureRatio(int vdp2widthratio, int vdp2heightratio)
 {
-   float vdp1w;
-   float vdp1h;
+   float vdp1w=1;
+   float vdp1h=1;
 
-   // may need some tweaking
+   // may need some tweaking  
 
    // Figure out which vdp1 screen mode to use
    switch (Vdp1Regs->TVMR & 7)
@@ -470,7 +470,7 @@ static void Vdp1SetTextureRatio(int vdp2widthratio, int vdp2heightratio)
       vdp1h=2;
 
    vdp1wratio = (float)vdp2widthratio / vdp1w;
-   vdp1hratio = (float)vdp2heightratio / vdp1w;
+   vdp1hratio = (float)vdp2heightratio / vdp1h;
 }
 
 //////////////////////////////////////////////////////////////////////////////

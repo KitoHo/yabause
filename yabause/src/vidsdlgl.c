@@ -1077,13 +1077,13 @@ void VIDSDLGLVdp1ScaledSpriteDraw(void)
    switch ((cmd.CMDCTRL & 0xF00) >> 8)
    {
       case 0x0: // Only two coordinates
-         rw = cmd.CMDXC - x;
-         rh = cmd.CMDYC - y;
+         rw = cmd.CMDXC - x + Vdp1Regs->localX;
+         rh = cmd.CMDYC - y + Vdp1Regs->localY;
          break;
       case 0x5: // Upper-left
          rw = cmd.CMDXB;
          rh = cmd.CMDYB;
-         break;
+         break;        
       case 0x6: // Upper-Center
          rw = cmd.CMDXB;
          rh = cmd.CMDYB;
@@ -1264,12 +1264,85 @@ void VIDSDLGLVdp1PolygonDraw(void)
 
 void VIDSDLGLVdp1PolylineDraw(void)
 {
+   s16 X[2];
+   s16 Y[2];
+   u16 color;
+   u16 CMDPMOD;
+   u8 alpha;
+   s32 priority;
+
+   X[0] = Vdp1Regs->localX + (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x0C) );
+   Y[0] = Vdp1Regs->localY + (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x0E) );
+   X[1] = Vdp1Regs->localX + (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x10) );
+   Y[1] = Vdp1Regs->localY + (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x12) );
+   X[2] = Vdp1Regs->localX + (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x14) );
+   Y[2] = Vdp1Regs->localY + (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x16) );
+   X[3] = Vdp1Regs->localX + (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x18) );
+   Y[3] = Vdp1Regs->localY + (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1A) );
+
+   color = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x6);
+   CMDPMOD = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
+
+   alpha = 0xFF;
+   if ((CMDPMOD & 0x7) == 0x3)
+      alpha = 0x80;
+
+   if ((color & 0x8000) == 0)
+      alpha = 0;
+
+   priority = Vdp2Regs->PRISA & 0x7;
+
+/*
+   glColor4ub(((color & 0x1F) << 3), ((color & 0x3E0) >> 2), ((color & 0x7C00) >> 7), alpha);
+   glBegin(GL_LINE_STRIP);
+   glVertex2i(X[0], Y[0]);
+   glVertex2i(X[1], Y[1]);
+   glVertex2i(X[2], Y[2]);
+   glVertex2i(X[3], Y[3]);
+   glVertex2i(X[0], Y[0]);
+   glEnd();
+   glColor4ub(0xFF, 0xFF, 0xFF, 0xFF);
+*/
+   
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void VIDSDLGLVdp1LineDraw(void)
 {
+   s16 X[2];
+   s16 Y[2];
+   u16 color;
+   u16 CMDPMOD;
+   u8 alpha;
+   s32 priority;
+
+   X[0] = Vdp1Regs->localX + (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x0C));
+   Y[0] = Vdp1Regs->localY + (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x0E));
+   X[1] = Vdp1Regs->localX + (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x10));
+   Y[1] = Vdp1Regs->localY + (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x12));
+
+   color = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x6);
+   CMDPMOD = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
+
+   alpha = 0xFF;
+
+   if ((CMDPMOD & 0x7) == 0x3)
+      alpha = 0x80;
+
+   if ((color & 0x8000) == 0)
+      alpha = 0;
+
+   priority = Vdp2Regs->PRISA & 0x7;
+
+/*
+   glColor4ub(((color & 0x1F) << 3), ((color & 0x3E0) >> 2), ((color & 0x7C00) >> 7), alpha);
+   glBegin(GL_LINES);
+   glVertex2i(X[0], Y[0]);
+   glVertex2i(X[1], Y[1]);
+   glEnd();
+   glColor4ub(0xFF, 0xFF, 0xFF, 0xFF);
+*/
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2117,6 +2190,34 @@ static void Vdp2DrawNBG3(void)
 
    Vdp2DrawMap(&info, &texture);
 }
+
+//////////////////////////////////////////////////////////////////////////////
+
+/*
+int Vdp2dRBG0GetX(Vdp2Screen * tmp, int Hcnt, int Vcnt)
+{
+	RBG0 * screen = (RBG0 *) tmp;
+	float ret;
+	float Xsp = screen->A * ((screen->Xst + screen->deltaXst * Vcnt) - screen->Px) + screen->B * ((screen->Yst + screen->deltaYst * Vcnt) - screen->Py) + screen->C * (screen->Zst - screen->Pz);
+	float Xp = screen->A * (screen->Px - screen->Cx) + screen->B * (screen->Py - screen->Cy) + screen->C * (screen->Pz - screen->Cz); //+ Cx + Mx;
+	float dX = screen->A * screen->deltaX + screen->B * screen->deltaY;
+	ret = (screen->kx * (Xsp + dX * Hcnt) + Xp);
+	return (int) ret;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+int Vdp2RBG0GetY(Vdp2Screen * tmp, int Hcnt, int Vcnt)
+{
+	RBG0 * screen = (RBG0 *) tmp;
+	float ret;
+	float Ysp = screen->D * ((screen->Xst + screen->deltaXst * Vcnt) - screen->Px) + screen->E * ((screen->Yst + screen->deltaYst * Vcnt) - screen->Py) + screen->F * (screen->Zst - screen->Pz);
+	float Yp = screen->D * (screen->Px - screen->Cx) + screen->E * (screen->Py - screen->Cy) + screen->F * (screen->Pz - screen->Cz); //+ Cy + My
+	float dY = screen->D * screen->deltaX + screen->E * screen->deltaY;
+	ret = (screen->ky * (Ysp + dY * Hcnt) + Yp);
+	return (int) ret;
+}
+*/
 
 //////////////////////////////////////////////////////////////////////////////
 

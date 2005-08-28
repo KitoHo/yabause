@@ -46,6 +46,7 @@ typedef struct
 } ScspInternal;
 
 extern SoundInterface_struct SNDDummy;
+extern u8 *SoundRam;
 
 u8 FASTCALL SoundRamReadByte(u32 addr);
 u16 FASTCALL SoundRamReadWord(u32 addr);

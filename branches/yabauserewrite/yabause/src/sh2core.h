@@ -141,6 +141,8 @@ typedef struct
    {
       u32 leftover;
       u32 div;
+      u16 ocra;
+      u16 ocrb;
    } frc;
 
    struct

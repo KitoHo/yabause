@@ -74,8 +74,10 @@ typedef struct
     u16 all;
   } FRC;
 #endif
-
+   u16 OCRA;   // 0xFFFFFE14/0xFFFFFE15
+   u16 OCRB;   // 0xFFFFFE14/0xFFFFFE15
    u8 TCR;     // 0xFFFFFE16
+   u8 TOCR;    // 0xFFFFFE17
    u16 FICR;   // 0xFFFFFE18
                // 0xFFFFFE19
    u16 IPRB;   // 0xFFFFFE60
@@ -141,14 +143,12 @@ typedef struct
    {
       u32 leftover;
       u32 div;
-      u16 ocra;
-      u16 ocrb;
    } frc;
 
    struct
    {
-        int enable;
-        int interval;
+        int isenable;
+        int isinterval;
         u32 leftover;
         u32 div;
    } wdt;

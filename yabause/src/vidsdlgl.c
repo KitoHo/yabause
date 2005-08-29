@@ -623,7 +623,7 @@ static void FASTCALL Vdp2DrawCell(vdp2draw_struct *info, YglTexture *texture)
 static void Vdp2DrawPattern(vdp2draw_struct *info, YglTexture *texture)
 {
    u32 cacheaddr = (info->paladdr << 20) | info->charaddr;
-   int c;
+   int * c;
    YglSprite tile;
 
    tile.w = tile.h = info->patternpixelwh;   
@@ -638,7 +638,7 @@ static void Vdp2DrawPattern(vdp2draw_struct *info, YglTexture *texture)
    tile.vertices[6] = info->x * info->coordincx;
    tile.vertices[7] = (info->y + tile.h) * info->coordincy;
 
-   if ((c = YglIsCached(cacheaddr)) != -1)
+   if ((c = YglIsCached(cacheaddr)) != NULL)
    {
       YglCachedQuad(&tile, c);
 
@@ -1027,7 +1027,7 @@ void VIDSDLGLVdp1NormalSpriteDraw(void)
    vdp1cmd_struct cmd;
    YglSprite sprite;
    YglTexture texture;
-   int c;
+   int * c;
    u32 tmp;
    s16 x, y;
 
@@ -1057,11 +1057,12 @@ void VIDSDLGLVdp1NormalSpriteDraw(void)
 
    if (sprite.w > 0 && sprite.h > 1)
    {
-      if ((c = YglIsCached(tmp)) != -1)
+      if ((c = YglIsCached(tmp)) != NULL)
       {
          YglCachedQuad(&sprite, c);
          return;
       } 
+
       c = YglQuad(&sprite, &texture);
       YglCache(tmp, c);
 
@@ -1076,7 +1077,7 @@ void VIDSDLGLVdp1ScaledSpriteDraw(void)
    vdp1cmd_struct cmd;
    YglSprite sprite;
    YglTexture texture;
-   int c;
+   int * c;
    u32 tmp;
    s16 rw=0, rh=0;
    s16 x, y;
@@ -1164,11 +1165,12 @@ void VIDSDLGLVdp1ScaledSpriteDraw(void)
 
    if (sprite.w > 0 && sprite.h > 1)
    {
-      if ((c = YglIsCached(tmp)) != -1)
+      if ((c = YglIsCached(tmp)) != NULL)
       {
          YglCachedQuad(&sprite, c);
          return;
       } 
+
       c = YglQuad(&sprite, &texture);
       YglCache(tmp, c);
 
@@ -1183,7 +1185,7 @@ void VIDSDLGLVdp1DistortedSpriteDraw(void)
    vdp1cmd_struct cmd;
    YglSprite sprite;
    YglTexture texture;
-   int c;
+   int * c;
    u32 tmp;
 
    Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
@@ -1211,7 +1213,7 @@ void VIDSDLGLVdp1DistortedSpriteDraw(void)
 
    if (sprite.w > 0 && sprite.h > 1)
    {
-      if ((c = YglIsCached(tmp)) != -1)
+      if ((c = YglIsCached(tmp)) != NULL)
       {
          YglCachedQuad(&sprite, c);
          return;

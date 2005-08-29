@@ -27,7 +27,7 @@ Ygl * _Ygl;
 typedef struct
 {
    u32 id;
-   int textdata;
+   int * textdata;
 } cache_struct;
 
 static cache_struct *cachelist;
@@ -62,6 +62,14 @@ void YglTMReset(void) {
 //////////////////////////////////////////////////////////////////////////////
 
 void YglTMAllocate(YglTexture * output, unsigned int w, unsigned int h, unsigned int * x, unsigned int * y) {
+   if ((YglTM->height - YglTM->currentY) < h) {
+      fprintf(stderr, "can't allocate texture: %dx%d\n", w, h);
+      *x = *y = 0;
+      output->w = 0;
+      output->textdata = YglTM->texture;
+      return;
+   }
+
    if ((YglTM->width - YglTM->currentX) >= w) {
       *x = YglTM->currentX;
       *y = YglTM->currentY;
@@ -180,7 +188,7 @@ void YglDeInit(void) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-int YglQuad(YglSprite * input, YglTexture * output) {
+int * YglQuad(YglSprite * input, YglTexture * output) {
    unsigned int x, y;
    YglLevel *level;
    int *tmp;
@@ -191,6 +199,7 @@ int YglQuad(YglSprite * input, YglTexture * output) {
       level->maxQuad += 8;
       level->quads = (int *) realloc(level->quads, level->maxQuad * sizeof(int));
       level->textcoords = (int *) realloc(level->textcoords, level->maxQuad * sizeof(int));
+      YglTMReset();
    }
 
    tmp = level->textcoords + level->currentQuad;
@@ -217,13 +226,13 @@ int YglQuad(YglSprite * input, YglTexture * output) {
 
    switch(input->flip) {
       case 0:
-         return level->currentQuad - 8;
+         return level->textcoords + level->currentQuad - 8;
       case 1:
-         return level->currentQuad - 6;
+         return level->textcoords + level->currentQuad - 6;
       case 2:
-         return level->currentQuad - 2;
+         return level->textcoords + level->currentQuad - 2;
       case 3:
-         return level->currentQuad - 4;
+         return level->textcoords + level->currentQuad - 4;
    }
 
    return 0;
@@ -231,15 +240,19 @@ int YglQuad(YglSprite * input, YglTexture * output) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void YglCachedQuad(YglSprite * input, int cache) {
+void YglCachedQuad(YglSprite * input, int * cache) {
    YglLevel * level = _Ygl->levels + input->priority;
    unsigned int x,y;
    int * tmp;
+
+   x = *cache;
+   y = *(cache + 1);
 
    if (level->currentQuad == level->maxQuad) {
       level->maxQuad += 8;
       level->quads = (int *) realloc(level->quads, level->maxQuad * sizeof(int));
       level->textcoords = (int *) realloc(level->textcoords, level->maxQuad * sizeof(int));
+      YglTMReset();
    }
 
    tmp = level->textcoords + level->currentQuad;
@@ -247,8 +260,6 @@ void YglCachedQuad(YglSprite * input, int cache) {
    memcpy(level->quads + level->currentQuad, input->vertices, 8 * sizeof(int));
    level->currentQuad += 8;
 
-   x = *(level->textcoords + cache);
-   y = *(level->textcoords + cache + 1);
    if (input->flip & 0x1) {
       *tmp = *(tmp + 6) = x + input->w;
       *(tmp + 2) = *(tmp + 4) = x;
@@ -351,7 +362,7 @@ void YglOnScreenDebugMessage(char *string, ...) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-int YglIsCached(u32 addr) {
+int * YglIsCached(u32 addr) {
 /*
    int i = 0;
 
@@ -361,12 +372,12 @@ int YglIsCached(u32 addr) {
          return cachelist[i].textdata;
    }
 */
-   return -1;
+   return NULL;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void YglCache(u32 addr, int val) {
+void YglCache(u32 addr, int * val) {
 /*
    cachelist[cachelistsize].id = addr;
    cachelist[cachelistsize].textdata = val;

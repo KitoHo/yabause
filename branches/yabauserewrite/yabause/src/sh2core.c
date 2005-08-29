@@ -112,9 +112,9 @@ void SH2Reset(SH2_struct *context)
 
    context->frc.leftover = 0;
    context->frc.div = 8;
-
-   context->wdt.enable = 0;
-   context->wdt.interval = 1;
+ 
+   context->wdt.isenable = 0;
+   context->wdt.isinterval = 1;
    context->wdt.div = 2;
    context->wdt.leftover = 0;
 
@@ -333,7 +333,10 @@ void OnchipReset(SH2_struct *context) {
    context->onchip.TIER = 0x01;
    context->onchip.FTCSR = 0x00;
    context->onchip.FRC.all = 0x0000;
+   context->onchip.OCRA = 0xFFFF;
+   context->onchip.OCRB = 0xFFFF;
    context->onchip.TCR = 0x00;
+   context->onchip.TOCR = 0xE0;
    context->onchip.FICR = 0x0000;
    context->onchip.IPRB = 0x0000;
    context->onchip.VCRA = 0x0000;
@@ -350,13 +353,10 @@ void OnchipReset(SH2_struct *context) {
    context->onchip.ICR = 0x0000;
    context->onchip.IPRA = 0x0000;
    context->onchip.VCRWDT = 0x0000;
-   context->onchip.DVDNT = 0x00000000;
    context->onchip.DVCR = 0x00000000;
    context->onchip.VCRDIV = 0x00000000;
    context->onchip.CHCR0 = 0x00000000;
    context->onchip.CHCR1 = 0x00000000;
-   context->onchip.VCRDMA0 = 0x00000000;
-   context->onchip.VCRDMA1 = 0x00000000;
    context->onchip.DMAOR = 0x00000000;
    context->onchip.BCR1 &= 0x8000; // preserve MASTER bit
    context->onchip.BCR1 |= 0x03F0;
@@ -383,6 +383,10 @@ u8 FASTCALL OnchipReadByte(u32 addr) {
          return CurrentSH2->onchip.FRC.part.L;
       case 0x016:
          return CurrentSH2->onchip.TCR;
+      case 0x017:
+         return CurrentSH2->onchip.TOCR;
+      case 0x080:
+         return CurrentSH2->onchip.WTCSR;
       default:
          fprintf(stderr, "Unhandled Onchip byte read %08X\n", (int)addr);
          break;
@@ -396,8 +400,12 @@ u8 FASTCALL OnchipReadByte(u32 addr) {
 u16 FASTCALL OnchipReadWord(u32 addr) {
    switch(addr)
    {
-      case 0xE0:
+      case 0x060:
+         return CurrentSH2->onchip.IPRB;
+      case 0x0E0:
          return CurrentSH2->onchip.ICR;
+      case 0x0E2:
+         return CurrentSH2->onchip.IPRA;
       default:
          fprintf(stderr, "Unhandled Onchip word read %08X\n", (int)addr);
          return 0;
@@ -456,6 +464,18 @@ void FASTCALL OnchipWriteByte(u32 addr, u8 val) {
       case 0x013:
          CurrentSH2->onchip.FRC.part.L = val;
          return;
+      case 0x014:
+         if (!(CurrentSH2->onchip.TOCR & 0x10))
+            CurrentSH2->onchip.OCRA = (val << 8) | (CurrentSH2->onchip.OCRA & 0xFF);
+         else                  
+            CurrentSH2->onchip.OCRB = (val << 8) | (CurrentSH2->onchip.OCRB & 0xFF);
+         return;
+      case 0x015:
+         if (!(CurrentSH2->onchip.TOCR & 0x10))
+            CurrentSH2->onchip.OCRA = (CurrentSH2->onchip.OCRA & 0xFF00) | val;
+         else
+            CurrentSH2->onchip.OCRB = (CurrentSH2->onchip.OCRB & 0xFF00) | val;
+         return;
       case 0x016:
          CurrentSH2->onchip.TCR = val & 0x83;
 
@@ -475,8 +495,36 @@ void FASTCALL OnchipWriteByte(u32 addr, u8 val) {
                break;
          }
          return;
+      case 0x017:
+         CurrentSH2->onchip.TOCR = 0xE0 | (val & 0x13);
+         return;
       case 0x060:
          CurrentSH2->onchip.IPRB = val & 0xFF00;
+         return;
+      case 0x061:
+         return;
+      case 0x062:
+         CurrentSH2->onchip.VCRA = ((val & 0x7F) << 8) | (CurrentSH2->onchip.VCRA & 0x00FF);
+         return;
+      case 0x063:
+         CurrentSH2->onchip.VCRA = (CurrentSH2->onchip.VCRA & 0xFF00) | (val & 0x7F);
+         return;
+      case 0x064:
+         CurrentSH2->onchip.VCRB = ((val & 0x7F) << 8) | (CurrentSH2->onchip.VCRB & 0x00FF);
+         return;
+      case 0x065:
+         CurrentSH2->onchip.VCRB = (CurrentSH2->onchip.VCRB & 0xFF00) | (val & 0x7F);
+         return;
+      case 0x066:
+         CurrentSH2->onchip.VCRC = ((val & 0x7F) << 8) | (CurrentSH2->onchip.VCRC & 0x00FF);
+         return;
+      case 0x067:
+         CurrentSH2->onchip.VCRC = (CurrentSH2->onchip.VCRC & 0xFF00) | (val & 0x7F);
+         return;
+      case 0x068:
+         CurrentSH2->onchip.VCRD = (val & 0x7F) << 8;
+         return;
+      case 0x069:
          return;
       case 0x071:
          CurrentSH2->onchip.DRCR0 = val & 0x3;
@@ -484,8 +532,23 @@ void FASTCALL OnchipWriteByte(u32 addr, u8 val) {
       case 0x072:
          CurrentSH2->onchip.DRCR1 = val & 0x3;
          return;
+      case 0x091:
+         CurrentSH2->onchip.SBYCR = val & 0xDF;
+         return;
+      case 0x092:
+         CurrentSH2->onchip.CCR = val & 0xCF;
+         return;
+      case 0x0E0:
+         CurrentSH2->onchip.ICR = ((val & 0x1) << 8) | (CurrentSH2->onchip.ICR & 0xFEFF);
+         return;
+      case 0x0E1:
+         CurrentSH2->onchip.ICR = (CurrentSH2->onchip.ICR & 0xFFFE) | (val & 0x1);
+         return;
       case 0x0E2:
          CurrentSH2->onchip.IPRA = val & 0xFFF0;
+         return;
+      case 0x0E3:
+         CurrentSH2->onchip.IPRA = (CurrentSH2->onchip.IPRA & 0xFF00) | (val & 0xF0);
          return;
       case 0x0E4:
          CurrentSH2->onchip.VCRWDT = ((val & 0x7F) << 8) | (CurrentSH2->onchip.VCRWDT & 0x00FF);
@@ -495,14 +558,82 @@ void FASTCALL OnchipWriteByte(u32 addr, u8 val) {
          return;
       default:
          fprintf(stderr, "Unhandled Onchip byte write %08X\n", (int)addr);
-   } 
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL OnchipWriteWord(u32 addr, u16 val) {
-   // stub
-   fprintf(stderr, "Unhandled Onchip word write %08X\n", (int)addr);
+   switch(addr)
+   {
+      case 0x060:
+         CurrentSH2->onchip.IPRB = val & 0xFF00;
+         return;
+      case 0x080:
+         // This and RSTCSR have got to be the most wackiest register
+         // mappings I've ever seen
+
+         if (val >> 8 == 0xA5)
+         {
+            // WTCSR
+            switch (val & 7)
+            {
+               case 0:
+                  CurrentSH2->wdt.div = 2;
+                  break;
+               case 1:
+                  CurrentSH2->wdt.div = 64;
+                  break;
+               case 2:
+                  CurrentSH2->wdt.div = 128;
+                  break;
+               case 3:
+                  CurrentSH2->wdt.div = 256;
+                  break;
+               case 4:
+                  CurrentSH2->wdt.div = 512;
+                  break;
+               case 5:
+                  CurrentSH2->wdt.div = 1024;
+                  break;
+               case 6:
+                  CurrentSH2->wdt.div = 4096;
+                  break;
+               case 7:
+                  CurrentSH2->wdt.div = 8192;
+                  break;
+            }
+
+            CurrentSH2->wdt.isenable = (val & 0x20);
+            CurrentSH2->wdt.isinterval = (~val & 0x40);
+
+            LOG("WTCSR write = %02X. Timer Enabled = %s, Timer Mode = %s, wdtdiv = %d\n", val & 0xFF, CurrentSH2->wdt.isenable ? "true" : "false", CurrentSH2->wdt.isinterval ? "Interval Timer" : "Watchdog Timer", CurrentSH2->wdt.div);
+            CurrentSH2->onchip.WTCSR = (u8)val | 0x18;
+         }
+         else if (val >> 8 == 0x5A)
+         {
+            // WTCNT
+            CurrentSH2->onchip.WTCNT = (u8)val;
+         }
+         return;
+      case 0x082:
+         if (val == 0xA500)
+            // clear WOVF bit
+            CurrentSH2->onchip.RSTCSR &= 0x7F;
+         else if (val >> 8 == 0x5A)
+            // RSTE and RSTS bits
+            CurrentSH2->onchip.RSTCSR = (CurrentSH2->onchip.RSTCSR & 0x80) | (val & 0x60) | 0x1F;
+         return;
+      case 0x0E0:
+         CurrentSH2->onchip.ICR = val & 0x0101;
+         return;
+      case 0x0E2:
+         CurrentSH2->onchip.IPRA = val & 0xFFF0;
+         return;
+      default:
+         fprintf(stderr, "Unhandled Onchip word write %08X\n", (int)addr);
+         return;
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -648,6 +779,15 @@ void FASTCALL OnchipWriteLong(u32 addr, u32 val)  {
       case 0x1E8:
          CurrentSH2->onchip.WCR = val;
          return;
+      case 0x1EC:
+         CurrentSH2->onchip.MCR = val & 0xFEFC;
+         return;
+      case 0x1F0:
+         CurrentSH2->onchip.RTCSR = val & 0xF8;
+         return;
+      case 0x1F8:
+         CurrentSH2->onchip.RTCOR = val & 0xFF;
+         return;
       default:
          fprintf(stderr, "Unhandled Onchip long write %08X\n", (int)addr);
          break;
@@ -679,7 +819,7 @@ void FRTExec(u32 cycles) {
    CurrentSH2->frc.leftover = (CurrentSH2->cycles + CurrentSH2->frc.leftover) % CurrentSH2->frc.div;
 
    // Check to see if there is or was a Output Compare A match
-   if (frctemp >= CurrentSH2->frc.ocra && frcold < CurrentSH2->frc.ocra)
+   if (frctemp >= CurrentSH2->onchip.OCRA && frcold < CurrentSH2->onchip.OCRA)
    {
       // Do we need to trigger an interrupt?
       if (CurrentSH2->onchip.TIER & 0x8)
@@ -697,7 +837,7 @@ void FRTExec(u32 cycles) {
    }
 
    // Check to see if there is or was a Output Compare B match
-   if (frctemp >= CurrentSH2->frc.ocrb && frcold < CurrentSH2->frc.ocrb)
+   if (frctemp >= CurrentSH2->onchip.OCRB && frcold < CurrentSH2->onchip.OCRB)
    {
       // Do we need to trigger an interrupt?
       if (CurrentSH2->onchip.TIER & 0x4)
@@ -724,7 +864,40 @@ void FRTExec(u32 cycles) {
 //////////////////////////////////////////////////////////////////////////////
 
 void WDTExec(u32 cycles) {
-   // stub
+   u32 wdttemp;
+
+   if (!CurrentSH2->wdt.isenable || CurrentSH2->onchip.WTCSR & 0x80 || CurrentSH2->onchip.RSTCSR & 0x80)
+      return;
+
+   wdttemp = (u32)CurrentSH2->onchip.WTCNT;
+   wdttemp += ((cycles + CurrentSH2->wdt.leftover) / CurrentSH2->wdt.div);
+   CurrentSH2->wdt.leftover = (cycles + CurrentSH2->wdt.leftover) % CurrentSH2->wdt.div;
+
+   // Are we overflowing?
+   if (wdttemp > 0xFF)
+   {
+      // Obviously depending on whether or not we're in Watchdog or Interval
+      // Modes, they'll handle an overflow differently.
+
+      if (CurrentSH2->wdt.isinterval)
+      {
+         // Interval Timer Mode
+
+         // Set OVF flag
+         CurrentSH2->onchip.WTCSR |= 0x80;
+
+         // Trigger interrupt
+         SH2SendInterrupt(CurrentSH2, (CurrentSH2->onchip.VCRWDT >> 8) & 0x7F, (CurrentSH2->onchip.IPRA >> 4) & 0xF);
+      }
+      else
+      {
+         // Watchdog Timer Mode(untested)
+         LOG("Watchdog timer(WDT mode) overflow not implemented\n");
+      }
+   }
+
+   // Write new WTCNT value
+   CurrentSH2->onchip.WTCNT = (u8)wdttemp;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -736,7 +909,7 @@ void DMAExec(void) {
 
    if ((CurrentSH2->onchip.CHCR0 & 0x1) && (CurrentSH2->onchip.CHCR1 & 0x1)) { // both channel wants DMA
       if (CurrentSH2->onchip.DMAOR & 0x8) { // round robin priority
-         LOG(stderr, "dma\t: FIXME: two channel dma - round robin priority not properly implemented\n");
+         LOG("dma\t: FIXME: two channel dma - round robin priority not properly implemented\n");
          DMATransfer(&CurrentSH2->onchip.CHCR0, &CurrentSH2->onchip.SAR0,
 		     &CurrentSH2->onchip.DAR0,  &CurrentSH2->onchip.TCR0,
 		     &CurrentSH2->onchip.VCRDMA0);

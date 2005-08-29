@@ -244,7 +244,10 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
                else
                {
                   temp = T1ReadWord(Vdp1Ram, (dot >> 4) * 2 + colorLut);
-                  *texture->textdata++ = COLOR_ADD(SAT2YAB1(alpha, temp), vdp1cor, vdp1cog, vdp1cob);
+                  if (temp & 0x8000)
+                     *texture->textdata++ = COLOR_ADD(SAT2YAB1(alpha, temp), vdp1cor, vdp1cog, vdp1cob);
+                  else
+                     *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor(temp, alpha, 0), vdp1cor, vdp1cog, vdp1cob);
                }
 
                j += 1;
@@ -254,7 +257,10 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
                else
                {
                   temp = T1ReadWord(Vdp1Ram, (dot & 0xF) * 2 + colorLut);
-                  *texture->textdata++ = COLOR_ADD(SAT2YAB1(alpha, temp), vdp1cor, vdp1cog, vdp1cob);
+                  if (temp & 0x8000)
+                     *texture->textdata++ = COLOR_ADD(SAT2YAB1(alpha, temp), vdp1cor, vdp1cog, vdp1cob);
+                  else
+                     *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor(temp, alpha, 0), vdp1cor, vdp1cog, vdp1cob);                     
                }
 
                j += 1;

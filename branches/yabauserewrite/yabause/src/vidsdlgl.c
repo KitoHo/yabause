@@ -164,6 +164,9 @@ typedef struct
 
    float coordincx, coordincy;
    void FASTCALL (* PlaneAddr)(void *, int);
+   int patternpixelwh;
+   int draww;
+   int drawh;
 } vdp2draw_struct;
 
 static u32 Vdp2ColorRamGetColor(u32 addr, int alpha, u32 colorOffset);
@@ -623,7 +626,7 @@ static void Vdp2DrawPattern(vdp2draw_struct *info, YglTexture *texture)
    int c;
    YglSprite tile;
 
-   tile.w = tile.h = info->patternwh * 8;
+   tile.w = tile.h = info->patternpixelwh;   
    tile.flip = info->flipfunction;
    tile.priority = info->priority;
    tile.vertices[0] = info->x * info->coordincx;
@@ -755,7 +758,10 @@ static void Vdp2DrawPage(vdp2draw_struct *info, YglTexture *texture)
       for(j = 0;j < info->pagewh;j++)
       {
          info->y = Y;
-         if ((info->x >= -(8 * info->patternwh)) && (info->y >= -(8 * info->patternwh)) && (info->x < vdp2width) && (info->y < vdp2height))
+         if ((info->x >= -info->patternpixelwh) &&
+             (info->y >= -info->patternpixelwh) &&
+             (info->x <= info->draww) &&
+             (info->y <= info->drawh))
          {
             Vdp2PatternAddr(info);
             Vdp2DrawPattern(info, texture);
@@ -763,8 +769,8 @@ static void Vdp2DrawPage(vdp2draw_struct *info, YglTexture *texture)
          else
          {
             info->addr += info->patterndatasize * 2;
-            info->x += 8 * info->patternwh;
-            info->y += 8 * info->patternwh;
+            info->x += info->patternpixelwh;
+            info->y += info->patternpixelwh;
          }
       }
    }
@@ -797,6 +803,10 @@ static void Vdp2DrawMap(vdp2draw_struct *info, YglTexture *texture)
    int i, j;
    int X, Y;
    X = info->x;
+
+   info->patternpixelwh = 8 * info->patternwh;
+   info->draww = (int)((float)vdp2width / info->coordincx);
+   info->drawh = (int)((float)vdp2height / info->coordincy);
 
    for(i = 0;i < info->mapwh;i++)
    {

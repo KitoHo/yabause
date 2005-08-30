@@ -305,6 +305,7 @@ void YglRender(void) {
 
    glDisable(GL_TEXTURE_2D);
 #ifndef _arch_dreamcast
+#if HAVE_LIBGLUT
    if (_Ygl->msglength > 0) {
       glColor3f(1.0f, 0.0f, 0.0f);
       glRasterPos2i(10, 22);
@@ -313,6 +314,7 @@ void YglRender(void) {
       }
       glColor3f(1, 1, 1);
    }
+#endif
 #endif
 
    SDL_GL_SwapBuffers();

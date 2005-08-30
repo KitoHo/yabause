@@ -100,7 +100,7 @@ int YabauseInit(int percoretype,
 
    if (LoadBackupRam(savepath) != 0)
       FormatBackupRam(BupRam, 0x10000);
-   else
+   //else
       savefilename = savepath;
 
    // Initialize input core
@@ -132,8 +132,10 @@ int YabauseInit(int percoretype,
 
    YabauseChangeTiming(CLKTYPE_26MHZNTSC);
 
-   if (LoadBios(biospath) != 0)
+   if (LoadBios(biospath) != 0) {
+      fprintf(stderr, "Error loading bios file \"%s\" (use \"-b\" option to specify a bios file)\n", biospath);
       return -2;
+   }
 
    YabauseReset();
 

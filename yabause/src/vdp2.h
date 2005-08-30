@@ -180,57 +180,70 @@ typedef struct {
    u16 SCYN3;  // 0x25F80096
    u16 ZMCTL;  // 0x25F80098
    u16 SCRCTL; // 0x25F8009A
-   u16 VCSTAU; // 0x25F8009C
-   u16 VCSTAL; // 0x25F8009E
-
 #ifdef WORDS_BIGENDIAN
-  union {
-    struct {
-      u32 U:16; // 0x25F800A0
-      u32 L:16; // 0x25F800A2
-    } part;
-    u32 all;
-  } LSTA0;
+   union {
+      struct {
+         u32 U:16; // 0x25F8009C
+         u32 L:16; // 0x25F8009E
+      } part;
+      u32 all;
+   } VCSTA;
 
-  union {
-    struct {
-      u32 U:16; // 0x25F800A4
-      u32 L:16; // 0x25F800A6
-    } part;
-    u32 all;
-  } LSTA1;
+   union {
+      struct {
+         u32 U:16; // 0x25F800A0
+         u32 L:16; // 0x25F800A2
+      } part;
+      u32 all;
+   } LSTA0;
 
-  union {
-    struct {
-      u32 U:16; // 0x25F800A8
-      u32 L:16; // 0x25F800AA
-    } part;
-    u32 all;
-  } LCTA;
+   union {
+      struct {
+         u32 U:16; // 0x25F800A4
+         u32 L:16; // 0x25F800A6
+      } part;
+      u32 all;
+   } LSTA1;
+
+   union {
+      struct {
+         u32 U:16; // 0x25F800A8
+         u32 L:16; // 0x25F800AA
+      } part;
+      u32 all;
+   } LCTA;
 #else
-  union {
-    struct {
-      u32 L:16; // 0x25F800A2
-      u32 U:16; // 0x25F800A0
-    } part;
-    u32 all;
-  } LSTA0;
+   union {
+      struct {
+         u32 L:16; // 0x25F8009E
+         u32 U:16; // 0x25F8009C
+      } part;
+      u32 all;
+   } VCSTA;
 
-  union {
-    struct {
-      u32 L:16; // 0x25F800A6
-      u32 U:16; // 0x25F800A4
-    } part;
-    u32 all;
-  } LSTA1;
+   union {
+      struct {
+         u32 L:16; // 0x25F800A2
+         u32 U:16; // 0x25F800A0
+      } part;
+      u32 all;
+   } LSTA0;
 
-  union {
-    struct {
-      u32 L:16; // 0x25F800AA
-      u32 U:16; // 0x25F800A8
-    } part;
-    u32 all;
-  } LCTA;
+   union {
+      struct {
+         u32 L:16; // 0x25F800A6
+         u32 U:16; // 0x25F800A4
+      } part;
+      u32 all;
+   } LSTA1;
+
+   union {
+      struct {
+         u32 L:16; // 0x25F800AA
+         u32 U:16; // 0x25F800A8
+      } part;
+      u32 all;
+   } LCTA;
 #endif
 
    u16 BKTAU;  // 0x25F800AC
@@ -242,21 +255,21 @@ typedef struct {
    u16 OVPNRA; // 0x25F800B8
    u16 OVPNRB; // 0x25F800BA
 #ifdef WORDS_BIGENDIAN
-  union {
-    struct {
-      u32 U:16; // 0x25F800BC
-      u32 L:16; // 0x25F800BE
-    } part;
-    u32 all;
-  } RPTA;
+   union {
+      struct {
+         u32 U:16; // 0x25F800BC
+         u32 L:16; // 0x25F800BE
+      } part;
+      u32 all;
+   } RPTA;
 #else
-  union {
-    struct {
-      u32 L:16; // 0x25F800BE
-      u32 U:16; // 0x25F800BC
-    } part;
-    u32 all;
-  } RPTA;
+   union {
+      struct {
+         u32 L:16; // 0x25F800BE
+         u32 U:16; // 0x25F800BC
+      } part;
+      u32 all;
+   } RPTA;
 #endif
    u16 WPSX0;  // 0x25F800C0
    u16 WPSY0;  // 0x25F800C2

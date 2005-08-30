@@ -180,8 +180,7 @@ void Vdp2Reset(void) {
    Vdp2Regs->SCYN3 = 0x0000;
    Vdp2Regs->ZMCTL = 0x0000;
    Vdp2Regs->SCRCTL = 0x0000;
-   Vdp2Regs->VCSTAU = 0x0000;
-   Vdp2Regs->VCSTAL = 0x0000;
+   Vdp2Regs->VCSTA.all = 0x00000000;
    Vdp2Regs->BKTAU = 0x0000;
    Vdp2Regs->BKTAL = 0x0000;
    Vdp2Regs->RPMD = 0x0000;
@@ -573,10 +572,10 @@ void FASTCALL Vdp2WriteWord(u32 addr, u16 val) {
          Vdp2Regs->SCRCTL = val;
          return;
       case 0x09C:
-         Vdp2Regs->VCSTAU = val;
+         Vdp2Regs->VCSTA.part.U = val;
          return;
       case 0x09E:
-         Vdp2Regs->VCSTAL = val;
+         Vdp2Regs->VCSTA.part.L = val;
          return;
       case 0x0A0:
          Vdp2Regs->LSTA0.part.U = val;
@@ -1129,952 +1128,1166 @@ int Vdp2LoadState(FILE *fp, int version, int size)
 
 //////////////////////////////////////////////////////////////////////////////
 
+static inline void Vdp2GetPlaneSize(int planedata, int *planew, int *planeh)
+{
+   switch(planedata)
+   {
+      case 0:
+         *planew = *planeh = 1;
+         break;
+      case 1:
+         *planew = 2;
+         *planeh = 1;
+         break;
+      case 2:
+         *planew = *planeh = 2;
+         break;
+   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+// Terrible, but I'm not sure how to do the equivalent in inline
+#define AddString(s, r...) \
+   sprintf(s, ## r); \
+   s += strlen(s)
+
+//////////////////////////////////////////////////////////////////////////////
+
+static inline char *AddBppString(char *outstring, int bpp)
+{
+   switch (bpp)
+   {
+      case 0:
+         AddString(outstring, "4-bit(16 colors)\r\n");
+         break;
+      case 1:
+         AddString(outstring, "8-bit(256 colors)\r\n");
+         break;
+      case 2:
+         AddString(outstring, "16-bit(2048 colors)\r\n");
+         break;
+      case 3:
+         AddString(outstring, "16-bit(32,768 colors)\r\n");
+         break;
+      case 4:
+         AddString(outstring, "32-bit(16.7 mil colors)\r\n");
+         break;
+      default:
+         AddString(outstring, "Unsupported BPP\r\n");
+         break;
+   }
+
+   return outstring;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+static inline char *AddMosaicString(char *outstring, int mask)
+{
+   if (Vdp2Regs->MZCTL & mask)
+   {
+      AddString(outstring, "Mosaic Size = width %d height %d\r\n", ((Vdp2Regs->MZCTL >> 8) & 0xf) + 1, (Vdp2Regs->MZCTL >> 12) + 1);
+   }
+
+   return outstring;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+static inline char *AddBitmapInfoString(char *outstring, int wh, int palnum, int mapofn)
+{
+   int cellw=0, cellh=0;
+
+   // Bitmap
+   switch(wh)
+   {
+      case 0:
+         cellw = 512;
+         cellh = 256;
+         break;
+      case 1:
+         cellw = 512;
+         cellh = 512;
+         break;
+      case 2:
+         cellw = 1024;
+         cellh = 256;
+         break;
+      case 3:
+         cellw = 1024;
+         cellh = 512;
+         break;                                                           
+   }
+
+   AddString(outstring, "Bitmap(%dx%d)\r\n", cellw, cellh);
+
+   if (palnum & 0x20)
+   {
+      AddString(outstring, "Bitmap Special Priority enabled\r\n");
+   }
+
+   if (palnum & 0x10)
+   {              
+      AddString(outstring, "Bitmap Special Color Calculation enabled\r\n");
+   }
+
+   AddString(outstring, "Bitmap Address = %X\r\n", (mapofn & 0x7) * 0x20000);
+   AddString(outstring, "Bitmap Palette Address = %X\r\n", (palnum & 0x7) << 4);
+
+   return outstring;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+static inline char *AddWindowInfoString(char *outstring, int wctl)
+{
+   if (wctl & 0x2)
+   {
+      int hstart=0, vstart=0, hend=0, vend=0;
+
+      AddString(outstring, "Window W0 Enabled:\r\n");
+
+      // Retrieve Window Points
+      if (Vdp2Regs->LWTA0.all & 0x80000000)
+      {
+         // Line Window
+      }
+      else
+      {
+         // Normal Window
+         hstart = Vdp2Regs->WPSX0 & 0x3FF;
+         vstart = Vdp2Regs->WPSY0 & 0x1FF;
+         hend = Vdp2Regs->WPEX0 & 0x3FF;
+         vend = Vdp2Regs->WPEY0 & 0x1FF;
+      }
+
+      AddString(outstring, "Horizontal start = %d\r\n", hstart);
+      AddString(outstring, "Vertical start = %d\r\n", vstart);
+      AddString(outstring, "Horizontal end = %d\r\n", hend);
+      AddString(outstring, "Vertical end = %d\r\n", vend);
+      AddString(outstring, "Display %s of Window\r\n", (wctl & 0x1) ? "outside" : "inside");
+   }
+
+   if (wctl & 0x8)
+   {
+      int hstart=0, vstart=0, hend=0, vend=0;
+
+      AddString(outstring, "Window W1 Enabled:\r\n");
+
+      // Retrieve Window Points
+      if (Vdp2Regs->LWTA1.all & 0x80000000)
+      {
+         // Line Window
+      }
+      else
+      {
+         // Normal Window
+         hstart = Vdp2Regs->WPSX1 & 0x3FF;
+         vstart = Vdp2Regs->WPSY1 & 0x1FF;
+         hend = Vdp2Regs->WPEX1 & 0x3FF;
+         vend = Vdp2Regs->WPEY1 & 0x1FF;
+      }
+
+      AddString(outstring, "Horizontal start = %d\r\n", hstart);
+      AddString(outstring, "Vertical start = %d\r\n", vstart);
+      AddString(outstring, "Horizontal end = %d\r\n", hend);
+      AddString(outstring, "Vertical end = %d\r\n", vend);
+      AddString(outstring, "Display %s of Window\r\n", (wctl & 0x4) ? "outside" : "inside");
+   }
+
+   if (wctl & 0x20)
+   {
+      AddString(outstring, "Sprite Window Enabled:\r\n");
+      AddString(outstring, "Display %s of Window\r\n", (wctl & 0x10) ? "outside" : "inside");
+   }
+
+   AddString(outstring, "Window Overlap Logic: %s\r\n", (wctl & 0x80) ? "AND" : "OR");
+
+   return outstring;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void Vdp2DebugStatsRBG0(char *outstring, int *isenabled)
 {
+   if (Vdp2Regs->BGON & 0x10)
+   {
+      // enabled
+      *isenabled = 1;
+
+      // Mosaic
+      outstring = AddMosaicString(outstring, 0x10);
+
+      // BPP
+      outstring = AddBppString(outstring, (Vdp2Regs->CHCTLB >> 12) & 0x7);
+
+      // Bitmap or Tile mode?
+      if (Vdp2Regs->CHCTLA & 0x200)
+      {
+         // Bitmap mode
+//         outstring = AddBitmapInfoString(outstring, (Vdp2Regs->CHCTLA & 0x400) >> 10, Vdp2Regs->BMPNB, ??);
+      }
+      else
+      {
+         // Tile mode
+/*
+         if(Vdp2Regs->PNCN3 & 0x8000)
+            patterndatasize = 1;
+         else
+            patterndatasize = 2;
+
+         AddString(outstring, "Tile(%dH x %dV)\r\n", patternwh, patternwh);
+
+         Vdp2GetPlaneSize((Vdp2Regs->PLSZ & 0xC0) >> 6, &planew, &planeh);
+         AddString(outstring, "Plane Size = %dH x %dV\r\n", planew, planeh);
+
+         // Pattern Name Control stuff
+         if (patterndatasize == 2) 
+         {
+            AddString(outstring, "Pattern Name data size = 2 words\r\n");
+         }
+         else
+         {
+            AddString(outstring, "Pattern Name data size = 1 word\r\n");
+            AddString(outstring, "Character Number Supplement bit = %d\r\n", (supplementdata >> 16));
+            AddString(outstring, "Special Priority bit = %d\r\n", (supplementdata >> 9) & 0x1);
+            AddString(outstring, "Special Color Calculation bit = %d\r\n", (supplementdata >> 8) & 0x1);
+            AddString(outstring, "Supplementary Palette number = %d\r\n", (supplementdata >> 5) & 0x7);
+            AddString(outstring, "Supplementary Color number = %d\r\n", supplementdata & 0x1f);
+         }
+*/
+
+/*
+         deca = planeh + planew - 2;
+         multi = planeh * planew;
+
+         // Map Planes A-D
+         for (int i=0; i < 4; i++)
+         {
+            tmp = mapOffsetReg | reg->getByte(0x4C + (i ^ 1));
+
+            if (patterndatasize == 1)
+            {
+               if (patternwh == 1) addr = ((tmp & 0x3F) >> deca) * (multi * 0x2000);
+               else addr = (tmp >> deca) * (multi * 0x800);
+            }
+            else
+            {
+               if (patternwh == 1) addr = ((tmp & 0x1F) >> deca) * (multi * 0x4000);
+               else addr = ((tmp & 0x7F) >> deca) * (multi * 0x1000);
+            }
+   
+            AddString(outstring, "Plane %C Address = %08X\r\n", 0x41+i, addr);
+         }
+   
+         // Figure out Cell start address
+         switch(patterndatasize)
+         {
+            case 1:
+            {
+               tmp = readWord(vram, addr);
+
+               switch(auxMode)
+               {
+                  case 0:
+                     switch(patternwh)
+                     {
+                        case 1:
+                           charAddr = (tmp & 0x3FF) | ((supplementdata & 0x1F) << 10);
+                           break;
+                        case 2:
+                           charAddr = ((tmp & 0x3FF) << 2) |  (supplementdata & 0x3) | ((supplementdata & 0x1C) << 10);
+                           break;
+                     }
+                     break;
+                  case 1:
+                     switch(patternwh)
+                     {
+                        case 1:
+                           charAddr = (tmp & 0xFFF) | ((supplementdata & 0x1C) << 10);
+                           break;
+                        case 4:
+                           charAddr = ((tmp & 0xFFF) << 2) |  (supplementdata & 0x3) | ((supplementdata & 0x10) << 10);
+                           break;
+                     }
+                     break;
+               }
+               break;
+            }
+            case 2:
+            {
+               unsigned short tmp1 = readWord(vram, addr);
+               unsigned short tmp2 = readWord(vram, addr+2);
+   
+               charAddr = tmp2 & 0x7FFF;
+               break;
+            }
+         }
+   
+         if (!(readWord(reg, 0x6) & 0x8000))
+            charAddr &= 0x3FFF;
+
+         charAddr *= 0x20; // selon Runik
+   
+         AddString(outstring, "Cell Data Address = %X\r\n", charAddr);
+*/
+      }
+
+      // Window Control
+      outstring = AddWindowInfoString(outstring, Vdp2Regs->WCTLC);
+
+      // Shadow Control here
+
+      // Color Ram Address Offset here
+
+      // Special Priority Mode here
+
+      // Color Calculation Control here
+
+      // Special Color Calculation Mode here
+
+      // Priority Number
+      AddString(outstring, "Priority = %d\r\n", Vdp2Regs->PRIR & 0x7);
+        
+      // Color Calculation here
+
+      // Color Offset Enable here
+
+      // Color Offset Select here
+   }
+   else
+   {
+      // disabled
+      *isenabled = 0;
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void Vdp2DebugStatsNBG0(char *outstring, int *isenabled)
 {
+   u16 lineVerticalScrollReg = Vdp2Regs->SCRCTL & 0x3F;
+   u32 tmp=0;
+   int isbitmap=Vdp2Regs->CHCTLA & 0x2;
+   int patternwh=(Vdp2Regs->CHCTLA & 0x1) + 1;
+
+   if (Vdp2Regs->BGON & 0x1 || Vdp2Regs->BGON & 0x20)
+   {
+      // enabled
+      *isenabled = 1;
+
+      // Generate specific Info for NBG0/RBG1
+      if (Vdp2Regs->BGON & 0x20)
+      {
+         AddString(outstring, "RBG1 mode\r\n");
+      }
+      else
+      {
+         AddString(outstring, "NBG0 mode\r\n");
+      }
+
+      // Mosaic
+      outstring = AddMosaicString(outstring, 0x1);
+
+      // BPP
+      outstring = AddBppString(outstring, (Vdp2Regs->CHCTLA & 0x70) >> 4);
+
+      // Bitmap or Tile mode?(RBG1 can only do Tile mode)
+      if (isbitmap && !(Vdp2Regs->BGON & 0x20))
+      {
+         // Bitmap
+         outstring = AddBitmapInfoString(outstring, (Vdp2Regs->CHCTLA & 0xC) >> 2, Vdp2Regs->BMPNA, Vdp2Regs->MPOFN);
+      }
+      else
+      {
+         int patterndatasize; 
+         u16 supplementdata=Vdp2Regs->PNCN0 & 0x3FF;
+         int planew=0, planeh=0;
+
+         if(Vdp2Regs->PNCN0 & 0x8000)
+            patterndatasize = 1;
+         else
+            patterndatasize = 2;
+
+         // Tile
+         AddString(outstring, "Tile(%dH x %dV)\r\n", patternwh, patternwh);
+
+         Vdp2GetPlaneSize(Vdp2Regs->PLSZ & 0x3, &planew, &planeh);
+         AddString(outstring, "Plane Size = %dH x %dV\r\n", planew, planeh);
+
+         // Pattern Name Control stuff
+         if (patterndatasize == 2) 
+         {
+            AddString(outstring, "Pattern Name data size = 2 words\r\n");
+         }
+         else
+         {
+            AddString(outstring, "Pattern Name data size = 1 word\r\n");
+            AddString(outstring, "Character Number Supplement bit = %d\r\n", (supplementdata >> 16));
+            AddString(outstring, "Special Priority bit = %d\r\n", (supplementdata >> 9) & 0x1);
+            AddString(outstring, "Special Color Calculation bit = %d\r\n", (supplementdata >> 8) & 0x1);
+            AddString(outstring, "Supplementary Palette number = %d\r\n", (supplementdata >> 5) & 0x7);
+            AddString(outstring, "Supplementary Color number = %d\r\n", supplementdata & 0x1f);
+         }
+
 /*
-  unsigned short screenDisplayReg = readWord(reg, 0x20);
-  unsigned short mosaicReg = readWord(reg, 0x22);
-  unsigned short lineVerticalScrollReg = readWord(reg, 0x9A) & 0x3F;
-  unsigned long tmp=0;
+         // Figure out Cell start address
+         switch(patterndatasize)
+         {
+            case 1:
+            {
+               tmp = T1ReadWord(Vdp2Ram, addr);
+         
+               switch(auxMode)
+               {
+                  case 0:
+                     switch(patternwh)
+                     {
+                        case 1:
+                           charAddr = (tmp & 0x3FF) | ((supplementdata & 0x1F) << 10);
+                           break;
+                        case 2:
+                           charAddr = ((tmp & 0x3FF) << 2) |  (supplementdata & 0x3) | ((supplementdata & 0x1C) << 10);
+                           break;
+                     }
+                     break;
+                  case 1:
+                     switch(patternwh)
+                     {
+                        case 1:
+                           charAddr = (tmp & 0xFFF) | ((supplementdata & 0x1C) << 10);
+                           break;
+                        case 4:
+                           charAddr = ((tmp & 0xFFF) << 2) |  (supplementdata & 0x3) | ((supplementdata & 0x10) << 10);
+                           break;
+                     }
+                     break;
+               }
+               break;
+            }
+            case 2:
+            {
+               u16 tmp1 = T1ReadWord(Vdp2Ram, addr);
+               u16 tmp2 = T1ReadWord(Vdp2Ram, addr+2);
 
-  init();
+               charAddr = tmp2 & 0x7FFF;
+               break;
+            }
+         }
+         if (!(readWord(reg, 0x6) & 0x8000))
+            charAddr &= 0x3FFF;
 
-  if (screenDisplayReg & 0x1 || screenDisplayReg & 0x20) {
-     // enabled
-     *isenabled = true;
+         charAddr *= 0x20; // selon Runik
 
-     // Generate specific Info for NBG0/RBG1
-     if (screenDisplayReg & 0x20)
-     {
-         sprintf(outstring, "RBG1 mode\r\n");
-         outstring += strlen(outstring);
-     }
-     else
-     {
-         sprintf(outstring, "NBG0 mode\r\n");
-         outstring += strlen(outstring);
-     }
-
-     // Mosaic
-     if (mosaicReg & 0x1)
-     {
-        sprintf(outstring, "Mosaic Size = width %d height %d\r\n", (mosaicReg >> 8) & 0xf + 1, (mosaicReg >> 12) + 1);
-        outstring += strlen(outstring);        
-     }
-
-     switch (colorNumber) {
-        case 0:
-                sprintf(outstring, "4-bit(16 colors)\r\n");
-                break;
-        case 1:
-                sprintf(outstring, "8-bit(256 colors)\r\n");
-                break;
-        case 2:
-                sprintf(outstring, "16-bit(2048 colors)\r\n");
-                break;
-        case 3:
-                sprintf(outstring, "16-bit(32,768 colors)\r\n");
-                break;
-        case 4:
-                sprintf(outstring, "32-bit(16.7 mil colors)\r\n");
-                break;
-        default:
-                sprintf(outstring, "Unsupported BPP\r\n");
-                break;
-     }
-     outstring += strlen(outstring);
-
-     // Bitmap or Tile mode?(RBG1 can only do Tile mode)
-     
-     if (bitmap && !(screenDisplayReg & 0x20))
-     {
-        unsigned short bmpPalNumberReg = readWord(reg, 0x2C);
-
-        // Bitmap
-        sprintf(outstring, "Bitmap(%dx%d)\r\n", cellW, cellH);
-        outstring += strlen(outstring);
-
-        if (bmpPalNumberReg & 0x20)
-        {
-           sprintf(outstring, "Bitmap Special Priority enabled\r\n");
-           outstring += strlen(outstring);
-        }
-
-        if (bmpPalNumberReg & 0x10)
-        {
-           sprintf(outstring, "Bitmap Special Color Calculation enabled\r\n");
-           outstring += strlen(outstring);
-        }
-
-        sprintf(outstring, "Bitmap Address = %X\r\n", charAddr);
-        outstring += strlen(outstring);
-
-        sprintf(outstring, "Bitmap Palette Address = %X\r\n", palAddr);
-        outstring += strlen(outstring);
-     }
-     else
-     {
-        // Tile
-        sprintf(outstring, "Tile(%dH x %dV)\r\n", patternWH, patternWH);
-        outstring += strlen(outstring);
-
-        // Pattern Name Control stuff
-        if (patternDataSize == 2) 
-        {
-           sprintf(outstring, "Pattern Name data size = 2 words\r\n");
-           outstring += strlen(outstring);
-        }
-        else
-        {
-           sprintf(outstring, "Pattern Name data size = 1 word\r\n");
-           outstring += strlen(outstring);
-           sprintf(outstring, "Character Number Supplement bit = %d\r\n", (supplementData >> 16));
-           outstring += strlen(outstring);
-           sprintf(outstring, "Special Priority bit = %d\r\n", (supplementData >> 9) & 0x1);
-           outstring += strlen(outstring);
-           sprintf(outstring, "Special Color Calculation bit = %d\r\n", (supplementData >> 8) & 0x1);
-           outstring += strlen(outstring);
-           sprintf(outstring, "Supplementary Palette number = %d\r\n", (supplementData >> 5) & 0x7);
-           outstring += strlen(outstring);
-           sprintf(outstring, "Supplementary Color number = %d\r\n", supplementData & 0x1f);
-           outstring += strlen(outstring);
-        }
-
-        // Figure out Cell start address
-        switch(patternDataSize) {
-           case 1: {
-                   tmp = readWord(vram, addr);
-
-                   switch(auxMode) {
-                      case 0:
-                         switch(patternWH) {
-                            case 1:
-                                charAddr = (tmp & 0x3FF) | ((supplementData & 0x1F) << 10);
-				break;
-                            case 2:
-				charAddr = ((tmp & 0x3FF) << 2) |  (supplementData & 0x3) | ((supplementData & 0x1C) << 10);
-				break;
-                         }
-                         break;
-                      case 1:
-                         switch(patternWH) {
-                         case 1:
-				charAddr = (tmp & 0xFFF) | ((supplementData & 0x1C) << 10);
-				break;
-                         case 4:
-                                charAddr = ((tmp & 0xFFF) << 2) |  (supplementData & 0x3) | ((supplementData & 0x10) << 10);
-                                break;
-                         }
-                         break;
-                   }
-                   break;
-           }
-           case 2: {
-                   unsigned short tmp1 = readWord(vram, addr);
-                   unsigned short tmp2 = readWord(vram, addr+2);
-
-                   charAddr = tmp2 & 0x7FFF;
-                   break;
-           }
-        }
-        if (!(readWord(reg, 0x6) & 0x8000)) charAddr &= 0x3FFF;
-
-        charAddr *= 0x20; // selon Runik
-  
-        sprintf(outstring, "Cell Data Address = %X\r\n", charAddr);
-        outstring += strlen(outstring);
-     }
-     
-     sprintf(outstring, "Plane Size = %dH x %dV\r\n", planeW, planeH);
-     outstring += strlen(outstring);
-
-     if (screenDisplayReg & 0x20)
-     {
-//        unsigned long mapOffsetReg=(readWord(reg, 0x3E) & 0x70) << 2;
-        unsigned short rotParaControlReg=readWord(reg, 0xB2);
-
-        // RBG1
-
-        // Map Planes A-P here
-
-        // Rotation Parameter Read Control
-        if (rotParaControlReg & 0x400)
-           sprintf(outstring, "Read KAst Parameter = TRUE\r\n");
-        else
-           sprintf(outstring, "Read KAst Parameter = FALSE\r\n");
-        outstring += strlen(outstring);
-
-        if (rotParaControlReg & 0x200)
-           sprintf(outstring, "Read Yst Parameter = TRUE\r\n");
-        else
-           sprintf(outstring, "Read Yst Parameter = FALSE\r\n");
-        outstring += strlen(outstring);
-
-        if (rotParaControlReg & 0x100)
-           sprintf(outstring, "Read Xst Parameter = TRUE\r\n");
-        else
-           sprintf(outstring, "Read Xst Parameter = FALSE\r\n");
-        outstring += strlen(outstring);
-
-        // Coefficient Table Control
-
-        // Coefficient Table Address Offset
-
-        // Screen Over Pattern Name(should this be moved?)
-
-        // Rotation Parameter Table Address
-     }
-     else
-     {
-        // NBG0
-        unsigned long mapOffsetReg=(readWord(reg, 0x3C) & 0x7) << 6;
-        int deca = planeH + planeW - 2;
-        int multi = planeH * planeW;
-
-        if (!bitmap) {
-           // Map Planes A-D
-           for (int i=0; i < 4; i++) {
-              tmp = mapOffsetReg | reg->getByte(0x40 + (i ^ 1));
-
-              if (patternDataSize == 1) {
-                 if (patternWH == 1) addr = ((tmp & 0x3F) >> deca) * (multi * 0x2000);
-                 else addr = (tmp >> deca) * (multi * 0x800);
-              }
-              else {
-                 if (patternWH == 1) addr = ((tmp & 0x1F) >> deca) * (multi * 0x4000);
-                 else addr = ((tmp & 0x7F) >> deca) * (multi * 0x1000);
-              }
-  
-              sprintf(outstring, "Plane %C Address = %08X\r\n", 0x41+i, addr);
-              outstring += strlen(outstring);
-           }
-        }
-
-        // Screen scroll values
-        sprintf(outstring, "Screen Scroll x = %f, y = %f\r\n", (float)(reg->getLong(0x70) & 0x7FFFF00) / 65536, (float)(reg->getLong(0x74) & 0x7FFFF00) / 65536);
-        outstring += strlen(outstring);
-
-        // Coordinate Increments
-        sprintf(outstring, "Coordinate Increments x = %f, y = %f\r\n", coordIncX, coordIncY);
-        outstring += strlen(outstring);
-
-        // Reduction Enable
-        switch (readWord(reg, 0x98) & 3)
-        {
-           case 1:
-                   sprintf(outstring, "Horizontal Reduction = 1/2\r\n");
-                   outstring += strlen(outstring);
-                   break;
-           case 2:
-           case 3:
-                   sprintf(outstring, "Horizontal Reduction = 1/4\r\n");
-                   outstring += strlen(outstring);
-                   break;
-           default: break;
-        }
-
-        switch (lineVerticalScrollReg >> 4)
-        {
-           case 0:
-                   sprintf(outstring, "Line Scroll Interval = Each Line\r\n");
-                   break;
-           case 1:
-                   sprintf(outstring, "Line Scroll Interval = Every 2 Lines\r\n");
-                   break;
-           case 2:
-                   sprintf(outstring, "Line Scroll Interval = Every 4 Lines\r\n");
-                   break;
-           case 3:
-                   sprintf(outstring, "Line Scroll Interval = Every 8 Lines\r\n");
-                   break;
-        }
-
-        outstring += strlen(outstring);
-   
-        if (lineVerticalScrollReg & 0x8)
-        {
-           sprintf(outstring, "Line Zoom enabled\r\n");
-           outstring += strlen(outstring);
-        }
-
-        if (lineVerticalScrollReg & 0x4)
-        {
-           sprintf(outstring, "Line Scroll Vertical enabled\r\n");
-           outstring += strlen(outstring);
-        }
-   
-        if (lineVerticalScrollReg & 0x2)
-        {
-           sprintf(outstring, "Line Scroll Horizontal enabled\r\n");
-           outstring += strlen(outstring);
-        }
-
-        if (lineVerticalScrollReg & 0x6) 
-        {
-           sprintf(outstring, "Line Scroll Enabled\r\n");
-           outstring += strlen(outstring);
-           sprintf(outstring, "Line Scroll Table Address = %08X\r\n", 0x05E00000 + ((((readWord(reg, 0xA0) & 0x7) << 16) | (readWord(reg, 0xA2) & 0xFFFE)) << 1));
-           outstring += strlen(outstring);
-        }
-
-        if (lineVerticalScrollReg & 0x1)
-        {
-           sprintf(outstring, "Vertical Cell Scroll enabled\r\n");
-           outstring += strlen(outstring);
-           sprintf(outstring, "Vertical Cell Scroll Table Address = %08X\r\n", 0x05E00000 + ((((readWord(reg, 0x9C) & 0x7) << 16) | (readWord(reg, 0x9E) & 0xFFFE)) << 1));
-           outstring += strlen(outstring);
-        }
-     }
-
-     // Window Control here
-
-     // Shadow Control here
-
-     // Color Ram Address Offset here
-
-     // Special Priority Mode here
-
-     // Color Calculation Control here
-
-     // Special Color Calculation Mode here
-
-     // Priority Number
-     sprintf(outstring, "Priority = %d\r\n", priority);
-     outstring += strlen(outstring);
-
-     // Color Calculation here
-
-     // Color Offset Enable here
-
-     // Color Offset Select here
-  }
-  else {
-     // disabled
-     *isenabled = false;
-  }
+         AddString(outstring, "Cell Data Address = %X\r\n", charAddr);
 */
+      }
+
+      if (Vdp2Regs->BGON & 0x20)
+      {
+//         unsigned long mapOffsetReg=(readWord(reg, 0x3E) & 0x70) << 2;
+                                        
+         // RBG1
+
+         // Map Planes A-P here
+
+         // Rotation Parameter Read Control
+         if (Vdp2Regs->RPRCTL & 0x400)
+         {
+            AddString(outstring, "Read KAst Parameter = TRUE\r\n");
+         }
+         else
+         {
+            AddString(outstring, "Read KAst Parameter = FALSE\r\n");
+         }
+
+         if (Vdp2Regs->RPRCTL & 0x200)
+         {
+            AddString(outstring, "Read Yst Parameter = TRUE\r\n");
+         }
+         else
+         {
+            AddString(outstring, "Read Yst Parameter = FALSE\r\n");
+         }
+ 
+         if (Vdp2Regs->RPRCTL & 0x100)
+         {
+            AddString(outstring, "Read Xst Parameter = TRUE\r\n");
+         }
+         else
+         {
+            AddString(outstring, "Read Xst Parameter = FALSE\r\n");
+         }
+
+         // Coefficient Table Control
+
+         // Coefficient Table Address Offset
+
+         // Screen Over Pattern Name(should this be moved?)
+
+         // Rotation Parameter Table Address
+      }
+      else
+      {
+/*
+         // NBG0
+         unsigned long mapOffsetReg=(readWord(reg, 0x3C) & 0x7) << 6;
+         int deca = planeh + planew - 2;
+         int multi = planeh * planew;
+
+         if (!isbitmap)
+         {
+            // Map Planes A-D
+            for (int i=0; i < 4; i++)
+            {
+               tmp = mapOffsetReg | reg->getByte(0x40 + (i ^ 1));
+
+               if (patterndatasize == 1)
+               {
+                  if (patternwh == 1) addr = ((tmp & 0x3F) >> deca) * (multi * 0x2000);
+                  else addr = (tmp >> deca) * (multi * 0x800);
+               }
+               else
+               {
+                  if (patternwh == 1) addr = ((tmp & 0x1F) >> deca) * (multi * 0x4000);
+                  else addr = ((tmp & 0x7F) >> deca) * (multi * 0x1000);
+               }
+  
+               AddString(outstring, "Plane %C Address = %08X\r\n", 0x41+i, addr);
+            }
+         }
+*/
+
+/*
+         // Screen scroll values
+         AddString(outstring, "Screen Scroll x = %f, y = %f\r\n", (float)(reg->getLong(0x70) & 0x7FFFF00) / 65536, (float)(reg->getLong(0x74) & 0x7FFFF00) / 65536);
+*/
+      
+         // Coordinate Increments
+         AddString(outstring, "Coordinate Increments x = %f, y = %f\r\n", (float) 65536 / (Vdp2Regs->ZMXN0.all & 0x7FF00), (float) 65536 / (Vdp2Regs->ZMYN0.all & 0x7FF00));
+
+         // Reduction Enable
+         switch (Vdp2Regs->ZMCTL & 3)
+         {
+            case 1:
+               AddString(outstring, "Horizontal Reduction = 1/2\r\n");
+               break;
+            case 2:
+            case 3:
+               AddString(outstring, "Horizontal Reduction = 1/4\r\n");
+               break;
+            default: break;
+         }
+
+         switch (lineVerticalScrollReg >> 4)
+         {
+            case 0:
+               AddString(outstring, "Line Scroll Interval = Each Line\r\n");
+               break;
+            case 1:
+               AddString(outstring, "Line Scroll Interval = Every 2 Lines\r\n");
+               break;
+            case 2:
+               AddString(outstring, "Line Scroll Interval = Every 4 Lines\r\n");
+               break;
+            case 3:
+               AddString(outstring, "Line Scroll Interval = Every 8 Lines\r\n");
+               break;
+         }
+
+         if (lineVerticalScrollReg & 0x8)
+         {
+            AddString(outstring, "Line Zoom enabled\r\n");
+         }
+
+         if (lineVerticalScrollReg & 0x4)
+         {
+            AddString(outstring, "Line Scroll Vertical enabled\r\n");
+         }
+   
+         if (lineVerticalScrollReg & 0x2)
+         {
+            AddString(outstring, "Line Scroll Horizontal enabled\r\n");
+         }
+
+         if (lineVerticalScrollReg & 0x6) 
+         {
+            AddString(outstring, "Line Scroll Enabled\r\n");
+            AddString(outstring, "Line Scroll Table Address = %08X\r\n", (int)(0x05E00000 + ((Vdp2Regs->LSTA0.all & 0x7FFFE) << 1)));
+         }
+
+         if (lineVerticalScrollReg & 0x1)
+         {      
+            AddString(outstring, "Vertical Cell Scroll enabled\r\n");
+            AddString(outstring, "Vertical Cell Scroll Table Address = %08X\r\n", 0x05E00000 + (int)(0x05E00000 + ((Vdp2Regs->VCSTA.all & 0x7FFFE) << 1)));
+         }
+      }
+
+      // Window Control
+      outstring = AddWindowInfoString(outstring, Vdp2Regs->WCTLA);
+
+      // Shadow Control here
+
+      // Color Ram Address Offset here
+ 
+      // Special Priority Mode here
+
+      // Color Calculation Control here
+
+      // Special Color Calculation Mode here
+
+      // Priority Number
+      AddString(outstring, "Priority = %d\r\n", Vdp2Regs->PRINA & 0x7);
+
+      // Color Calculation here
+
+      // Color Offset Enable here
+
+      // Color Offset Select here
+   }
+   else
+   {
+      // disabled
+      *isenabled = 0;
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void Vdp2DebugStatsNBG1(char *outstring, int *isenabled)
 {
+   u16 lineVerticalScrollReg = (Vdp2Regs->SCRCTL >> 8) & 0x3F;
+   u32 mapOffsetReg=(Vdp2Regs->MPOFN & 0x70) << 2;
+   u32 tmp=0;
+   int deca;
+   int multi;
+   int isbitmap=Vdp2Regs->CHCTLA & 0x200;
+   int patternwh=((Vdp2Regs->CHCTLA & 0x100) >> 8) + 1;
+
+   if (Vdp2Regs->BGON & 0x2)
+   {
+      // enabled
+      *isenabled = 1;
+
+      // Mosaic
+      outstring = AddMosaicString(outstring, 0x2);
+
+      // BPP
+      outstring = AddBppString(outstring, (Vdp2Regs->CHCTLA & 0x3000) >> 12);
+
+      // Bitmap or Tile mode?     
+      if (isbitmap)
+      {
+         // Bitmap
+         outstring = AddBitmapInfoString(outstring, (Vdp2Regs->CHCTLA & 0xC00) >> 10, Vdp2Regs->BMPNA >> 8, Vdp2Regs->MPOFN >> 4);
+      }
+      else
+      {
+         int patterndatasize;
+         u16 supplementdata=Vdp2Regs->PNCN1 & 0x3FF;
+         int planew=0, planeh=0;
+
+         if(Vdp2Regs->PNCN1 & 0x8000)
+           patterndatasize = 1;
+         else
+           patterndatasize = 2;
+
+         // Tile
+         AddString(outstring, "Tile(%dH x %dV)\r\n", patternwh, patternwh);
+
+         Vdp2GetPlaneSize((Vdp2Regs->PLSZ & 0xC) >> 2, &planew, &planeh);
+         AddString(outstring, "Plane Size = %dH x %dV\r\n", planew, planeh);
+
+         // Pattern Name Control stuff
+         if (patterndatasize == 2) 
+         {
+            AddString(outstring, "Pattern Name data size = 2 words\r\n");
+         }
+         else
+         {
+            AddString(outstring, "Pattern Name data size = 1 word\r\n");
+            AddString(outstring, "Character Number Supplement bit = %d\r\n", (supplementdata >> 16));
+            AddString(outstring, "Special Priority bit = %d\r\n", (supplementdata >> 9) & 0x1);
+            AddString(outstring, "Special Color Calculation bit = %d\r\n", (supplementdata >> 8) & 0x1);
+            AddString(outstring, "Supplementary Palette number = %d\r\n", (supplementdata >> 5) & 0x7);
+            AddString(outstring, "Supplementary Color number = %d\r\n", supplementdata & 0x1f);
+         }
+
 /*
-  unsigned short mosaicReg = readWord(reg, 0x22);
-  unsigned short lineVerticalScrollReg = (readWord(reg, 0x9A) >> 8) & 0x3F;
-  unsigned long mapOffsetReg=(readWord(reg, 0x3C) & 0x70) << 2;
-  unsigned long tmp=0;
-  int deca;
-  int multi;
+         deca = planeh + planew - 2;
+         multi = planeh * planew;
 
-  init();
+         // Map Planes A-D
+         for (int i=0; i < 4; i++)
+         {
+            tmp = mapOffsetReg | reg->getByte(0x44 + (i ^ 1));
 
-  if (enable) {
-     // enabled
-     *isenabled = true;
+            if (patterndatasize == 1)
+            {
+               if (patternwh == 1) addr = ((tmp & 0x3F) >> deca) * (multi * 0x2000);
+               else addr = (tmp >> deca) * (multi * 0x800);
+            }
+            else {
+               if (patternwh == 1) addr = ((tmp & 0x1F) >> deca) * (multi * 0x4000);
+               else addr = ((tmp & 0x7F) >> deca) * (multi * 0x1000);
+            }
 
-     // Mosaic
-     if (mosaicReg & 0x2)
-     {
-        sprintf(outstring, "Mosaic Size = width %d height %d\r\n", (mosaicReg >> 8) & 0xf + 1, (mosaicReg >> 12) + 1);
-        outstring += strlen(outstring);        
-     }
+            AddString(outstring, "Plane %C Address = %08X\r\n", 0x41+i, addr);
+         }
 
-     switch (colorNumber) {
-        case 0:
-                sprintf(outstring, "4-bit(16 colors)\r\n");
-                break;
-        case 1:
-                sprintf(outstring, "8-bit(256 colors)\r\n");
-                break;
-        case 2:
-                sprintf(outstring, "16-bit(2048 colors)\r\n");
-                break;
-        case 3:
-                sprintf(outstring, "16-bit(32,768 colors)\r\n");
-                break;
-        case 4:
-                sprintf(outstring, "32-bit(16.7 mil colors)\r\n");
-                break;
-        default:
-                sprintf(outstring, "Unsupported BPP\r\n");
-                break;
-     }
-     outstring += strlen(outstring);
+         // Figure out Cell start address
+         switch(patterndatasize)
+         {
+            case 1:
+            {
+               tmp = readWord(vram, addr);
 
-     // Bitmap or Tile mode?     
-     if (bitmap)
-     {
-        unsigned short bmpPalNumberReg = readWord(reg, 0x2C) >> 8;
+               switch(auxMode)
+               {
+                  case 0:
+                     switch(patternwh)
+                     {
+                        case 1:
+                           charAddr = (tmp & 0x3FF) | ((supplementdata & 0x1F) << 10);
+                           break;
+                        case 2:
+                           charAddr = ((tmp & 0x3FF) << 2) |  (supplementdata & 0x3) | ((supplementdata & 0x1C) << 10);
+                           break;
+                     }
+                     break;
+                  case 1:
+                     switch(patternwh)
+                     {
+                        case 1:
+                           charAddr = (tmp & 0xFFF) | ((supplementdata & 0x1C) << 10);
+                           break;
+                        case 4:
+                           charAddr = ((tmp & 0xFFF) << 2) |  (supplementdata & 0x3) | ((supplementdata & 0x10) << 10);
+                           break;
+                     }
+                     break;
+               }
+               break;
+            }
+            case 2:
+            {
+               unsigned short tmp1 = readWord(vram, addr);
+               unsigned short tmp2 = readWord(vram, addr+2);
 
-        // Bitmap
-        sprintf(outstring, "Bitmap(%dx%d)\r\n", cellW, cellH);
-        outstring += strlen(outstring);
+               charAddr = tmp2 & 0x7FFF;
+               break;
+            }
+         }
+         if (!(readWord(reg, 0x6) & 0x8000))
+            charAddr &= 0x3FFF;
 
-        if (bmpPalNumberReg & 0x20)
-        {
-           sprintf(outstring, "Bitmap Special Priority enabled\r\n");
-           outstring += strlen(outstring);
-        }
-
-        if (bmpPalNumberReg & 0x10)
-        {
-           sprintf(outstring, "Bitmap Special Color Calculation enabled\r\n");
-           outstring += strlen(outstring);
-        }
-
-        sprintf(outstring, "Bitmap Address = %X\r\n", charAddr);
-        outstring += strlen(outstring);
-
-        sprintf(outstring, "Bitmap Palette Address = %X\r\n", palAddr);
-        outstring += strlen(outstring);
-     }
-     else
-     {
-        // Tile
-        sprintf(outstring, "Tile(%dH x %dV)\r\n", patternWH, patternWH);
-        outstring += strlen(outstring);
-
-        // Pattern Name Control stuff
-        if (patternDataSize == 2) 
-        {
-           sprintf(outstring, "Pattern Name data size = 2 words\r\n");
-           outstring += strlen(outstring);
-        }
-        else
-        {
-           sprintf(outstring, "Pattern Name data size = 1 word\r\n");
-           outstring += strlen(outstring);
-           sprintf(outstring, "Character Number Supplement bit = %d\r\n", (supplementData >> 16));
-           outstring += strlen(outstring);
-           sprintf(outstring, "Special Priority bit = %d\r\n", (supplementData >> 9) & 0x1);
-           outstring += strlen(outstring);
-           sprintf(outstring, "Special Color Calculation bit = %d\r\n", (supplementData >> 8) & 0x1);
-           outstring += strlen(outstring);
-           sprintf(outstring, "Supplementary Palette number = %d\r\n", (supplementData >> 5) & 0x7);
-           outstring += strlen(outstring);
-           sprintf(outstring, "Supplementary Color number = %d\r\n", supplementData & 0x1f);
-           outstring += strlen(outstring);
-        }
-
-        deca = planeH + planeW - 2;
-        multi = planeH * planeW;
-
-        // Map Planes A-D
-        for (int i=0; i < 4; i++) {
-           tmp = mapOffsetReg | reg->getByte(0x44 + (i ^ 1));
-
-           if (patternDataSize == 1) {
-              if (patternWH == 1) addr = ((tmp & 0x3F) >> deca) * (multi * 0x2000);
-              else addr = (tmp >> deca) * (multi * 0x800);
-           }
-           else {
-              if (patternWH == 1) addr = ((tmp & 0x1F) >> deca) * (multi * 0x4000);
-              else addr = ((tmp & 0x7F) >> deca) * (multi * 0x1000);
-           }
-
-           sprintf(outstring, "Plane %C Address = %08X\r\n", 0x41+i, addr);
-           outstring += strlen(outstring);
-        }
-
-        // Figure out Cell start address
-        switch(patternDataSize) {
-           case 1: {
-                   tmp = readWord(vram, addr);
-
-                   switch(auxMode) {
-                      case 0:
-                         switch(patternWH) {
-                            case 1:
-                                charAddr = (tmp & 0x3FF) | ((supplementData & 0x1F) << 10);
-				break;
-                            case 2:
-				charAddr = ((tmp & 0x3FF) << 2) |  (supplementData & 0x3) | ((supplementData & 0x1C) << 10);
-				break;
-                         }
-                         break;
-                      case 1:
-                         switch(patternWH) {
-                         case 1:
-				charAddr = (tmp & 0xFFF) | ((supplementData & 0x1C) << 10);
-				break;
-                         case 4:
-                                charAddr = ((tmp & 0xFFF) << 2) |  (supplementData & 0x3) | ((supplementData & 0x10) << 10);
-                                break;
-                         }
-                         break;
-                   }
-                   break;
-           }
-           case 2: {
-                   unsigned short tmp1 = readWord(vram, addr);
-                   unsigned short tmp2 = readWord(vram, addr+2);
-
-                   charAddr = tmp2 & 0x7FFF;
-                   break;
-           }
-        }
-        if (!(readWord(reg, 0x6) & 0x8000)) charAddr &= 0x3FFF;
-
-        charAddr *= 0x20; // selon Runik
+         charAddr *= 0x20; // selon Runik
   
-        sprintf(outstring, "Cell Data Address = %X\r\n", charAddr);
-        outstring += strlen(outstring);
-     }
-     
-     sprintf(outstring, "Plane Size = %dH x %dV\r\n", planeW, planeH);
-     outstring += strlen(outstring);
-
-     // Screen scroll values
-     sprintf(outstring, "Screen Scroll x = %f, y = %f\r\n", (float)(reg->getLong(0x80) & 0x7FFFF00) / 65536, (float)(reg->getLong(0x84) & 0x7FFFF00) / 65536);
-     outstring += strlen(outstring);
-
-     // Coordinate Increments
-     sprintf(outstring, "Coordinate Increments x = %f, y = %f\r\n", coordIncX, coordIncY);
-     outstring += strlen(outstring);
-
-     // Reduction Enable
-     switch ((readWord(reg, 0x98) >> 8) & 3)
-     {
-        case 1:
-                sprintf(outstring, "Horizontal Reduction = 1/2\r\n");
-                outstring += strlen(outstring);
-                break;
-        case 2:
-        case 3:
-                sprintf(outstring, "Horizontal Reduction = 1/4\r\n");
-                outstring += strlen(outstring);
-                break;
-        default: break;
-     }
-
-     switch (lineVerticalScrollReg >> 4)
-     {
-        case 0:
-                sprintf(outstring, "Line Scroll Interval = Each Line\r\n");
-                break;
-        case 1:
-                sprintf(outstring, "Line Scroll Interval = Every 2 Lines\r\n");
-                break;
-        case 2:
-                sprintf(outstring, "Line Scroll Interval = Every 4 Lines\r\n");
-                break;
-        case 3:
-                sprintf(outstring, "Line Scroll Interval = Every 8 Lines\r\n");
-                break;
-     }
-
-     outstring += strlen(outstring);
-
-     if (lineVerticalScrollReg & 0x8)
-     {
-        sprintf(outstring, "Line Zoom X enabled\r\n");
-        outstring += strlen(outstring);
-     }
-
-     if (lineVerticalScrollReg & 0x4)
-     {
-        sprintf(outstring, "Line Scroll Vertical enabled\r\n");
-        outstring += strlen(outstring);
-     }
-   
-     if (lineVerticalScrollReg & 0x2)
-     {
-        sprintf(outstring, "Line Scroll Horizontal enabled\r\n");
-        outstring += strlen(outstring);
-     }
-
-     if (lineVerticalScrollReg & 0x6) 
-     {
-        sprintf(outstring, "Line Scroll Enabled\r\n");
-        outstring += strlen(outstring);
-        sprintf(outstring, "Line Scroll Table Address = %08X\r\n", 0x05E00000 + ((((readWord(reg, 0xA4) & 0x7) << 16) | (readWord(reg, 0xA6) & 0xFFFE)) << 1));
-        outstring += strlen(outstring);
-     }
-
-     if (lineVerticalScrollReg & 0x1)
-     {
-        sprintf(outstring, "Vertical Cell Scroll enabled\r\n");
-        outstring += strlen(outstring);
-        sprintf(outstring, "Vertical Cell Scroll Table Address = %08X\r\n", 0x05E00000 + ((((readWord(reg, 0x9C) & 0x7) << 16) | (readWord(reg, 0x9E) & 0xFFFE)) << 1));
-        outstring += strlen(outstring);
-     }
-
-     // Window Control here
-
-     // Shadow Control here
-
-     // Color Ram Address Offset here
-
-     // Special Priority Mode here
-
-     // Color Calculation Control here
-
-     // Special Color Calculation Mode here
-
-     // Priority Number
-     sprintf(outstring, "Priority = %d\r\n", priority);
-     outstring += strlen(outstring);
-
-     // Color Calculation here
-
-     // Color Offset Enable here
-
-     // Color Offset Select here
-  }
-  else {
-     // disabled
-     *isenabled = false;
-  }
+         AddString(outstring, "Cell Data Address = %X\r\n", charAddr);
 */
+      }
+     
+/*
+      // Screen scroll values
+      AddString(outstring, "Screen Scroll x = %f, y = %f\r\n", (float)(reg->getLong(0x80) & 0x7FFFF00) / 65536, (float)(reg->getLong(0x84) & 0x7FFFF00) / 65536);
+*/
+
+      // Coordinate Increments
+      AddString(outstring, "Coordinate Increments x = %f, y = %f\r\n", (float) 65536 / (Vdp2Regs->ZMXN1.all & 0x7FF00), (float) 65536 / (Vdp2Regs->ZMXN1.all & 0x7FF00));
+
+      // Reduction Enable
+      switch ((Vdp2Regs->ZMCTL >> 8) & 3)
+      {
+         case 1:
+            AddString(outstring, "Horizontal Reduction = 1/2\r\n");
+            break;
+         case 2:
+         case 3:
+            AddString(outstring, "Horizontal Reduction = 1/4\r\n");
+            break;
+         default: break;
+      }
+
+      switch (lineVerticalScrollReg >> 4)
+      {
+         case 0:
+            AddString(outstring, "Line Scroll Interval = Each Line\r\n");
+            break;
+         case 1:
+            AddString(outstring, "Line Scroll Interval = Every 2 Lines\r\n");
+            break;
+         case 2:
+            AddString(outstring, "Line Scroll Interval = Every 4 Lines\r\n");
+            break;
+         case 3:
+            AddString(outstring, "Line Scroll Interval = Every 8 Lines\r\n");
+            break;
+      }
+
+      if (lineVerticalScrollReg & 0x8)
+      {
+         AddString(outstring, "Line Zoom X enabled\r\n");
+      }
+
+      if (lineVerticalScrollReg & 0x4)
+      {
+         AddString(outstring, "Line Scroll Vertical enabled\r\n");
+      }
+   
+      if (lineVerticalScrollReg & 0x2)
+      {
+         AddString(outstring, "Line Scroll Horizontal enabled\r\n");
+      }
+
+      if (lineVerticalScrollReg & 0x6) 
+      {
+         AddString(outstring, "Line Scroll Enabled\r\n");
+         AddString(outstring, "Line Scroll Table Address = %08X\r\n", (int)(0x05E00000 + ((Vdp2Regs->LSTA1.all & 0x7FFFE) << 1)));
+      }
+
+      if (lineVerticalScrollReg & 0x1)
+      {
+         AddString(outstring, "Vertical Cell Scroll enabled\r\n");
+         AddString(outstring, "Vertical Cell Scroll Table Address = %08X\r\n", 0x05E00000 + (int)(0x05E00000 + ((Vdp2Regs->VCSTA.all & 0x7FFFE) << 1)));
+      }
+
+      // Window Control
+      outstring = AddWindowInfoString(outstring, Vdp2Regs->WCTLA >> 8);
+
+      // Shadow Control here
+
+      // Color Ram Address Offset here
+
+      // Special Priority Mode here
+
+      // Color Calculation Control here
+
+      // Special Color Calculation Mode here
+
+      // Priority Number
+      AddString(outstring, "Priority = %d\r\n", (Vdp2Regs->PRINA >> 8) & 0x7);
+
+      // Color Calculation here
+
+      // Color Offset Enable here
+
+      // Color Offset Select here
+   }
+   else
+     // disabled
+     *isenabled = 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void Vdp2DebugStatsNBG2(char *outstring, int *isenabled)
 {
-/*
-  unsigned short mosaicReg = readWord(reg, 0x22);
-  unsigned long mapOffsetReg=(readWord(reg, 0x3C) & 0x700) >> 2;
-  unsigned long tmp=0;
-  int deca;
-  int multi;
+   u32 mapOffsetReg=(Vdp2Regs->MPOFN & 0x700) >> 2;
+   u32 tmp=0;
+   int deca;
+   int multi;
 
-  init();
+   if (Vdp2Regs->BGON & 0x4)
+   {
+      int patterndatasize;
+      u16 supplementdata=Vdp2Regs->PNCN2 & 0x3FF;
+      int planew=0, planeh=0;
+      int patternwh=(Vdp2Regs->CHCTLB & 0x1) + 1;
 
-  if (enable) {
-     // enabled
-     *isenabled = true;
+      // enabled
+      *isenabled = 1;
 
-     // Mosaic
-     if (mosaicReg & 0x4)
-     {
-        sprintf(outstring, "Mosaic Size = width %d height %d\r\n", (mosaicReg >> 8) & 0xf + 1, (mosaicReg >> 12) + 1);
-        outstring += strlen(outstring);        
-     }
+      // Mosaic
+      outstring = AddMosaicString(outstring, 0x4);
 
-     switch (colorNumber) {
-        case 0:
-                sprintf(outstring, "4-bit(16 colors)\r\n");
-                break;
-        case 1:
-                sprintf(outstring, "8-bit(256 colors)\r\n");
-                break;
-        case 2:
-                sprintf(outstring, "16-bit(2048 colors)\r\n");
-                break;
-        case 3:
-                sprintf(outstring, "16-bit(32,768 colors)\r\n");
-                break;
-        case 4:
-                sprintf(outstring, "32-bit(16.7 mil colors)\r\n");
-                break;
-        default:
-                sprintf(outstring, "Unsupported BPP\r\n");
-                break;
-     }
-     outstring += strlen(outstring);
+      // BPP
+      outstring = AddBppString(outstring, (Vdp2Regs->CHCTLB & 0x2) >> 1);
 
-     sprintf(outstring, "Tile(%dH x %dV)\r\n", patternWH, patternWH);
-     outstring += strlen(outstring);
+      if(Vdp2Regs->PNCN2 & 0x8000)
+         patterndatasize = 1;
+      else
+         patterndatasize = 2;
 
-     // Pattern Name Control stuff
-     if (patternDataSize == 2) 
-     {
-        sprintf(outstring, "Pattern Name data size = 2 words\r\n");
-        outstring += strlen(outstring);
-     }
-     else
-     {
-        sprintf(outstring, "Pattern Name data size = 1 word\r\n");
-        outstring += strlen(outstring);
-        sprintf(outstring, "Character Number Supplement bit = %d\r\n", (supplementData >> 16));
-        outstring += strlen(outstring);
-        sprintf(outstring, "Special Priority bit = %d\r\n", (supplementData >> 9) & 0x1);
-        outstring += strlen(outstring);
-        sprintf(outstring, "Special Color Calculation bit = %d\r\n", (supplementData >> 8) & 0x1);
-        outstring += strlen(outstring);
-        sprintf(outstring, "Supplementary Palette number = %d\r\n", (supplementData >> 5) & 0x7);
-        outstring += strlen(outstring);
-        sprintf(outstring, "Supplementary Color number = %d\r\n", supplementData & 0x1f);
-        outstring += strlen(outstring);
-     }
+      AddString(outstring, "Tile(%dH x %dV)\r\n", patternwh, patternwh);
+
+      Vdp2GetPlaneSize((Vdp2Regs->PLSZ & 0x30) >> 4, &planew, &planeh);
+      AddString(outstring, "Plane Size = %dH x %dV\r\n", planew, planeh);
+
+      // Pattern Name Control stuff
+      if (patterndatasize == 2) 
+      {
+         AddString(outstring, "Pattern Name data size = 2 words\r\n");
+      }
+      else
+      {
+         AddString(outstring, "Pattern Name data size = 1 word\r\n");
+         AddString(outstring, "Character Number Supplement bit = %d\r\n", (supplementdata >> 16));
+         AddString(outstring, "Special Priority bit = %d\r\n", (supplementdata >> 9) & 0x1);
+         AddString(outstring, "Special Color Calculation bit = %d\r\n", (supplementdata >> 8) & 0x1);
+         AddString(outstring, "Supplementary Palette number = %d\r\n", (supplementdata >> 5) & 0x7);
+         AddString(outstring, "Supplementary Color number = %d\r\n", supplementdata & 0x1f);
+      }
      
-     sprintf(outstring, "Plane Size = %dH x %dV\r\n", planeW, planeH);
-     outstring += strlen(outstring);
 
-     deca = planeH + planeW - 2;
-     multi = planeH * planeW;
+/*
+      deca = planeh + planew - 2;
+      multi = planeh * planew;
 
-     // Map Planes A-D
-     for (int i=0; i < 4; i++) {
-        tmp = mapOffsetReg | reg->getByte(0x48 + (i ^ 1));
+      // Map Planes A-D
+      for (int i=0; i < 4; i++)
+      {
+         tmp = mapOffsetReg | reg->getByte(0x48 + (i ^ 1));
 
-        if (patternDataSize == 1) {
-           if (patternWH == 1) addr = ((tmp & 0x3F) >> deca) * (multi * 0x2000);
-           else addr = (tmp >> deca) * (multi * 0x800);
-        }
-        else {
-           if (patternWH == 1) addr = ((tmp & 0x1F) >> deca) * (multi * 0x4000);
-           else addr = ((tmp & 0x7F) >> deca) * (multi * 0x1000);
-        }
-
-        sprintf(outstring, "Plane %C Address = %08X\r\n", 0x41+i, addr);
-        outstring += strlen(outstring);
-     }
-
-     // Figure out Cell start address
-     switch(patternDataSize) {
-        case 1: {
-                tmp = readWord(vram, addr);
-
-    		switch(auxMode) {
-    		case 0:
-      			switch(patternWH) {
-      			case 1:
-				charAddr = (tmp & 0x3FF) | ((supplementData & 0x1F) << 10);
-				break;
-      			case 2:
-				charAddr = ((tmp & 0x3FF) << 2) |  (supplementData & 0x3) | ((supplementData & 0x1C) << 10);
-				break;
-      			}
-      			break;
-    		case 1:
-      			switch(patternWH) {
-      			case 1:
-				charAddr = (tmp & 0xFFF) | ((supplementData & 0x1C) << 10);
-				break;
-      			case 4:
-				charAddr = ((tmp & 0xFFF) << 2) |  (supplementData & 0x3) | ((supplementData & 0x10) << 10);
-				break;
-      			}
-      			break;
-    		}
-    		break;
-	}
-  	case 2: {
-                unsigned short tmp1 = readWord(vram, addr);
-                unsigned short tmp2 = readWord(vram, addr+2);
-
-    		charAddr = tmp2 & 0x7FFF;
-    		break;
-	}
-     }
-     if (!(readWord(reg, 0x6) & 0x8000)) charAddr &= 0x3FFF;
-
-     charAddr *= 0x20; // selon Runik
-
-     sprintf(outstring, "Cell Data Address = %X\r\n", charAddr);
-     outstring += strlen(outstring);
-
-     // Screen scroll values
-     sprintf(outstring, "Screen Scroll x = %d, y = %d\r\n", readWord(reg, 0x90) & 0x7FF, readWord(reg, 0x92) & 0x7FF);
-     outstring += strlen(outstring);
+         if (patterndatasize == 1)
+         {
+            if (patternwh == 1) addr = ((tmp & 0x3F) >> deca) * (multi * 0x2000);
+            else addr = (tmp >> deca) * (multi * 0x800);
+         }
+         else
+         {
+            if (patternwh == 1) addr = ((tmp & 0x1F) >> deca) * (multi * 0x4000);
+            else addr = ((tmp & 0x7F) >> deca) * (multi * 0x1000);
+         }
  
-     // Window Control here
+         AddString(outstring, "Plane %C Address = %08X\r\n", 0x41+i, addr);
+      }
 
-     // Shadow Control here
+      // Figure out Cell start address
+      switch(patterndatasize)
+      {
+         case 1:
+         {
+            tmp = readWord(vram, addr);
 
-     // Color Ram Address Offset here
+            switch(auxMode)
+            {
+               case 0:
+                  switch(patternwh)
+                  {
+                     case 1:
+                        charAddr = (tmp & 0x3FF) | ((supplementdata & 0x1F) << 10);
+                        break;
+                     case 2:
+                        charAddr = ((tmp & 0x3FF) << 2) |  (supplementdata & 0x3) | ((supplementdata & 0x1C) << 10);
+                        break;
+                  }
+                  break;
+               case 1:
+                  switch(patternwh)
+                  {
+                     case 1:
+                        charAddr = (tmp & 0xFFF) | ((supplementdata & 0x1C) << 10);
+                        break;
+                     case 4:
+                        charAddr = ((tmp & 0xFFF) << 2) |  (supplementdata & 0x3) | ((supplementdata & 0x10) << 10);
+                        break;
+                  }
+                  break;
+            }
+            break;
+         }
+         case 2:
+         {
+            unsigned short tmp1 = readWord(vram, addr);
+            unsigned short tmp2 = readWord(vram, addr+2);
 
-     // Special Priority Mode here
+            charAddr = tmp2 & 0x7FFF;
+            break;
+         }
+      }
+      if (!(readWord(reg, 0x6) & 0x8000)) charAddr &= 0x3FFF;
 
-     // Color Calculation Control here
+      charAddr *= 0x20; // selon Runik
 
-     // Special Color Calculation Mode here
-
-     // Priority Number
-     sprintf(outstring, "Priority = %d\r\n", priority);
-     outstring += strlen(outstring);
-
-     // Color Calculation here
-
-     // Color Offset Enable here
-
-     // Color Offset Select here
-  }
-  else {
-     // disabled
-     *isenabled = false;
-  }
+      AddString(outstring, "Cell Data Address = %X\r\n", charAddr);
 */
+      // Screen scroll values
+      AddString(outstring, "Screen Scroll x = %d, y = %d\r\n", - ((Vdp2Regs->SCXN2 & 0x7FF) % 512), - ((Vdp2Regs->SCYN2 & 0x7FF) % 512));
+
+      // Window Control
+      outstring = AddWindowInfoString(outstring, Vdp2Regs->WCTLB);
+
+      // Shadow Control here
+
+      // Color Ram Address Offset here
+
+      // Special Priority Mode here
+
+      // Color Calculation Control here
+
+      // Special Color Calculation Mode here
+
+      // Priority Number
+      AddString(outstring, "Priority = %d\r\n", Vdp2Regs->PRINB & 0x7);
+                       
+      // Color Calculation here
+
+      // Color Offset Enable here
+
+      // Color Offset Select here
+   }
+   else
+   {
+     // disabled
+     *isenabled = 0;
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void Vdp2DebugStatsNBG3(char *outstring, int *isenabled)
 {
-/*
-  unsigned short mosaicReg = readWord(reg, 0x22);
-  unsigned long mapOffsetReg=(readWord(reg, 0x3C) & 0x7000) >> 6;
-  unsigned long tmp=0;
-  int deca;
-  int multi;
+   u32 mapOffsetReg=(Vdp2Regs->MPOFN & 0x7000) >> 6;
+   u32 tmp=0;
+   int deca;
+   int multi;
 
-  init();
+   if (Vdp2Regs->BGON & 0x8)
+   {
+      int patterndatasize;
+      u16 supplementdata=Vdp2Regs->PNCN3 & 0x3FF;
+      int planew=0, planeh=0;
+      int patternwh=((Vdp2Regs->CHCTLB & 0x10) >> 4) + 1;
 
-  if (enable) {
-     // enabled
-     *isenabled = true;
+      // enabled
+      *isenabled = 1;
 
-     // Mosaic
-     if (mosaicReg & 0x8)
-     {
-        sprintf(outstring, "Mosaic Size = width %d height %d\r\n", (mosaicReg >> 8) & 0xf + 1, (mosaicReg >> 12) + 1);
-        outstring += strlen(outstring);        
-     }
+      // Mosaic
+      outstring = AddMosaicString(outstring, 0x8);
 
-     switch (colorNumber) {
-        case 0:
-                sprintf(outstring, "4-bit(16 colors)\r\n");
-                break;
-        case 1:
-                sprintf(outstring, "8-bit(256 colors)\r\n");
-                break;
-        case 2:
-                sprintf(outstring, "16-bit(2048 colors)\r\n");
-                break;
-        case 3:
-                sprintf(outstring, "16-bit(32,768 colors)\r\n");
-                break;
-        case 4:
-                sprintf(outstring, "32-bit(16.7 mil colors)\r\n");
-                break;
-        default:
-                sprintf(outstring, "Unsupported BPP\r\n");
-                break;
-     }
-     outstring += strlen(outstring);
+      // BPP
+      outstring = AddBppString(outstring, (Vdp2Regs->CHCTLB & 0x20) >> 5);
 
-     sprintf(outstring, "Tile(%dH x %dV)\r\n", patternWH, patternWH);
-     outstring += strlen(outstring);
+      if(Vdp2Regs->PNCN3 & 0x8000)
+         patterndatasize = 1;
+      else
+         patterndatasize = 2;
 
-     // Pattern Name Control stuff
-     if (patternDataSize == 2) 
-     {
-        sprintf(outstring, "Pattern Name data size = 2 words\r\n");
-        outstring += strlen(outstring);
-     }
-     else
-     {
-        sprintf(outstring, "Pattern Name data size = 1 word\r\n");
-        outstring += strlen(outstring);
-        sprintf(outstring, "Character Number Supplement bit = %d\r\n", (supplementData >> 16));
-        outstring += strlen(outstring);
-        sprintf(outstring, "Special Priority bit = %d\r\n", (supplementData >> 9) & 0x1);
-        outstring += strlen(outstring);
-        sprintf(outstring, "Special Color Calculation bit = %d\r\n", (supplementData >> 8) & 0x1);
-        outstring += strlen(outstring);
-        sprintf(outstring, "Supplementary Palette number = %d\r\n", (supplementData >> 5) & 0x7);
-        outstring += strlen(outstring);
-        sprintf(outstring, "Supplementary Color number = %d\r\n", supplementData & 0x1f);
-        outstring += strlen(outstring);
-     }
+      AddString(outstring, "Tile(%dH x %dV)\r\n", patternwh, patternwh);
+
+      Vdp2GetPlaneSize((Vdp2Regs->PLSZ & 0xC0) >> 6, &planew, &planeh);
+      AddString(outstring, "Plane Size = %dH x %dV\r\n", planew, planeh);
+
+      // Pattern Name Control stuff
+      if (patterndatasize == 2) 
+      {
+         AddString(outstring, "Pattern Name data size = 2 words\r\n");
+      }
+      else
+      {
+         AddString(outstring, "Pattern Name data size = 1 word\r\n");
+         AddString(outstring, "Character Number Supplement bit = %d\r\n", (supplementdata >> 16));
+         AddString(outstring, "Special Priority bit = %d\r\n", (supplementdata >> 9) & 0x1);
+         AddString(outstring, "Special Color Calculation bit = %d\r\n", (supplementdata >> 8) & 0x1);
+         AddString(outstring, "Supplementary Palette number = %d\r\n", (supplementdata >> 5) & 0x7);
+         AddString(outstring, "Supplementary Color number = %d\r\n", supplementdata & 0x1f);
+      }
      
-     sprintf(outstring, "Plane Size = %dH x %dV\r\n", planeW, planeH);
-     outstring += strlen(outstring);
+/*
+      deca = planeh + planew - 2;
+      multi = planeh * planew;
 
-     deca = planeH + planeW - 2;
-     multi = planeH * planeW;
+      // Map Planes A-D
+      for (int i=0; i < 4; i++)
+      {
+         tmp = mapOffsetReg | reg->getByte(0x4C + (i ^ 1));
 
-     // Map Planes A-D
-     for (int i=0; i < 4; i++) {
-        tmp = mapOffsetReg | reg->getByte(0x4C + (i ^ 1));
+         if (patterndatasize == 1)
+         {
+            if (patternwh == 1) addr = ((tmp & 0x3F) >> deca) * (multi * 0x2000);
+            else addr = (tmp >> deca) * (multi * 0x800);
+         }
+         else
+         {
+            if (patternwh == 1) addr = ((tmp & 0x1F) >> deca) * (multi * 0x4000);
+            else addr = ((tmp & 0x7F) >> deca) * (multi * 0x1000);
+         }
 
-        if (patternDataSize == 1) {
-           if (patternWH == 1) addr = ((tmp & 0x3F) >> deca) * (multi * 0x2000);
-           else addr = (tmp >> deca) * (multi * 0x800);
-        }
-        else {
-           if (patternWH == 1) addr = ((tmp & 0x1F) >> deca) * (multi * 0x4000);
-           else addr = ((tmp & 0x7F) >> deca) * (multi * 0x1000);
-        }
+         AddString(outstring, "Plane %C Address = %08X\r\n", 0x41+i, addr);
+      }
 
-        sprintf(outstring, "Plane %C Address = %08X\r\n", 0x41+i, addr);
-        outstring += strlen(outstring);
-     }
+      // Figure out Cell start address
+      switch(patterndatasize)
+      {
+         case 1:
+         {
+            tmp = readWord(vram, addr);
 
-     // Figure out Cell start address
-     switch(patternDataSize) {
-        case 1: {
-                tmp = readWord(vram, addr);
+            switch(auxMode)
+            {
+               case 0:
+                  switch(patternwh)
+                  {
+                     case 1:
+                        charAddr = (tmp & 0x3FF) | ((supplementdata & 0x1F) << 10);
+                        break;
+                     case 2:
+                        charAddr = ((tmp & 0x3FF) << 2) |  (supplementdata & 0x3) | ((supplementdata & 0x1C) << 10);
+                        break;
+                  }
+                  break;
+               case 1:
+                  switch(patternwh)
+                  {
+                     case 1:
+                        charAddr = (tmp & 0xFFF) | ((supplementdata & 0x1C) << 10);
+                        break;
+                     case 4:
+                        charAddr = ((tmp & 0xFFF) << 2) |  (supplementdata & 0x3) | ((supplementdata & 0x10) << 10);
+                        break;
+                  }
+                  break;
+            }
+            break;
+         }
+         case 2:
+         {
+            unsigned short tmp1 = readWord(vram, addr);
+            unsigned short tmp2 = readWord(vram, addr+2);
 
-    		switch(auxMode) {
-    		case 0:
-      			switch(patternWH) {
-      			case 1:
-				charAddr = (tmp & 0x3FF) | ((supplementData & 0x1F) << 10);
-				break;
-      			case 2:
-				charAddr = ((tmp & 0x3FF) << 2) |  (supplementData & 0x3) | ((supplementData & 0x1C) << 10);
-				break;
-      			}
-      			break;
-    		case 1:
-      			switch(patternWH) {
-      			case 1:
-				charAddr = (tmp & 0xFFF) | ((supplementData & 0x1C) << 10);
-				break;
-      			case 4:
-				charAddr = ((tmp & 0xFFF) << 2) |  (supplementData & 0x3) | ((supplementData & 0x10) << 10);
-				break;
-      			}
-      			break;
-    		}
-    		break;
-	}
-  	case 2: {
-                unsigned short tmp1 = readWord(vram, addr);
-                unsigned short tmp2 = readWord(vram, addr+2);
+            charAddr = tmp2 & 0x7FFF;
+            break;
+         }
+      }
 
-    		charAddr = tmp2 & 0x7FFF;
-    		break;
-	}
-     }
-     if (!(readWord(reg, 0x6) & 0x8000)) charAddr &= 0x3FFF;
+      if (!(readWord(reg, 0x6) & 0x8000))
+         charAddr &= 0x3FFF;
 
-     charAddr *= 0x20; // selon Runik
+      charAddr *= 0x20; // selon Runik
 
-     sprintf(outstring, "Cell Data Address = %X\r\n", charAddr);
-     outstring += strlen(outstring);
-
-     // Screen scroll values
-     sprintf(outstring, "Screen Scroll x = %d, y = %d\r\n", readWord(reg, 0x94) & 0x7FF, readWord(reg, 0x96) & 0x7FF);
-     outstring += strlen(outstring);
- 
-     // Window Control here
-
-     // Shadow Control here
-
-     // Color Ram Address Offset here
-
-     // Special Priority Mode here
-
-     // Color Calculation Control here
-
-     // Special Color Calculation Mode here
-
-     // Priority Number
-     sprintf(outstring, "Priority = %d\r\n", priority);
-     outstring += strlen(outstring);
-
-     // Color Calculation here
-
-     // Color Offset Enable here
-
-     // Color Offset Select here
-  }
-  else {
-     // disabled
-     *isenabled = false;
-  }
+      AddString(outstring, "Cell Data Address = %X\r\n", charAddr);
 */
+      // Screen scroll values
+      AddString(outstring, "Screen Scroll x = %d, y = %d\r\n", - ((Vdp2Regs->SCXN3 & 0x7FF) % 512), - ((Vdp2Regs->SCYN3 & 0x7FF) % 512));
+
+      // Window Control
+      outstring = AddWindowInfoString(outstring, Vdp2Regs->WCTLB >> 8);
+
+      // Shadow Control here
+
+      // Color Ram Address Offset here
+
+      // Special Priority Mode here
+
+      // Color Calculation Control here
+
+      // Special Color Calculation Mode here
+
+      // Priority Number
+      AddString(outstring, "Priority = %d\r\n", (Vdp2Regs->PRINB >> 8) & 0x7);
+
+      // Color Calculation here
+
+      // Color Offset Enable here
+
+      // Color Offset Select here
+   }
+   else
+   {
+      // disabled
+      *isenabled = 0;
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////////

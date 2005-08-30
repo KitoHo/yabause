@@ -3375,10 +3375,6 @@ _ACEOF
 
   LIBS="-lglut $LIBS"
 
-else
-  { { echo "$as_me:$LINENO: error: \"You need to install GLUT\"" >&5
-echo "$as_me: error: \"You need to install GLUT\"" >&2;}
-   { (exit 1); exit 1; }; }
 fi
 
 		yabause_yui="."
@@ -5160,10 +5156,6 @@ _ACEOF
 
   LIBS="-lglut $LIBS"
 
-else
-  { { echo "$as_me:$LINENO: error: \"You need to install GLUT\"" >&5
-echo "$as_me: error: \"You need to install GLUT\"" >&2;}
-   { (exit 1); exit 1; }; }
 fi
 
 		yabause_yui="."
@@ -5320,10 +5312,6 @@ _ACEOF
 
   LIBS="-lglut $LIBS"
 
-else
-  { { echo "$as_me:$LINENO: error: \"You need to install GLUT\"" >&5
-echo "$as_me: error: \"You need to install GLUT\"" >&2;}
-   { (exit 1); exit 1; }; }
 fi
 
 		yabause_yui="."

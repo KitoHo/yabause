@@ -48,7 +48,7 @@ case $target in
 		;;
 	*mingw32*)
 		AC_CHECK_LIB(opengl32, glEnable, [], [AC_MSG_ERROR("You need to install OpenGL")])
-		AC_CHECK_LIB(glut, glutGetModifiers, [], [AC_MSG_ERROR("You need to install GLUT")])
+		AC_CHECK_LIB(glut, glutGetModifiers)
 		yabause_yui="."
 		use_gtk=no
 		;;
@@ -57,13 +57,13 @@ case $target in
 		LIBS="$LIBS $X_LIBS"
 		CFLAGS="$CFLAGS $X_CFLAGS"
 		AC_CHECK_LIB(GL, glEnable, [], [AC_MSG_ERROR("You need to install OpenGL") ])
-		AC_CHECK_LIB(glut, glutGetModifiers, [], [AC_MSG_ERROR("You need to install GLUT")])
+		AC_CHECK_LIB(glut, glutGetModifiers)
 		yabause_yui="."
 		use_gtk=yes
 		;;
 	*) 
 		AC_CHECK_LIB(GL, glEnable, [], [AC_MSG_ERROR("You need to install OpenGL") ])
-		AC_CHECK_LIB(glut, glutGetModifiers, [], [AC_MSG_ERROR("You need to install GLUT")])
+		AC_CHECK_LIB(glut, glutGetModifiers)
 		yabause_yui="."
 		use_gtk=no
 		;;

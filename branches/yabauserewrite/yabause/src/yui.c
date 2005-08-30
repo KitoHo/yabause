@@ -38,6 +38,7 @@ int stop;
 
 const char * bios = "jap.rom";
 const char * iso_or_cd = 0;
+const char * backup_ram = "backup.ram";
 int cdcore = CDCORE_DEFAULT;
 
 void YuiSetBiosFilename(const char * biosfilename) {
@@ -66,7 +67,7 @@ int YuiInit(void) {
 
    if (YabauseInit(PERCORE_SDL, SH2CORE_DEFAULT, VIDCORE_SDLGL, SNDCORE_SDL,
                    cdcore, REGION_AUTODETECT, bios, iso_or_cd,
-                   NULL, NULL) != 0)
+                   backup_ram, NULL) != 0)
       return -1;
 
    while (!stop)

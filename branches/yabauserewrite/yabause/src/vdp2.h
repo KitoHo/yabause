@@ -374,4 +374,10 @@ void FASTCALL   Vdp2WriteByte(u32, u8);
 void FASTCALL   Vdp2WriteWord(u32, u16);
 void FASTCALL   Vdp2WriteLong(u32, u32);
 
+void Vdp2DebugStatsRBG0(char *outstring, int *isenabled);
+void Vdp2DebugStatsNBG0(char *outstring, int *isenabled);
+void Vdp2DebugStatsNBG1(char *outstring, int *isenabled);
+void Vdp2DebugStatsNBG2(char *outstring, int *isenabled);
+void Vdp2DebugStatsNBG3(char *outstring, int *isenabled);
+
 #endif

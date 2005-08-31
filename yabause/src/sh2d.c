@@ -186,7 +186,7 @@ i_descr tab[] = {
  *              otherwise SH-1 mode
  */
  
-void SH2Disasm(unsigned v_addr, unsigned short op, int mode, char *string)
+void SH2Disasm(u32 v_addr, u16 op, int mode, char *string)
 {
    int i;
    sprintf(string,"0x%08X: ", v_addr);

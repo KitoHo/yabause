@@ -1,13 +1,17 @@
 #include "SDL.h"
 #ifndef _arch_dreamcast
 #if HAVE_LIBGLUT
-#ifdef __APPLE__
-#include <GLUT/glut.h>
+    #ifdef __APPLE__
+        #include <GLUT/glut.h>
+    #else
+        #include <GL/glut.h>
+    #endif
 #else
-#include <GL/glut.h>
-#endif
-#else
-#include <GL/gl.h>
+    #ifdef __APPLE__
+        #include <OpenGL/gl.h>
+    #else
+        #include <GL/gl.h>
+    #endif
 #endif
 #endif
 #include <stdarg.h>

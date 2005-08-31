@@ -1,6 +1,8 @@
 #ifndef SH2D_H
 #define SH2D_H
 
-void SH2Disasm(unsigned, unsigned short, int, char *);
+#include "core.h"
+
+void SH2Disasm(u32 v_addr, u16 op, int mode, char *string);
 
 #endif

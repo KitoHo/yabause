@@ -2655,7 +2655,7 @@ int ScspInit(int coreid) {
    C68k_Set_WriteB(&C68K, (C68K_WRITE *)c68k_byte_write);
    C68k_Set_WriteW(&C68K, (C68K_WRITE *)c68k_word_write);
 
-   C68k_Set_Fetch(&C68K, 0x000000, 0x080000, (u32)SoundRam);
+   C68k_Set_Fetch(&C68K, 0x000000, 0x080000, (pointer)SoundRam);
 
    yabsys.IsM68KRunning = 0;
 
@@ -2756,7 +2756,9 @@ void M68KExec(u32 cycles) {
    if (yabsys.IsM68KRunning)
    {
       if (ScspInternalVars->numcodebreakpoints == 0)
+      {
          C68k_Exec(&C68K, (u32)((float)cycles / 2.5)); // almost correct
+      }
       else
       {
          u32 cyclestoexec=(u32)((float)cycles / 2.5);

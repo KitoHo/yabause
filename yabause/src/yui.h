@@ -32,7 +32,9 @@ void YuiSetIsoFilename(const char *);
 /* Sets CDROM filename in the yui - used to specify the CDROM from the commandline */
 void YuiSetCdromFilename(const char *);
 
+//////////////////////////////////////////////////////////////////////////////
 // Helper functions(you can use these in your own port)
+//////////////////////////////////////////////////////////////////////////////
 
 /* int MappedMemoryLoad(const char *filename, u32 addr);
 
@@ -119,6 +121,95 @@ void YuiSetCdromFilename(const char *);
 
    For the specified SH2 context(context), it deletes every code breakpoint
    entry. context should be either MSH2 or SSH2.
+*/
+
+/* void M68KStep();
+
+   Executes 1 68k instruction.
+*/
+
+/* void M68KGetRegisters(m68kregs_struct *regs);
+
+   Copies the current 68k registers into the specified structure(regs).
+*/
+
+/* void M68KSetRegisters(m68kregs_struct *regs);
+
+   Copies the specified structure(regs) to the current 68k registers.
+*/
+
+/* void M68KSetBreakpointCallBack(void (*func)(u32));
+
+   It sets the breakpoint handler function(func) for the 68k. 
+*/
+
+/* int M68KAddCodeBreakpoint(u32 addr);
+
+   It adds a 68K code breakpoint for specified address(addr). Returns zero on
+   success, or less than zero if an error has occured(such as the breakpoint
+   list being full)
+*/
+
+/* int M68KDelCodeBreakpoint(u32 addr);
+
+   It deletes a 68k code breakpoint for specified address(addr). Returns zero
+   on success, or less than zero if an error has occured.
+*/
+
+/* m68kcodebreakpoint_struct *M68KGetBreakpointList();
+
+   It returns a pointer to the code breakpoint list for the 68k.
+*/
+
+/* void M68KClearCodeBreakpoints();
+
+   It deletes every code breakpoint entry for the 68k.
+*/
+
+/* void ScuDspDisasm(u8 addr, char *outstring);
+*/
+
+/* void ScuDspStep(void);
+
+   Executes 1 SCU DSP step
+*/
+
+/* void ScuDspGetRegisters(scudspregs_struct *regs);
+
+   Copies the current SCU DSP registers into the specified structure(regs).
+*/
+
+/* void ScuDspSetRegisters(scudspregs_struct *regs);
+
+   Copies the specified structure(regs) to the current SCU DSP registers.
+*/
+
+/* void ScuDspSetBreakpointCallBack(void (*func)(u32));
+
+   It sets the breakpoint handler function(func) for the SCU DSP.
+*/
+
+/* int ScuDspAddCodeBreakpoint(u32 addr);
+
+   It adds a SCU DSP code breakpoint for specified address(addr). Returns zero
+   on success, or less than zero if an error has occured(such as the
+   breakpoint list being full)
+*/
+
+/* int ScuDspDelCodeBreakpoint(u32 addr);
+
+   It deletes a SCU DSP code breakpoint for specified address(addr). Returns
+   zero on success, or less than zero if an error has occured.
+*/
+
+/* scucodebreakpoint_struct *ScuDspGetBreakpointList();
+
+   It returns a pointer to the code breakpoint list for the SCU DSP.
+*/
+
+/* void ScuDspClearCodeBreakpoints();
+
+   It deletes every code breakpoint entry for the SCU DSP.
 */
 
 /* void Vdp2DebugStatsRBG0(char *outstring, int *isenabled);

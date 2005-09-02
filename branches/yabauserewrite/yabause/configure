@@ -3217,12 +3217,10 @@ case $target in
 	*darwin*)
 		LIBS="$LIBS $SDL_LIBS -framework IOKit -framework CoreFoundation -framework GLUT"
 		yabause_yui="."
-		use_gtk=no
 		;;
 	*cygwin*)
 		LIBS="$LIBS -lopengl32 -lglut32"
 		yabause_yui="."
-		use_gtk=no
 		;;
 	*mingw32*)
 
@@ -3378,7 +3376,6 @@ _ACEOF
 fi
 
 		yabause_yui="."
-		use_gtk=no
 		;;
 	*linux* | *freebsd*)
 		ac_ext=c
@@ -5159,7 +5156,6 @@ _ACEOF
 fi
 
 		yabause_yui="."
-		use_gtk=yes
 		;;
 	*)
 
@@ -5315,7 +5311,6 @@ _ACEOF
 fi
 
 		yabause_yui="."
-		use_gtk=no
 		;;
 
 esac
@@ -5325,6 +5320,8 @@ esac
 if test "${with_gtk+set}" = set; then
   withval="$with_gtk"
   use_gtk=$withval
+else
+  use_gtk=no
 fi;
 
 if test x$use_gtk = xyes ; then

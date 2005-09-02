@@ -39,18 +39,15 @@ case $target in
 	*darwin*)
 		LIBS="$LIBS $SDL_LIBS -framework IOKit -framework CoreFoundation -framework GLUT"
 		yabause_yui="."
-		use_gtk=no
 		;;
 	*cygwin*)
 		LIBS="$LIBS -lopengl32 -lglut32"
 		yabause_yui="."
-		use_gtk=no
 		;;
 	*mingw32*)
 		AC_CHECK_LIB(opengl32, glEnable, [], [AC_MSG_ERROR("You need to install OpenGL")])
 		AC_CHECK_LIB(glut, glutGetModifiers)
 		yabause_yui="."
-		use_gtk=no
 		;;
 	*linux* | *freebsd*)
 		AC_PATH_XTRA
@@ -59,18 +56,16 @@ case $target in
 		AC_CHECK_LIB(GL, glEnable, [], [AC_MSG_ERROR("You need to install OpenGL") ])
 		AC_CHECK_LIB(glut, glutGetModifiers)
 		yabause_yui="."
-		use_gtk=yes
 		;;
 	*) 
 		AC_CHECK_LIB(GL, glEnable, [], [AC_MSG_ERROR("You need to install OpenGL") ])
 		AC_CHECK_LIB(glut, glutGetModifiers)
 		yabause_yui="."
-		use_gtk=no
 		;;
 
 esac
 
-AC_ARG_WITH(gtk, AC_HELP_STRING(--with-gtk, use a gtk interface), [use_gtk=$withval])
+AC_ARG_WITH(gtk, AC_HELP_STRING(--with-gtk, use a gtk interface), [use_gtk=$withval], [use_gtk=no])
 
 if test x$use_gtk = xyes ; then
 	AC_CHECK_TOOL(HAVE_PKG, pkg-config)

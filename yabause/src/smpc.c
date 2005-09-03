@@ -597,15 +597,17 @@ int SmpcSaveState(FILE *fp)
    offset = StateWriteHeader(fp, "SMPC", 1);
 
    // Write registers
-   fwrite((void *)SmpcRegs.IREG, sizeof(u8), 7, fp);
-   fwrite((void *)&SmpcRegs.COMREG, sizeof(u8), 1, fp);
-   fwrite((void *)SmpcRegs.OREG, sizeof(u8), 32, fp);
-   fwrite((void *)&SmpcRegs.SR, sizeof(u8), 1, fp);
-   fwrite((void *)&SmpcRegs.SF, sizeof(u8), 1, fp);
-   fwrite((void *)SmpcRegs.PDR, sizeof(u8), 2, fp);
-   fwrite((void *)SmpcRegs.DDR, sizeof(u8), 2, fp);
-   fwrite((void *)&SmpcRegs.IOSEL, sizeof(u8), 1, fp);
-   fwrite((void *)&SmpcRegs.EXLE, sizeof(u8), 1, fp);
+   fwrite((void *)SmpcRegs->IREG, sizeof(u8), 7, fp);
+   fwrite((void *)&SmpcRegs->COMREG, sizeof(u8), 1, fp);
+   fwrite((void *)SmpcRegs->OREG, sizeof(u8), 32, fp);
+   fwrite((void *)&SmpcRegs->SR, sizeof(u8), 1, fp);
+   fwrite((void *)&SmpcRegs->SF, sizeof(u8), 1, fp);
+   fwrite((void *)SmpcRegs->PDR, sizeof(u8), 2, fp);
+   fwrite((void *)SmpcRegs->DDR, sizeof(u8), 2, fp);
+   fwrite((void *)&SmpcRegs->IOSEL, sizeof(u8), 1, fp);
+   fwrite((void *)&SmpcRegs->EXLE, sizeof(u8), 1, fp);
+
+   // Write ID's of currently emulated peripherals(fix me)
 
    return StateFinishHeader(fp, offset);
 }
@@ -615,18 +617,20 @@ int SmpcSaveState(FILE *fp)
 int SmpcLoadState(FILE *fp, int version, int size)
 {
    // Read registers
-   fread((void *)SmpcRegs.IREG, sizeof(u8), 7, fp);
-   fread((void *)&SmpcRegs.COMREG, sizeof(u8), 1, fp);
-   fread((void *)SmpcRegs.OREG, sizeof(u8), 32, fp);
-   fread((void *)&SmpcRegs.SR, sizeof(u8), 1, fp);
-   fread((void *)&SmpcRegs.SF, sizeof(u8), 1, fp);
-   fread((void *)SmpcRegs.PDR, sizeof(u8), 2, fp);
-   fread((void *)SmpcRegs.DDR, sizeof(u8), 2, fp);
-   fread((void *)&SmpcRegs.IOSEL, sizeof(u8), 1, fp);
-   fread((void *)&SmpcRegs.EXLE, sizeof(u8), 1, fp);
+   fread((void *)SmpcRegs->IREG, sizeof(u8), 7, fp);
+   fread((void *)&SmpcRegs->COMREG, sizeof(u8), 1, fp);
+   fread((void *)SmpcRegs->OREG, sizeof(u8), 32, fp);
+   fread((void *)&SmpcRegs->SR, sizeof(u8), 1, fp);
+   fread((void *)&SmpcRegs->SF, sizeof(u8), 1, fp);
+   fread((void *)SmpcRegs->PDR, sizeof(u8), 2, fp);
+   fread((void *)SmpcRegs->DDR, sizeof(u8), 2, fp);
+   fread((void *)&SmpcRegs->IOSEL, sizeof(u8), 1, fp);
+   fread((void *)&SmpcRegs->EXLE, sizeof(u8), 1, fp);
+
+   // Read ID's of currently emulated peripherals(fix me)
 
    // May need to rework the following
-   timing = 0;
+   SmpcInternalVars->timing=0;
 
    return size;
 }

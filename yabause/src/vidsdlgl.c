@@ -625,6 +625,13 @@ static void Vdp2DrawPattern(vdp2draw_struct *info, YglTexture *texture)
    u32 cacheaddr = (info->paladdr << 20) | info->charaddr;
    int * c;
    YglSprite tile;
+#ifdef YGL_CACHE_CHECK
+   int isCached = 0;
+   unsigned int * textdata1;
+   unsigned int * textdata2;
+   int match = 1;
+   int x, y;
+#endif
 
    tile.w = tile.h = info->patternpixelwh;   
    tile.flip = info->flipfunction;
@@ -640,15 +647,25 @@ static void Vdp2DrawPattern(vdp2draw_struct *info, YglTexture *texture)
 
    if ((c = YglIsCached(cacheaddr)) != NULL)
    {
+#ifdef YGL_CACHE_CHECK
+      isCached = 1;
+      textdata1 = YglTM->texture + *(c + 1) * YglTM->width + *c;
+#else
       YglCachedQuad(&tile, c);
 
       info->x += tile.w;
       info->y += tile.h;
       return;
+#endif
    }
 
    c = YglQuad(&tile, texture);
    YglCache(cacheaddr, c);
+
+#ifdef YGL_CACHE_CHECK
+   if (isCached)
+      textdata2 = texture->textdata;
+#endif
 
    switch(info->patternwh)
    {
@@ -668,6 +685,28 @@ static void Vdp2DrawPattern(vdp2draw_struct *info, YglTexture *texture)
    }
    info->x += tile.w;
    info->y += tile.h;
+
+#ifdef YGL_CACHE_CHECK
+   if(isCached) {
+      y = 0;
+      while(match && y < tile.h)
+      {
+         x = 0;
+         while (match && x < tile.w)
+         {
+            match = (*textdata1 == *textdata2);
+            textdata1++;
+            textdata2++;
+            x++;
+         }
+         textdata1 += (YglTM->width - tile.w);
+         textdata2 += (YglTM->width - tile.w);
+         y++;
+      }
+      if (!match)
+         printf("cache mismatch\n");
+   }
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////

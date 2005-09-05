@@ -365,7 +365,7 @@ void YglOnScreenDebugMessage(char *string, ...) {
 //////////////////////////////////////////////////////////////////////////////
 
 int * YglIsCached(u32 addr) {
-/*
+#ifdef YGL_CACHE_CHECK
    int i = 0;
 
    for (i = 0; i < cachelistsize; i++)
@@ -373,18 +373,19 @@ int * YglIsCached(u32 addr) {
       if (addr == cachelist[i].id)
          return cachelist[i].textdata;
    }
-*/
+#endif
+
    return NULL;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void YglCache(u32 addr, int * val) {
-/*
+#ifdef YGL_CACHE_CHECK
    cachelist[cachelistsize].id = addr;
    cachelist[cachelistsize].textdata = val;
    cachelistsize++;
-*/
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////////

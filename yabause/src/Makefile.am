@@ -1,3 +1,4 @@
+SUBDIRS = freebsd linux
 bin_PROGRAMS = yabause
 yabause_SOURCES = \
 	c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c c68k/c68k_ini.inc \
@@ -9,7 +10,7 @@ yabause_SOURCES = \
 	smpc.c smpc.h scsp.c scsp.h sndsdl.c sndsdl.h vdp1.c vdp1.h \
 	vdp2.c vdp2.h vidsdlgl.c vidsdlgl.h vidsdlsoft.c vidsdlsoft.h \
 	yabause.c yabause.h ygl.h ygl.c \
-	yui.h $(yabause_yui)/yui.c
+	$(yabause_yui)/yui.c yui.h
 BUILT_SOURCES = c68k/c68k_ini.inc
 c68k/c68k_ini.inc: c68k/gen68k
 	cd c68k && ./gen68k

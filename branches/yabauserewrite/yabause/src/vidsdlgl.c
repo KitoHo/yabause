@@ -622,7 +622,7 @@ static void FASTCALL Vdp2DrawCell(vdp2draw_struct *info, YglTexture *texture)
 
 static void Vdp2DrawPattern(vdp2draw_struct *info, YglTexture *texture)
 {
-   u32 cacheaddr = (info->paladdr << 20) | info->charaddr;
+   u32 cacheaddr = ((u32) info->alpha << 30) | (info->paladdr << 20) | info->charaddr;
    int * c;
    YglSprite tile;
 #ifdef YGL_CACHE_CHECK
@@ -695,6 +695,8 @@ static void Vdp2DrawPattern(vdp2draw_struct *info, YglTexture *texture)
          while (match && x < tile.w)
          {
             match = (*textdata1 == *textdata2);
+            if (!match)
+               printf("cache mismatch (x=%d, y=%d, data1=%x, data2=%x) cacheaddr=%x\n", x, y, *textdata1, *textdata2, cacheaddr);
             textdata1++;
             textdata2++;
             x++;
@@ -703,8 +705,6 @@ static void Vdp2DrawPattern(vdp2draw_struct *info, YglTexture *texture)
          textdata2 += (YglTM->width - tile.w);
          y++;
       }
-      if (!match)
-         printf("cache mismatch\n");
    }
 #endif
 }

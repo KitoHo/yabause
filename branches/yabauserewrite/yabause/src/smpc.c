@@ -307,7 +307,7 @@ void SmpcINTBACK() {
    if ((SmpcInternalVars->intbackIreg0 = SmpcRegs->IREG[0]) != 0) {
       // Return non-peripheral data
       SmpcInternalVars->firstPeri = 1;
-      SmpcInternalVars->intback = SmpcRegs->IREG[1] & 0x8; // does the program want peripheral data too?
+      SmpcInternalVars->intback = (SmpcRegs->IREG[1] & 0x8) >> 3; // does the program want peripheral data too?
       SmpcINTBACKStatus();
       SmpcRegs->SR = 0x4F | (SmpcInternalVars->intback << 5); // the low nibble is undefined(or 0xF)
       ScuSendSystemManager();

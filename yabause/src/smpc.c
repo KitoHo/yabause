@@ -428,6 +428,7 @@ void SmpcExec(s32 t) {
 
 u8 FASTCALL SmpcReadByte(u32 addr) {
    addr &= 0x7F;
+
    return SmpcRegsT[addr >> 1];
 }
 
@@ -482,7 +483,8 @@ void SmpcSetTiming(void) {
 
             // If retrieving peripheral data, add 15 milliseconds
             if (SmpcRegs->IREG[1] & 0x8)
-               SmpcInternalVars->timing += 150;
+               SmpcInternalVars->timing += 16000; // Strangely enough, this works better
+//               SmpcInternalVars->timing += 150;
          }
          return;
       case 0x17:

@@ -258,7 +258,7 @@ LRESULT CALLBACK SettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                ZeroMemory(&ofn, sizeof(OPENFILENAME));
                ofn.lStructSize = sizeof(OPENFILENAME);
                ofn.hwndOwner = hDlg;
-               ofn.lpstrFilter = "Cue files (*.cue)\0*.cue\0All Files (*.*)\0*.*\0";
+               ofn.lpstrFilter = "Cue files (*.cue)\0*.cue\0Iso files (*.iso)\0*.iso\0All Files (*.*)\0*.*\0";
                ofn.lpstrFile = cdrompath;
                ofn.nMaxFile = sizeof(cdrompath);
                ofn.Flags = OFN_FILEMUSTEXIST;
@@ -293,24 +293,21 @@ LRESULT CALLBACK SettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             }
             case IDC_BACKUPRAMBROWSE:
             {
-/*
                OPENFILENAME ofn;
                // setup ofn structure
                ZeroMemory(&ofn, sizeof(OPENFILENAME));
                ofn.lStructSize = sizeof(OPENFILENAME);
                ofn.hwndOwner = hDlg;
-               ofn.lpstrFilter = "Executables (*.exe)\0*.exe\0All Files (*.*)\0*.*\0";
-               ofn.lpstrFile = girigirifilename;
-               ofn.nMaxFile = sizeof(girigirifilename);
-//               ofn.lpstrInitialDir = gszInitialDir;
-//               ofn.Flags = OFN_FILEMUSTEXIST;
+               ofn.lpstrFilter = "Binaries (*.bin)\0*.bin\0All Files (*.*)\0*.*\0";
+               ofn.lpstrFile = backupramfilename;
+               ofn.nMaxFile = sizeof(backupramfilename);
 
-               if (GetSaveFileName(&ofn))
+               if (GetOpenFileName(&ofn))
                {
                   // adjust appropriate edit box
                   SetDlgItemText(hDlg, IDC_BACKUPRAMEDIT, backupramfilename);
                }
-*/
+
                return TRUE;
             }
             case IDC_MPEGROMBROWSE:
@@ -337,6 +334,12 @@ LRESULT CALLBACK SettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             case IDC_VIDEOSETTINGS:
             {
 //               DialogBox(g_hInstance, "VideoSettingsDlg", hDlg, (DLGPROC)VideoSettingsDlgProc);
+
+               return TRUE;
+            }
+            case IDC_SOUNDSETTINGS:
+            {
+//               DialogBox(g_hInstance, "SoundSettingsDlg", hDlg, (DLGPROC)SoundSettingsDlgProc);
 
                return TRUE;
             }

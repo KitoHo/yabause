@@ -91,7 +91,8 @@
 #define IDC_MPEGROMBROWSE               1012
 
 #define IDC_VIDEOSETTINGS               1013
-#define IDC_INPUTSETTINGS               1014
+#define IDC_SOUNDSETTINGS               1014
+#define IDC_INPUTSETTINGS               1015
 
 //////////////////////////////////////////////////////////////////////////////
 // VDP2 debug stuff

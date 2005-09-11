@@ -24,8 +24,10 @@
 #include "SDL.h"
 #undef FASTCALL
 #include "../memory.h"
+#include "../scu.h"
 #include "../sh2core.h"
 #include "../sh2d.h"
+#include "../vdp2.h"
 #include "../yui.h"
 #include "../sndsdl.h"
 #include "../vidsdlgl.h"
@@ -43,13 +45,13 @@ char SDL_windowhack[32];
 HINSTANCE y_hInstance;
 HWND YabWin;
 
-unsigned long mtrnssaddress=0x06004000;
-unsigned long mtrnseaddress=0x06100000;
+u32 mtrnssaddress=0x06004000;
+u32 mtrnseaddress=0x06100000;
 char mtrnsfilename[MAX_PATH] = "\0";
-char mtrnsreadwrite=1;
-char mtrnssetpc=TRUE;
+int mtrnsreadwrite=1;
+int mtrnssetpc=TRUE;
 
-unsigned long memaddr=0;
+u32 memaddr=0;
 
 //bool shwaspaused=true;
 
@@ -151,6 +153,29 @@ void YuiQuit(void) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+/*
+void YuiErrorMsg(int type, void *extra) {
+   fprintf(stderr, "Error: %s\n", error_text);
+
+   fprintf(stderr, "R0 = %08X\tR12 = %08X\n", sh2opcodes->regs.R[0], sh2opcodes->regs.R[12]);
+   fprintf(stderr, "R1 = %08X\tR13 = %08X\n", sh2opcodes->regs.R[1], sh2opcodes->regs.R[13]);
+   fprintf(stderr, "R2 = %08X\tR14 = %08X\n", sh2opcodes->regs.R[2], sh2opcodes->regs.R[14]);
+   fprintf(stderr, "R3 = %08X\tR15 = %08X\n", sh2opcodes->regs.R[3], sh2opcodes->regs.R[15]);
+   fprintf(stderr, "R4 = %08X\tSR = %08X\n", sh2opcodes->regs.R[4], sh2opcodes->regs.SR.all);
+   fprintf(stderr, "R5 = %08X\tGBR = %08X\n", sh2opcodes->regs.R[5], sh2opcodes->regs.GBR);
+   fprintf(stderr, "R6 = %08X\tVBR = %08X\n", sh2opcodes->regs.R[6], sh2opcodes->regs.VBR);
+   fprintf(stderr, "R7 = %08X\tMACH = %08X\n", sh2opcodes->regs.R[7], sh2opcodes->regs.MACH);
+   fprintf(stderr, "R8 = %08X\tMACL = %08X\n", sh2opcodes->regs.R[8], sh2opcodes->regs.MACL);
+   fprintf(stderr, "R9 = %08X\tPR = %08X\n", sh2opcodes->regs.R[9], sh2opcodes->regs.PR);
+   fprintf(stderr, "R10 = %08X\tPC = %08X\n", sh2opcodes->regs.R[10], sh2opcodes->regs.PC);
+   fprintf(stderr, "R11 = %08X\n", sh2opcodes->regs.R[11]);
+   stop = 1;
+}
+*/
+
+//////////////////////////////////////////////////////////////////////////////
+
 
 int YuiInit(void) {
    WNDCLASS                    MyWndClass;
@@ -285,7 +310,7 @@ int YuiInit(void) {
    ShowWindow(hWnd, SW_SHOWDEFAULT);
    UpdateWindow(hWnd);
 
-   sprintf(SDL_windowhack,"SDL_WINDOWID=%ld", hWnd);
+   sprintf(SDL_windowhack,"SDL_WINDOWID=%ld", (long int)hWnd);
    putenv(SDL_windowhack);
 
    YabWin = hWnd;
@@ -410,10 +435,10 @@ LRESULT CALLBACK MemTransferDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
       {
          SetDlgItemText(hDlg, IDC_EDITTEXT1, mtrnsfilename);
 
-         sprintf(tempstr, "%08x", mtrnssaddress);
+         sprintf(tempstr, "%08X", (int)mtrnssaddress);
          SetDlgItemText(hDlg, IDC_EDITTEXT2, tempstr);
 
-         sprintf(tempstr, "%08x", mtrnseaddress);
+         sprintf(tempstr, "%08X", (int)mtrnseaddress);
          SetDlgItemText(hDlg, IDC_EDITTEXT3, tempstr);
 
          if (mtrnsreadwrite == 0)
@@ -485,10 +510,10 @@ LRESULT CALLBACK MemTransferDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                GetDlgItemText(hDlg, IDC_EDITTEXT1, mtrnsfilename, MAX_PATH);
 
                GetDlgItemText(hDlg, IDC_EDITTEXT2, tempstr, 9);
-               sscanf(tempstr, "%08x", &mtrnssaddress);
+               sscanf(tempstr, "%08X", &mtrnssaddress);
 
                GetDlgItemText(hDlg, IDC_EDITTEXT3, tempstr, 9);
-               sscanf(tempstr, "%08x", &mtrnseaddress);
+               sscanf(tempstr, "%08X", &mtrnseaddress);
 
                if ((mtrnseaddress - mtrnssaddress) < 0)
                {
@@ -572,54 +597,54 @@ void SH2UpdateRegList(HWND hDlg, sh2regs_struct *regs)
 
    for (i = 0; i < 16; i++)
    {                                       
-      sprintf(tempstr, "R%02d =  %08x", i, regs->R[i]);
+      sprintf(tempstr, "R%02d =  %08x", i, (int)regs->R[i]);
       strupr(tempstr);
       SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
    }
 
    // SR
-   sprintf(tempstr, "SR =   %08x", regs->SR.all);
+   sprintf(tempstr, "SR =   %08x", (int)regs->SR.all);
    strupr(tempstr);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 
    // GBR
-   sprintf(tempstr, "GBR =  %08x", regs->GBR);
+   sprintf(tempstr, "GBR =  %08x", (int)regs->GBR);
    strupr(tempstr);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 
    // VBR
-   sprintf(tempstr, "VBR =  %08x", regs->VBR);
+   sprintf(tempstr, "VBR =  %08x", (int)regs->VBR);
    strupr(tempstr);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 
    // MACH
-   sprintf(tempstr, "MACH = %08x", regs->MACH);
+   sprintf(tempstr, "MACH = %08x", (int)regs->MACH);
    strupr(tempstr);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 
    // MACL
-   sprintf(tempstr, "MACL = %08x", regs->MACL);
+   sprintf(tempstr, "MACL = %08x", (int)regs->MACL);
    strupr(tempstr);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 
    // PR
-   sprintf(tempstr, "PR =   %08x", regs->PR);
+   sprintf(tempstr, "PR =   %08x", (int)regs->PR);
    strupr(tempstr);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 
    // PC
-   sprintf(tempstr, "PC =   %08x", regs->PC);
+   sprintf(tempstr, "PC =   %08x", (int)regs->PC);
    strupr(tempstr);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void SH2UpdateCodeList(HWND hDlg, unsigned long addr)
+void SH2UpdateCodeList(HWND hDlg, u32 addr)
 {
    int i;
    char buf[60];
-   unsigned long offset;
+   u32 offset;
 
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX2), LB_RESETCONTENT, 0, 0);
 
@@ -630,7 +655,7 @@ void SH2UpdateCodeList(HWND hDlg, unsigned long addr)
       SH2Disasm(offset, MappedMemoryReadWord(offset), 0, buf);
 
       SendMessage(GetDlgItem(hDlg, IDC_LISTBOX2), LB_ADDSTRING, 0,
-                  (long)buf);
+                  (s32)buf);
       offset += 2;
    }
 
@@ -648,7 +673,7 @@ LRESULT CALLBACK MemDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
       {
          char buf[8];
 
-         sprintf(buf, "%08X",memaddr);
+         sprintf(buf, "%08X", (int)memaddr);
          SetDlgItemText(hDlg, IDC_EDITTEXT1, buf);
          return TRUE;
       }
@@ -683,7 +708,7 @@ LRESULT CALLBACK MemDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
 
 //////////////////////////////////////////////////////////////////////////////
 
-void BreakpointHandler (SH2_struct *context, unsigned long addr)
+void BreakpointHandler (SH2_struct *context, u32 addr)
 {
    MessageBox (NULL, "Breakpoint Reached", "Notice",  MB_OK | MB_ICONINFORMATION);
 
@@ -711,7 +736,7 @@ LRESULT CALLBACK SH2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
          {
             if (cbp[i].addr != 0xFFFFFFFF)
             {
-               sprintf(tempstr, "%08X", cbp[i].addr);
+               sprintf(tempstr, "%08X", (int)cbp[i].addr);
                SendMessage(GetDlgItem(hDlg, IDC_LISTBOX3), LB_ADDSTRING, 0, (LPARAM)tempstr);
             }
          }
@@ -757,14 +782,14 @@ LRESULT CALLBACK SH2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             case IDC_ADDBP1:
             {
                char bptext[10];
-               unsigned long addr=0;
+               u32 addr=0;
                memset(bptext, 0, 10);
                GetDlgItemText(hDlg, IDC_EDITTEXT1, bptext, 10);
 
                if (bptext[0] != 0)
                {
                   sscanf(bptext, "%X", &addr);
-                  sprintf(bptext, "%08X", addr);
+                  sprintf(bptext, "%08X", (int)addr);
 
                   if (SH2AddCodeBreakpoint(debugsh, addr) == 0)
                      SendMessage(GetDlgItem(hDlg, IDC_LISTBOX3), LB_ADDSTRING, 0, (LPARAM)bptext);
@@ -775,7 +800,7 @@ LRESULT CALLBACK SH2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             {
                LRESULT ret;
                char bptext[10];
-               unsigned long addr=0;
+               u32 addr=0;
 
                if ((ret = SendMessage(GetDlgItem(hDlg, IDC_LISTBOX3), LB_GETCURSEL, 0, 0)) != LB_ERR)
                {
@@ -891,30 +916,6 @@ LRESULT CALLBACK SH2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
 
 //////////////////////////////////////////////////////////////////////////////
 
-void DisplayScreenCCRInfo(HWND hControl, unsigned char reg_data)
-{
-   char tempstr[256];
-
-   // bpp
-   SendMessage(hControl, LB_ADDSTRING, 0, (LPARAM)vdp2bppstr[(reg_data & 0x0070) >> 4]);
-
-   // Bitmap or Tile mode?
-   if (reg_data & 0x0002)
-   {
-      // Bitmap
-      sprintf(tempstr, "Bitmap(%s)", vdp2bmsizestr[(reg_data & 0x000C) >> 2]);
-      SendMessage(hControl, LB_ADDSTRING, 0, (LPARAM)tempstr);
-   }
-   else
-   {
-      // Tile
-      sprintf(tempstr, "Tile(%s)", vdp2charsizestr[reg_data & 1]);
-      SendMessage(hControl, LB_ADDSTRING, 0, (LPARAM)tempstr);
-   }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
 LRESULT CALLBACK VDP2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                                  LPARAM lParam)
 {
@@ -922,85 +923,73 @@ LRESULT CALLBACK VDP2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
    {
       case WM_INITDIALOG:
       {
-/*
-         Vdp2 *proc=yabausemem->vdp2_3;
-         unsigned long reg;
+         u32 reg;
          char tempstr[1024];
-         bool isscrenabled;
+         int isscrenabled;
 
          // is NBG0/RBG1 enabled?
-         ((NBG0 *)proc->getNBG0())->debugStats(tempstr, &isscrenabled);
+         Vdp2DebugStatsNBG0(tempstr, &isscrenabled);
 
          if (isscrenabled)
          {
             SendMessage(GetDlgItem(hDlg, IDC_NBG0ENABCB), BM_SETCHECK, BST_CHECKED, 0);
-            SetDlgItemText(hDlg, IDC_NBG0LB, tempstr);
+            SetDlgItemText(hDlg, IDC_NBG0ET, tempstr);
          }
          else
-         {
             SendMessage(GetDlgItem(hDlg, IDC_NBG0ENABCB), BM_SETCHECK, BST_UNCHECKED, 0);
-         }
 
-         ((NBG1 *)proc->getNBG1())->debugStats(tempstr, &isscrenabled);
+         Vdp2DebugStatsNBG1(tempstr, &isscrenabled);
 
          // is NBG1 enabled?
          if (isscrenabled)
          {
             // enabled
             SendMessage(GetDlgItem(hDlg, IDC_NBG1ENABCB), BM_SETCHECK, BST_CHECKED, 0);
-            SetDlgItemText(hDlg, IDC_NBG1LB, tempstr);
+            SetDlgItemText(hDlg, IDC_NBG1ET, tempstr);
          }
          else
-         {
             // disabled
             SendMessage(GetDlgItem(hDlg, IDC_NBG1ENABCB), BM_SETCHECK, BST_UNCHECKED, 0);
-         }
 
-         ((NBG2 *)proc->getNBG2())->debugStats(tempstr, &isscrenabled);
+         Vdp2DebugStatsNBG2(tempstr, &isscrenabled);
 
          // is NBG2 enabled?
          if (isscrenabled)
          {
             // enabled
             SendMessage(GetDlgItem(hDlg, IDC_NBG2ENABCB), BM_SETCHECK, BST_CHECKED, 0);
-            SetDlgItemText(hDlg, IDC_NBG2LB, tempstr);
+            SetDlgItemText(hDlg, IDC_NBG2ET, tempstr);
          }
          else
-         {
             // disabled
             SendMessage(GetDlgItem(hDlg, IDC_NBG2ENABCB), BM_SETCHECK, BST_UNCHECKED, 0);
-         }
 
-         ((NBG3 *)proc->getNBG3())->debugStats(tempstr, &isscrenabled);
+         Vdp2DebugStatsNBG3(tempstr, &isscrenabled);
 
          // is NBG3 enabled?
          if (isscrenabled)
          {
             // enabled
             SendMessage(GetDlgItem(hDlg, IDC_NBG3ENABCB), BM_SETCHECK, BST_CHECKED, 0);
-            SetDlgItemText(hDlg, IDC_NBG3LB, tempstr);
+            SetDlgItemText(hDlg, IDC_NBG3ET, tempstr);
          }
          else
-         {
             // disabled
             SendMessage(GetDlgItem(hDlg, IDC_NBG3ENABCB), BM_SETCHECK, BST_UNCHECKED, 0);
-         }
+
+         Vdp2DebugStatsRBG0(tempstr, &isscrenabled);
 
          // is RBG0 enabled?
-         if (proc->getWord(0x20) & 0x10)
+         if (isscrenabled)
          {
             // enabled
             SendMessage(GetDlgItem(hDlg, IDC_RBG0ENABCB), BM_SETCHECK, BST_CHECKED, 0);
-
-            // Generate Info for RBG0
-            DisplayScreenCCRInfo(GetDlgItem(hDlg, IDC_RBG0LB), proc->getWord(0x2A) >> 8);
+            SetDlgItemText(hDlg, IDC_RBG0ET, tempstr);
          }
          else
-         {
             // disabled
             SendMessage(GetDlgItem(hDlg, IDC_RBG0ENABCB), BM_SETCHECK, BST_UNCHECKED, 0);
-         }
-*/
+
          return TRUE;
       }
       case WM_COMMAND:
@@ -1026,7 +1015,6 @@ LRESULT CALLBACK VDP2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
 
 //////////////////////////////////////////////////////////////////////////////
 
-/*
 void M68KUpdateRegList(HWND hDlg, m68kregs_struct *regs)
 {
    char tempstr[128];
@@ -1060,21 +1048,20 @@ void M68KUpdateRegList(HWND hDlg, m68kregs_struct *regs)
    strupr(tempstr);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 }
-*/
 
 //////////////////////////////////////////////////////////////////////////////
 
-void M68KUpdateCodeList(HWND hDlg, unsigned long addr)
+void M68KUpdateCodeList(HWND hDlg, u32 addr)
 {
 /*
-   unsigned long buf_size;
-   unsigned long buf_addr;
+   u32 buf_size;
+   u32 buf_addr;
    int i, i2;
    char buf[60];
-   unsigned long offset;
+   u32 offset;
    char op[64], inst[32], arg[24];
    unsigned char *buffer;
-   unsigned long op_size;
+   u32 op_size;
 
    buffer = ((ScspRam *)((Scsp *)mem->soundr)->getSRam())->getBuffer();
         
@@ -1090,7 +1077,7 @@ void M68KUpdateCodeList(HWND hDlg, unsigned long addr)
       offset += op_size;
 
       SendMessage(GetDlgItem(hDlg, IDC_LISTBOX2), LB_ADDSTRING, 0,
-                  (long)buf);
+                  (s32)buf);
    }
 
 //   SendMessage(GetDlgItem(hDlg, IDC_LISTBOX2), LB_SETCURSEL,12,0);
@@ -1107,22 +1094,21 @@ LRESULT CALLBACK M68KDebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
    {
       case WM_INITDIALOG:
       {
-/*
          m68kregs_struct m68kregs;
 
+/*
          SendMessage(GetDlgItem(hDlg, IDC_CHKREAD), BM_SETCHECK, BST_UNCHECKED, 0);
          SendMessage(GetDlgItem(hDlg, IDC_CHKWRITE), BM_SETCHECK, BST_UNCHECKED, 0);
          SendMessage(GetDlgItem(hDlg, IDC_CHKBYTE), BM_SETCHECK, BST_UNCHECKED, 0);
          SendMessage(GetDlgItem(hDlg, IDC_CHKWORD), BM_SETCHECK, BST_UNCHECKED, 0);
          SendMessage(GetDlgItem(hDlg, IDC_CHKDWORD), BM_SETCHECK, BST_UNCHECKED, 0);
+*/
 
          EnableWindow(GetDlgItem(hDlg, IDC_STEP), TRUE);
-//         EnableWindow(GetDlgItem(hDlg, IDC_STEPOVER), TRUE);
 
-         ((Scsp*)yabausemem->soundr)->Get68kRegisters(&m68kregs);
+         M68KGetRegisters(&m68kregs);
          M68KUpdateRegList(hDlg, &m68kregs);
          M68KUpdateCodeList(hDlg, m68kregs.PC);
-*/
 
          return TRUE;
       }
@@ -1151,16 +1137,14 @@ LRESULT CALLBACK M68KDebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             }
             case IDC_STEP:
             {
-/*
                m68kregs_struct m68kregs;
 
                // execute instruction
-               ((Scsp*)yabausemem->soundr)->step68k();
+               M68KStep();
 
-               ((Scsp*)yabausemem->soundr)->Get68kRegisters(&m68kregs);
+               M68KGetRegisters(&m68kregs);
                M68KUpdateRegList(hDlg, &m68kregs);
                M68KUpdateCodeList(hDlg, m68kregs.PC);
-*/
                break;
             }
             case IDC_ADDBP1:
@@ -1186,14 +1170,13 @@ LRESULT CALLBACK M68KDebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                {
                   case LBN_DBLCLK:
                   {
-/*
                      // dialogue for changing register values
                      int cursel;
                      m68kregs_struct m68kregs;
 
                      cursel = SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_GETCURSEL,0,0);
 
-                     ((Scsp*)yabausemem->soundr)->Get68kRegisters(&m68kregs);
+                     M68KGetRegisters(&m68kregs);
 
                      switch (cursel)
                      {
@@ -1260,11 +1243,10 @@ LRESULT CALLBACK M68KDebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                            default: break;
                         }
 
-                        ((Scsp*)yabausemem->soundr)->Set68kRegisters(&m68kregs);
+                        M68KSetRegisters(&m68kregs);
                      }
 
                      M68KUpdateRegList(hDlg, &m68kregs);
-*/
                      break;
                   }
                   default: break;
@@ -1285,58 +1267,56 @@ LRESULT CALLBACK M68KDebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
 
 //////////////////////////////////////////////////////////////////////////////
 
-/*
 void SCUDSPUpdateRegList(HWND hDlg, scudspregs_struct *regs)
 {
    char tempstr[128];
 
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_RESETCONTENT, 0, 0);
 
-   sprintf(tempstr, "PR =          %d", regs->dspProgControlPort.part.PR);
+   sprintf(tempstr, "PR =          %d", regs->ProgControlPort.part.PR);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 
-   sprintf(tempstr, "EP =          %d", regs->dspProgControlPort.part.EP);
+   sprintf(tempstr, "EP =          %d", regs->ProgControlPort.part.EP);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 
-   sprintf(tempstr, "T0 =          %d", regs->dspProgControlPort.part.T0);
+   sprintf(tempstr, "T0 =          %d", regs->ProgControlPort.part.T0);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 
-   sprintf(tempstr, "S =           %d", regs->dspProgControlPort.part.S);
+   sprintf(tempstr, "S =           %d", regs->ProgControlPort.part.S);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 
-   sprintf(tempstr, "Z =           %d", regs->dspProgControlPort.part.Z);
+   sprintf(tempstr, "Z =           %d", regs->ProgControlPort.part.Z);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 
-   sprintf(tempstr, "C =           %d", regs->dspProgControlPort.part.C);
+   sprintf(tempstr, "C =           %d", regs->ProgControlPort.part.C);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 
-   sprintf(tempstr, "V =           %d", regs->dspProgControlPort.part.V);
+   sprintf(tempstr, "V =           %d", regs->ProgControlPort.part.V);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 
-   sprintf(tempstr, "E =           %d", regs->dspProgControlPort.part.E);
+   sprintf(tempstr, "E =           %d", regs->ProgControlPort.part.E);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 
-   sprintf(tempstr, "ES =          %d", regs->dspProgControlPort.part.ES);
+   sprintf(tempstr, "ES =          %d", regs->ProgControlPort.part.ES);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 
-   sprintf(tempstr, "EX =          %d", regs->dspProgControlPort.part.EX);
+   sprintf(tempstr, "EX =          %d", regs->ProgControlPort.part.EX);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 
-   sprintf(tempstr, "LE =          %d", regs->dspProgControlPort.part.LE);
+   sprintf(tempstr, "LE =          %d", regs->ProgControlPort.part.LE);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 
-   sprintf(tempstr, "P =          %02X", regs->dspProgControlPort.part.P);
+   sprintf(tempstr, "P =          %02X", regs->ProgControlPort.part.P);
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX1), LB_ADDSTRING, 0, (LPARAM)tempstr);
 }
-*/
+
 //////////////////////////////////////////////////////////////////////////////
 
-void SCUDSPUpdateCodeList(HWND hDlg, unsigned long addr)
+void SCUDSPUpdateCodeList(HWND hDlg, u32 addr)
 {
-/*
    int i;
    char buf[60];
-   unsigned long offset;
+   u32 offset;
 
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX2), LB_RESETCONTENT, 0, 0);
 
@@ -1344,15 +1324,14 @@ void SCUDSPUpdateCodeList(HWND hDlg, unsigned long addr)
 
    for (i = 0; i < 24; i++)
    {
-      ((Scu*)yabausemem->scu)->DSPDisasm(offset, buf);
+      ScuDspDisasm(offset, buf);
       offset++;
 
       SendMessage(GetDlgItem(hDlg, IDC_LISTBOX2), LB_ADDSTRING, 0,
-                  (long)buf);
+                  (s32)buf);
    }
 
    SendMessage(GetDlgItem(hDlg, IDC_LISTBOX2), LB_SETCURSEL,0,0);
-*/
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1364,15 +1343,14 @@ LRESULT CALLBACK SCUDSPDebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
    {
       case WM_INITDIALOG:
       {
-/*
          scudspregs_struct dspregs;
 
          EnableWindow(GetDlgItem(hDlg, IDC_STEP), TRUE);
 
-         ((Scu*)yabausemem->scu)->GetDSPRegisters(&dspregs);
+         ScuDspGetRegisters(&dspregs);
          SCUDSPUpdateRegList(hDlg, &dspregs);
-         SCUDSPUpdateCodeList(hDlg, dspregs.dspProgControlPort.part.P);
-*/
+         SCUDSPUpdateCodeList(hDlg, dspregs.ProgControlPort.part.P);
+
          return TRUE;
       }
       case WM_COMMAND:
@@ -1387,15 +1365,14 @@ LRESULT CALLBACK SCUDSPDebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             }
             case IDC_STEP:
             {
-/*
                scudspregs_struct dspregs;
 
-               // execute instruction here
+               ScuDspStep();
 
-               ((Scu*)yabausemem->scu)->GetDSPRegisters(&dspregs);
+               ScuDspGetRegisters(&dspregs);
                SCUDSPUpdateRegList(hDlg, &dspregs);
-               SCUDSPUpdateCodeList(hDlg, dspregs.dspProgControlPort.part.P);
-*/
+               SCUDSPUpdateCodeList(hDlg, dspregs.ProgControlPort.part.P);
+
                break;
             }
             case IDC_ADDBP1:

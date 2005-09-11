@@ -97,19 +97,19 @@
 // VDP2 debug stuff
 
 #define IDC_NBG0ENABCB                  1001
-#define IDC_NBG0LB                      1002
+#define IDC_NBG0ET                      1002
 
 #define IDC_NBG1ENABCB                  1003
-#define IDC_NBG1LB                      1004
+#define IDC_NBG1ET                      1004
 
 #define IDC_NBG2ENABCB                  1005
-#define IDC_NBG2LB                      1006
+#define IDC_NBG2ET                      1006
 
 #define IDC_NBG3ENABCB                  1007
-#define IDC_NBG3LB                      1008
+#define IDC_NBG3ET                      1008
 
 #define IDC_RBG0ENABCB                  1009
-#define IDC_RBG0LB                      1010
+#define IDC_RBG0ET                      1010
 
 //////////////////////////////////////////////////////////////////////////////
 

@@ -1,4 +1,4 @@
-/*  Copyright 2004 Theo Berkau
+/*  Copyright 2004-2005 Theo Berkau
 
     This file is part of Yabause.
 
@@ -209,7 +209,7 @@ BEGIN
     LTEXT           "Drive Letter", -1, 112, 19, 56, 10
     COMBOBOX        IDC_DRIVELETTERCB, 163, 18, 46, 87, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
 
-    LTEXT           "Cue File", -1, 10, 35, 41, 10
+    LTEXT           "Cue/Iso File", -1, 10, 35, 61, 10
     EDITTEXT        IDC_IMAGEEDIT, 10, 47, 162, 13, ES_AUTOHSCROLL
     PUSHBUTTON      "Browse",IDC_IMAGEBROWSE, 176, 47, 33, 12
 
@@ -231,8 +231,9 @@ BEGIN
     EDITTEXT        IDC_MPEGROMEDIT, 10, 157, 162, 13 , ES_AUTOHSCROLL
     PUSHBUTTON      "Browse",IDC_MPEGROMBROWSE, 176, 157, 33, 13
 
-    PUSHBUTTON      "&Video Settings",IDC_VIDEOSETTINGS, 38, 183, 62, 16, WS_DISABLED
-    PUSHBUTTON      "&Input Settings",IDC_INPUTSETTINGS, 118, 183, 62, 16, WS_DISABLED
+    PUSHBUTTON      "&Video Settings",IDC_VIDEOSETTINGS, 7, 183, 62, 16, WS_DISABLED
+    PUSHBUTTON      "&Sound Settings",IDC_SOUNDSETTINGS, 79, 183, 62, 16, WS_DISABLED
+    PUSHBUTTON      "&Input Settings",IDC_INPUTSETTINGS, 151, 183, 62, 16, WS_DISABLED
 
     DEFPUSHBUTTON   "&OK",IDOK,128,207,40,14
     PUSHBUTTON      "&Cancel",IDCANCEL,173,207,40,14

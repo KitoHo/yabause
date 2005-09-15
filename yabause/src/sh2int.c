@@ -1975,7 +1975,7 @@ void FASTCALL xtrct(SH2_struct * sh) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FASTCALL sleep(SH2_struct * sh) {
+void FASTCALL shsleep(SH2_struct * sh) {
   //cerr << "SLEEP" << endl;
   sh->cycles += 3;
 }
@@ -2032,7 +2032,7 @@ opcodefunc decode(u16 instruction) {
     case 11:
       switch (INSTRUCTION_C(instruction)) {
       case 0: return &rts;
-      case 1: return &sleep;
+      case 1: return &shsleep;
       case 2: return &rte;
       default: return &undecoded;
       }

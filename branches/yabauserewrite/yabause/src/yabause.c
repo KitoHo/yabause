@@ -25,7 +25,9 @@
 #include "debug.h"
 #include "memory.h"
 #include "peripheral.h"
+#ifndef _arch_dreamcast
 #include "SDL.h"
+#endif
 #include "scsp.h"
 #include "scu.h"
 #include "sh2core.h"
@@ -324,7 +326,9 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "Error running Yabause\n");
 
    YabauseDeInit();
+#ifndef _arch_dreamcast
    SDL_Quit();
+#endif
    PROFILE_PRINT();
    LogStop();
 

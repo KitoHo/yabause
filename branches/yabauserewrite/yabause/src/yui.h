@@ -21,7 +21,7 @@ void YuiQuit(void);
 void YuiHideShow(void);
 
 /* If Yabause encounters any fatal errors, it sends the error text to this function */
-void YuiErrorMsg(const char *error_text, SH2_struct *sh2opcodes);
+void YuiErrorMsg(const char *string);
 
 /* Sets bios filename in the yui - used to specify bios from the commandline */
 void YuiSetBiosFilename(const char *);

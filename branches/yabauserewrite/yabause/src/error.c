@@ -26,7 +26,7 @@ void YabSetError(int type, void *extra)
    switch (type)
    {
       case YAB_ERR_FILENOTFOUND:
-         AllocAmendPrintString(File not found: ", extra);
+         AllocAmendPrintString("File not found: ", extra);
          break;
       case YAB_ERR_MEMORYALLOC:
          YuiErrorMsg("Error allocating memory\n");
@@ -41,6 +41,7 @@ void YabSetError(int type, void *extra)
          AllocAmendPrintString("Cannot initialize ", extra);
          break;
       case YAB_ERR_SH2INVALIDOPCODE:
+         YuiErrorMsg("SH2 invalid opcode\n"); // fix me
 /*
          fprintf(stderr, "R0 = %08X\tR12 = %08X\n", sh2opcodes->regs.R[0], sh2opcodes->regs.R[12]);
          fprintf(stderr, "R1 = %08X\tR13 = %08X\n", sh2opcodes->regs.R[1], sh2opcodes->regs.R[13]);
@@ -57,8 +58,10 @@ void YabSetError(int type, void *extra)
 */
          break;
       case YAB_ERR_SH2READ:
+         YuiErrorMsg("SH2 read error\n"); // fix me
          break;
       case YAB_ERR_SH2WRITE:
+         YuiErrorMsg("SH2 write error\n"); // fix me
          break;
       case YAB_ERR_UNKNOWN:
       default:

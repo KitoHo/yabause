@@ -96,6 +96,8 @@ void FASTCALL SH2undecoded(SH2_struct * sh)
    {
       int vectnum;
 
+      YabSetError(YAB_ERR_SH2INVALIDOPCODE, sh);      
+
       // Save regs.SR on stack
       sh->regs.R[15]-=4;
       MappedMemoryWriteLong(sh->regs.R[15],sh->regs.SR.all);
@@ -116,7 +118,7 @@ void FASTCALL SH2undecoded(SH2_struct * sh)
    {
       int vectnum;
 
-      fprintf(stderr, "Master SH2 Illegal Opcode: %04X, regs.PC: %08X. Jumping to Exception Service Routine.\n", (unsigned int)sh->instruction, (unsigned int)sh->regs.PC);
+      YabSetError(YAB_ERR_SH2INVALIDOPCODE, sh);      
 
       // Save regs.SR on stack
       sh->regs.R[15]-=4;

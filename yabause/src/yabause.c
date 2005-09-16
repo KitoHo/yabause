@@ -23,11 +23,9 @@
 #include "cs0.h"
 #include "cs2.h"
 #include "debug.h"
+#include "error.h"
 #include "memory.h"
 #include "peripheral.h"
-#ifndef _arch_dreamcast
-#include "SDL.h"
-#endif
 #include "scsp.h"
 #include "scu.h"
 #include "sh2core.h"
@@ -40,7 +38,7 @@
 //////////////////////////////////////////////////////////////////////////////
 
 yabsys_struct yabsys;
-const char *savefilename = NULL;
+const char *bupfilename = NULL;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -83,10 +81,13 @@ void YabauseChangeTiming(int freqtype) {
 int YabauseInit(int percoretype,
 		int sh2coretype, int vidcoretype, int sndcoretype,
                 int cdcoretype, unsigned char regionid, const char *biospath,
-                const char *cdpath, const char *savepath, const char *mpegpath) {
-   // Initialize Both cores
+                const char *cdpath, const char *buppath, const char *mpegpath) {
+   // Initialize both cpu's
    if (SH2Init(sh2coretype) != 0)
+   {
+      YabSetError(YAB_ERR_CANNOTINIT, "SH2");
       return -1;
+   }
 
    if ((BiosRom = T2MemoryInit(0x80000)) == NULL)
       return -1;
@@ -100,42 +101,67 @@ int YabauseInit(int percoretype,
    if ((BupRam = T1MemoryInit(0x10000)) == NULL)
       return -1;
 
-   if (LoadBackupRam(savepath) != 0)
+   if (LoadBackupRam(buppath) != 0)
       FormatBackupRam(BupRam, 0x10000);
-   //else
-      savefilename = savepath;
+
+   bupfilename = buppath;
 
    // Initialize input core
    if (PerInit(percoretype) != 0)
+   {
+      YabSetError(YAB_ERR_CANNOTINIT, "Peripheral");
       return -1;
+   }
 
    if (CartInit(NULL, CART_NONE) != 0) // fix me
+   {
+      YabSetError(YAB_ERR_CANNOTINIT, "Cartridge");
       return -1;
+   }
 
    if (Cs2Init(CART_NONE, cdcoretype, cdpath, mpegpath) != 0)
+   {
+      YabSetError(YAB_ERR_CANNOTINIT, "CS2");
       return -1;
+   }
 
    if (ScuInit() != 0)
+   {
+      YabSetError(YAB_ERR_CANNOTINIT, "SCU");
       return -1;
+   }
 
    if (ScspInit(sndcoretype) != 0)
+   {
+      YabSetError(YAB_ERR_CANNOTINIT, "SCSP/M68K");
       return -1;
+   }
 
    if (Vdp1Init(vidcoretype) != 0)
+   {
+      YabSetError(YAB_ERR_CANNOTINIT, "VDP1");
       return -1;
+   }
 
    if (Vdp2Init(vidcoretype) != 0)
+   {
+      YabSetError(YAB_ERR_CANNOTINIT, "VDP2");
       return -1;
+   }
 
    if (SmpcInit(regionid) != 0)
+   {
+      YabSetError(YAB_ERR_CANNOTINIT, "SMPC");
       return -1;
+   }
 
    MappedMemoryInit();
 
    YabauseChangeTiming(CLKTYPE_26MHZNTSC);
 
-   if (LoadBios(biospath) != 0) {
-      fprintf(stderr, "Error loading bios file \"%s\" (use \"-b\" option to specify a bios file)\n", biospath);
+   if (LoadBios(biospath) != 0)
+   {
+      YabSetError(YAB_ERR_FILENOTFOUND, biospath);
       return -2;
    }
 
@@ -160,9 +186,9 @@ void YabauseDeInit() {
 
    if (BupRam)
    {
-      if (T123Save(BupRam, 0x10000, 1, savefilename) != 0)
-         fprintf(stderr, "Error saving Backup Ram file \"%s\"\n", savefilename);
-      
+      if (T123Save(BupRam, 0x10000, 1, bupfilename) != 0)
+         YabSetError(YAB_ERR_FILEWRITE, bupfilename);
+
       T1MemoryDeInit(BupRam);
    }
 
@@ -182,6 +208,7 @@ void YabauseReset() {
    YabStopSlave();
    memset(HighWram, 0, 0x100000);
    memset(LowWram, 0, 0x100000);
+
    // Reset CS0 area here
    // Reset CS1 area here
    Cs2Reset();
@@ -229,11 +256,11 @@ int YabauseExec() {
       yabsys.LineCount++;
       if (yabsys.LineCount == 224)
       {
-         PROFILE_START("hblankin");
+         PROFILE_START("vblankin");
          // VBlankIN
          SmpcINTBACKEnd();
          Vdp2VBlankIN();
-         PROFILE_STOP("hblankin");
+         PROFILE_STOP("vblankin");
       }
       else if (yabsys.LineCount == 263)
       {
@@ -326,12 +353,8 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "Error running Yabause\n");
 
    YabauseDeInit();
-#ifndef _arch_dreamcast
-   SDL_Quit();
-#endif
    PROFILE_PRINT();
    LogStop();
-
    return 0;
 }
 

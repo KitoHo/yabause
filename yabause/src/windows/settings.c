@@ -1,4 +1,4 @@
-/*  Copyright 2004 Theo Berkau
+/*  Copyright 2004-2005 Theo Berkau
 
     This file is part of Yabause.
 

@@ -23,6 +23,7 @@
 #include "sh2core.h"
 #include "sh2int.h"
 #include "cs0.h"
+#include "error.h"
 #include "memory.h"
 
 #define INSTRUCTION_A(x) ((x & 0xF000) >> 12)

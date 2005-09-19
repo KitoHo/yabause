@@ -284,5 +284,5 @@ void SH2Disasm(u32 v_addr, u16 op, int mode, char *string)
       }
    }
        
-   sprintf(string,"unrecognized\n");
+   sprintf(string,"unrecognized");
 }

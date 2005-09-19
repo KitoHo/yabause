@@ -370,7 +370,7 @@ uninstall-am: uninstall-binPROGRAMS uninstall-info-am
 	mostlyclean-generic tags uninstall uninstall-am \
 	uninstall-binPROGRAMS uninstall-info-am
 
-c68k_ini.inc:
+c68k_ini.inc: gen68k
 	./gen68k
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

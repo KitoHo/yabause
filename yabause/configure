@@ -271,7 +271,7 @@ PACKAGE_VERSION='0.5'
 PACKAGE_STRING='yabause 0.5'
 PACKAGE_BUGREPORT=''
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os yabause_arch INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO AMTAR install_sh STRIP ac_ct_STRIP INSTALL_STRIP_PROGRAM AWK SET_MAKE CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT DEPDIR am__include am__quote AMDEP_TRUE AMDEP_FALSE AMDEPBACKSLASH CCDEPMODE HAVE_LIBSDL CPP X_CFLAGS X_PRE_LIBS X_LIBS X_EXTRA_LIBS HAVE_PKG ac_ct_HAVE_PKG yabause_yui LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os yabause_arch INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA PACKAGE VERSION ACLOCAL AUTOCONF AUTOMAKE AUTOHEADER MAKEINFO AMTAR install_sh STRIP ac_ct_STRIP INSTALL_STRIP_PROGRAM AWK SET_MAKE CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT DEPDIR am__include am__quote AMDEP_TRUE AMDEP_FALSE AMDEPBACKSLASH CCDEPMODE HAVE_LIBSDL CPP X_CFLAGS X_PRE_LIBS X_LIBS X_EXTRA_LIBS HAVE_PKG ac_ct_HAVE_PKG yabause_yui YAB_CFLAGS YAB_LIBS LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -3210,16 +3210,16 @@ else
 	SDL_LIBS=`$HAVE_LIBSDL --libs`
 fi
 
-CFLAGS="$CFLAGS $SDL_CFLAGS"
-LIBS="$LIBS $SDL_LIBS"
+YAB_CFLAGS="$YAB_CFLAGS $SDL_CFLAGS"
+YAB_LIBS="$YAB_LIBS $SDL_LIBS"
 
 case $target in
 	*darwin*)
-		LIBS="$LIBS $SDL_LIBS -framework IOKit -framework CoreFoundation -framework GLUT"
+		YAB_LIBS="$YAB_LIBS $SDL_LIBS -framework IOKit -framework CoreFoundation -framework GLUT"
 		yabause_yui="."
 		;;
 	*cygwin*)
-		LIBS="$LIBS -lopengl32 -lglut32"
+		YAB_LIBS="$YAB_LIBS -lopengl32 -lglut32"
 		yabause_yui="."
 		;;
 	*mingw32*)
@@ -5001,10 +5001,9 @@ fi
 
 fi
 
-		LIBS="$LIBS $X_LIBS"
-		CFLAGS="$CFLAGS $X_CFLAGS"
-
-echo "$as_me:$LINENO: checking for glEnable in -lGL" >&5
+		YAB_LIBS="$YAB_LIBS $X_LIBS"
+		YAB_CFLAGS="$YAB_CFLAGS $X_CFLAGS"
+		echo "$as_me:$LINENO: checking for glEnable in -lGL" >&5
 echo $ECHO_N "checking for glEnable in -lGL... $ECHO_C" >&6
 if test "${ac_cv_lib_GL_glEnable+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -5069,11 +5068,12 @@ fi
 echo "$as_me:$LINENO: result: $ac_cv_lib_GL_glEnable" >&5
 echo "${ECHO_T}$ac_cv_lib_GL_glEnable" >&6
 if test $ac_cv_lib_GL_glEnable = yes; then
-  cat >>confdefs.h <<_ACEOF
+
+			YAB_LIBS="$YAB_LIBS -lGL"
+			cat >>confdefs.h <<\_ACEOF
 #define HAVE_LIBGL 1
 _ACEOF
 
-  LIBS="-lGL $LIBS"
 
 else
   { { echo "$as_me:$LINENO: error: \"You need to install OpenGL\"" >&5
@@ -5081,8 +5081,7 @@ echo "$as_me: error: \"You need to install OpenGL\"" >&2;}
    { (exit 1); exit 1; }; }
 fi
 
-
-echo "$as_me:$LINENO: checking for glutGetModifiers in -lglut" >&5
+		echo "$as_me:$LINENO: checking for glutGetModifiers in -lglut" >&5
 echo $ECHO_N "checking for glutGetModifiers in -lglut... $ECHO_C" >&6
 if test "${ac_cv_lib_glut_glutGetModifiers+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -5147,11 +5146,11 @@ fi
 echo "$as_me:$LINENO: result: $ac_cv_lib_glut_glutGetModifiers" >&5
 echo "${ECHO_T}$ac_cv_lib_glut_glutGetModifiers" >&6
 if test $ac_cv_lib_glut_glutGetModifiers = yes; then
-  cat >>confdefs.h <<_ACEOF
+
+			YAB_LIBS="$YAB_LIBS -lglut"
+			cat >>confdefs.h <<\_ACEOF
 #define HAVE_LIBGLUT 1
 _ACEOF
-
-  LIBS="-lglut $LIBS"
 
 fi
 
@@ -5414,8 +5413,10 @@ fi
 
 
 
-CFLAGS="$CFLAGS $GTK_CFLAGS"
-LIBS="$LIBS $GTK_LIBS"
+YAB_CFLAGS="$YAB_CFLAGS $GTK_CFLAGS"
+YAB_LIBS="$YAB_LIBS $GTK_LIBS"
+
+
 
 # Check whether --enable-debug or --disable-debug was given.
 if test "${enable_debug+set}" = set; then
@@ -5450,7 +5451,7 @@ _ACEOF
 
 fi;
 
-                                                  ac_config_files="$ac_config_files Makefile src/Makefile doc/Makefile src/freebsd/Makefile src/linux/Makefile"
+                                                            ac_config_files="$ac_config_files Makefile src/Makefile doc/Makefile src/freebsd/Makefile src/linux/Makefile src/c68k/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -6025,6 +6026,7 @@ do
   "doc/Makefile" ) CONFIG_FILES="$CONFIG_FILES doc/Makefile" ;;
   "src/freebsd/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/freebsd/Makefile" ;;
   "src/linux/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/linux/Makefile" ;;
+  "src/c68k/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/c68k/Makefile" ;;
   "depfiles" ) CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 echo "$as_me: error: invalid argument: $ac_config_target" >&2;}
@@ -6163,6 +6165,8 @@ s,@X_EXTRA_LIBS@,$X_EXTRA_LIBS,;t t
 s,@HAVE_PKG@,$HAVE_PKG,;t t
 s,@ac_ct_HAVE_PKG@,$ac_ct_HAVE_PKG,;t t
 s,@yabause_yui@,$yabause_yui,;t t
+s,@YAB_CFLAGS@,$YAB_CFLAGS,;t t
+s,@YAB_LIBS@,$YAB_LIBS,;t t
 s,@LIBOBJS@,$LIBOBJS,;t t
 s,@LTLIBOBJS@,$LTLIBOBJS,;t t
 CEOF

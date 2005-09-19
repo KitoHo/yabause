@@ -14,6 +14,5 @@ yabause_SOURCES = \
 	$(yabause_yui)/yui.c yui.h
 yabause_CFLAGS = $(YAB_CFLAGS)
 yabause_LDFLAGS = $(YAB_LIBS)
-BUILT_SOURCES = c68k/c68k_ini.inc
 c68k/c68k_ini.inc:
 	cd c68k && ./gen68k

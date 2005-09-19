@@ -45,8 +45,7 @@ case $target in
 		yabause_yui="."
 		;;
 	*mingw32*)
-		AC_CHECK_LIB(opengl32, glEnable, [], [AC_MSG_ERROR("You need to install OpenGL")])
-		AC_CHECK_LIB(glut, glutGetModifiers)
+		YAB_LIBS="$YAB_LIBS -lopengl32 -lglut32"
 		yabause_yui="."
 		;;
 	*linux* | *freebsd*)

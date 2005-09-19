@@ -93,7 +93,7 @@ bin_PROGRAMS = gen68k
 gen68k_SOURCES = c68kexec.c c68k.c gen68k.c
 gen68k_CFLAGS = -DC68K_GEN
 gen68k_LDFLAGS = -DC68K_GEN
-BUILT_SOURCES = c68k_ini.inc
+nodist_pkgdata_DATA = c68k_ini.inc
 subdir = src/c68k
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_CLEAN_FILES =
@@ -122,11 +122,12 @@ CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 CFLAGS = @CFLAGS@
 DIST_SOURCES = $(gen68k_SOURCES)
+DATA = $(nodist_pkgdata_DATA)
+
 DIST_COMMON = Makefile.am Makefile.in
 SOURCES = $(gen68k_SOURCES)
 
-all: $(BUILT_SOURCES)
-	$(MAKE) $(AM_MAKEFLAGS) all-am
+all: all-am
 
 .SUFFIXES:
 .SUFFIXES: .c .o .obj
@@ -228,6 +229,24 @@ gen68k-gen68k.obj: gen68k.c
 	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(gen68k_CFLAGS) $(CFLAGS) -c -o gen68k-gen68k.obj `cygpath -w gen68k.c`
 CCDEPMODE = @CCDEPMODE@
 uninstall-info-am:
+nodist_pkgdataDATA_INSTALL = $(INSTALL_DATA)
+install-nodist_pkgdataDATA: $(nodist_pkgdata_DATA)
+	@$(NORMAL_INSTALL)
+	$(mkinstalldirs) $(DESTDIR)$(pkgdatadir)
+	@list='$(nodist_pkgdata_DATA)'; for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  f="`echo $$p | sed -e 's|^.*/||'`"; \
+	  echo " $(nodist_pkgdataDATA_INSTALL) $$d$$p $(DESTDIR)$(pkgdatadir)/$$f"; \
+	  $(nodist_pkgdataDATA_INSTALL) $$d$$p $(DESTDIR)$(pkgdatadir)/$$f; \
+	done
+
+uninstall-nodist_pkgdataDATA:
+	@$(NORMAL_UNINSTALL)
+	@list='$(nodist_pkgdata_DATA)'; for p in $$list; do \
+	  f="`echo $$p | sed -e 's|^.*/||'`"; \
+	  echo " rm -f $(DESTDIR)$(pkgdatadir)/$$f"; \
+	  rm -f $(DESTDIR)$(pkgdatadir)/$$f; \
+	done
 
 ETAGS = etags
 ETAGSFLAGS =
@@ -292,10 +311,10 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(PROGRAMS)
+all-am: Makefile $(PROGRAMS) $(DATA)
 
 installdirs:
-	$(mkinstalldirs) $(DESTDIR)$(bindir)
+	$(mkinstalldirs) $(DESTDIR)$(bindir) $(DESTDIR)$(pkgdatadir)
 
 install: install-am
 install-exec: install-exec-am
@@ -321,7 +340,6 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
-	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 clean: clean-am
 
 clean-am: clean-binPROGRAMS clean-generic mostlyclean-am
@@ -339,7 +357,7 @@ info: info-am
 
 info-am:
 
-install-data-am:
+install-data-am: install-nodist_pkgdataDATA
 
 install-exec-am: install-binPROGRAMS
 
@@ -357,18 +375,20 @@ mostlyclean: mostlyclean-am
 
 mostlyclean-am: mostlyclean-compile mostlyclean-generic
 
-uninstall-am: uninstall-binPROGRAMS uninstall-info-am
+uninstall-am: uninstall-binPROGRAMS uninstall-info-am \
+	uninstall-nodist_pkgdataDATA
 
 .PHONY: GTAGS all all-am check check-am clean clean-binPROGRAMS \
 	clean-generic distclean distclean-compile distclean-depend \
 	distclean-generic distclean-tags distdir dvi dvi-am info \
 	info-am install install-am install-binPROGRAMS install-data \
 	install-data-am install-exec install-exec-am install-info \
-	install-info-am install-man install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-compile \
-	mostlyclean-generic tags uninstall uninstall-am \
-	uninstall-binPROGRAMS uninstall-info-am
+	install-info-am install-man install-nodist_pkgdataDATA \
+	install-strip installcheck installcheck-am installdirs \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-compile mostlyclean-generic tags uninstall \
+	uninstall-am uninstall-binPROGRAMS uninstall-info-am \
+	uninstall-nodist_pkgdataDATA
 
 c68k_ini.inc: gen68k
 	./gen68k

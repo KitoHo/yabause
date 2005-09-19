@@ -92,6 +92,7 @@ yabause_yui = @yabause_yui@
 bin_PROGRAMS = gen68k
 gen68k_SOURCES = c68kexec.c c68k.c gen68k.c
 gen68k_CFLAGS = -DC68K_GEN
+gen68k_LDFLAGS = -DC68K_GEN
 BUILT_SOURCES = c68k_ini.inc
 subdir = src/c68k
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
@@ -104,7 +105,6 @@ am_gen68k_OBJECTS = gen68k-c68kexec.$(OBJEXT) gen68k-c68k.$(OBJEXT) \
 gen68k_OBJECTS = $(am_gen68k_OBJECTS)
 gen68k_LDADD = $(LDADD)
 gen68k_DEPENDENCIES =
-gen68k_LDFLAGS =
 
 DEFS = @DEFS@
 DEFAULT_INCLUDES =  -I. -I$(srcdir)

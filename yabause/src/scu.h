@@ -261,4 +261,14 @@ void ScuSendExternalInterrupt13(void);
 void ScuSendExternalInterrupt14(void);
 void ScuSendExternalInterrupt15(void);
 
+void ScuDspDisasm(u8 addr, char *outstring);
+void ScuDspStep(void);
+void ScuDspGetRegisters(scudspregs_struct *regs);
+void ScuDspSetRegisters(scudspregs_struct *regs);
+void ScuDspSetBreakpointCallBack(void (*func)(u32));
+int ScuDspAddCodeBreakpoint(u32 addr);
+int ScuDspDelCodeBreakpoint(u32 addr);
+scucodebreakpoint_struct *ScuDspGetBreakpointList();
+void ScuDspClearCodeBreakpoints();
+
 #endif

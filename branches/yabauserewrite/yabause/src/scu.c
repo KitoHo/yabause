@@ -23,6 +23,7 @@
 #include "debug.h"
 #include "memory.h"
 #include "sh2core.h"
+#include "yabause.h"
 
 Scu * ScuRegs;
 scudspregs_struct * ScuDsp;
@@ -1448,7 +1449,15 @@ void ScuDspClearCodeBreakpoints() {
 
 u8 FASTCALL ScuReadByte(u32 addr) {
    addr &= 0xFF;
-   // long access only
+
+   switch(addr) {
+      case 0xA7:
+         return (ScuRegs->IST & 0xFF);
+      default:
+         LOG("Unhandled SCU Register byte read %08X\n", addr);
+         return 0;
+   }
+
    return 0;
 }
 
@@ -1456,7 +1465,8 @@ u8 FASTCALL ScuReadByte(u32 addr) {
 
 u16 FASTCALL ScuReadWord(u32 addr) {
    addr &= 0xFF;
-   // long access only
+   LOG("Unhandled SCU Register word read %08X\n", addr);
+
    return 0;
 }
 
@@ -1501,7 +1511,7 @@ u32 FASTCALL ScuReadLong(u32 addr) {
       case 0xC8:
          return ScuRegs->VER;
       default:
-         LOG("bad Scu register read\n");
+         LOG("Unhandled SCU Register long read %08X\n", addr);
          return 0;
    }
 }
@@ -1510,14 +1520,21 @@ u32 FASTCALL ScuReadLong(u32 addr) {
 
 void FASTCALL ScuWriteByte(u32 addr, u8 val) {
    addr &= 0xFF;
-   // long access only
+   switch(addr) {
+      case 0xA7:
+         ScuRegs->IST &= (0xFFFFFF00 | val); // double check this
+         return;
+      default:
+         LOG("Unhandled SCU Register byte write %08X\n", addr);
+         return;
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 void FASTCALL ScuWriteWord(u32 addr, u16 val) {
    addr &= 0xFF;
-   // long access only
+   LOG("Unhandled SCU Register word write %08X\n", addr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1691,7 +1708,7 @@ void FASTCALL ScuWriteLong(u32 addr, u32 val) {
          ScuRegs->RSEL = val;
          break;
       default:
-         LOG("bad Scu register write\n");
+         LOG("Unhandled SCU Register long write %08X\n", addr);
          break;
    }
 }
@@ -1892,3 +1909,33 @@ void ScuSendExternalInterrupt15(void) {
 
 //////////////////////////////////////////////////////////////////////////////
 
+int ScuSaveState(FILE *fp)
+{
+   int offset;
+
+   offset = StateWriteHeader(fp, "SCU ", 1);
+/*
+   // Write registers
+   fwrite((void *)this->getBuffer(), 0x100, 1, fp);
+   fwrite((void *)&timer0, 4, 1, fp);
+   fwrite((void *)&timer1, 4, 1, fp);
+
+   // Write DSP area
+   fwrite((void *)&dsp, sizeof(scudspregs_struct), 1, fp);
+*/
+   return StateFinishHeader(fp, offset);
+}
+
+int ScuLoadState(FILE *fp, int version, int size)
+{
+/*
+   // Read registers
+   fread((void *)this->getBuffer(), 0x100, 1, fp);
+   fread((void *)&timer0, 4, 1, fp);
+   fread((void *)&timer1, 4, 1, fp);
+
+   // Read DSP area
+   fread((void *)&dsp, sizeof(scudspregs_struct), 1, fp);
+*/
+   return size;
+}

@@ -493,13 +493,11 @@ u8 FASTCALL MappedMemoryReadByte(u32 addr)
          // Purge Area
          break;
       }
+*/
       case 0x4:
       case 0x6:
-      {
          // Data Array
-         break;
-      }
-*/
+         return DataArrayReadByte(addr);
       case 0x7:
       {
          if (addr >= 0xFFFFFE00)
@@ -546,13 +544,11 @@ u16 FASTCALL MappedMemoryReadWord(u32 addr)
          // Purge Area
          break;
       }
+*/
       case 0x4:
       case 0x6:
-      {
          // Data Array
-         break;
-      }
-*/
+         return DataArrayReadWord(addr);
       case 0x7:
       {
          if (addr >= 0xFFFFFE00)
@@ -605,14 +601,10 @@ u32 FASTCALL MappedMemoryReadLong(u32 addr)
          // Address Array
          return AddressArrayReadLong(addr);
       }
-/*
       case 0x4:
       case 0x6:
-      {
          // Data Array
-         break;
-      }
-*/
+         return DataArrayReadLong(addr);
       case 0x7:
       {
          if (addr >= 0xFFFFFE00)
@@ -659,13 +651,12 @@ void FASTCALL MappedMemoryWriteByte(u32 addr, u8 val)
          // Purge Area
          return;
       }
+*/
       case 0x4:
       case 0x6:
-      {
          // Data Array
+         DataArrayWriteByte(addr, val);
          return;
-      }
-*/
       case 0x7:
       {
          if (addr >= 0xFFFFFE00)
@@ -712,13 +703,12 @@ void FASTCALL MappedMemoryWriteWord(u32 addr, u16 val)
          // Purge Area
          return;
       }
+*/
       case 0x4:
       case 0x6:
-      {
          // Data Array
+         DataArrayWriteWord(addr, val);
          return;
-      }
-*/
       case 0x7:
       {
          if (addr >= 0xFFFFFE00)
@@ -770,14 +760,11 @@ void FASTCALL MappedMemoryWriteLong(u32 addr, u32 val)
          AddressArrayWriteLong(addr, val);
          return;
       }
-/*
       case 0x4:
       case 0x6:
-      {
          // Data Array
+         DataArrayWriteLong(addr, val);
          return;
-      }
-*/
       case 0x7:
       {
          if (addr >= 0xFFFFFE00)
@@ -912,4 +899,226 @@ void FormatBackupRam(void *mem, u32 size)
    }
 }
 
-////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////
+
+int YabSaveState(const char *filename)
+{
+/*
+   u32 i, i2;
+   FILE *fp;
+   int offset;
+
+   if ((fp = fopen(filename, "wb")) == NULL)
+      return -1;
+
+   // Write signature
+   fprintf(fp, "YSS");
+
+   // Write endianness byte
+#ifdef WORDS_BIGENDIAN
+   fputc(0x00, fp);
+#else
+   fputc(0x01, fp);
+#endif
+
+   // Write version(fix me)
+   i = 1;
+   fwrite((void *)&i, sizeof(i), 1, fp);
+
+   // Skip the next 4 bytes for now
+   i = 0;
+   fwrite((void *)&i, sizeof(i), 1, fp);
+
+   // Go through each area and write each state
+   i += CartSaveState(fp);
+   i += Cs2SaveState(fp);
+   i += SH2SaveState(MSH2, fp);
+   i += SH2SaveState(SSH2, fp);
+   i += SoundSaveState(fp);
+   i += ScuSaveState(fp);
+   i += SmpcSaveState(fp);
+   i += Vdp1SaveState(fp);
+   i += Vdp2SaveState(fp);
+
+   offset = StateWriteHeader(fp, "OTHR", 1);
+
+   // Other data here
+   fwrite((void *)ram->getBuffer(), 0x10000, 1, fp);
+   fwrite((void *)ramHigh->getBuffer(), 0x100000, 1, fp);
+   fwrite((void *)ramLow->getBuffer(), 0x100000, 1, fp);
+   i += StateFinishHeader(fp, offset);
+
+   // Go back and update size
+   fseek(fp, 8, SEEK_SET);
+   fwrite((void *)&i, sizeof(i), 1, fp);
+
+   fclose(fp);
+*/
+
+   return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+int YabLoadState(const char *filename)
+{
+/*
+   FILE *fp;
+   char id[3];
+   unsigned char endian;
+   int version, size, chunksize;
+
+   if ((fp = fopen(filename, "rb")) == NULL)
+      return -1;
+
+   // Read signature
+   fread((void *)id, 1, 3, fp);
+
+   if (strncmp(id, "YSS", 3) != 0)
+   {
+      fclose(fp);
+      return -2;
+   }
+
+   // Read header
+   fread((void *)&endian, 1, 1, fp);
+   fread((void *)&version, 4, 1, fp);
+   fread((void *)&size, 4, 1, fp);
+
+#ifdef WORDS_BIGENDIAN
+   if (endian == 1)
+#else
+   if (endian == 0)
+#endif
+   {
+      // should setup reading so it's byte-swapped
+      cerr << "loadState byteswapping not supported" << endl;
+      fclose(fp);
+      return -3;
+   }
+
+   // Make sure size variable matches actual size minus header
+   fseek(fp, 0, SEEK_END);
+   if (size != (ftell(fp) - 0xC))
+   {
+      fclose(fp);
+      return -2;
+   }
+   fseek(fp, 0xC, SEEK_SET);
+
+   // Verify version here
+
+   soundr->muteAudio();
+   
+   if (stateCheckRetrieveHeader(fp, "CS0 ", &version, &chunksize) != 0)
+   {
+      fclose(fp);
+      // Revert back to old state here
+      soundr->unmuteAudio();
+      return -3;
+   }
+   cs0->loadState(fp, version, chunksize);
+
+   if (stateCheckRetrieveHeader(fp, "CS1 ", &version, &chunksize) != 0)
+   {
+      fclose(fp);
+      // Revert back to old state here
+      soundr->unmuteAudio();
+      return -3;
+   }
+   cs1->loadState(fp, version, chunksize);
+
+   if (stateCheckRetrieveHeader(fp, "CS2 ", &version, &chunksize) != 0)
+   {
+      fclose(fp);
+      // Revert back to old state here
+      soundr->unmuteAudio();
+      return -3;
+   }
+   cs2->loadState(fp, version, chunksize);
+
+   if (stateCheckRetrieveHeader(fp, "MSH2", &version, &chunksize) != 0)
+   {
+      fclose(fp);
+      // Revert back to old state here
+      soundr->unmuteAudio();
+      return -3;
+   }
+   msh->loadState(fp, version, chunksize);
+
+   if (stateCheckRetrieveHeader(fp, "SSH2", &version, &chunksize) != 0)
+   {
+      fclose(fp);
+      // Revert back to old state here
+      soundr->unmuteAudio();
+      return -3;
+   }
+   ssh->loadState(fp, version, chunksize);
+
+   if (stateCheckRetrieveHeader(fp, "SCSP", &version, &chunksize) != 0)
+   {
+      fclose(fp);
+      // Revert back to old state here
+      soundr->unmuteAudio();
+      return -3;
+   }
+   soundr->loadState(fp, version, chunksize);
+
+   if (stateCheckRetrieveHeader(fp, "SCU ", &version, &chunksize) != 0)
+   {
+      fclose(fp);
+      // Revert back to old state here
+      soundr->unmuteAudio();
+      return -3;
+   }
+   scu->loadState(fp, version, chunksize);
+
+   if (stateCheckRetrieveHeader(fp, "SMPC", &version, &chunksize) != 0)
+   {
+      fclose(fp);
+      // Revert back to old state here
+      soundr->unmuteAudio();
+      return -3;
+   }
+   smpc->loadState(fp, version, chunksize);
+
+   if (stateCheckRetrieveHeader(fp, "VDP1", &version, &chunksize) != 0)
+   {
+      fclose(fp);
+      // Revert back to old state here
+      soundr->unmuteAudio();
+      return -3;
+   }
+   vdp1_2->loadState(fp, version, chunksize);
+
+   if (stateCheckRetrieveHeader(fp, "VDP2", &version, &chunksize) != 0)
+   {
+      fclose(fp);
+      // Revert back to old state here
+      soundr->unmuteAudio();
+      return -3;
+   }
+   vdp2_3->loadState(fp, version, chunksize);
+
+   if (stateCheckRetrieveHeader(fp, "OTHR", &version, &chunksize) != 0)
+   {
+      fclose(fp);
+      // Revert back to old state here
+      soundr->unmuteAudio();
+      return -3;
+   }
+   // Other data
+   fread((void *)ram->getBuffer(), 0x10000, 1, fp);
+   fread((void *)ramHigh->getBuffer(), 0x100000, 1, fp);
+   fread((void *)ramLow->getBuffer(), 0x100000, 1, fp);
+
+   fclose(fp);
+
+#endif
+
+   soundr->unmuteAudio();
+*/
+   return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////

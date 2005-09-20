@@ -320,8 +320,7 @@ void slog(char * out, ...){
 }
 
 #else
-void slog(char * out, ...){
-}
+#define slog(f, r...)
 #endif
 
 ////////////////////////////////////////////////////////////////
@@ -2954,23 +2953,26 @@ void M68KClearCodeBreakpoints() {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/*
-int Scsp::saveState(FILE *fp) {
+int SoundSaveState(FILE *fp)
+{
    int i;
    u32 temp;
    int offset;
 
-   offset = stateWriteHeader(fp, "SCSP", 1);
+   offset = StateWriteHeader(fp, "SCSP", 1);
 
+/*
    // Save 68k registers first
    fwrite((void *)&is68kOn, 1, 1, fp);
 
-   for (i = 0; i < 8; i++) {
+   for (i = 0; i < 8; i++)
+   {
       temp = C68k_Get_DReg(&C68K, i);
       fwrite((void *)&temp, 4, 1, fp);
    }
 
-   for (i = 0; i < 8; i++) {
+   for (i = 0; i < 8; i++)
+   {
       temp =  C68k_Get_AReg(&C68K, i);
       fwrite((void *)&temp, 4, 1, fp);
    }
@@ -2985,13 +2987,16 @@ int Scsp::saveState(FILE *fp) {
 
    // Lastly, sound ram
    fwrite((void *)sram->getBuffer(), 0x80000, 1, fp);
+*/
 
-   return stateFinishHeader(fp, offset);
+   return StateFinishHeader(fp, offset);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-int Scsp::loadState(FILE *fp, int version, int size) {
+int SoundLoadState(FILE *fp, int version, int size)
+{
+/*
    int i;
    u32 temp;
 
@@ -3018,10 +3023,9 @@ int Scsp::loadState(FILE *fp, int version, int size) {
 
    // Lastly, sound ram
    fread((void *)sram->getBuffer(), 0x80000, 1, fp);
-
+*/
    return size;
 }
-*/
 
 //////////////////////////////////////////////////////////////////////////////
 // Dummy Sound Interface

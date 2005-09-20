@@ -81,4 +81,14 @@ u8 scsp_midi_out_read(void);
 void scsp_update(s32 *bufL, s32 *bufR, u32 len);
 void scsp_update_timer(u32 len);
 
+void M68KStep();
+void M68KGetRegisters(m68kregs_struct *regs);
+void M68KSetRegisters(m68kregs_struct *regs);
+void M68KSetBreakpointCallBack(void (*func)(u32));
+int M68KAddCodeBreakpoint(u32 addr);
+void M68KSortCodeBreakpoints();
+int M68KDelCodeBreakpoint(u32 addr);
+m68kcodebreakpoint_struct *M68KGetBreakpointList();
+void M68KClearCodeBreakpoints();
+
 #endif

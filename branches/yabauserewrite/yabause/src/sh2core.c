@@ -23,6 +23,7 @@
 #include "sh2core.h"
 #include "debug.h"
 #include "memory.h"
+#include "yabause.h"
 
 SH2_struct *MSH2=NULL;
 SH2_struct *SSH2=NULL;
@@ -355,6 +356,15 @@ void OnchipReset(SH2_struct *context) {
    context->onchip.VCRWDT = 0x0000;
    context->onchip.DVCR = 0x00000000;
    context->onchip.VCRDIV = 0x00000000;
+   context->onchip.BARA.all = 0x00000000;
+   context->onchip.BAMRA.all = 0x00000000;
+   context->onchip.BBRA = 0x0000;
+   context->onchip.BARB.all = 0x00000000;
+   context->onchip.BAMRB.all = 0x00000000;
+   context->onchip.BDRB.all = 0x00000000;
+   context->onchip.BDMRB.all = 0x00000000;
+   context->onchip.BBRB = 0x0000;
+   context->onchip.BRCR = 0x0000;
    context->onchip.CHCR0 = 0x00000000;
    context->onchip.CHCR1 = 0x00000000;
    context->onchip.DMAOR = 0x00000000;
@@ -387,8 +397,12 @@ u8 FASTCALL OnchipReadByte(u32 addr) {
          return CurrentSH2->onchip.TOCR;
       case 0x080:
          return CurrentSH2->onchip.WTCSR;
+      case 0x081:
+         return CurrentSH2->onchip.WTCNT;
+      case 0x092:
+         return CurrentSH2->onchip.CCR;
       default:
-         fprintf(stderr, "Unhandled Onchip byte read %08X\n", (int)addr);
+         LOG("Unhandled Onchip byte read %08X\n", (int)addr);
          break;
    }
 
@@ -407,7 +421,7 @@ u16 FASTCALL OnchipReadWord(u32 addr) {
       case 0x0E2:
          return CurrentSH2->onchip.IPRA;
       default:
-         fprintf(stderr, "Unhandled Onchip word read %08X\n", (int)addr);
+         LOG("Unhandled Onchip word read %08X\n", (int)addr);
          return 0;
    }
 
@@ -420,18 +434,25 @@ u32 FASTCALL OnchipReadLong(u32 addr) {
    switch(addr)
    {
       case 0x100:
+      case 0x120:
          return CurrentSH2->onchip.DVSR;
       case 0x104: // DVDNT
+      case 0x124:
          return CurrentSH2->onchip.DVDNTL;
       case 0x108:
+      case 0x128:
          return CurrentSH2->onchip.DVCR;
       case 0x10C:
+      case 0x12C:
          return CurrentSH2->onchip.VCRDIV;
       case 0x110:
+      case 0x130:
          return CurrentSH2->onchip.DVDNTH;
       case 0x114:
+      case 0x134:
          return CurrentSH2->onchip.DVDNTL;
       case 0x11C: // DVDNTL mirror
+      case 0x13C:
          return CurrentSH2->onchip.DVDNTL;
       case 0x18C:
          return CurrentSH2->onchip.CHCR0;
@@ -442,7 +463,7 @@ u32 FASTCALL OnchipReadLong(u32 addr) {
       case 0x1E0:
          return CurrentSH2->onchip.BCR1;
       default:
-         fprintf(stderr, "Unhandled Onchip long read %08X\n", (int)addr);
+         LOG("Unhandled Onchip long read %08X\n", (int)addr);
          return 0;
    }
 
@@ -557,7 +578,7 @@ void FASTCALL OnchipWriteByte(u32 addr, u8 val) {
          CurrentSH2->onchip.VCRWDT = (CurrentSH2->onchip.VCRWDT & 0xFF00) | (val & 0x7F);
          return;
       default:
-         fprintf(stderr, "Unhandled Onchip byte write %08X\n", (int)addr);
+         LOG("Unhandled Onchip byte write %08X\n", (int)addr);
    }
 }
 
@@ -630,8 +651,18 @@ void FASTCALL OnchipWriteWord(u32 addr, u16 val) {
       case 0x0E2:
          CurrentSH2->onchip.IPRA = val & 0xFFF0;
          return;
+      case 0x108:
+      case 0x128:
+         CurrentSH2->onchip.DVCR = val & 0x3;
+         return;
+      case 0x148:
+         CurrentSH2->onchip.BBRA = val & 0xFF;
+         return;
+      case 0x178:
+         CurrentSH2->onchip.BRCR = val & 0xF4DC;
+         return;
       default:
-         fprintf(stderr, "Unhandled Onchip word write %08X\n", (int)addr);
+         LOG("Unhandled Onchip word write %08X(%04X)\n", (int)addr, val);
          return;
    }
 }
@@ -642,9 +673,12 @@ void FASTCALL OnchipWriteLong(u32 addr, u32 val)  {
    switch (addr)
    {
       case 0x100:
+      case 0x120:
          CurrentSH2->onchip.DVSR = val;
          return;
-      case 0x104: {
+      case 0x104:
+      case 0x124:
+      {
          s32 divisor = (s32) CurrentSH2->onchip.DVSR;
          if (divisor == 0)
          {
@@ -660,7 +694,7 @@ void FASTCALL OnchipWriteLong(u32 addr, u32 val)  {
             CurrentSH2->onchip.DVCR |= 1;
 #if DEBUG
             if (CurrentSH2->onchip.DVCR & 0x2)
-               fprintf(stderr, "should be triggering DIVU interrupt\n");
+               LOG("should be triggering DIVU interrupt\n");
 #endif
          }
          else
@@ -674,15 +708,19 @@ void FASTCALL OnchipWriteLong(u32 addr, u32 val)  {
          return;
       }
       case 0x108:
+      case 0x128:
          CurrentSH2->onchip.DVCR = val & 0x3;
          return;
       case 0x10C:
+      case 0x12C:
          CurrentSH2->onchip.VCRDIV = val & 0xFFFF;
          return;
       case 0x110:
+      case 0x130:
          CurrentSH2->onchip.DVDNTH = val;
          return;
-      case 0x114: {
+      case 0x114:
+      case 0x134: {
          s32 divisor = (s32) CurrentSH2->onchip.DVSR;
          s64 dividend = CurrentSH2->onchip.DVDNTH;
          dividend <<= 32;
@@ -694,7 +732,7 @@ void FASTCALL OnchipWriteLong(u32 addr, u32 val)  {
             CurrentSH2->onchip.DVCR |= 1;
 #if DEBUG
             if (CurrentSH2->onchip.DVCR & 0x2)
-               fprintf(stderr, "should be triggering DIVU interrupt\n");
+               LOG("should be triggering DIVU interrupt\n");
 #endif
          }
          else
@@ -707,7 +745,7 @@ void FASTCALL OnchipWriteLong(u32 addr, u32 val)  {
                CurrentSH2->onchip.DVCR |= 1;
 #if DEBUG
                if (CurrentSH2->onchip.DVCR & 0x2)
-                  fprintf(stderr, "should be triggering DIVU interrupt\n");
+                  LOG("should be triggering DIVU interrupt\n");
 #endif
             }
             else
@@ -718,6 +756,12 @@ void FASTCALL OnchipWriteLong(u32 addr, u32 val)  {
          }
          return;
       }
+      case 0x140:
+         CurrentSH2->onchip.BARA.all = val;         
+         return;
+      case 0x144:
+         CurrentSH2->onchip.BAMRA.all = val;         
+         return;
       case 0x180:
          CurrentSH2->onchip.SAR0 = val;
          return;
@@ -789,7 +833,7 @@ void FASTCALL OnchipWriteLong(u32 addr, u32 val)  {
          CurrentSH2->onchip.RTCOR = val & 0xFF;
          return;
       default:
-         fprintf(stderr, "Unhandled Onchip long write %08X\n", (int)addr);
+         LOG("Unhandled Onchip long write %08X\n", (int)addr);
          break;
    }
 }
@@ -804,6 +848,42 @@ u32 FASTCALL AddressArrayReadLong(u32 addr) {
 
 void FASTCALL AddressArrayWriteLong(u32 addr, u32 val)  {
    CurrentSH2->AddressArray[(addr & 0x3FC) >> 2] = val;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+u8 FASTCALL DataArrayReadByte(u32 addr) {
+   return T2ReadByte(CurrentSH2->DataArray, addr & 0xFFF);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+u16 FASTCALL DataArrayReadWord(u32 addr) {
+   return T2ReadWord(CurrentSH2->DataArray, addr & 0xFFF);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+u32 FASTCALL DataArrayReadLong(u32 addr) {
+   return T2ReadLong(CurrentSH2->DataArray, addr & 0xFFF);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FASTCALL DataArrayWriteByte(u32 addr, u8 val)  {
+   T2WriteByte(CurrentSH2->DataArray, addr & 0xFFF, val);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FASTCALL DataArrayWriteWord(u32 addr, u16 val)  {
+   T2WriteWord(CurrentSH2->DataArray, addr & 0xFFF, val);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void FASTCALL DataArrayWriteLong(u32 addr, u32 val)  {
+   T2WriteLong(CurrentSH2->DataArray, addr & 0xFFF, val);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1019,9 +1099,8 @@ void DMATransfer(u32 *CHCR, u32 *SAR, u32 *DAR, u32 *TCR, u32 *VCRDMA)
 
    if (*CHCR & 0x4)
    {
-#if DEBUG
-      fprintf(stderr, "FIXME should launch an interrupt\n");
-#endif
+      LOG("FIXME should launch an interrupt\n");
+
       SH2SendInterrupt(CurrentSH2, *VCRDMA, (CurrentSH2->onchip.IPRA & 0xF00) >> 8);
    }                                                                    
 
@@ -1043,10 +1122,7 @@ void FASTCALL MSH2InputCaptureWriteWord(u32 addr, u16 data)
 
    // Time for an Interrupt?
    if (MSH2->onchip.TIER & 0x80)
-   {
-      LOG("Trigger MSH2 Input Capture interrupt here\n");
       SH2SendInterrupt(MSH2, (MSH2->onchip.VCRC >> 8) & 0x7F, (MSH2->onchip.IPRB >> 8) & 0xF);
-   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1061,10 +1137,49 @@ void FASTCALL SSH2InputCaptureWriteWord(u32 addr, u16 data)
 
    // Time for an Interrupt?
    if (SSH2->onchip.TIER & 0x80)
-   {
-      LOG("Trigger SSH2 Input Capture interrupt here\n");
       SH2SendInterrupt(SSH2, (SSH2->onchip.VCRC >> 8) & 0x7F, (SSH2->onchip.IPRB >> 8) & 0xF);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+int SH2SaveState(SH2_struct *context, FILE *fp)
+{
+   int offset;
+
+   // Write header
+   if (context->isslave == 0)
+      offset = StateWriteHeader(fp, "MSH2", 1);
+   else
+   {
+      offset = StateWriteHeader(fp, "SSH2", 1);
+      fwrite((void *)&yabsys.IsSSH2Running, 1, 1, fp);
    }
+
+/*
+   // Write registers
+   fwrite((void *)regs_array, 4, 23, fp);
+
+   // Write onchip registers
+   fwrite((void *)onchip->getBuffer(), 0x200, 1, fp);
+*/
+   return StateFinishHeader(fp, offset);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+int SH2LoadState(SH2_struct *context, FILE *fp, int version, int size)
+{
+/*
+   if (context->isslave == 1)
+      fread((void *)&yabsys.IsSSH2Running, 1, 1, fp);
+
+   // Read registers
+   fread((void *)regs_array, 4, 23, fp);
+
+   // Read onchip registers
+   fread((void *)onchip->getBuffer(), 0x200, 1, fp);
+*/
+   return size;
 }
 
 //////////////////////////////////////////////////////////////////////////////

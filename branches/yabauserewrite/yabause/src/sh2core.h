@@ -101,6 +101,108 @@ typedef struct
    u32 VCRDIV; // 0xFFFFFF0C
    u32 DVDNTH; // 0xFFFFFF10
    u32 DVDNTL; // 0xFFFFFF14
+#ifdef WORDS_BIGENDIAN
+  union {
+    struct {
+      u32 H:16; // 0xFFFFFF40
+      u32 L:16; // 0xFFFFFF42
+    } part;
+    u16 all;
+  } BARA;
+
+  union {
+    struct {
+      u32 H:16; // 0xFFFFFF44
+      u32 L:16; // 0xFFFFFF46
+    } part;
+    u16 all;
+  } BAMRA;
+#else
+  union {
+    struct {
+      u32 L:16; // 0xFFFFFF42
+      u32 H:16; // 0xFFFFFF40
+    } part;
+    u16 all;
+  } BARA;
+
+  union {
+    struct {
+      u32 L:16; // 0xFFFFFF46
+      u32 H:16; // 0xFFFFFF44
+    } part;
+    u16 all;
+  } BAMRA;
+#endif
+   u32 BBRA;   // 0xFFFFFF48
+#ifdef WORDS_BIGENDIAN
+  union {
+    struct {
+      u32 H:16; // 0xFFFFFF60
+      u32 L:16; // 0xFFFFFF62
+    } part;
+    u16 all;
+  } BARB;
+
+  union {
+    struct {
+      u32 H:16; // 0xFFFFFF64
+      u32 L:16; // 0xFFFFFF66
+    } part;
+    u16 all;
+  } BAMRB;
+#else
+  union {
+    struct {
+      u32 L:16; // 0xFFFFFF62
+      u32 H:16; // 0xFFFFFF60
+    } part;
+    u16 all;
+  } BARB;
+
+  union {
+    struct {
+      u32 L:16; // 0xFFFFFF66
+      u32 H:16; // 0xFFFFFF64
+    } part;
+    u16 all;
+  } BAMRB;
+#endif
+   u32 BBRB;   // 0xFFFFFF68
+#ifdef WORDS_BIGENDIAN
+  union {
+    struct {
+      u32 H:16; // 0xFFFFFF70
+      u32 L:16; // 0xFFFFFF72
+    } part;
+    u16 all;
+  } BDRB;
+
+  union {
+    struct {
+      u32 H:16; // 0xFFFFFF74
+      u32 L:16; // 0xFFFFFF76
+    } part;
+    u16 all;
+  } BDMRB;
+#else
+  union {
+    struct {
+      u32 L:16; // 0xFFFFFF72
+      u32 H:16; // 0xFFFFFF70
+    } part;
+    u16 all;
+  } BDRB;
+
+  union {
+    struct {
+      u32 L:16; // 0xFFFFFF76
+      u32 H:16; // 0xFFFFFF74
+    } part;
+    u16 all;
+  } BDMRB;
+#endif
+   u32 BRCR;   // 0xFFFFFF78
    u32 SAR0;   // 0xFFFFFF80
    u32 DAR0;   // 0xFFFFFF84
    u32 TCR0;   // 0xFFFFFF88
@@ -156,6 +258,7 @@ typedef struct
    interrupt_struct interrupts[MAX_INTERRUPTS];
    u32 NumberOfInterrupts;
    u32 AddressArray[0x100];
+   u8 DataArray[0x1000];
    u32 delay;
    u32 cycles;
    u8 isslave;
@@ -222,6 +325,13 @@ void FASTCALL OnchipWriteLong(u32 addr, u32 val);
 
 u32 FASTCALL AddressArrayReadLong(u32 addr);
 void FASTCALL AddressArrayWriteLong(u32 addr, u32 val);
+
+u8 FASTCALL DataArrayReadByte(u32 addr);
+u16 FASTCALL DataArrayReadWord(u32 addr);
+u32 FASTCALL DataArrayReadLong(u32 addr);
+void FASTCALL DataArrayWriteByte(u32 addr, u8 val);
+void FASTCALL DataArrayWriteWord(u32 addr, u16 val);
+void FASTCALL DataArrayWriteLong(u32 addr, u32 val);
 
 void FASTCALL MSH2InputCaptureWriteWord(u32 addr, u16 data);
 void FASTCALL SSH2InputCaptureWriteWord(u32 addr, u16 data);

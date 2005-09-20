@@ -23,6 +23,7 @@
 #include "sh2core.h"
 #include "sh2int.h"
 #include "cs0.h"
+#include "debug.h"
 #include "error.h"
 #include "memory.h"
 
@@ -2650,11 +2651,58 @@ FASTCALL u32 SH2InterpreterExec(SH2_struct *context, u32 cycles)
    {
       SH2HandleBreakpoints(context);
 
+#ifdef EMULATEUBC
+      // fix me
+      int ubcainterrupt=0, ubcbinterrupt=0;
+             
+      if (context->onchip.BBRA & 0x10)
+      {
+         if (context->onchip.BARA.all == context->regs.PC) // fix me
+         {
+            LOG("Trigger UBC interrupt: PC = %08X\n", context->regs.PC);
+            if (context->onchip.BRCR & 0x0400)
+               ubcainterrupt=1;
+            else
+            {
+            }
+         }
+      }
+      else if(context.onchip.BBRB & 0x10)
+      {
+         if (context.onchip.BRCR & 0x0004)
+            ubcainterrupt=1;
+         else
+         {
+         }
+      }
+#endif
+
       // Fetch Instruction
       context->instruction = fetchlist[(context->regs.PC >> 20) & 0x0FF](context->regs.PC);
 
       // Execute it
       opcodes[context->instruction](context);
+
+#ifdef EMULATEUBC
+      if (ubcainterrupt)
+      {
+         // handle interrupt
+         if (15 > context->regs.SR.part.I) // Since UBC's interrupt are always level 15
+         {
+            context->regs.R[15] -= 4;
+            MappedMemoryWriteLong(context->regs.R[15], context->regs.SR.all);
+            context->regs.R[15] -= 4;
+            MappedMemoryWriteLong(context->regs.R[15], context->regs.PC);
+            context->regs.SR.part.I = 15;
+            context->regs.PC = MappedMemoryReadLong(context->regs.VBR + (12 << 2));
+            LOG("interrupt successfully handled\n");
+         }
+      }
+      else if (ubcbinterrupt)
+      {
+         // fix me
+      }
+#endif
    }
 
    return 0; // fix me

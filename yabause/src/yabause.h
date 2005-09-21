@@ -5,12 +5,27 @@
 
 typedef struct
 {
+   int percoretype;
+   int sh2coretype;
+   int vidcoretype;
+   int sndcoretype;
+   int cdcoretype;
+   int carttype;
+   u8 regionid;
+   const char *biospath;
+   const char *cdpath;
+   const char *buppath;
+   const char *mpegpath;
+   const char *cartpath;
+} yabauseinit_struct;
+
+typedef struct
+{
    int id;
    const char *Name;
    int (*Init)();
    void (*DeInit)();
    void (*SetPeripheralType)(int port1type, int port2type);
-
 } PeripheralInterface_struct;
 
 #define CLKTYPE_26MHZNTSC       0
@@ -19,10 +34,7 @@ typedef struct
 #define CLKTYPE_28MHZPAL        3
 
 void YabauseChangeTiming(int freqtype);
-int YabauseInit(int percorettype,
-		int sh2coretype, int vidcoretype, int sndcoretype,
-                int cdcoretype, u8 regionid, const char *biospath,
-                const char *cdpath, const char *savepath, const char *mpegpath);
+int YabauseInit(yabauseinit_struct *init);
 void YabauseDeInit();
 void YabauseReset();
 int YabauseExec();

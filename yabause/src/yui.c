@@ -1,4 +1,5 @@
 #include "yui.h"
+#include "cs0.h"
 #include "sndsdl.h"
 #include "vidsdlgl.h"
 #include "vidsdlsoft.h"
@@ -64,13 +65,26 @@ void YuiQuit(void) {
 }
 
 int YuiInit(void) {
+   yabauseinit_struct yinit;
+
    stop = 0;
 
    atexit(SDL_Quit);
 
-   if (YabauseInit(PERCORE_SDL, SH2CORE_DEFAULT, VIDCORE_SDLGL, SNDCORE_SDL,
-                   cdcore, REGION_AUTODETECT, bios, iso_or_cd,
-                   backup_ram, NULL) != 0)
+   yinit.percoretype = PERCORE_SDL;
+   yinit.sh2coretype = SH2CORE_DEFAULT;
+   yinit.vidcoretype = VIDCORE_SDLGL;
+   yinit.sndcoretype = SNDCORE_SDL;
+   yinit.cdcoretype = cdcore;
+   yinit.carttype = CART_NONE; // fix me
+   yinit.regionid = REGION_AUTODETECT;
+   yinit.biospath = bios;
+   yinit.cdpath = iso_or_cd;
+   yinit.buppath = backup_ram;
+   yinit.mpegpath = NULL;
+   yinit.cartpath = NULL;
+
+   if (YabauseInit(&yinit) != 0)
       return -1;
 
    while (!stop)

@@ -2,6 +2,7 @@
 #include "../sndsdl.h"
 #include "../vidsdlgl.h"
 #include "../persdl.h"
+#include "../cs0.h"
 
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
@@ -177,9 +178,22 @@ void GtkYuiChooseIso(void) {
 }
 
 void GtkYuiRun(void) {
-   YabauseInit(PERCORE_SDL, SH2CORE_DEFAULT, VIDCORE_SDLGL, SNDCORE_SDL,
-                   cdcore, REGION_AUTODETECT, bios, iso_or_cd,
-                   NULL, NULL);
+   yabauseinit_struct yinit;
+
+   yinit.percoretype = PERCORE_SDL;
+   yinit.sh2coretype = SH2CORE_DEFAULT;
+   yinit.vidcoretype = VIDCORE_SDLGL;
+   yinit.sndcoretype = SNDCORE_SDL;
+   yinit.cdcoretype = cdcore;
+   yinit.carttype = CART_NONE;
+   yinit.regionid = REGION_AUTODETECT;
+   yinit.biospath = bios;
+   yinit.cdpath = iso_or_cd;
+   yinit.buppath = NULL;
+   yinit.mpegpath = NULL;
+   yinit.cartpath = NULL;
+
+   YabauseInit(&yinit);
 
    g_idle_add((gboolean (*)(void*)) GtkWorkaround, NULL);
 }

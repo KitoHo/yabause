@@ -33,6 +33,7 @@
 #include "../vidsdlgl.h"
 #include "../vidsdlsoft.h"
 #include "../persdl.h"
+#include "../cs0.h"
 #include "resource.h"
 #include "settings.h"
 #include "cd.h"
@@ -172,6 +173,7 @@ int YuiInit(void) {
 //   RECT                        workarearect;
 //   DWORD ret;
    char tempstr[MAX_PATH];
+   yabauseinit_struct yinit;
 
    sprintf(szAppName, "Yabause %s", VERSION);
 
@@ -302,10 +304,21 @@ int YuiInit(void) {
 
    stop = 0;
 
-   if (YabauseInit(PERCORE_SDL, SH2CORE_DEFAULT, VIDCORE_SDLGL, SNDCORE_SDL,
-//   if (YabauseInit(PERCORE_SDL, SH2CORE_DEFAULT, VIDCORE_SDLSOFT, SNDCORE_SDL,
-                   CDCORE_SPTI, regionid, biosfilename, cdrompath,
-                   backupramfilename, mpegromfilename) == -1)
+   yinit.percoretype = PERCORE_SDL;
+   yinit.sh2coretype = SH2CORE_DEFAULT;
+   yinit.vidcoretype = VIDCORE_SDLGL;
+//   yinit.vidcoretype = VIDCORE_SDLSOFT;
+   yinit.sndcoretype = SNDCORE_SDL;
+   yinit.cdcoretype = CDCORE_SPTI;
+   yinit.carttype = CART_NONE; // fix me
+   yinit.regionid = regionid;
+   yinit.biospath = biosfilename;
+   yinit.cdpath = cdrompath;
+   yinit.buppath = backupramfilename;
+   yinit.mpegpath = mpegromfilename;
+   yinit.cartpath = NULL;
+
+   if (YabauseInit(&yinit) == -1)
       return -1;
 
    while (!stop)

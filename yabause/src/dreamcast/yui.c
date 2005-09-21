@@ -20,6 +20,7 @@
 
 #include "yui.h"
 #include "peripheral.h"
+#include "../cs0.h"
 #include "dreamcast/perdc.h"
 
 SH2Interface_struct *SH2CoreList[] = {
@@ -76,11 +77,24 @@ void YuiQuit(void) {
 }
 
 int YuiInit(void) {
+   yabauseinit_struct yinit;
+
    stop = 0;
 
-   if (YabauseInit(PERCORE_DC, SH2CORE_DEFAULT, 0, 0,
-                   cdcore, REGION_AUTODETECT, bios, iso_or_cd,
-                   backup_ram, NULL) != 0)
+   yinit.percoretype = PERCORE_DC;
+   yinit.sh2coretype = SH2CORE_DEFAULT;
+   yinit.vidcoretype = 0;
+   yinit.sndcoretype = 0;
+   yinit.cdcoretype = cdcore;
+   yinit.carttype = CART_NONE;
+   yinit.regionid = REGION_AUTODETECT;
+   yinit.biospath = bios;
+   yinit.cdpath = iso_or_cd;
+   yinit.buppath = backup_ram;
+   yinit.mpegpath = NULL;
+   yinit.cartpath = NULL;
+
+   if (YabauseInit(&yinit) != 0)
       return -1;
 
    while (!stop)

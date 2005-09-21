@@ -78,12 +78,10 @@ void YabauseChangeTiming(int freqtype) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-int YabauseInit(int percoretype,
-		int sh2coretype, int vidcoretype, int sndcoretype,
-                int cdcoretype, unsigned char regionid, const char *biospath,
-                const char *cdpath, const char *buppath, const char *mpegpath) {
+int YabauseInit(yabauseinit_struct *init)
+{     
    // Initialize both cpu's
-   if (SH2Init(sh2coretype) != 0)
+   if (SH2Init(init->sh2coretype) != 0)
    {
       YabSetError(YAB_ERR_CANNOTINIT, "SH2");
       return -1;
@@ -101,25 +99,25 @@ int YabauseInit(int percoretype,
    if ((BupRam = T1MemoryInit(0x10000)) == NULL)
       return -1;
 
-   if (LoadBackupRam(buppath) != 0)
+   if (LoadBackupRam(init->buppath) != 0)
       FormatBackupRam(BupRam, 0x10000);
 
-   bupfilename = buppath;
+   bupfilename = init->buppath;
 
    // Initialize input core
-   if (PerInit(percoretype) != 0)
+   if (PerInit(init->percoretype) != 0)
    {
       YabSetError(YAB_ERR_CANNOTINIT, "Peripheral");
       return -1;
    }
 
-   if (CartInit(NULL, CART_NONE) != 0) // fix me
+   if (CartInit(init->cartpath, init->carttype) != 0)
    {
       YabSetError(YAB_ERR_CANNOTINIT, "Cartridge");
       return -1;
    }
 
-   if (Cs2Init(CART_NONE, cdcoretype, cdpath, mpegpath) != 0)
+   if (Cs2Init(init->carttype, init->cdcoretype, init->cdpath, init->mpegpath) != 0)
    {
       YabSetError(YAB_ERR_CANNOTINIT, "CS2");
       return -1;
@@ -131,25 +129,25 @@ int YabauseInit(int percoretype,
       return -1;
    }
 
-   if (ScspInit(sndcoretype) != 0)
+   if (ScspInit(init->sndcoretype) != 0)
    {
       YabSetError(YAB_ERR_CANNOTINIT, "SCSP/M68K");
       return -1;
    }
 
-   if (Vdp1Init(vidcoretype) != 0)
+   if (Vdp1Init(init->vidcoretype) != 0)
    {
       YabSetError(YAB_ERR_CANNOTINIT, "VDP1");
       return -1;
    }
 
-   if (Vdp2Init(vidcoretype) != 0)
+   if (Vdp2Init(init->vidcoretype) != 0)
    {
       YabSetError(YAB_ERR_CANNOTINIT, "VDP2");
       return -1;
    }
 
-   if (SmpcInit(regionid) != 0)
+   if (SmpcInit(init->regionid) != 0)
    {
       YabSetError(YAB_ERR_CANNOTINIT, "SMPC");
       return -1;
@@ -159,9 +157,9 @@ int YabauseInit(int percoretype,
 
    YabauseChangeTiming(CLKTYPE_26MHZNTSC);
 
-   if (LoadBios(biospath) != 0)
+   if (LoadBios(init->biospath) != 0)
    {
-      YabSetError(YAB_ERR_FILENOTFOUND, biospath);
+      YabSetError(YAB_ERR_FILENOTFOUND, init->biospath);
       return -2;
    }
 

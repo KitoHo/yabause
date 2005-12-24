@@ -1,0 +1,266 @@
+/*  Copyright 2004-2005 Theo Berkau
+
+    This file is part of Yabause.
+
+    Yabause is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Yabause is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Yabause; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
+
+#include <windows.h>
+#include "resource.h"
+
+IDR_MENU MENU
+BEGIN
+  POPUP "&File"
+  BEGIN
+//    MENUITEM "&Run", IDM_RUN
+//    MENUITEM "&Pause", IDM_PAUSE
+    MENUITEM "&Memory Transfer", IDM_MEMTRANSFER
+    MENUITEM SEPARATOR
+    MENUITEM "&Settings", IDM_SETTINGS
+    MENUITEM SEPARATOR
+    MENUITEM "&Quit", IDM_EXIT
+  END
+  POPUP "&Debug"
+  BEGIN
+    MENUITEM "Master SH2", IDM_MSH2DEBUG
+    MENUITEM "Slave SH2", IDM_SSH2DEBUG
+    MENUITEM "VDP1", IDM_VDP1DEBUG
+    MENUITEM "VDP2", IDM_VDP2DEBUG
+    MENUITEM "68K", IDM_M68KDEBUG
+    MENUITEM "SCU DSP", IDM_SCUDSPDEBUG
+  END
+END
+
+//////////////////////////////////////////////////////////////////////////////
+
+MEMTRANSFERDLG DIALOG FIXED PURE  100, 100, 172, 90
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Memory Transfer"
+FONT 8, "Courier New"
+BEGIN
+    DEFPUSHBUTTON   "&OK",    IDOK,       89,  72, 40, 14
+    PUSHBUTTON      "&Cancel",IDCANCEL,   43,  72, 40, 14
+    PUSHBUTTON      "&Browse",IDC_BROWSE, 140, 4,  30, 12
+    LTEXT           "File:",    -1, 4, 4,  16, 10
+    LTEXT           "Start Address:", -1, 4, 18, 46, 10
+    LTEXT           "End Address:", -1, 4, 32, 42, 10
+    EDITTEXT        IDC_EDITTEXT1, 52, 4,  86, 10, ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDITTEXT2, 52, 18, 36, 10, ES_UPPERCASE
+    EDITTEXT        IDC_EDITTEXT3, 52, 32, 36, 10, ES_UPPERCASE
+    AUTORADIOBUTTON "Download",  IDC_DOWNLOADMEM,  42, 46, 42, 10
+    AUTORADIOBUTTON "Upload", IDC_UPLOADMEM, 92, 46, 42, 10
+    AUTOCHECKBOX "Set PC to start address", IDC_CHECKBOX1, 34, 58, 104, 10
+END
+
+//////////////////////////////////////////////////////////////////////////////
+
+MEMDLG DIALOG FIXED PURE  6, 21, 116, 60
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "Register Modification"
+FONT 8, "Courier New"
+BEGIN
+    DEFPUSHBUTTON   "&OK",IDOK,16,42,40,14
+    PUSHBUTTON      "&Cancel",IDCANCEL,60,42,40,14
+    CTEXT           "Enter New Register Value:", 63, 18, 5, 88, 10
+    EDITTEXT        IDC_EDITTEXT1,36,20,44,11
+END
+
+//////////////////////////////////////////////////////////////////////////////
+
+SH2DEBUGDLG DIALOG FIXED PURE  0, 0, 386, 229
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION
+CAPTION "SH2 Debug"
+FONT 8, "Courier New"
+BEGIN
+    DEFPUSHBUTTON   "&Close",IDOK, 3, 212, 40, 14
+    PUSHBUTTON      "&Step",IDC_STEP,53,212,40,14
+//    PUSHBUTTON      "S&tep Over",IDC_STEPOVER,103,212,40,14
+    PUSHBUTTON      "&Memory Transfer",IDC_MEMTRANSFER,153,212,70,14
+    GROUPBOX "SH2 Registers", -1, 2, 0, 71, 208, WS_CHILD | WS_VISIBLE
+    LISTBOX IDC_LISTBOX1, 5, 10, 65, 195
+    GROUPBOX "Disassembled Code", -1, 75, 0, 213, 208, WS_CHILD | WS_VISIBLE
+    LISTBOX IDC_LISTBOX2,78, 10, 206, 195
+    GROUPBOX "Code Breakpoints", -1, 290, 0, 94, 90, WS_CHILD | WS_VISIBLE
+    EDITTEXT IDC_EDITTEXT1, 293, 10, 44, 11, ES_UPPERCASE
+    LISTBOX IDC_LISTBOX3,293, 20, 65, 66
+    PUSHBUTTON      "&Add",IDC_ADDBP1,361, 10, 20, 10
+    PUSHBUTTON      "&Del",IDC_DELBP1,361, 24, 20, 10
+//    GROUPBOX "Memory Breakpoints", -1, 290, 86, 94, 113, WS_CHILD | WS_VISIBLE
+//    EDITTEXT IDC_EDITTEXT2, 293, 95, 44, 11
+//    LISTBOX IDC_LISTBOX4, 293, 105, 65, 66
+//    PUSHBUTTON      "&Add",IDC_ADDBP2,361, 97, 20, 10
+//    PUSHBUTTON      "&Del",IDC_DELBP2,361, 110, 20, 10
+//    CHECKBOX "&Read", IDC_CHKREAD, 293, 167, 36, 10
+//    CHECKBOX "&Write", IDC_CHKWRITE, 293, 177, 36, 10
+//    CHECKBOX "&Byte", IDC_CHKBYTE, 339, 167, 36, 10
+//    CHECKBOX "&Word", IDC_CHKWORD, 339, 177, 36, 10
+//    CHECKBOX "&Dword", IDC_CHKDWORD, 339, 187, 36, 10
+END
+
+//////////////////////////////////////////////////////////////////////////////
+
+VDP1DEBUGDLG DIALOG FIXED PURE  0, 0, 306, 200
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION
+CAPTION "VDP1 Debug"
+FONT 8, "Courier New"
+BEGIN
+    LTEXT           "VDP1 Command List", -1, 4, 4, 70, 10
+    LISTBOX         IDC_VDP1CMDLB, 4, 14, 124, 168, WS_VSCROLL
+    LTEXT           "VDP1 Command Info", -1, 150, 4, 70, 10
+    EDITTEXT        IDC_VDP1CMDET, 132, 14, 170, 162, ES_MULTILINE | ES_READONLY | WS_HSCROLL | WS_VSCROLL
+    DEFPUSHBUTTON   "&Close", IDOK, 4, 182, 40, 14
+END
+
+//////////////////////////////////////////////////////////////////////////////
+
+VDP2DEBUGDLG DIALOG FIXED PURE  0, 0, 454, 206
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION
+CAPTION "VDP2 Debug"
+FONT 8, "Courier New"
+BEGIN
+    DEFPUSHBUTTON   "&Close",IDOK, 4, 188, 40, 14
+
+    LTEXT           "NBG0/RBG1 Info", -1, 4,   4,  70, 10
+    CHECKBOX "Screen Enabled", IDC_NBG0ENABCB, 4, 14, 70, 10
+    EDITTEXT        IDC_NBG0ET, 4, 24,  86, 160, ES_MULTILINE | ES_READONLY | WS_VSCROLL | WS_HSCROLL
+
+    LTEXT           "NBG1 Info", -1, 94,  4,  70, 10
+    CHECKBOX "Screen Enabled", IDC_NBG1ENABCB, 94, 14, 70, 10
+    EDITTEXT        IDC_NBG1ET, 94, 24,  86, 160, ES_MULTILINE | ES_READONLY | WS_VSCROLL | WS_HSCROLL
+
+    LTEXT           "NBG2 Info", -1, 184, 4,  70, 10
+    CHECKBOX "Screen Enabled", IDC_NBG2ENABCB, 184, 14, 70, 10
+    EDITTEXT        IDC_NBG2ET, 184, 24,  86, 160, ES_MULTILINE | ES_READONLY | WS_VSCROLL | WS_HSCROLL
+
+    LTEXT           "NBG3 Info", -1, 274, 4,  70, 10
+    CHECKBOX "Screen Enabled", IDC_NBG3ENABCB, 274, 14, 70, 10
+    EDITTEXT        IDC_NBG3ET, 274, 24,  86, 160, ES_MULTILINE | ES_READONLY | WS_VSCROLL | WS_HSCROLL
+
+    LTEXT           "RBG0 Info", -1, 364, 4,  70, 10
+    CHECKBOX "Screen Enabled", IDC_RBG0ENABCB, 364, 14, 70, 10
+    EDITTEXT        IDC_RBG0ET, 364, 24, 86, 160, ES_MULTILINE | ES_READONLY | WS_VSCROLL | WS_HSCROLL
+END
+
+//////////////////////////////////////////////////////////////////////////////
+
+M68KDEBUGDLG DIALOG FIXED PURE  0, 0, 386, 229
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION
+CAPTION "68K Debug"
+FONT 8, "Courier New"
+BEGIN
+    DEFPUSHBUTTON   "&Close",IDOK, 3, 212, 40, 14
+    PUSHBUTTON      "&Step",IDC_STEP,53,212,40,14
+    GROUPBOX "68k Registers", -1, 2, 0, 71, 208, WS_CHILD | WS_VISIBLE
+    LISTBOX IDC_LISTBOX1, 5, 10, 65, 195
+    GROUPBOX "Disassembled Code", -1, 75, 0, 213, 208, WS_CHILD | WS_VISIBLE
+    LISTBOX IDC_LISTBOX2,78, 10, 206, 195
+    GROUPBOX "Code Breakpoints", -1, 290, 0, 94, 90, WS_CHILD | WS_VISIBLE
+    EDITTEXT IDC_EDITTEXT1, 293, 10, 44, 11, ES_UPPERCASE
+    LISTBOX IDC_LISTBOX3,293, 20, 65, 66
+    PUSHBUTTON      "&Add",IDC_ADDBP1,361, 10, 20, 10
+    PUSHBUTTON      "&Del",IDC_DELBP1,361, 24, 20, 10
+//    GROUPBOX "Memory Breakpoints", -1, 290, 86, 94, 113, WS_CHILD | WS_VISIBLE
+//    EDITTEXT IDC_EDITTEXT2, 293, 95, 44, 11
+//    LISTBOX IDC_LISTBOX4, 293, 105, 65, 66
+//    PUSHBUTTON      "&Add",IDC_ADDBP2,361, 97, 20, 10
+//    PUSHBUTTON      "&Del",IDC_DELBP2,361, 110, 20, 10
+//    CHECKBOX "&Read", IDC_CHKREAD, 293, 167, 36, 10
+//    CHECKBOX "&Write", IDC_CHKWRITE, 293, 177, 36, 10
+//    CHECKBOX "&Byte", IDC_CHKBYTE, 339, 167, 36, 10
+//    CHECKBOX "&Word", IDC_CHKWORD, 339, 177, 36, 10
+//    CHECKBOX "&Dword", IDC_CHKDWORD, 339, 187, 36, 10
+END
+
+//////////////////////////////////////////////////////////////////////////////
+
+SCUDSPDEBUGDLG DIALOG FIXED PURE  0, 0, 436, 229
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION
+CAPTION "SCU DSP Debug"
+FONT 8, "Courier New"
+BEGIN
+    DEFPUSHBUTTON   "&Close",IDOK, 3, 212, 40, 14
+    PUSHBUTTON      "&Step",IDC_STEP,53,212,40,14
+    GROUPBOX "DSP Registers", -1, 2, 0, 71, 208, WS_CHILD | WS_VISIBLE
+    LISTBOX IDC_LISTBOX1, 5, 10, 65, 195
+    GROUPBOX "Disassembled Code", -1, 75, 0, 283, 208, WS_CHILD | WS_VISIBLE
+    LISTBOX IDC_LISTBOX2,78, 10, 276, 195
+    GROUPBOX "Code Breakpoints", -1, 360, 0, 74, 90, WS_CHILD | WS_VISIBLE
+    EDITTEXT IDC_EDITTEXT1, 363, 10, 14, 11, ES_UPPERCASE
+    LISTBOX IDC_LISTBOX3,363, 20, 45, 66
+    PUSHBUTTON      "&Add",IDC_ADDBP1,411, 10, 20, 10
+    PUSHBUTTON      "&Del",IDC_DELBP1,411, 24, 20, 10
+END
+
+//////////////////////////////////////////////////////////////////////////////
+
+SETTINGSDLG DIALOG DISCARDABLE  0, 0, 220, 244
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION
+CAPTION "Settings"
+FONT 8, "Courier New"
+BEGIN
+    GROUPBOX "Yabause Basic Settings", -1, 3, 2, 214, 200, WS_CHILD | WS_VISIBLE
+    LTEXT           "Disc Type", -1, 10, 14, 40, 10
+    COMBOBOX        IDC_DISCTYPECB, 49, 13, 55, 33, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Drive Letter", -1, 112, 14, 56, 10
+    COMBOBOX        IDC_DRIVELETTERCB, 163, 13, 46, 87, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+
+    LTEXT           "Cue/Iso File", -1, 10, 29, 61, 10
+    EDITTEXT        IDC_IMAGEEDIT, 10, 38, 162, 13, ES_AUTOHSCROLL
+    PUSHBUTTON      "Browse",IDC_IMAGEBROWSE, 176, 38, 33, 12
+
+//    LTEXT           "Bios Language", -1, 10, 55, 60, 10, WS_DISABLED
+//    COMBOBOX        IDC_BIOSLANGCB, 10, 64, 66, 87, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP, WS_DISABLED
+
+    LTEXT           "SH2 Core", -1, 10, 55, 60, 10
+    COMBOBOX        IDC_SH2CORECB, 10, 64, 74, 87, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP, WS_DISABLED
+
+    LTEXT           "Region", -1, 90, 55, 115, 10
+    COMBOBOX        IDC_REGIONCB, 90, 64, 119, 87, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+
+    LTEXT           "Bios ROM File", -1, 10, 81, 73, 10
+    EDITTEXT        IDC_BIOSEDIT, 10, 90, 162, 13, ES_AUTOHSCROLL
+    PUSHBUTTON      "Browse",IDC_BIOSBROWSE, 176, 90, 33, 13
+
+    LTEXT           "Backup RAM File", -1, 10, 107, 73, 10
+    EDITTEXT        IDC_BACKUPRAMEDIT, 10, 116, 162, 13, ES_AUTOHSCROLL
+    PUSHBUTTON      "Browse",IDC_BACKUPRAMBROWSE, 176, 116, 33, 13
+
+    LTEXT           "MPEG ROM File", -1, 10, 133, 73, 10
+    EDITTEXT        IDC_MPEGROMEDIT, 10, 142, 162, 13 , ES_AUTOHSCROLL
+    PUSHBUTTON      "Browse",IDC_MPEGROMBROWSE, 176, 142, 33, 13
+
+    LTEXT           "Cartridge Type", -1, 10, 160, 60, 10
+    COMBOBOX        IDC_CARTTYPECB, 70, 158, 86, 87, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Cartridge ROM/RAM/EEPROM File", -1, 10, 175, 130, 10
+    EDITTEXT        IDC_CARTEDIT, 10, 184, 162, 13 , ES_AUTOHSCROLL
+    PUSHBUTTON      "Browse",IDC_CARTBROWSE, 176, 184, 33, 13
+
+    PUSHBUTTON      "&Video Settings",IDC_VIDEOSETTINGS, 7, 206, 62, 16, WS_DISABLED
+    PUSHBUTTON      "&Sound Settings",IDC_SOUNDSETTINGS, 79, 206, 62, 16, WS_DISABLED
+    PUSHBUTTON      "&Input Settings",IDC_INPUTSETTINGS, 151, 206, 62, 16, WS_DISABLED
+
+    DEFPUSHBUTTON   "&OK",IDOK,128,226,40,14
+    PUSHBUTTON      "&Cancel",IDCANCEL,173,226,40,14
+END
+
+//////////////////////////////////////////////////////////////////////////////
+
+#ifdef _MSC_VER
+IDI_ICON        ICON    DISCARDABLE     "..\logo.ico"
+#else
+IDI_ICON        ICON    DISCARDABLE     "logo.ico"
+#endif
+//////////////////////////////////////////////////////////////////////////////
+

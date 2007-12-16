@@ -1,0 +1,66 @@
+#       Makefile.mng
+#       Mingw makefile
+#	Copyright (C) 2002, 2003, 2004 Lawrence Sebald
+#       Copyright (C) 2004-2007 Theo Berkau
+#	Based on KOS makefiles (C) by Dan Potter
+#
+#	This program is free software; you can redistribute it and/or modify
+#	it under the terms of the GNU General Public License as published by
+#	the Free Software Foundation; either version 2 of the License, or
+#	(at your option) any later version.
+#
+#	This program is distributed in the hope that it will be useful,
+#	but WITHOUT ANY WARRANTY; without even the implied warranty of
+#	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#	GNU General Public License for more details.
+#
+#	You should have received a copy of the GNU General Public License
+#	along with this program; if not, write to the Free Software
+#	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+
+TARGET = yabause.exe
+CC = gcc
+RC = windres
+#DDEFINES=-DDEBUG
+DDEFINES=
+VDEFINES=-DPACKAGE=\"yabause-win\" -DVERSION=\"0.9.2\" -DHAVE_LIBGLUT -DHAVE_LIBGL -DNO_CLI -D_WIN32_IE=0x0400
+CFLAGS=$(VDEFINES) $(DDEFINES) -O3 -fomit-frame-pointer -Wall
+#CFLAGS=$(VDEFINES) $(DDEFINES) -O3 -fomit-frame-pointer -Wall -g
+CFLAGS2= -fomit-frame-pointer -Wall 
+#CFLAGS2= -fomit-frame-pointer -Wall -g
+LDFLAGS=-lmingw32 -lopengl32 -lglut32 -lkernel32 -lgdi32 -lcomctl32 -lcomdlg32 -lwinmm -lws2_32 -ldxguid -ldinput8 -ldxerr8 -ldsound -mwindows -mthreads
+OBJS = bios.o cdbase.o cheat.o coffelf.o cs0.o cs1.o cs2.o debug.o error.o m68kcore.o m68kc68k.o m68kd.o memory.o netlink.o peripheral.o profile.o scsp.o scu.o sh2core.o sh2idle.o sh2int.o sh2d.o smpc.o vdp1.o vdp2.o vidogl.o vidshared.o vidsoft.o yabause.o ygl.o cd-windows.o c68k/c68k.o c68k/c68kexec.o c68k/gen68k.o windows/perdx.o windows/snddx.o windows/yui.o windows/yuidebug.o windows/settings.o windows/cheats.o windows/resource.o windows/hexedit.o
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+.c.o:
+	$(CC) $(CFLAGS) -c $< -o $@
+
+windows/resource.o: windows/resource.rc windows/resource.h
+	cd windows && $(RC) $(VDEFINES) $(DDEFINES) resource.rc -o resource.o
+	cd ..
+clean:
+	rm -f $(OBJS)
+	rm -f $(TARGET)
+
+cdbase.o: cdbase.h
+cs0.o: cs0.h core.h
+cs1.o: cs1.h core.h
+debug.o: debug.h
+memory.o: debug.h memory.h
+scu.o: scu.h debug.h core.h
+sh2core.o: sh2core.h core.h
+sh2int.o: sh2core.h sh2int.h core.h
+vdp1.o: vdp1.h debug.h memory.h
+c68k/c68k.o: c68k/c68k.h
+c68k/c68kexec.o: c68k/c68k.h c68k/c68k_ini.inc
+	$(CC) $(CFLAGS2) -c c68k/c68kexec.c -o $@
+c68k/c68k_ini.inc: c68k/gen68k.exe
+c68k/gen68k.exe: c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c
+	$(CC) $(CFLAGS) -DC68K_GEN -o $@ $^
+	cd c68k && gen68k
+
+                        

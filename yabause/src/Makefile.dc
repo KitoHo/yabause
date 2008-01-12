@@ -1,6 +1,6 @@
 #	Makefile.dc
 #	Dreamcast Makefile
-#	Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007 Lawrence Sebald
+#	Copyright (C) 2002, 2003, 2004 Lawrence Sebald
 #	Based on KOS makefiles (C) by Dan Potter
 #
 #	This program is free software; you can redistribute it and/or modify
@@ -22,47 +22,26 @@ all: yabause.bin
 
 include $(KOS_BASE)/Makefile.rules
 
-KOS_CFLAGS += -I. -DDEBUG -DNO_CLI
+KOS_LOCAL_CFLAGS=-I$(KOS_BASE)/addons/include -DPACKAGE=\"yabause-dc\" -DVERSION=\"0.0.5\" -DHAVE_LIBSDL
 
-OBJS = bios.o cdbase.o cheat.o cs0.o cs1.o cs2.o debug.o error.o m68kd.o \
- memory.o netlink.o peripheral.o profile.o scsp.o scu.o sh2core.o sh2idle.o \
- sh2int.o sh2d.o smpc.o vdp1.o vdp2.o yabause.o m68kcore.o coffelf.o \
- m68kc68k.o
-C68K_OBJS = c68k/c68k.o c68k/c68kexec.o c68k/gen68k.o
-ARCH_OBJS = dreamcast/yui.o dreamcast/perdc.o dreamcast/viddc.o \
- dreamcast/localtime.o dreamcast/cd.o
+OBJS = cs1.o cs2.o exception.o intc.o memory.o cpu.o scu.o smpc.o superh.o vdp1.o vdp2.o monitor.o yabause.o sh2d.o timer.o tree.o
 
-c68k/c68kexec.o: c68k/gen68k
-
-c68k/gen68k: c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c
-	$(CC) $(CFLAGS) -DC68K_GEN -o $@ $^
-	cd c68k && ./gen68k
-
-yabause.elf: $(OBJS) $(ARCH_OBJS) $(C68K_OBJS)
-	$(KOS_CC) $(KOS_CFLAGS) $(KOS_LDFLAGS) \
+yabause.elf: $(OBJS)
+	$(KOS_CC) $(KOS_CFLAGS) $(KOS_LOCAL_CFLAGS) $(KOS_LDFLAGS) \
 	-o $@ $(KOS_START) $^ \
-	-lm $(KOS_LIBS)
+	-lSDL -lk++ $(KOS_LIBS)
 
 yabause.bin: yabause.elf
-	$(KOS_OBJCOPY) -R .stack -O binary yabause.elf yabause.bin
+	$(KOS_OBJCOPY) -O binary yabause.elf output.bin
+	scramble output.bin yabause.bin
 
-cdtest.elf: dreamcast/cd.o tools/cdtest.o
-	$(KOS_CC) $(KOS_CFLAGS) $(KOS_LDFLAGS) \
-	-o $@ $(KOS_START) $^ \
-	 $(KOS_LIBS)
-
-cdtest.bin: cdtest.elf
-	$(KOS_OBJCOPY) -R .stack -O binary cdtest.elf cdtest.bin
-
-run: yabause.bin
-	$(KOS_LOADER) yabause.bin
+run: yabause.elf
+	$(KOS_LOADER) yabause.elf -b 115200
 
 clean:
-	rm -f $(OBJS) $(ARCH_OBJS)
-	rm -f tools/cdtest.o
+	rm -f $(OBJS)
 	rm -f yabause.elf
-	rm -f cdtest.elf
-	rm -f cdtest.bin
+	rm -f output.bin
 
 distclean: clean
 	rm -f yabause.bin

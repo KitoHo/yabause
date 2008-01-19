@@ -42,17 +42,8 @@ struct _YuiVdp2
 {
   GtkWindow dialog;
 
-  GtkTextBuffer * buffer;
-  GtkWidget * toolbar;
-
-  GtkListStore * store;
-
-  gint cursor;
-
-  gulong paused_handler;
-  gulong running_handler;
-
-  YuiWindow * yui;
+  GtkWidget * box;
+  GtkTextBuffer * buffer[5];
 };
 
 struct _YuiVdp2Class

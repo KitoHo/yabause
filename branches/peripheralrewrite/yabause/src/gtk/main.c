@@ -106,11 +106,7 @@ int yui_main(gpointer data) {
 }
 
 GtkWidget * yui_new() {
-#ifdef USENEWPERINTERFACE
 	yui = yui_window_new(NULL, G_CALLBACK(YabauseInit), &yinit, yui_main, G_CALLBACK(YabauseReset));
-#else
-	yui = yui_window_new(NULL, G_CALLBACK(YabauseInit), &yinit, yui_main, G_CALLBACK(YabauseReset));
-#endif
 
 	gtk_widget_show(yui);
 
@@ -161,6 +157,7 @@ gboolean yui_settings_load(void) {
 	gchar * stmp;
 	gchar *biosPath;
 	gboolean mustRestart = FALSE;
+	u8 * padbits;
 
 	g_key_file_load_from_file(keyfile, inifile, G_KEY_FILE_NONE, 0);
 
@@ -280,11 +277,14 @@ gboolean yui_settings_load(void) {
 	/* peripheral core */
 	yinit.percoretype = g_key_file_get_integer(keyfile, "General", "PerCore", 0);
 
+	PerPortReset();
+	padbits = PerPadAdd(&PORTDATA1);
+
 	i = 0;
 
 	while(key_names[i]) {
 	  u32 key = g_key_file_get_integer(keyfile, "Input", key_names[i], 0);
-	  PerSetKey(key, key_names[i]);
+	  PerSetKey(key, key_names[i], padbits);
 	  i++;
 	}
 

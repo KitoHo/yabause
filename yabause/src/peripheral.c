@@ -157,7 +157,7 @@ void PerPadBReleased(PerPad_struct * pad) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void PerParCPressed(PerPad_struct * pad) {
+void PerPadCPressed(PerPad_struct * pad) {
    *pad->padbits &= 0xFD;
    LOG("C\n");
 }
@@ -244,7 +244,7 @@ void * PerAddPeripheral(PortData_struct *port, int perid)
    int current = 1;
 
    if (pernum == 0xF)
-     return;
+     return NULL;
 
    // if only one peripheral is connected use 0xF0, otherwise use 0x00 or 0x10
    if (pernum == 0)
@@ -340,7 +340,7 @@ PerBaseConfig_struct perkeybaseconfig[] = {
 	{ "Start", PerPadStartPressed, PerPadStartReleased },
 	{ "A", PerPadAPressed, PerPadAReleased },
 	{ "B", PerPadBPressed, PerPadBReleased },
-	{ "C", PerParCPressed, PerPadCReleased },
+        { "C", PerPadCPressed, PerPadCReleased },
 	{ "X", PerPadXPressed, PerPadXReleased },
 	{ "Y", PerPadYPressed, PerPadYReleased },
 	{ "Z", PerPadZPressed, PerPadZReleased },
@@ -431,8 +431,8 @@ void PERDummyDeInit(void);
 int PERDummyHandleEvents(void);
 void PERDummyNothing(void);
 
-static PortData_struct port1;
-static PortData_struct port2;
+//static PortData_struct port1;
+//static PortData_struct port2;
 
 u32 PERDummyScan(const char *);
 void PERDummyFlush(void);
@@ -492,6 +492,7 @@ int PERDummyHandleEvents(void) {
 //////////////////////////////////////////////////////////////////////////////
 
 u32 PERDummyScan(const char * name) {
+   return 0;
 }
 
 void PERDummyFlush(void) {

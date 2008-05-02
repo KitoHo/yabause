@@ -26,12 +26,15 @@ extern PerInterface_struct PERDIRECTX;
 
 extern GUID GUIDDevice[256];
 extern u32 numguids;
+extern const char * pad_names[];
+extern const char * pad_names2[];
+extern PerPad_struct *pad[12];
 
 LRESULT CALLBACK ButtonConfigDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                                      LPARAM lParam);
 
-void KeyStub(void);
-void SetupControlUpDown(u8 padnum, u8 controlcode, void (*downfunc)(), void (*upfunc)());
+void KeyStub(PerPad_struct *pad);
+void SetupControlUpDown(u8 padnum, u8 controlcode, void (*downfunc)(PerPad_struct *), void (*upfunc)(PerPad_struct *));
 
 void PERDXLoadDevices(char *inifilename);
 void PERDXListDevices(HWND control);

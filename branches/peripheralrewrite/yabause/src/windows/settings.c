@@ -1480,54 +1480,19 @@ LRESULT CALLBACK PadConfigDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
 
                EndDialog(hDlg, TRUE);
 
-               for (i = 0; i < 256; i++)
-                  SetupControlUpDown(padnum, i, KeyStub, KeyStub);
-
-               SetupControlUpDown(padnum, controlmap[0], PerUpPressed, PerUpReleased);
-               SetupControlUpDown(padnum, controlmap[1], PerDownPressed, PerDownReleased);
-               SetupControlUpDown(padnum, controlmap[2], PerLeftPressed, PerLeftReleased);
-               SetupControlUpDown(padnum, controlmap[3], PerRightPressed, PerRightReleased);
-               SetupControlUpDown(padnum, controlmap[4], PerLTriggerPressed, PerLTriggerReleased);
-               SetupControlUpDown(padnum, controlmap[5], PerRTriggerPressed, PerRTriggerReleased);
-               SetupControlUpDown(padnum, controlmap[6], PerStartPressed, PerStartReleased);
-               SetupControlUpDown(padnum, controlmap[7], PerAPressed, PerAReleased);
-               SetupControlUpDown(padnum, controlmap[8], PerBPressed, PerBReleased);
-               SetupControlUpDown(padnum, controlmap[9], PerCPressed, PerCReleased);
-               SetupControlUpDown(padnum, controlmap[10], PerXPressed, PerXReleased);
-               SetupControlUpDown(padnum, controlmap[11], PerYPressed, PerYReleased);
-               SetupControlUpDown(padnum, controlmap[12], PerZPressed, PerZReleased);
+               for (i = 0; i < 13; i++)
+                  PerSetKey(controlmap[i], pad_names[i], pad[padnum]);
 
                sprintf(string1, "Peripheral%d", padnum+1);
 
                // Write GUID
                PERDXWriteGUID(cursel-1, padnum, inifilename);
 
-               sprintf(string2, "%d", controlmap[0]);
-               WritePrivateProfileString(string1, "Up", string2, inifilename);
-               sprintf(string2, "%d", controlmap[1]);
-               WritePrivateProfileString(string1, "Down", string2, inifilename);
-               sprintf(string2, "%d", controlmap[2]);
-               WritePrivateProfileString(string1, "Left", string2, inifilename);
-               sprintf(string2, "%d", controlmap[3]);
-               WritePrivateProfileString(string1, "Right", string2, inifilename);
-               sprintf(string2, "%d", controlmap[4]);
-               WritePrivateProfileString(string1, "L", string2, inifilename);
-               sprintf(string2, "%d", controlmap[5]);
-               WritePrivateProfileString(string1, "R", string2, inifilename);
-               sprintf(string2, "%d", controlmap[6]);
-               WritePrivateProfileString(string1, "Start", string2, inifilename);
-               sprintf(string2, "%d", controlmap[7]);
-               WritePrivateProfileString(string1, "A", string2, inifilename);
-               sprintf(string2, "%d", controlmap[8]);
-               WritePrivateProfileString(string1, "B", string2, inifilename);
-               sprintf(string2, "%d", controlmap[9]);
-               WritePrivateProfileString(string1, "C", string2, inifilename);
-               sprintf(string2, "%d", controlmap[10]);
-               WritePrivateProfileString(string1, "X", string2, inifilename);
-               sprintf(string2, "%d", controlmap[11]);
-               WritePrivateProfileString(string1, "Y", string2, inifilename);
-               sprintf(string2, "%d", controlmap[12]);
-               WritePrivateProfileString(string1, "Z", string2, inifilename);
+               for (i = 0; i < 13; i++)
+               {
+                  sprintf(string2, "%d", controlmap[i]);
+                  WritePrivateProfileString(string1, pad_names2[i], string2, inifilename);
+               }
                return TRUE;
             }
             case IDCANCEL:

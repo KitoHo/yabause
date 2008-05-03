@@ -68,21 +68,20 @@ typedef struct
 
 padconf_struct paddevice[12];
 
-const char *pad_names[] = {
-"Up",
-"Down",
-"Left",
-"Right",
-"A",
-"B",
-"C",
-"X",
-"Y",
-"Z",
-"Left trigger",
-"Right trigger",
-"Start",
-NULL
+const int pad_names[] = {
+PERPAD_UP,
+PERPAD_DOWN,
+PERPAD_LEFT,
+PERPAD_RIGHT,
+PERPAD_A,
+PERPAD_B,
+PERPAD_C,
+PERPAD_X,
+PERPAD_Y,
+PERPAD_Z,
+PERPAD_LEFT_TRIGGER,
+PERPAD_RIGHT_TRIGGER,
+PERPAD_START
 };
 
 const char *pad_names2[] = {
@@ -200,19 +199,19 @@ int PERDXInit(void)
    PerPortReset();
    pad[0] = PerPadAdd(&PORTDATA1);
 
-   PerSetKey(DIK_UP, "Up", pad[0]);
-   PerSetKey(DIK_DOWN, "Down", pad[0]);
-   PerSetKey(DIK_LEFT, "Left", pad[0]);
-   PerSetKey(DIK_RIGHT, "Right", pad[0]);
-   PerSetKey(DIK_K, "A", pad[0]);
-   PerSetKey(DIK_L, "B", pad[0]);
-   PerSetKey(DIK_M, "C", pad[0]);
-   PerSetKey(DIK_U, "X", pad[0]);
-   PerSetKey(DIK_I, "Y", pad[0]);
-   PerSetKey(DIK_O, "Z", pad[0]);
-   PerSetKey(DIK_X, "Left Trigger", pad[0]);
-   PerSetKey(DIK_Z, "Right Trigger", pad[0]);
-   PerSetKey(DIK_J, "Start", pad[0]);
+   PerSetKey(DIK_UP, PERPAD_UP, pad[0]);
+   PerSetKey(DIK_DOWN, PERPAD_DOWN, pad[0]);
+   PerSetKey(DIK_LEFT, PERPAD_LEFT, pad[0]);
+   PerSetKey(DIK_RIGHT, PERPAD_RIGHT, pad[0]);
+   PerSetKey(DIK_K, PERPAD_A, pad[0]);
+   PerSetKey(DIK_L, PERPAD_B, pad[0]);
+   PerSetKey(DIK_M, PERPAD_C, pad[0]);
+   PerSetKey(DIK_U, PERPAD_X, pad[0]);
+   PerSetKey(DIK_I, PERPAD_Y, pad[0]);
+   PerSetKey(DIK_O, PERPAD_Z, pad[0]);
+   PerSetKey(DIK_X, PERPAD_LEFT_TRIGGER, pad[0]);
+   PerSetKey(DIK_Z, PERPAD_RIGHT_TRIGGER, pad[0]);
+   PerSetKey(DIK_J, PERPAD_START, pad[0]);
 
    return 0;
 }
@@ -244,7 +243,7 @@ void PERDXLoadDevices(char *inifilename)
 
    for (i = 0; i < numpads; i++)
    {
-      sprintf(string1, "Peripheral%d", i+1);
+      sprintf(string1, "Peripheral%d", (int)i+1);
 
       // Let's first fetch the guid of the device
       if (GetPrivateProfileString(string1, "GUID", "", tempstr, MAX_PATH, inifilename) == 0)
@@ -302,7 +301,7 @@ void PERDXLoadDevices(char *inifilename)
       IDirectInputDevice8_Acquire(lpDIDevice[i]);
 
       // Now that we're all setup, let's fetch the controls from the ini
-      sprintf(string1, "Peripheral%d", i+1);
+      sprintf(string1, "Peripheral%d", (int)i+1);
 
       for (i2 = 0; i2 < 13; i2++)
       {

@@ -260,6 +260,9 @@ void SmpcINTBACKStatus(void) {
 //////////////////////////////////////////////////////////////////////////////
 
 void SmpcINTBACKPeripheral(void) {
+  int oregoffset;
+  PortData_struct *port1, *port2;
+
   if (SmpcInternalVars->firstPeri)
     SmpcRegs->SR = 0xC0 | (SmpcRegs->IREG[1] >> 4);
   else
@@ -301,8 +304,7 @@ void SmpcINTBACKPeripheral(void) {
   etc.
   */
 
-  int oregoffset=0;
-  PortData_struct *port1, *port2;
+  oregoffset=0;
 
   if (SmpcInternalVars->port1.size == 0 && SmpcInternalVars->port2.size == 0)
   {
@@ -635,7 +637,7 @@ void FASTCALL SmpcWriteByte(u32 addr, u8 val) {
                SMPCLOG("smpc\t: Peripheral TH Control Method not implemented\n");
                break;
             case 0x60:
-#warning "placeholder must be filled"
+//#warning "placeholder must be filled"
 #if 0
                switch (val & 0x60) {
                   case 0x60: // 1st Data

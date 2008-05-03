@@ -284,7 +284,7 @@ gboolean yui_settings_load(void) {
 
 	while(key_names[i]) {
 	  u32 key = g_key_file_get_integer(keyfile, "Input", key_names[i], 0);
-	  PerSetKey(key, key_names[i], padbits);
+	  PerSetKey(key, i, padbits);
 	  i++;
 	}
 

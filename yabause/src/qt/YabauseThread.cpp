@@ -149,13 +149,17 @@ void YabauseThread::reloadSettings()
 
 	{
 		u8 * padbits;
+		u8 i = 0;
 
 		PerReset(&PORTDATA1);
 		padbits = PerPadAdd(&PORTDATA1);
 	
 		s->beginGroup( "Input/Keys" );
 		foreach ( const QString& ki, s->childKeys() )
-			PerSetKey( (u32)s->value( ki ).toString().toUInt(), ki.toAscii().constData(), padbits );
+		{
+			PerSetKey( (u32)s->value( ki ).toString().toUInt(), i, padbits );
+			i++;
+		}
 		s->endGroup();
 	}
 }

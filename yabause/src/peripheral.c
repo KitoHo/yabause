@@ -319,7 +319,7 @@ void PerRemovePeripheral(PortData_struct *port, int removeoffset)
 //////////////////////////////////////////////////////////////////////////////
 
 typedef struct {
-	const char * name;
+	u8 name;
 	void (*Press)(PerPad_struct *);
 	void (*Release)(PerPad_struct *);
 } PerBaseConfig_struct;
@@ -331,19 +331,19 @@ typedef struct {
 } PerConfig_struct;
 
 PerBaseConfig_struct perkeybaseconfig[] = {
-	{ "Up", PerPadUpPressed, PerPadUpReleased },
-	{ "Right", PerPadRightPressed, PerPadRightReleased },
-	{ "Down", PerPadDownPressed, PerPadDownReleased },
-	{ "Left", PerPadLeftPressed, PerPadLeftReleased },
-	{ "Right trigger", PerPadRTriggerPressed, PerPadRTriggerReleased },
-	{ "Left trigger", PerPadLTriggerPressed, PerPadLTriggerReleased },
-	{ "Start", PerPadStartPressed, PerPadStartReleased },
-	{ "A", PerPadAPressed, PerPadAReleased },
-	{ "B", PerPadBPressed, PerPadBReleased },
-        { "C", PerPadCPressed, PerPadCReleased },
-	{ "X", PerPadXPressed, PerPadXReleased },
-	{ "Y", PerPadYPressed, PerPadYReleased },
-	{ "Z", PerPadZPressed, PerPadZReleased },
+	{ PERPAD_UP, PerPadUpPressed, PerPadUpReleased },
+	{ PERPAD_RIGHT, PerPadRightPressed, PerPadRightReleased },
+	{ PERPAD_DOWN, PerPadDownPressed, PerPadDownReleased },
+	{ PERPAD_LEFT, PerPadLeftPressed, PerPadLeftReleased },
+	{ PERPAD_RIGHT_TRIGGER, PerPadRTriggerPressed, PerPadRTriggerReleased },
+	{ PERPAD_LEFT_TRIGGER, PerPadLTriggerPressed, PerPadLTriggerReleased },
+	{ PERPAD_START, PerPadStartPressed, PerPadStartReleased },
+	{ PERPAD_A, PerPadAPressed, PerPadAReleased },
+	{ PERPAD_B, PerPadBPressed, PerPadBReleased },
+        { PERPAD_C, PerPadCPressed, PerPadCReleased },
+	{ PERPAD_X, PerPadXPressed, PerPadXReleased },
+	{ PERPAD_Y, PerPadYPressed, PerPadYReleased },
+	{ PERPAD_Z, PerPadZPressed, PerPadZReleased },
 };
 
 static u32 perkeyconfigsize = 0;
@@ -377,13 +377,13 @@ void PerKeyUp(u32 key)
 	}
 }
 
-void PerSetKey(u32 key, const char * name, PerPad_struct * pad)
+void PerSetKey(u32 key, u8 name, PerPad_struct * pad)
 {
 	int i = 0;
 
 	while(i < perkeyconfigsize)
 	{
-		if (!strcmp(name, perkeyconfig[i].base->name) && (pad == perkeyconfig[i].pad))
+		if ((name == perkeyconfig[i].base->name) && (pad == perkeyconfig[i].pad))
 		{
 			perkeyconfig[i].key = key;
 		}

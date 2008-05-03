@@ -393,11 +393,14 @@ void PerSetKey(u32 key, const char * name, PerPad_struct * pad)
 
 void PerPortReset(void)
 {
-	PORTDATA1.data[0] = 0;
-	PORTDATA2.data[0] = 0;
+        PORTDATA1.data[0] = 0xF0;
+        PORTDATA1.size = 1;
+        PORTDATA2.data[0] = 0xF0;
+        PORTDATA2.size = 1;
 
 	perkeyconfigsize = 0;
-	free(perkeyconfig);
+        if (perkeyconfig)
+           free(perkeyconfig);
 	perkeyconfig = NULL;
 }
 

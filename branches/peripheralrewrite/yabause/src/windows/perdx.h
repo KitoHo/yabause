@@ -26,7 +26,7 @@ extern PerInterface_struct PERDIRECTX;
 
 extern GUID GUIDDevice[256];
 extern u32 numguids;
-extern const char * pad_names[];
+extern const int pad_names[];
 extern const char * pad_names2[];
 extern PerPad_struct *pad[12];
 

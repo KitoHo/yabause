@@ -1313,6 +1313,7 @@ LRESULT CALLBACK InputSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
 
          SendDlgItemMessage(hDlg, IDC_PORT1ATYPECB, CB_SETCURSEL, 1, 0);
          EnableWindow(GetDlgItem(hDlg, IDC_PORT1ACFGPB), TRUE);            
+//         EnableWindow(GetDlgItem(hDlg, IDC_PORT2//ACFGPB), TRUE);            
 
          // Setup Tooltips
          hb[0].string = "Use this to select whether to use a multi-tap or direct connection";
@@ -1344,15 +1345,23 @@ LRESULT CALLBACK InputSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
          switch (LOWORD(wParam))
          {
             case IDC_PORT1ACFGPB:
-            {
-               DialogBoxParam(y_hInstance, MAKEINTRESOURCE(IDD_PADCONFIG), hDlg, (DLGPROC)PadConfigDlgProc, (LPARAM)0);
+            case IDC_PORT1BCFGPB:
+            case IDC_PORT1CCFGPB:
+            case IDC_PORT1DCFGPB:
+            case IDC_PORT1ECFGPB:
+            case IDC_PORT1FCFGPB:
+               DialogBoxParam(y_hInstance, MAKEINTRESOURCE(IDD_PADCONFIG), hDlg, (DLGPROC)PadConfigDlgProc, (LPARAM)LOWORD(wParam)-IDC_PORT1ACFGPB);
                return TRUE;
-            }
-//            case IDC_PAD2ACFGPB:
-//            {
-//               DialogBoxParam(y_hInstance, MAKEINTRESOURCE(IDD_PADCONFIG), hDlg, (DLGPROC)PadConfigDlgProc, (LPARAM)1);
-//               return TRUE;
-//            }
+            case IDC_PORT2ACFGPB:
+               // If multitap is enabled, this can't be the second pad
+               DialogBoxParam(y_hInstance, MAKEINTRESOURCE(IDD_PADCONFIG), hDlg, (DLGPROC)PadConfigDlgProc, (LPARAM)1);
+               return TRUE;
+            case IDC_PORT2BCFGPB:
+            case IDC_PORT2CCFGPB:
+            case IDC_PORT2DCFGPB:
+            case IDC_PORT2ECFGPB:
+            case IDC_PORT2FCFGPB:
+               return TRUE;
             case IDOK:
             {
                EndDialog(hDlg, TRUE);
@@ -1493,6 +1502,9 @@ LRESULT CALLBACK PadConfigDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                   sprintf(string2, "%d", controlmap[i]);
                   WritePrivateProfileString(string1, pad_names2[i], string2, inifilename);
                }
+
+               // Reload device
+               PERDXLoadDevices(inifilename);
                return TRUE;
             }
             case IDCANCEL:

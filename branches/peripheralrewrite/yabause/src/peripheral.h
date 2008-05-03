@@ -28,6 +28,20 @@
 #define PERCORE_DEFAULT -1
 #define PERCORE_DUMMY 0
 
+#define PERPAD_UP	0
+#define PERPAD_RIGHT	1
+#define PERPAD_DOWN	2
+#define PERPAD_LEFT	3
+#define PERPAD_RIGHT_TRIGGER 4
+#define PERPAD_LEFT_TRIGGER 5
+#define PERPAD_START	6
+#define PERPAD_A	7
+#define PERPAD_B	8
+#define PERPAD_C	9
+#define PERPAD_X	10
+#define PERPAD_Y	11
+#define PERPAD_Z	12
+
 extern PortData_struct PORTDATA1;
 extern PortData_struct PORTDATA2;
 
@@ -103,7 +117,7 @@ void PerPadLTriggerReleased(PerPad_struct * pad);
 
 void PerKeyDown(u32);
 void PerKeyUp(u32);
-void PerSetKey(u32, const char *, PerPad_struct * pad);
+void PerSetKey(u32, u8, PerPad_struct * pad);
 PerPad_struct * PerPadAdd(PortData_struct * port);
 
 #endif

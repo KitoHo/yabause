@@ -157,7 +157,7 @@ gboolean yui_settings_load(void) {
 	gchar * stmp;
 	gchar *biosPath;
 	gboolean mustRestart = FALSE;
-	u8 * padbits;
+	PerPad_struct * padbits;
 
 	g_key_file_load_from_file(keyfile, inifile, G_KEY_FILE_NONE, 0);
 
@@ -357,36 +357,26 @@ int main(int argc, char *argv[]) {
 			
          //set bios
          if (0 == strcmp(argv[i], "-b") && argv[i + 1]) {
-	    if (yinit.biospath)
-	       g_free(yinit.biospath);
-	    yinit.biospath = g_strdup(argv[i + 1]);
+            g_strlcpy(biospath, argv[i + 1], 256);
+            yinit.biospath = biospath;
 	 } else if (strstr(argv[i], "--bios=")) {
-	    if (yinit.biospath)
-	       g_free(yinit.biospath);
-	    yinit.biospath =  g_strdup(argv[i] + strlen("--bios="));
+            g_strlcpy(biospath, argv[i] + strlen("--bios="), 256);
+            yinit.biospath = biospath;
 	 }
          //set iso
          else if (0 == strcmp(argv[i], "-i") && argv[i + 1]) {
-	    if (yinit.cdpath)
-		g_free(yinit.cdpath);
-	    yinit.cdpath = g_strdup(argv[i + 1]);
+            g_strlcpy(cdpath, argv[i + 1], 256);
 	    yinit.cdcoretype = 1;
 	 } else if (strstr(argv[i], "--iso=")) {
-	    if (yinit.cdpath)
-		g_free(yinit.cdpath);
-	    yinit.cdpath = g_strdup(argv[i] + strlen("--iso="));
+            g_strlcpy(cdpath, argv[i] + strlen("--iso="), 256);
 	    yinit.cdcoretype = 1;
 	 }
          //set cdrom
 	 else if (0 == strcmp(argv[i], "-c") && argv[i + 1]) {
-	    if (yinit.cdpath)
-		g_free(yinit.cdpath);
-	    yinit.cdpath = g_strdup(argv[i + 1]);
+            g_strlcpy(cdpath, argv[i + 1], 256);
 	    yinit.cdcoretype = 2;
 	 } else if (strstr(argv[i], "--cdrom=")) {
-	    if (yinit.cdpath)
-		g_free(yinit.cdpath);
-	    yinit.cdpath = g_strdup(argv[i] + strlen("--cdrom="));
+            g_strlcpy(cdpath, argv[i] + strlen("--cdrom="), 256);
 	    yinit.cdcoretype = 2;
 	 }
          // Set sound

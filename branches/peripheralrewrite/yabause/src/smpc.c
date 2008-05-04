@@ -637,24 +637,21 @@ void FASTCALL SmpcWriteByte(u32 addr, u8 val) {
                SMPCLOG("smpc\t: Peripheral TH Control Method not implemented\n");
                break;
             case 0x60:
-//#warning "placeholder must be filled"
-#if 0
                switch (val & 0x60) {
                   case 0x60: // 1st Data
-                     val = (val & 0x80) | 0x14 | (buttonbits & 0x8);
+                     val = (val & 0x80) | 0x14 | (PORTDATA1.data[1] & 0x8);
                      break;
                   case 0x20: // 2nd Data
-                     val = (val & 0x80) | 0x10 | (buttonbits >> 12);
+                     val = (val & 0x80) | 0x10 | ((PORTDATA1.data[2] >> 4) & 0xF);
                      break;
                   case 0x40: // 3rd Data
-                     val = (val & 0x80) | 0x10 | ((buttonbits >> 8) & 0xF);
+                     val = (val & 0x80) | 0x10 | (PORTDATA1.data[2] & 0xF);
                      break;
                   case 0x00: // 4th Data
-                     val = (val & 0x80) | 0x10 | ((buttonbits >> 4) & 0xF);
+                     val = (val & 0x80) | 0x10 | ((PORTDATA1.data[1] >> 4) & 0xF);
                      break;
                   default: break;
                }
-#endif
 
                SmpcRegs->PDR[0] = val;
                break;

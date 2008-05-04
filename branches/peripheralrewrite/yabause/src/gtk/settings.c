@@ -72,7 +72,7 @@ YuiRangeItem vidcores[] = {
 	{ "1", "OpenGL Video Interface" },
 #endif
 	{ "2", "Software Video Interface" },
-	{ 1, 0 }
+	{ 0, 0 }
 };
 
 YuiRangeItem sndcores[] = {
@@ -80,7 +80,7 @@ YuiRangeItem sndcores[] = {
 #ifdef HAVE_LIBSDL
 	{ "1", "SDL Sound Interface" },
 #endif
-	{ 1, 0 }
+	{ 0, 0 }
 };
 
 const gchar * keys1[] = { "Up", "Right", "Down", "Left", "Right trigger", "Left trigger", 0 };

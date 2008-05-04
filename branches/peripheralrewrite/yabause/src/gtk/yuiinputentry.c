@@ -115,9 +115,9 @@ GtkWidget* yui_input_entry_new(GKeyFile * keyfile, const gchar * group, const gc
 
 		if (PERCore) {
 			if (PERCore->canScan)
-				g_signal_connect(entry, "focus-in-event", G_CALLBACK(yui_input_entry_focus_in), keys[row]);
+				g_signal_connect(entry, "focus-in-event", G_CALLBACK(yui_input_entry_focus_in), (gpointer) keys[row]);
 			else
-				g_signal_connect(entry, "key-press-event", G_CALLBACK(yui_input_entry_keypress), keys[row]);
+				g_signal_connect(entry, "key-press-event", G_CALLBACK(yui_input_entry_keypress), (gpointer) keys[row]);
 		} else {
 			gtk_widget_set_sensitive(entry, FALSE);
 		}

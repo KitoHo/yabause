@@ -1,5 +1,5 @@
 /*  Copyright 2003 Guillaume Duhamel
-    Copyright 2004-2007 Lawrence Sebald
+    Copyright 2004-2008 Lawrence Sebald
 
     This file is part of Yabause.
 
@@ -93,8 +93,7 @@ int YuiInit(void)   {
       return -1;
 
     for(;;) {
-      if(PERCore->HandleEvents() != 0)
-         return -1;
+        PERCore->HandleEvents();
     }
 
     return 0;

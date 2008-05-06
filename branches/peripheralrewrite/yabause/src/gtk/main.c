@@ -86,7 +86,7 @@ NULL
 
 VideoInterface_struct *VIDCoreList[] = {
 &VIDDummy,
-#ifdef HAVE_LIBGL
+#ifdef HAVE_LIBGTKGLEXT
 &VIDOGL,
 #endif
 &VIDSoft,
@@ -117,7 +117,7 @@ void yui_settings_init(void) {
 	yinit.m68kcoretype = M68KCORE_C68K;
 	yinit.percoretype = PERCORE_GTK;
 	yinit.sh2coretype = SH2CORE_DEFAULT;
-#ifdef HAVE_LIBGL
+#ifdef HAVE_LIBGTKGLEXT
 	yinit.vidcoretype = VIDCORE_OGL;
 #else
 	yinit.vidcoretype = VIDCORE_SOFT;
@@ -330,7 +330,7 @@ int main(int argc, char *argv[]) {
 	keyfile = g_key_file_new();
 
 	gtk_init(&argc, &argv);
-#ifdef HAVE_LIBGL
+#ifdef HAVE_LIBGTKGLEXT
 	gtk_gl_init(&argc, &argv);
 #endif
 

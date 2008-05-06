@@ -165,6 +165,7 @@ if test ! x$HAVE_PKG = x ; then
 		yabause_available_yuis="gtk $yabause_available_yuis"
 		YUI_gtk_CFLAGS=`$HAVE_PKG gtkglext-1.0 --cflags`
 		YUI_gtk_LIBS=`$HAVE_PKG gtkglext-1.0 --libs`
+		AC_DEFINE(HAVE_LIBGTKGLEXT)
 	else
 		if `$HAVE_PKG gtk+-2.0` ; then
 			yabause_available_yuis="gtk $yabause_available_yuis"

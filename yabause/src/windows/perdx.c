@@ -18,17 +18,6 @@
 */
 
 #include <windows.h>
-#define DIRECTINPUT_VERSION 0x0800
-#include <dinput.h>
-#ifdef __MINGW32__
-// I have to do this because for some reason because the dxerr8.h header is fubared
-const char*  __stdcall DXGetErrorString8A(HRESULT hr);
-#define DXGetErrorString8 DXGetErrorString8A
-const char*  __stdcall DXGetErrorDescription8A(HRESULT hr);
-#define DXGetErrorDescription8 DXGetErrorDescription8A
-#else
-#include <dxerr8.h>
-#endif
 #include "../debug.h"
 #include "../peripheral.h"
 #include "perdx.h"
@@ -58,14 +47,8 @@ GUID GUIDDevice[256]; // I hope that's enough
 u32 numguids=0;
 u32 numdevices=0;
 
-u32 numpads=1;
+u32 numpads=12;
 PerPad_struct *pad[12];
-typedef struct
-{
-   LPDIRECTINPUTDEVICE8 lpDIDevice;
-   int type;
-} padconf_struct;
-
 padconf_struct paddevice[12];
 
 const int pad_names[] = {
@@ -194,7 +177,7 @@ int PERDXInit(void)
 
    paddevice[0].lpDIDevice = lpDIDevice[0];
    paddevice[0].type = TYPE_KEYBOARD;
-   numdevices = 1;
+   paddevice[i].emulatetype = 1;
 
    PerPortReset();
    pad[0] = PerPadAdd(&PORTDATA1);
@@ -234,12 +217,16 @@ void PERDXLoadDevices(char *inifilename)
 {
    char tempstr[MAX_PATH];
    char string1[20];
+   char string2[20];
    GUID guid;
    DIDEVCAPS didc;
    u32 i;
    int i2;
    int buttonid;
    DIPROPDWORD dipdw;
+
+   PerPortReset();
+   memset(pad, 0, sizeof(pad));
 
    for (i = 0; i < numpads; i++)
    {
@@ -248,6 +235,14 @@ void PERDXLoadDevices(char *inifilename)
       // Let's first fetch the guid of the device
       if (GetPrivateProfileString(string1, "GUID", "", tempstr, MAX_PATH, inifilename) == 0)
          continue;
+
+
+      if (GetPrivateProfileString(string1, "EmulateType", "0", string2, MAX_PATH, inifilename))
+      {
+         paddevice[i].emulatetype = atoi(string2);
+         if (paddevice[i].emulatetype == 0)
+            continue;
+      }
 
       if (paddevice[i].lpDIDevice)
       {
@@ -261,7 +256,11 @@ void PERDXLoadDevices(char *inifilename)
       // Ok, now that we've got the GUID of the device, let's set it up
       if (IDirectInput8_CreateDevice(lpDI8, &guid, &lpDIDevice[i],
           NULL) != DI_OK)
+      {
+         paddevice[i].lpDIDevice = NULL;
+         paddevice[i].emulatetype = 0;
          continue;
+      }
 
       paddevice[i].lpDIDevice = lpDIDevice[i];
 
@@ -299,6 +298,12 @@ void PERDXLoadDevices(char *inifilename)
          continue;
 
       IDirectInputDevice8_Acquire(lpDIDevice[i]);
+
+      // Make sure we're added to the smpc list 
+      if (i < 6)
+         pad[i] = PerPadAdd(&PORTDATA1);
+      else
+         pad[i] = PerPadAdd(&PORTDATA2);
 
       // Now that we're all setup, let's fetch the controls from the ini
       sprintf(string1, "Peripheral%d", (int)i+1);
@@ -347,7 +352,7 @@ void PollKeys(void)
    for (i = 0; i < numpads; i++)
    {
       if (paddevice[i].lpDIDevice == NULL)
-         return;
+         continue;
 
       hr = IDirectInputDevice8_Poll(paddevice[i].lpDIDevice);
 
@@ -357,9 +362,11 @@ void PollKeys(void)
          {
             // Make sure device is acquired
             while(IDirectInputDevice8_Acquire(paddevice[i].lpDIDevice) == DIERR_INPUTLOST) {}
-            return;
+            continue;
          }
       }
+
+      size = 8;
 
       // Poll events
       if (IDirectInputDevice8_GetDeviceData(paddevice[i].lpDIDevice,
@@ -369,9 +376,12 @@ void PollKeys(void)
          {
             // Make sure device is acquired
             while(IDirectInputDevice8_Acquire(paddevice[i].lpDIDevice) == DIERR_INPUTLOST) {}
-            return;
+            continue;
          }
       }
+
+      if (size == 0)
+         continue;
 
       switch (paddevice[i].type)
       {

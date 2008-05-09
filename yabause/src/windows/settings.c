@@ -18,6 +18,7 @@
 */
 
 #include <windows.h>
+#include <windowsx.h>
 #include <commctrl.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -1267,6 +1268,7 @@ LRESULT CALLBACK InputSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
       case WM_INITDIALOG:
       {
          int i;
+         u32 j;
 
          SendDlgItemMessage(hDlg, IDC_PORT1CONNTYPECB, CB_RESETCONTENT, 0, 0);
          SendDlgItemMessage(hDlg, IDC_PORT1CONNTYPECB, CB_ADDSTRING, 0, (LPARAM)"None");
@@ -1283,19 +1285,21 @@ LRESULT CALLBACK InputSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             SendDlgItemMessage(hDlg, IDC_PORT1ATYPECB+i, CB_RESETCONTENT, 0, 0);
             SendDlgItemMessage(hDlg, IDC_PORT1ATYPECB+i, CB_ADDSTRING, 0, (LPARAM)"None");
             SendDlgItemMessage(hDlg, IDC_PORT1ATYPECB+i, CB_ADDSTRING, 0, (LPARAM)"Standard Pad");
+/*
             SendDlgItemMessage(hDlg, IDC_PORT1ATYPECB+i, CB_ADDSTRING, 0, (LPARAM)"Analog Pad");
             SendDlgItemMessage(hDlg, IDC_PORT1ATYPECB+i, CB_ADDSTRING, 0, (LPARAM)"Stunner");
             SendDlgItemMessage(hDlg, IDC_PORT1ATYPECB+i, CB_ADDSTRING, 0, (LPARAM)"Mouse");
             SendDlgItemMessage(hDlg, IDC_PORT1ATYPECB+i, CB_ADDSTRING, 0, (LPARAM)"Keyboard");
-
+*/
             SendDlgItemMessage(hDlg, IDC_PORT2ATYPECB+i, CB_RESETCONTENT, 0, 0);
             SendDlgItemMessage(hDlg, IDC_PORT2ATYPECB+i, CB_ADDSTRING, 0, (LPARAM)"None");
             SendDlgItemMessage(hDlg, IDC_PORT2ATYPECB+i, CB_ADDSTRING, 0, (LPARAM)"Standard Pad");
+/*
             SendDlgItemMessage(hDlg, IDC_PORT2ATYPECB+i, CB_ADDSTRING, 0, (LPARAM)"Analog Pad");
             SendDlgItemMessage(hDlg, IDC_PORT2ATYPECB+i, CB_ADDSTRING, 0, (LPARAM)"Stunner");
             SendDlgItemMessage(hDlg, IDC_PORT2ATYPECB+i, CB_ADDSTRING, 0, (LPARAM)"Mouse");
             SendDlgItemMessage(hDlg, IDC_PORT2ATYPECB+i, CB_ADDSTRING, 0, (LPARAM)"Keyboard");
-
+*/
             // finish me
             SendDlgItemMessage(hDlg, IDC_PORT1ATYPECB+i, CB_SETCURSEL, 0, 0);
             EnableWindow(GetDlgItem(hDlg, IDC_PORT1ATYPECB+i), FALSE);
@@ -1308,12 +1312,30 @@ LRESULT CALLBACK InputSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
 
          SendDlgItemMessage(hDlg, IDC_PORT1CONNTYPECB, CB_SETCURSEL, 1, 0);
          EnableWindow(GetDlgItem(hDlg, IDC_PORT1CONNTYPECB), FALSE);
-         SendDlgItemMessage(hDlg, IDC_PORT2CONNTYPECB, CB_SETCURSEL, 0, 0);
+         SendDlgItemMessage(hDlg, IDC_PORT2CONNTYPECB, CB_SETCURSEL, 1, 0);
          EnableWindow(GetDlgItem(hDlg, IDC_PORT2CONNTYPECB), FALSE);
 
-         SendDlgItemMessage(hDlg, IDC_PORT1ATYPECB, CB_SETCURSEL, 1, 0);
-         EnableWindow(GetDlgItem(hDlg, IDC_PORT1ACFGPB), TRUE);            
-//         EnableWindow(GetDlgItem(hDlg, IDC_PORT2//ACFGPB), TRUE);            
+         EnableWindow(GetDlgItem(hDlg, IDC_PORT1ATYPECB), TRUE);
+         EnableWindow(GetDlgItem(hDlg, IDC_PORT2ATYPECB), TRUE);
+
+         // Go through previous settings and figure out which controls to 
+         // enable, etc.
+         for (j = 0; j < numpads; j++)
+         {
+            if (paddevice[j].emulatetype != 0)
+            {
+               int id;
+               switch (pad[j]->perid)
+               {
+                  case 0x02: // Standard Pad
+                     id = 1;
+                  default: break;
+               }
+
+               SendDlgItemMessage(hDlg, IDC_PORT1ATYPECB+j, CB_SETCURSEL, id, 0);
+               EnableWindow(GetDlgItem(hDlg, IDC_PORT1ACFGPB+j), TRUE);            
+            }
+         }
 
          // Setup Tooltips
          hb[0].string = "Use this to select whether to use a multi-tap or direct connection";
@@ -1344,28 +1366,66 @@ LRESULT CALLBACK InputSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
       {
          switch (LOWORD(wParam))
          {
+            case IDC_PORT1ATYPECB:
+            case IDC_PORT1BTYPECB:
+            case IDC_PORT1CTYPECB:
+            case IDC_PORT1DTYPECB:
+            case IDC_PORT1ETYPECB:
+            case IDC_PORT1FTYPECB:
+            case IDC_PORT2ATYPECB:
+            case IDC_PORT2BTYPECB:
+            case IDC_PORT2CTYPECB:
+            case IDC_PORT2DTYPECB:
+            case IDC_PORT2ETYPECB:
+            case IDC_PORT2FTYPECB:
+            {
+               switch(HIWORD(wParam))
+               {
+                  case CBN_SELCHANGE:
+                     // If emulated peripheral is set to none, we don't want 
+                     // the config button enabled
+                     if (ComboBox_GetCurSel((HWND)lParam) != 0)
+                        Button_Enable(GetDlgItem(hDlg, IDC_PORT1ACFGPB+(int)LOWORD(wParam)-IDC_PORT1ATYPECB), TRUE);
+                     else
+                        Button_Enable(GetDlgItem(hDlg, IDC_PORT1ACFGPB+(int)LOWORD(wParam)-IDC_PORT1ATYPECB), FALSE);
+
+                     break;
+                  default: break;
+               }
+               break;
+            }
             case IDC_PORT1ACFGPB:
             case IDC_PORT1BCFGPB:
             case IDC_PORT1CCFGPB:
             case IDC_PORT1DCFGPB:
             case IDC_PORT1ECFGPB:
             case IDC_PORT1FCFGPB:
-               DialogBoxParam(y_hInstance, MAKEINTRESOURCE(IDD_PADCONFIG), hDlg, (DLGPROC)PadConfigDlgProc, (LPARAM)LOWORD(wParam)-IDC_PORT1ACFGPB);
-               return TRUE;
             case IDC_PORT2ACFGPB:
-               // If multitap is enabled, this can't be the second pad
-               DialogBoxParam(y_hInstance, MAKEINTRESOURCE(IDD_PADCONFIG), hDlg, (DLGPROC)PadConfigDlgProc, (LPARAM)1);
-               return TRUE;
             case IDC_PORT2BCFGPB:
             case IDC_PORT2CCFGPB:
             case IDC_PORT2DCFGPB:
             case IDC_PORT2ECFGPB:
             case IDC_PORT2FCFGPB:
+               switch (ComboBox_GetCurSel(GetDlgItem(hDlg, IDC_PORT1ATYPECB+LOWORD(wParam)-IDC_PORT1ACFGPB)))
+               {
+                  case 1:
+                     DialogBoxParam(y_hInstance, MAKEINTRESOURCE(IDD_PADCONFIG), hDlg, (DLGPROC)PadConfigDlgProc, (LPARAM)LOWORD(wParam)-IDC_PORT1ACFGPB);
+                     break;
+                  default: break;
+               }
                return TRUE;
             case IDOK:
             {
-               EndDialog(hDlg, TRUE);
+               u32 i;
+               char string1[13], string2[3];
 
+               for (i = 0; i < numpads; i++)
+               {
+                  sprintf(string1, "Peripheral%d", i+1);
+                  sprintf(string2, "%d", ComboBox_GetCurSel(GetDlgItem(hDlg, IDC_PORT1ATYPECB+i)));
+                  WritePrivateProfileString(string1, "EmulateType", string2, inifilename);
+               }
+               EndDialog(hDlg, TRUE);
                return TRUE;
             }
             case IDCANCEL:
@@ -1380,6 +1440,9 @@ LRESULT CALLBACK InputSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
       }
       case WM_DESTROY:
       {
+         // Reload device(s)
+         PERDXLoadDevices(inifilename);
+
          DestroyHelpBalloons(hb);
          break;
       }
@@ -1489,9 +1552,6 @@ LRESULT CALLBACK PadConfigDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
 
                EndDialog(hDlg, TRUE);
 
-               for (i = 0; i < 13; i++)
-                  PerSetKey(controlmap[i], pad_names[i], pad[padnum]);
-
                sprintf(string1, "Peripheral%d", padnum+1);
 
                // Write GUID
@@ -1503,8 +1563,6 @@ LRESULT CALLBACK PadConfigDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                   WritePrivateProfileString(string1, pad_names2[i], string2, inifilename);
                }
 
-               // Reload device
-               PERDXLoadDevices(inifilename);
                return TRUE;
             }
             case IDCANCEL:

@@ -1,0 +1,912 @@
+<ui version="4.0" >
+ <class>UISettings</class>
+ <widget class="QDialog" name="UISettings" >
+  <property name="geometry" >
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>507</width>
+    <height>411</height>
+   </rect>
+  </property>
+  <property name="windowTitle" >
+   <string>Settings</string>
+  </property>
+  <layout class="QVBoxLayout" >
+   <item>
+    <widget class="QTabWidget" name="twPages" >
+     <property name="currentIndex" >
+      <number>0</number>
+     </property>
+     <widget class="QWidget" name="wGeneral" >
+      <attribute name="title" >
+       <string>General</string>
+      </attribute>
+      <layout class="QGridLayout" >
+       <item row="0" column="0" colspan="2" >
+        <widget class="QLabel" name="lBios" >
+         <property name="font" >
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text" >
+          <string>Bios</string>
+         </property>
+         <property name="textFormat" >
+          <enum>Qt::PlainText</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" >
+        <widget class="QLineEdit" name="leBios" />
+       </item>
+       <item row="1" column="1" >
+        <widget class="QToolButton" name="tbBios" >
+         <property name="text" >
+          <string>...</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="2" >
+        <widget class="QLabel" name="lCdRom" >
+         <property name="font" >
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text" >
+          <string>Cd-Rom</string>
+         </property>
+         <property name="textFormat" >
+          <enum>Qt::PlainText</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0" colspan="2" >
+        <widget class="QComboBox" name="cbCdRom" />
+       </item>
+       <item row="4" column="0" >
+        <widget class="QLineEdit" name="leCdRom" />
+       </item>
+       <item row="4" column="1" >
+        <widget class="QToolButton" name="tbCdRom" >
+         <property name="text" >
+          <string>...</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0" colspan="2" >
+        <widget class="QLabel" name="lSaveStates" >
+         <property name="font" >
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text" >
+          <string>Save States</string>
+         </property>
+         <property name="textFormat" >
+          <enum>Qt::PlainText</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0" >
+        <widget class="QLineEdit" name="leSaveStates" />
+       </item>
+       <item row="6" column="1" >
+        <widget class="QToolButton" name="tbSaveStates" >
+         <property name="text" >
+          <string>...</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="0" >
+        <spacer>
+         <property name="orientation" >
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" >
+          <size>
+           <width>20</width>
+           <height>2</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="wVideo" >
+      <attribute name="title" >
+       <string>Video</string>
+      </attribute>
+      <layout class="QGridLayout" >
+       <item row="0" column="0" colspan="3" >
+        <widget class="QLabel" name="lVideoCore" >
+         <property name="font" >
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text" >
+          <string>Video Core</string>
+         </property>
+         <property name="textFormat" >
+          <enum>Qt::PlainText</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="3" >
+        <widget class="QComboBox" name="cbVideoCore" />
+       </item>
+       <item row="2" column="0" colspan="3" >
+        <widget class="QLabel" name="lResolution" >
+         <property name="font" >
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text" >
+          <string>Resolution</string>
+         </property>
+         <property name="textFormat" >
+          <enum>Qt::PlainText</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0" >
+        <widget class="QLabel" name="lWidth" >
+         <property name="text" >
+          <string>Width</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1" >
+        <widget class="QLineEdit" name="leWidth" />
+       </item>
+       <item row="3" column="2" >
+        <widget class="QCheckBox" name="cbFullscreen" >
+         <property name="text" >
+          <string>Fullscreen</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0" >
+        <widget class="QLabel" name="lHeight" >
+         <property name="text" >
+          <string>Height</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1" >
+        <widget class="QLineEdit" name="leHeight" />
+       </item>
+       <item row="5" column="0" colspan="3" >
+        <widget class="QLabel" name="lVideoFormat" >
+         <property name="font" >
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text" >
+          <string>Video Format</string>
+         </property>
+         <property name="textFormat" >
+          <enum>Qt::PlainText</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0" colspan="3" >
+        <widget class="QComboBox" name="cbVideoFormat" />
+       </item>
+       <item row="7" column="0" colspan="3" >
+        <spacer>
+         <property name="orientation" >
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" >
+          <size>
+           <width>20</width>
+           <height>2</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="wSound" >
+      <attribute name="title" >
+       <string>Sound</string>
+      </attribute>
+      <layout class="QVBoxLayout" >
+       <item>
+        <widget class="QLabel" name="lSoundCore" >
+         <property name="font" >
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text" >
+          <string>Sound Core</string>
+         </property>
+         <property name="textFormat" >
+          <enum>Qt::PlainText</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="cbSoundCore" />
+       </item>
+       <item>
+        <spacer>
+         <property name="orientation" >
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" >
+          <size>
+           <width>20</width>
+           <height>2</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="wCartMemory" >
+      <attribute name="title" >
+       <string>Cart/Memory</string>
+      </attribute>
+      <layout class="QGridLayout" >
+       <item row="0" column="0" colspan="2" >
+        <widget class="QLabel" name="lCartridge" >
+         <property name="font" >
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text" >
+          <string>Cartridge</string>
+         </property>
+         <property name="textFormat" >
+          <enum>Qt::PlainText</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="2" >
+        <widget class="QComboBox" name="cbCartridge" />
+       </item>
+       <item row="2" column="0" >
+        <widget class="QLineEdit" name="leCartridge" />
+       </item>
+       <item row="2" column="1" >
+        <widget class="QToolButton" name="tbCartridge" >
+         <property name="text" >
+          <string>...</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0" colspan="2" >
+        <widget class="QLabel" name="lMemory" >
+         <property name="font" >
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text" >
+          <string>Memory</string>
+         </property>
+         <property name="textFormat" >
+          <enum>Qt::PlainText</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0" >
+        <widget class="QLineEdit" name="leMemory" />
+       </item>
+       <item row="4" column="1" >
+        <widget class="QToolButton" name="tbMemory" >
+         <property name="text" >
+          <string>...</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0" colspan="2" >
+        <widget class="QLabel" name="lMpegROM" >
+         <property name="font" >
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text" >
+          <string>Mpeg ROM</string>
+         </property>
+         <property name="textFormat" >
+          <enum>Qt::PlainText</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0" >
+        <widget class="QLineEdit" name="leMpegROM" />
+       </item>
+       <item row="6" column="1" >
+        <widget class="QToolButton" name="tbMpegROM" >
+         <property name="text" >
+          <string>...</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="0" >
+        <spacer>
+         <property name="orientation" >
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" >
+          <size>
+           <width>20</width>
+           <height>2</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="wInput" >
+      <attribute name="title" >
+       <string>Input</string>
+      </attribute>
+      <layout class="QGridLayout" >
+       <item row="0" column="0" colspan="4" >
+        <widget class="QLabel" name="lInput" >
+         <property name="font" >
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text" >
+          <string>Input</string>
+         </property>
+         <property name="textFormat" >
+          <enum>Qt::PlainText</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0" colspan="4" >
+        <widget class="QComboBox" name="cbInput" />
+       </item>
+       <item row="2" column="0" colspan="4" >
+        <widget class="Line" name="line" >
+         <property name="orientation" >
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="0" >
+        <widget class="QPushButton" name="pbUp" >
+         <property name="maximumSize" >
+          <size>
+           <width>80</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="statusTip" >
+          <string>Up</string>
+         </property>
+         <property name="text" >
+          <string>Up</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1" >
+        <widget class="QLabel" name="lUp" >
+         <property name="statusTip" >
+          <string>Up</string>
+         </property>
+         <property name="text" >
+          <string>-</string>
+         </property>
+         <property name="indent" >
+          <number>20</number>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="2" >
+        <widget class="QPushButton" name="pbA" >
+         <property name="maximumSize" >
+          <size>
+           <width>80</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="statusTip" >
+          <string>A</string>
+         </property>
+         <property name="text" >
+          <string>A</string>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="3" >
+        <widget class="QLabel" name="lA" >
+         <property name="statusTip" >
+          <string>A</string>
+         </property>
+         <property name="text" >
+          <string>-</string>
+         </property>
+         <property name="indent" >
+          <number>20</number>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="0" >
+        <widget class="QPushButton" name="pbDown" >
+         <property name="maximumSize" >
+          <size>
+           <width>80</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="statusTip" >
+          <string>Down</string>
+         </property>
+         <property name="text" >
+          <string>Down</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1" >
+        <widget class="QLabel" name="lDown" >
+         <property name="statusTip" >
+          <string>Down</string>
+         </property>
+         <property name="text" >
+          <string>-</string>
+         </property>
+         <property name="indent" >
+          <number>20</number>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="2" >
+        <widget class="QPushButton" name="pbB" >
+         <property name="maximumSize" >
+          <size>
+           <width>80</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="statusTip" >
+          <string>B</string>
+         </property>
+         <property name="text" >
+          <string>B</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="3" >
+        <widget class="QLabel" name="lB" >
+         <property name="statusTip" >
+          <string>B</string>
+         </property>
+         <property name="text" >
+          <string>-</string>
+         </property>
+         <property name="indent" >
+          <number>20</number>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0" >
+        <widget class="QPushButton" name="pbLeft" >
+         <property name="maximumSize" >
+          <size>
+           <width>80</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="statusTip" >
+          <string>Left</string>
+         </property>
+         <property name="text" >
+          <string>Left</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="1" >
+        <widget class="QLabel" name="lLeft" >
+         <property name="statusTip" >
+          <string>Left</string>
+         </property>
+         <property name="text" >
+          <string>-</string>
+         </property>
+         <property name="indent" >
+          <number>20</number>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="2" >
+        <widget class="QPushButton" name="pbC" >
+         <property name="maximumSize" >
+          <size>
+           <width>80</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="statusTip" >
+          <string>C</string>
+         </property>
+         <property name="text" >
+          <string>C</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="3" >
+        <widget class="QLabel" name="lC" >
+         <property name="statusTip" >
+          <string>C</string>
+         </property>
+         <property name="text" >
+          <string>-</string>
+         </property>
+         <property name="indent" >
+          <number>20</number>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0" >
+        <widget class="QPushButton" name="pbRight" >
+         <property name="maximumSize" >
+          <size>
+           <width>80</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="statusTip" >
+          <string>Right</string>
+         </property>
+         <property name="text" >
+          <string>Right</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="1" >
+        <widget class="QLabel" name="lRight" >
+         <property name="statusTip" >
+          <string>Right</string>
+         </property>
+         <property name="text" >
+          <string>-</string>
+         </property>
+         <property name="indent" >
+          <number>20</number>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="2" >
+        <widget class="QPushButton" name="pbX" >
+         <property name="maximumSize" >
+          <size>
+           <width>80</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="statusTip" >
+          <string>X</string>
+         </property>
+         <property name="text" >
+          <string>X</string>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="3" >
+        <widget class="QLabel" name="lX" >
+         <property name="statusTip" >
+          <string>X</string>
+         </property>
+         <property name="text" >
+          <string>-</string>
+         </property>
+         <property name="indent" >
+          <number>20</number>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="0" >
+        <widget class="QPushButton" name="pbL" >
+         <property name="maximumSize" >
+          <size>
+           <width>80</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="statusTip" >
+          <string>L</string>
+         </property>
+         <property name="text" >
+          <string>L</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="1" >
+        <widget class="QLabel" name="lL" >
+         <property name="statusTip" >
+          <string>Left trigger</string>
+         </property>
+         <property name="text" >
+          <string>-</string>
+         </property>
+         <property name="indent" >
+          <number>20</number>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="2" >
+        <widget class="QPushButton" name="pbY" >
+         <property name="maximumSize" >
+          <size>
+           <width>80</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="statusTip" >
+          <string>Y</string>
+         </property>
+         <property name="text" >
+          <string>Y</string>
+         </property>
+        </widget>
+       </item>
+       <item row="7" column="3" >
+        <widget class="QLabel" name="lY" >
+         <property name="statusTip" >
+          <string>Y</string>
+         </property>
+         <property name="text" >
+          <string>-</string>
+         </property>
+         <property name="indent" >
+          <number>20</number>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="0" >
+        <widget class="QPushButton" name="pbR" >
+         <property name="maximumSize" >
+          <size>
+           <width>80</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="statusTip" >
+          <string>R</string>
+         </property>
+         <property name="text" >
+          <string>R</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="1" >
+        <widget class="QLabel" name="lR" >
+         <property name="statusTip" >
+          <string>Right trigger</string>
+         </property>
+         <property name="text" >
+          <string>-</string>
+         </property>
+         <property name="indent" >
+          <number>20</number>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="2" >
+        <widget class="QPushButton" name="pbZ" >
+         <property name="maximumSize" >
+          <size>
+           <width>80</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="statusTip" >
+          <string>Z</string>
+         </property>
+         <property name="text" >
+          <string>Z</string>
+         </property>
+        </widget>
+       </item>
+       <item row="8" column="3" >
+        <widget class="QLabel" name="lZ" >
+         <property name="statusTip" >
+          <string>Z</string>
+         </property>
+         <property name="text" >
+          <string>-</string>
+         </property>
+         <property name="indent" >
+          <number>20</number>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="0" >
+        <widget class="QPushButton" name="pbStart" >
+         <property name="maximumSize" >
+          <size>
+           <width>80</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="statusTip" >
+          <string>Start</string>
+         </property>
+         <property name="text" >
+          <string>Start</string>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="1" >
+        <widget class="QLabel" name="lStart" >
+         <property name="statusTip" >
+          <string>Start</string>
+         </property>
+         <property name="text" >
+          <string>-</string>
+         </property>
+         <property name="indent" >
+          <number>20</number>
+         </property>
+        </widget>
+       </item>
+       <item row="9" column="2" colspan="2" >
+        <spacer>
+         <property name="orientation" >
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeType" >
+          <enum>QSizePolicy::Maximum</enum>
+         </property>
+         <property name="sizeHint" >
+          <size>
+           <width>20</width>
+           <height>21</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item row="10" column="1" colspan="2" >
+        <spacer>
+         <property name="orientation" >
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeType" >
+          <enum>QSizePolicy::MinimumExpanding</enum>
+         </property>
+         <property name="sizeHint" >
+          <size>
+           <width>20</width>
+           <height>1</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="wAdvanced" >
+      <attribute name="title" >
+       <string>Advanced</string>
+      </attribute>
+      <layout class="QVBoxLayout" >
+       <item>
+        <widget class="QLabel" name="lRegion" >
+         <property name="font" >
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text" >
+          <string>Region</string>
+         </property>
+         <property name="textFormat" >
+          <enum>Qt::PlainText</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="cbRegion" />
+       </item>
+       <item>
+        <widget class="QLabel" name="lSH2Interpreter" >
+         <property name="font" >
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="text" >
+          <string>SH2 Interpreter</string>
+         </property>
+         <property name="textFormat" >
+          <enum>Qt::PlainText</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QComboBox" name="cbSH2Interpreter" />
+       </item>
+       <item>
+        <spacer>
+         <property name="orientation" >
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" >
+          <size>
+           <width>20</width>
+           <height>2</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="dbbButtons" >
+     <property name="orientation" >
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons" >
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::NoButton|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>dbbButtons</sender>
+   <signal>accepted()</signal>
+   <receiver>UISettings</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel" >
+     <x>373</x>
+     <y>399</y>
+    </hint>
+    <hint type="destinationlabel" >
+     <x>383</x>
+     <y>403</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>dbbButtons</sender>
+   <signal>rejected()</signal>
+   <receiver>UISettings</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel" >
+     <x>467</x>
+     <y>399</y>
+    </hint>
+    <hint type="destinationlabel" >
+     <x>453</x>
+     <y>352</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

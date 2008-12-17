@@ -72,7 +72,7 @@ u32 logsize=512;
 
 //////////////////////////////////////////////////////////////////////////////
 
-void SetupOFN(OPENFILENAME *ofn, int type, HWND hwnd, const char *lpstrFilter, char *lpstrFile, DWORD nMaxFile)
+void SetupOFN(OPENFILENAME *ofn, int type, HWND hwnd, const LPCTSTR lpstrFilter, char *lpstrFile, DWORD nMaxFile)
 {
    ZeroMemory(ofn, sizeof(OPENFILENAME));
    ofn->lStructSize = sizeof(OPENFILENAME);
@@ -107,7 +107,7 @@ LRESULT CALLBACK ErrorDebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
    {
       case WM_INITDIALOG:
       {
-         SetDlgItemText(hDlg, IDC_EDTEXT, (LPCTSTR)lParam);
+         SetDlgItemText(hDlg, IDC_EDTEXT, _16(lParam));
          return TRUE;
       }
       case WM_COMMAND:
@@ -166,7 +166,7 @@ void YuiErrorMsg(const char *string)
       }
    }
    else
-      MessageBox (YabWin, string, "Error",  MB_OK | MB_ICONINFORMATION);
+      MessageBox (YabWin, _16(string), _16("Error"),  MB_OK | MB_ICONINFORMATION);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -180,13 +180,13 @@ LRESULT CALLBACK MemTransferDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
    {
       case WM_INITDIALOG:
       {
-         SetDlgItemText(hDlg, IDC_EDITTEXT1, mtrnsfilename);
+         SetDlgItemText(hDlg, IDC_EDITTEXT1, _16(mtrnsfilename));
 
          sprintf(tempstr, "%08X", (int)mtrnssaddress);
-         SetDlgItemText(hDlg, IDC_EDITTEXT2, tempstr);
+         SetDlgItemText(hDlg, IDC_EDITTEXT2, _16(tempstr));
 
          sprintf(tempstr, "%08X", (int)mtrnseaddress);
-         SetDlgItemText(hDlg, IDC_EDITTEXT3, tempstr);
+         SetDlgItemText(hDlg, IDC_EDITTEXT3, _16(tempstr));
 
          if (mtrnsreadwrite == 0)
          {
@@ -217,39 +217,61 @@ LRESULT CALLBACK MemTransferDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
 
                if (SendMessage(GetDlgItem(hDlg, IDC_DOWNLOADMEM), BM_GETCHECK, 0, 0) == BST_CHECKED)
                {
-                  SetupOFN(&ofn, OFN_DEFAULTSAVE, hDlg,
-                           "All Files\0*.*\0Binary Files\0*.BIN\0",
+                  WCHAR filter[1024];
+                  WCHAR * filterpos = filter;
+
+                  filterpos += 1 + swprintf(filterpos, _16("All Files"));
+                  filterpos += 1 + swprintf(filterpos, _16("*.*"));
+                  filterpos += 1 + swprintf(filterpos, _16("Binary Files"));
+                  filterpos += 1 + swprintf(filterpos, _16("*.BIN"));
+                  *filterpos = '\0';
+
+                  SetupOFN(&ofn, OFN_DEFAULTSAVE, hDlg, filter,
                            mtrnsfilename, sizeof(mtrnsfilename));
 
                   if (GetSaveFileName(&ofn))
-                     SetDlgItemText(hDlg, IDC_EDITTEXT1, mtrnsfilename);
+                     SetDlgItemText(hDlg, IDC_EDITTEXT1, _16(mtrnsfilename));
                }
                else
                {
+                  WCHAR filter[1024];
+                  WCHAR * filterpos = filter;
+
+                  filterpos += 1 + swprintf(filterpos, _16("All Files"));
+                  filterpos += 1 + swprintf(filterpos, _16("*.*"));
+                  filterpos += 1 + swprintf(filterpos, _16("Binary Files"));
+                  filterpos += 1 + swprintf(filterpos, _16("*.BIN"));
+                  filterpos += 1 + swprintf(filterpos, _16("COFF Files"));
+                  filterpos += 1 + swprintf(filterpos, _16("*.COF;*.COFF"));
+                  *filterpos = '\0';
+
                   // setup ofn structure
-                  SetupOFN(&ofn, OFN_DEFAULTLOAD, hDlg,
-                           "All Files\0*.*\0Binary Files\0*.BIN\0COFF Files\0*.COF;*.COFF\0",
+                  SetupOFN(&ofn, OFN_DEFAULTLOAD, hDlg, filter,
                            mtrnsfilename, sizeof(mtrnsfilename));
 
                   if (GetOpenFileName(&ofn))
-                     SetDlgItemText(hDlg, IDC_EDITTEXT1, mtrnsfilename);
+                     SetDlgItemText(hDlg, IDC_EDITTEXT1, _16(mtrnsfilename));
                }
 
                return TRUE;
             }
             case IDOK:
             {
-               GetDlgItemText(hDlg, IDC_EDITTEXT1, mtrnsfilename, MAX_PATH);
+               WCHAR tempwstr[MAX_PATH];
+               GetDlgItemText(hDlg, IDC_EDITTEXT1, tempwstr, MAX_PATH);
+               WideCharToMultiByte(CP_ACP, 0, tempwstr, -1, mtrnsfilename, MAX_PATH, NULL, NULL);
 
-               GetDlgItemText(hDlg, IDC_EDITTEXT2, tempstr, 9);
+               GetDlgItemText(hDlg, IDC_EDITTEXT2, tempwstr, 9);
+               WideCharToMultiByte(CP_ACP, 0, tempwstr, -1, tempstr, MAX_PATH, NULL, NULL);
                sscanf(tempstr, "%08lX", &mtrnssaddress);
 
-               GetDlgItemText(hDlg, IDC_EDITTEXT3, tempstr, 9);
+               GetDlgItemText(hDlg, IDC_EDITTEXT3, tempwstr, 9);
+               WideCharToMultiByte(CP_ACP, 0, tempwstr, -1, tempstr, MAX_PATH, NULL, NULL);
                sscanf(tempstr, "%08lX", &mtrnseaddress);
 
                if ((mtrnseaddress - mtrnssaddress) < 0)
                {
-                  MessageBox (hDlg, "Invalid Start/End Address Combination", "Error",  MB_OK | MB_ICONINFORMATION);
+                  MessageBox (hDlg, _16("Invalid Start/End Address Combination"), _16("Error"),  MB_OK | MB_ICONINFORMATION);
                   EndDialog(hDlg, TRUE);
                   return FALSE;
                }
@@ -400,7 +422,7 @@ LRESULT CALLBACK MemDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
          char buf[9];
 
          sprintf(buf, "%08lX", memaddr);
-         SetDlgItemText(hDlg, IDC_EDITTEXT1, buf);
+         SetDlgItemText(hDlg, IDC_EDITTEXT1, _16(buf));
          return TRUE;
       }
       case WM_COMMAND:
@@ -409,12 +431,12 @@ LRESULT CALLBACK MemDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
          {
             case IDOK:
             {
-               char buf[9];
+               WCHAR buf[9];
 
                EndDialog(hDlg, TRUE);
                GetDlgItemText(hDlg, IDC_EDITTEXT1, buf, 11);
 
-               sscanf(buf, "%08lx", &memaddr);
+               wscanf(buf, "%08lx", &memaddr);
 
                return TRUE;
             }
@@ -437,7 +459,7 @@ LRESULT CALLBACK MemDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
 void SH2BreakpointHandler (SH2_struct *context, u32 addr)
 {
    ScspMuteAudio();
-   MessageBox (YabWin, "Breakpoint Reached", "Notice",  MB_OK | MB_ICONINFORMATION);
+   MessageBox (YabWin, _16("Breakpoint Reached"), _16("Notice"),  MB_OK | MB_ICONINFORMATION);
 
    debugsh = context;
    DialogBox(y_hInstance, MAKEINTRESOURCE(IDD_SH2DEBUG), YabWin, (DLGPROC)SH2DebugDlgProc);
@@ -538,18 +560,20 @@ LRESULT CALLBACK SH2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             }
             case IDC_ADDCODEBP:
             {
+               WCHAR tempwstr[MAX_PATH];
                char bptext[10];
                u32 addr=0;
                extern SH2Interface_struct *SH2Core;
 
                if (SH2Core->id != SH2CORE_DEBUGINTERPRETER)
                {
-                  MessageBox (hDlg, "Breakpoints only supported by SH2 Debug Interpreter", "Error",  MB_OK | MB_ICONINFORMATION);
+                  MessageBox (hDlg, _16("Breakpoints only supported by SH2 Debug Interpreter"), _16("Error"),  MB_OK | MB_ICONINFORMATION);
                   break;
                }
                   
                memset(bptext, 0, 10);
-               GetDlgItemText(hDlg, IDC_CODEBPET, bptext, 10);
+               GetDlgItemText(hDlg, IDC_CODEBPET, tempwstr, 10);
+               WideCharToMultiByte(CP_ACP, 0, tempwstr, -1, bptext, 10, NULL, NULL);
 
                if (bptext[0] != 0)
                {
@@ -582,12 +606,14 @@ LRESULT CALLBACK SH2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             }
             case IDC_ADDMEMBP:
             {
+               WCHAR tempwstr[MAX_PATH];
                char bptext[10];
                u32 addr=0;
                u32 flags=0;
 
                memset(bptext, 0, 10);
-               GetDlgItemText(hDlg, IDC_MEMBPET, bptext, 10);
+               GetDlgItemText(hDlg, IDC_MEMBPET, tempwstr, 10);
+               WideCharToMultiByte(CP_ACP, 0, tempwstr, -1, bptext, 10, NULL, NULL);
 
                if (bptext[0] != 0)
                {
@@ -788,7 +814,7 @@ LRESULT CALLBACK SH2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
 
                      if (SH2Core->id != SH2CORE_DEBUGINTERPRETER)
                      {
-                        MessageBox (hDlg, "Breakpoints only supported by SH2 Debug Interpreter", "Error",  MB_OK | MB_ICONINFORMATION);
+                        MessageBox (hDlg, _16("Breakpoints only supported by SH2 Debug Interpreter"), _16("Error"),  MB_OK | MB_ICONINFORMATION);
                         break;
                      }
 
@@ -920,7 +946,7 @@ LRESULT CALLBACK VDP1DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                      cursel = (u32)SendDlgItemMessage(hDlg, IDC_VDP1CMDLB, LB_GETCURSEL, 0, 0);
 
                      Vdp1DebugCommand(cursel, tempstr);
-                     SetDlgItemText(hDlg, IDC_VDP1CMDET, tempstr);
+                     SetDlgItemText(hDlg, IDC_VDP1CMDET, _16(tempstr));
 
                      if (vdp1texture)
                         free(vdp1texture);
@@ -939,11 +965,17 @@ LRESULT CALLBACK VDP1DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             case IDC_VDP1SAVEBMPBT:
             {
                OPENFILENAME ofn;
+               WCHAR filter[1024];
+               WCHAR * filterpos = filter;
 
-               SetupOFN(&ofn, OFN_DEFAULTSAVE, hDlg,
-                        "Bitmap Files\0*.BMP\0All Files\0*.*\0",
-                        filename, sizeof(filename));
-               ofn.lpstrDefExt = "BMP";
+               filterpos += 1 + swprintf(filterpos, _16("Bitmap Files"));
+               filterpos += 1 + swprintf(filterpos, _16("*.BMP"));
+               filterpos += 1 + swprintf(filterpos, _16("All Files"));
+               filterpos += 1 + swprintf(filterpos, _16("*.*"));
+               *filterpos = '\0';
+
+               SetupOFN(&ofn, OFN_DEFAULTSAVE, hDlg, filter, filename, sizeof(filename));
+               ofn.lpstrDefExt = _16("BMP");
 
                if (vdp1texture && GetSaveFileName(&ofn))
                   SaveBitmap(filename, vdp1texturew, vdp1textureh, vdp1texture);
@@ -978,7 +1010,7 @@ LRESULT CALLBACK VDP1DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
          {
             SetBkColor(hdc, RGB(0,0,0));
             SetTextColor(hdc, RGB(255,255,255));
-            TextOut(hdc, 0, 0, "Not Available", 13);
+            TextOut(hdc, 0, 0, _16("Not Available"), 13);
          }
          else
          {
@@ -1040,11 +1072,11 @@ LRESULT CALLBACK VDP2ViewerDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
          vdp2texture = NULL;
 
          SendDlgItemMessage(hDlg, IDC_VDP2SCREENCB, CB_RESETCONTENT, 0, 0);
-         SendDlgItemMessage(hDlg, IDC_VDP2SCREENCB, CB_ADDSTRING, 0, (LPARAM)"NBG0/RBG1");
-         SendDlgItemMessage(hDlg, IDC_VDP2SCREENCB, CB_ADDSTRING, 0, (LPARAM)"NBG1");
-         SendDlgItemMessage(hDlg, IDC_VDP2SCREENCB, CB_ADDSTRING, 0, (LPARAM)"NBG2");
-         SendDlgItemMessage(hDlg, IDC_VDP2SCREENCB, CB_ADDSTRING, 0, (LPARAM)"NBG3");
-         SendDlgItemMessage(hDlg, IDC_VDP2SCREENCB, CB_ADDSTRING, 0, (LPARAM)"RBG0");
+         SendDlgItemMessage(hDlg, IDC_VDP2SCREENCB, CB_ADDSTRING, 0, (LPARAM)_16("NBG0/RBG1"));
+         SendDlgItemMessage(hDlg, IDC_VDP2SCREENCB, CB_ADDSTRING, 0, (LPARAM)_16("NBG1"));
+         SendDlgItemMessage(hDlg, IDC_VDP2SCREENCB, CB_ADDSTRING, 0, (LPARAM)_16("NBG2"));
+         SendDlgItemMessage(hDlg, IDC_VDP2SCREENCB, CB_ADDSTRING, 0, (LPARAM)_16("NBG3"));
+         SendDlgItemMessage(hDlg, IDC_VDP2SCREENCB, CB_ADDSTRING, 0, (LPARAM)_16("RBG0"));
          SendDlgItemMessage(hDlg, IDC_VDP2SCREENCB, CB_SETCURSEL, 0, 0);
 
          vdp2texture = Vdp2DebugTexture(0, -1, 0x00FF00FF, &width, &height);
@@ -1081,11 +1113,17 @@ LRESULT CALLBACK VDP2ViewerDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             case IDC_VDP2SAVEBMPBT:
             {
                OPENFILENAME ofn;
+               WCHAR filter[1024];
+               WCHAR * filterpos = filter;
 
-               SetupOFN(&ofn, OFN_DEFAULTSAVE, hDlg,
-                        "Bitmap Files\0*.BMP\0All Files\0*.*\0",
-                        filename, sizeof(filename));
-               ofn.lpstrDefExt = "BMP";
+               filterpos += 1 + swprintf(filterpos, _16("Bitmap Files"));
+               filterpos += 1 + swprintf(filterpos, _16("*.BMP"));
+               filterpos += 1 + swprintf(filterpos, _16("All Files"));
+               filterpos += 1 + swprintf(filterpos, _16("*.*"));
+               *filterpos = '\0';
+
+               SetupOFN(&ofn, OFN_DEFAULTSAVE, hDlg, filter, filename, sizeof(filename));
+               ofn.lpstrDefExt = _16("BMP");
 
                if (GetSaveFileName(&ofn))
                   SaveBitmap(filename, width, height, vdp2texture);
@@ -1116,7 +1154,7 @@ LRESULT CALLBACK VDP2ViewerDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
          {
             SetBkColor(hdc, RGB(0,0,0));
             SetTextColor(hdc, RGB(255,255,255));
-            TextOut(hdc, 0, 0, "Not Available", 13);
+            TextOut(hdc, 0, 0, _16("Not Available"), 13);
          }
          else
          {
@@ -1183,7 +1221,7 @@ LRESULT CALLBACK VDP2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
          if (isscrenabled)
          {
             SendMessage(GetDlgItem(hDlg, IDC_NBG0ENABCB), BM_SETCHECK, BST_CHECKED, 0);
-            SetDlgItemText(hDlg, IDC_NBG0ET, tempstr);
+            SetDlgItemText(hDlg, IDC_NBG0ET, _16(tempstr));
          }
          else
             SendMessage(GetDlgItem(hDlg, IDC_NBG0ENABCB), BM_SETCHECK, BST_UNCHECKED, 0);
@@ -1195,7 +1233,7 @@ LRESULT CALLBACK VDP2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
          {
             // enabled
             SendMessage(GetDlgItem(hDlg, IDC_NBG1ENABCB), BM_SETCHECK, BST_CHECKED, 0);
-            SetDlgItemText(hDlg, IDC_NBG1ET, tempstr);
+            SetDlgItemText(hDlg, IDC_NBG1ET, _16(tempstr));
          }
          else
             // disabled
@@ -1208,7 +1246,7 @@ LRESULT CALLBACK VDP2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
          {
             // enabled
             SendMessage(GetDlgItem(hDlg, IDC_NBG2ENABCB), BM_SETCHECK, BST_CHECKED, 0);
-            SetDlgItemText(hDlg, IDC_NBG2ET, tempstr);
+            SetDlgItemText(hDlg, IDC_NBG2ET, _16(tempstr));
          }
          else
             // disabled
@@ -1221,7 +1259,7 @@ LRESULT CALLBACK VDP2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
          {
             // enabled
             SendMessage(GetDlgItem(hDlg, IDC_NBG3ENABCB), BM_SETCHECK, BST_CHECKED, 0);
-            SetDlgItemText(hDlg, IDC_NBG3ET, tempstr);
+            SetDlgItemText(hDlg, IDC_NBG3ET, _16(tempstr));
          }
          else
             // disabled
@@ -1234,7 +1272,7 @@ LRESULT CALLBACK VDP2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
          {
             // enabled
             SendMessage(GetDlgItem(hDlg, IDC_RBG0ENABCB), BM_SETCHECK, BST_CHECKED, 0);
-            SetDlgItemText(hDlg, IDC_RBG0ET, tempstr);
+            SetDlgItemText(hDlg, IDC_RBG0ET, _16(tempstr));
          }
          else
             // disabled
@@ -1246,7 +1284,7 @@ LRESULT CALLBACK VDP2DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
          {
             // enabled
             SendMessage(GetDlgItem(hDlg, IDC_DISPENABCB), BM_SETCHECK, BST_CHECKED, 0);
-            SetDlgItemText(hDlg, IDC_VDP2GENET, tempstr);
+            SetDlgItemText(hDlg, IDC_VDP2GENET, _16(tempstr));
          }
          else
             // disabled
@@ -1324,7 +1362,7 @@ void M68KUpdateRegList(HWND hDlg, m68kregs_struct *regs)
 void M68KBreakpointHandler (u32 addr)
 {
    ScspMuteAudio();
-   MessageBox (YabWin, "Breakpoint Reached", "Notice",  MB_OK | MB_ICONINFORMATION);
+   MessageBox (YabWin, _16("Breakpoint Reached"), _16("Notice"),  MB_OK | MB_ICONINFORMATION);
    DialogBox(y_hInstance, MAKEINTRESOURCE(IDD_M68KDEBUG), YabWin, (DLGPROC)M68KDebugDlgProc);
    ScspUnMuteAudio();
 }
@@ -1406,11 +1444,13 @@ LRESULT CALLBACK M68KDebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             }
             case IDC_ADDCODEBP:
             {
+               WCHAR tempwstr[MAX_PATH];
                // add a code breakpoint
                char bptext[10];
                u32 addr=0;
                memset(bptext, 0, 10);
-               GetDlgItemText(hDlg, IDC_CODEBPET, bptext, 10);
+               GetDlgItemText(hDlg, IDC_CODEBPET, tempwstr, 10);
+               WideCharToMultiByte(CP_ACP, 0, tempwstr, -1, bptext, 10, NULL, NULL);
 
                if (bptext[0] != 0)
                {
@@ -1649,7 +1689,7 @@ void SCUDSPUpdateCodeList(HWND hDlg, u8 addr)
 void SCUDSPBreakpointHandler (u32 addr)
 {
    ScspMuteAudio();
-   MessageBox (YabWin, "Breakpoint Reached", "Notice",  MB_OK | MB_ICONINFORMATION);
+   MessageBox (YabWin, _16("Breakpoint Reached"), _16("Notice"),  MB_OK | MB_ICONINFORMATION);
    DialogBox(y_hInstance, MAKEINTRESOURCE(IDD_SCUDSPDEBUG), YabWin, (DLGPROC)SCUDSPDebugDlgProc);
    ScspUnMuteAudio();
 }
@@ -1724,11 +1764,13 @@ LRESULT CALLBACK SCUDSPDebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             }
             case IDC_ADDCODEBP:
             {
+               WCHAR tempwstr[MAX_PATH];
                // add a code breakpoint
                char bptext[10];
                u32 addr=0;
                memset(bptext, 0, 4);
-               GetDlgItemText(hDlg, IDC_CODEBPET, bptext, 4);
+               GetDlgItemText(hDlg, IDC_CODEBPET, tempwstr, 4);
+               WideCharToMultiByte(CP_ACP, 0, tempwstr, -1, bptext, MAX_PATH, NULL, NULL);
 
                if (bptext[0] != 0)
                {
@@ -1823,11 +1865,11 @@ LRESULT CALLBACK SCSPDebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
 
          // Setup Slot Info
          ScspSlotDebugStats(0, tempstr);
-         SetDlgItemText(hDlg, IDC_SCSPSLOTET, tempstr);
+         SetDlgItemText(hDlg, IDC_SCSPSLOTET, _16(tempstr));
 
          // Setup Common Control registers
          ScspCommonControlRegisterDebugStats(tempstr);
-         SetDlgItemText(hDlg, IDC_SCSPCOMMONREGET, tempstr);
+         SetDlgItemText(hDlg, IDC_SCSPCOMMONREGET, _16(tempstr));
 
          return TRUE;
       }
@@ -1847,7 +1889,7 @@ LRESULT CALLBACK SCSPDebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                      cursel = (u8)SendDlgItemMessage(hDlg, IDC_SCSPSLOTCB, CB_GETCURSEL, 0, 0);
 
                      ScspSlotDebugStats(cursel, tempstr);
-                     SetDlgItemText(hDlg, IDC_SCSPSLOTET, tempstr);
+                     SetDlgItemText(hDlg, IDC_SCSPSLOTET, _16(tempstr));
 
                      return TRUE;
                   }
@@ -1860,15 +1902,21 @@ LRESULT CALLBACK SCSPDebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             {
                OPENFILENAME ofn;
                u8 cursel=0;
+               WCHAR filter[1024];
+               WCHAR * filterpos = filter;
 
                cursel = (u8)SendDlgItemMessage(hDlg, IDC_SCSPSLOTCB, CB_GETCURSEL, 0, 0);
                sprintf(tempstr, "channel%02d.wav", cursel);
 
+               filterpos += 1 + swprintf(filterpos, _16("WAV Files"));
+               filterpos += 1 + swprintf(filterpos, _16("*.WAV"));
+               filterpos += 1 + swprintf(filterpos, _16("All Files"));
+               filterpos += 1 + swprintf(filterpos, _16("*.*"));
+               *filterpos = '\0';
+
                // setup ofn structure
-               SetupOFN(&ofn, OFN_DEFAULTSAVE, hDlg,
-                        "WAV Files\0*.WAV\0All Files\0*.*\0",
-                        tempstr, sizeof(tempstr));
-               ofn.lpstrDefExt = "WAV";
+               SetupOFN(&ofn, OFN_DEFAULTSAVE, hDlg, filter, tempstr, sizeof(tempstr));
+               ofn.lpstrDefExt = _16("WAV");
 
                if (GetSaveFileName(&ofn))
                   ScspSlotDebugAudioSaveWav(cursel, tempstr);
@@ -1879,15 +1927,21 @@ LRESULT CALLBACK SCSPDebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             {
                OPENFILENAME ofn;
                u8 cursel=0;
+               WCHAR filter[1024];
+               WCHAR * filterpos = filter;
 
                cursel = (u8)SendDlgItemMessage(hDlg, IDC_SCSPSLOTCB, CB_GETCURSEL, 0, 0);
                sprintf(tempstr, "channel%02dregs.bin", cursel);
 
+               filterpos += 1 + swprintf(filterpos, _16("Binary Files"));
+               filterpos += 1 + swprintf(filterpos, _16("*.BIN"));
+               filterpos += 1 + swprintf(filterpos, _16("All Files"));
+               filterpos += 1 + swprintf(filterpos, _16("*.*"));
+               *filterpos = '\0';
+
                // setup ofn structure
-               SetupOFN(&ofn, OFN_DEFAULTSAVE, hDlg,
-                        "Binary Files\0*.BIN\0All Files\0*.*\0",
-                        tempstr, sizeof(tempstr));
-               ofn.lpstrDefExt = "BIN";
+               SetupOFN(&ofn, OFN_DEFAULTSAVE, hDlg, filter, tempstr, sizeof(tempstr));
+               ofn.lpstrDefExt = _16("BIN");
 
                if (GetSaveFileName(&ofn))
                   ScspSlotDebugSaveRegisters(cursel, tempstr);
@@ -1970,7 +2024,7 @@ LRESULT CALLBACK SMPCDebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
          else
             sprintf(buf, "Last executed command: %02X\r\n", SmpcRegs->COMREG);
 
-         SetDlgItemText(hDlg, IDC_SMPCSTATUSET, tempstr);
+         SetDlgItemText(hDlg, IDC_SMPCSTATUSET, _16(tempstr));
          return TRUE;
       }
       case WM_COMMAND:
@@ -2014,7 +2068,7 @@ LRESULT CALLBACK GotoAddressDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
       {
          addr = (u32 *)lParam;
          sprintf(tempstr, "%08lX", addr[0]);
-         SetDlgItemText(hDlg, IDC_OFFSETET, tempstr);
+         SetDlgItemText(hDlg, IDC_OFFSETET, _16(tempstr));
 
          SendDlgItemMessage(hDlg, IDC_SPECIFYADDRRB, BM_SETCHECK, BST_CHECKED, 0);
          SendDlgItemMessage(hDlg, IDC_PRESETADDRRB, BM_SETCHECK, BST_UNCHECKED, 0);
@@ -2039,8 +2093,9 @@ LRESULT CALLBACK GotoAddressDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             {
                if (SendDlgItemMessage(hDlg, IDC_SPECIFYADDRRB, BM_GETCHECK, 0, 0) == BST_CHECKED)
                {
-                  GetDlgItemText(hDlg, IDC_OFFSETET, tempstr, 9);
-                  sscanf(tempstr, "%08lX", addr);
+                  WCHAR tempwstr[MAX_PATH];
+                  GetDlgItemText(hDlg, IDC_OFFSETET, tempwstr, 9);
+                  wscanf(tempwstr, "%08lX", addr);
                }
                else
                   addr[0] = hexaddrlist[SendDlgItemMessage(hDlg, IDC_PRESETLISTCB, CB_GETCURSEL, 0, 0)].start;
@@ -2140,14 +2195,14 @@ LRESULT CALLBACK SearchMemoryDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             default: break;
          }
 
-         SetDlgItemText(hDlg, IDC_SEARCHMEMET, searcharg->searchstr);
+         SetDlgItemText(hDlg, IDC_SEARCHMEMET, _16(searcharg->searchstr));
          SendDlgItemMessage(hDlg, IDC_SEARCHTYPECB, CB_SETCURSEL, cursel, 0);
 
          sprintf(tempstr, "%08X", (int)searcharg->startaddr);
-         SetDlgItemText(hDlg, IDC_SEARCHSTARTADDRET, tempstr);
+         SetDlgItemText(hDlg, IDC_SEARCHSTARTADDRET, _16(tempstr));
 
          sprintf(tempstr, "%08X", (int)searcharg->endaddr);
-         SetDlgItemText(hDlg, IDC_SEARCHENDADDRET, tempstr);
+         SetDlgItemText(hDlg, IDC_SEARCHENDADDRET, _16(tempstr));
 
          return TRUE;
       }
@@ -2157,6 +2212,7 @@ LRESULT CALLBACK SearchMemoryDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
          {
             case IDOK:
             {
+               WCHAR tempwstr[1024];
                int cursel=(int)SendDlgItemMessage(hDlg, IDC_SEARCHTYPECB, CB_GETCURSEL, 0, 0);
 
                switch(cursel)
@@ -2193,7 +2249,8 @@ LRESULT CALLBACK SearchMemoryDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                      break;
                }
 
-               GetDlgItemText(hDlg, IDC_SEARCHMEMET, searcharg->searchstr, 1024);
+               GetDlgItemText(hDlg, IDC_SEARCHMEMET, tempwstr, 1024);
+               WideCharToMultiByte(CP_ACP, 0, tempwstr, -1, searcharg->searchstr, 1024, NULL, NULL);
                EndDialog(hDlg, TRUE);
                return TRUE;
             }
@@ -2378,9 +2435,9 @@ LRESULT CALLBACK MemoryEditorDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                         // ask the user if they want to search from the begining.
 
                         if (SendDlgItemMessage(hDlg, IDC_HEXEDIT, HEX_GETCURADDRESS, 0, 0) != 0)
-                           MessageBox (hDlg, "Finished searching up to end of memory, continue from the beginning?", "Wrap search?", MB_OKCANCEL);
+                           MessageBox (hDlg, _16("Finished searching up to end of memory, continue from the beginning?"), _16("Wrap search?"), MB_OKCANCEL);
                         else
-                           MessageBox (hDlg, "No matches found", "Finished search", MB_OK);
+                           MessageBox (hDlg, _16("No matches found"), _16("Finished search"), MB_OK);
                      }
                   }
                }
@@ -2418,17 +2475,23 @@ LRESULT CALLBACK LogDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
          switch (LOWORD(wParam))
          {
             case IDC_CLEARBT:
-               SetDlgItemText(hDlg, IDC_LOGET, "");
+               SetDlgItemText(hDlg, IDC_LOGET, _16(""));
                return TRUE;
             case IDC_SAVELOGBT:
             {
                OPENFILENAME ofn;
+               WCHAR filter[1024];
+               WCHAR * filterpos = filter;
+
+               filterpos += 1 + swprintf(filterpos, _16("Text Files"));
+               filterpos += 1 + swprintf(filterpos, _16("*.txt"));
+               filterpos += 1 + swprintf(filterpos, _16("All Files"));
+               filterpos += 1 + swprintf(filterpos, _16("*.*"));
+               *filterpos = '\0';
 
                // setup ofn structure
-               SetupOFN(&ofn, OFN_DEFAULTSAVE, hDlg,
-                        "Text Files\0*.txt\0All Files\0*.*\0",
-                        logfilename, sizeof(logfilename));
-               ofn.lpstrDefExt = "TXT";
+               SetupOFN(&ofn, OFN_DEFAULTSAVE, hDlg, filter, logfilename, sizeof(logfilename));
+               ofn.lpstrDefExt = _16("TXT");
 
                if (GetSaveFileName(&ofn))
                {
@@ -2438,7 +2501,7 @@ LRESULT CALLBACK LogDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
 
                   if (fp == NULL)
                   {
-                     MessageBox (hDlg, "Unable to open file for writing", "Error",  MB_OK | MB_ICONINFORMATION);
+                     MessageBox (hDlg, _16("Unable to open file for writing"), _16("Error"),  MB_OK | MB_ICONINFORMATION);
                      return FALSE;
                   }
 

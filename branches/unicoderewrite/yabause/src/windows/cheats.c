@@ -721,7 +721,7 @@ LRESULT CALLBACK CheatSearchDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
          // cheat
          if (cheatresults == NULL)
          {
-            SetDlgItemText(hDlg, IDC_CTSEARCHRESTARTBT, (LPCTSTR)"Start");
+            SetDlgItemText(hDlg, IDC_CTSEARCHRESTARTBT, _16("Start"));
             EnableWindow(GetDlgItem(hDlg, IDC_CTSEARCHBT), FALSE);
             EnableWindow(GetDlgItem(hDlg, IDC_CTADDCHEATBT), FALSE);
          }
@@ -752,7 +752,7 @@ LRESULT CALLBACK CheatSearchDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             case IDC_CTSEARCHRESTARTBT:
                if (cheatresults == NULL)
                {
-                  SetDlgItemText(hDlg, IDC_CTSEARCHRESTARTBT, (LPCTSTR)"Restart");
+                  SetDlgItemText(hDlg, IDC_CTSEARCHRESTARTBT, _16("Restart"));
                   EnableWindow(GetDlgItem(hDlg, IDC_CTSEARCHBT), TRUE);
                }
                else

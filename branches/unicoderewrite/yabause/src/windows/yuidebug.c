@@ -914,7 +914,7 @@ LRESULT CALLBACK VDP1DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             if ((string = Vdp1DebugGetCommandNumberName(i)) == NULL)
                break;
 
-            SendMessage(GetDlgItem(hDlg, IDC_VDP1CMDLB), LB_ADDSTRING, 0, (LPARAM)string);
+            SendMessage(GetDlgItem(hDlg, IDC_VDP1CMDLB), LB_ADDSTRING, 0, (LPARAM) _16(string));
 
             i++;
          }
@@ -1845,7 +1845,7 @@ LRESULT CALLBACK SCSPDebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
          for (i = 0; i < 32; i++)
          {
             sprintf(tempstr, "%d", i);
-            SendDlgItemMessage(hDlg, IDC_SCSPSLOTCB, CB_ADDSTRING, 0, (LPARAM)tempstr);
+            SendDlgItemMessage(hDlg, IDC_SCSPSLOTCB, CB_ADDSTRING, 0, (LPARAM) _16(tempstr));
          }
 
          SendDlgItemMessage(hDlg, IDC_SCSPSLOTCB, CB_SETCURSEL, 0, 0);

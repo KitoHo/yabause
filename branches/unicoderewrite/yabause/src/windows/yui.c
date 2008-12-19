@@ -1331,16 +1331,13 @@ LRESULT CALLBACK WindowProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
             case IDM_SAVESTATEAS:
             {
                WCHAR filter[1024];
-               WCHAR * filterpos = filter;
                OPENFILENAME ofn;
 
                YuiTempPause();
 
-               filterpos += 1 + swprintf(filterpos, _16("Yabause Save State files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.YSS"));
-               filterpos += 1 + swprintf(filterpos, _16("All files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.*"));
-               *filterpos = '\0';
+               CreateFilter(filter, 1024,
+                  "Yabause Save State files", "*.YSS",
+                  "All files (*.*)", "*.*", NULL);
 
                SetupOFN(&ofn, OFN_DEFAULTSAVE, hWnd, filter,
                         yssfilename, sizeof(yssfilename));
@@ -1357,16 +1354,13 @@ LRESULT CALLBACK WindowProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
             case IDM_LOADSTATEAS:
             {
                WCHAR filter[1024];
-               WCHAR * filterpos = filter;
                OPENFILENAME ofn;
 
                YuiTempPause();
 
-               filterpos += 1 + swprintf(filterpos, _16("Yabause Save State files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.YSS"));
-               filterpos += 1 + swprintf(filterpos, _16("All files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.*"));
-               *filterpos = '\0';
+               CreateFilter(filter, 1024,
+                  "Yabause Save State files", "*.YSS",
+                  "All files (*.*)", "*.*", NULL);
 
                SetupOFN(&ofn, OFN_DEFAULTLOAD, hWnd, filter,
                         yssfilename, sizeof(yssfilename));
@@ -1411,16 +1405,13 @@ LRESULT CALLBACK WindowProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
             case IDM_CAPTURESCREEN:
             {
                WCHAR filter[1024];
-               WCHAR * filterpos = filter;
                OPENFILENAME ofn;
                
                YuiTempPause();
 
-               filterpos += 1 + swprintf(filterpos, _16("Bitmap Files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.BMP"));
-               filterpos += 1 + swprintf(filterpos, _16("All files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.*"));
-               *filterpos = '\0';
+               CreateFilter(filter, 1024,
+                  "Bitmap Files", "*.BMP",
+                  "All files (*.*)", "*.*", NULL);
 
                SetupOFN(&ofn, OFN_DEFAULTSAVE, hWnd, filter,
                        bmpfilename, sizeof(bmpfilename));

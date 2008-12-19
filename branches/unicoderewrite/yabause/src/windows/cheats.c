@@ -411,14 +411,11 @@ LRESULT CALLBACK CheatListDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             case IDC_SAVETOFILE:
             {
                WCHAR filter[1024];
-               WCHAR * filterpos = filter;
                OPENFILENAME ofn;
 
-               filterpos += 1 + swprintf(filterpos, _16("Yabause Cheat Files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.YCT"));
-               filterpos += 1 + swprintf(filterpos, _16("All Files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.*"));
-               *filterpos = '\0';
+               CreateFilter(filter, 1024,
+                  "Yabause Cheat Files", "*.YCT",
+                  "All files (*.*)", "*.*", NULL);
 
                SetupOFN(&ofn, OFN_DEFAULTSAVE, hDlg, filter,
                         cheatfilename, sizeof(cheatfilename));
@@ -434,14 +431,11 @@ LRESULT CALLBACK CheatListDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             case IDC_ADDFROMFILE:
             {
                WCHAR filter[1024];
-               WCHAR * filterpos = filter;
                OPENFILENAME ofn;
 
-               filterpos += 1 + swprintf(filterpos, _16("Yabause Cheat Files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.YCT"));
-               filterpos += 1 + swprintf(filterpos, _16("All Files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.*"));
-               *filterpos = '\0';
+               CreateFilter(filter, 1024,
+                  "Yabause Cheat Files", "*.YCT",
+                  "All files (*.*)", "*.*", NULL);
 
                // setup ofn structure
                SetupOFN(&ofn, OFN_DEFAULTLOAD, hDlg, filter,

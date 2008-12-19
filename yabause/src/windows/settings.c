@@ -610,7 +610,6 @@ LRESULT CALLBACK BasicSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             {
                WCHAR tempwstr[MAX_PATH];
                WCHAR filter[1024];
-               WCHAR * filterpos = filter;
                OPENFILENAME ofn;
                char tempstr[MAX_PATH];
 
@@ -618,15 +617,13 @@ LRESULT CALLBACK BasicSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                ZeroMemory(&ofn, sizeof(OPENFILENAME));
                ofn.lStructSize = sizeof(OPENFILENAME);
                ofn.hwndOwner = hDlg;
-               filterpos += 1 + swprintf(filterpos, _16("Supported image files (*.cue, *.iso)"));
-               filterpos += 1 + swprintf(filterpos, _16("*.cue;*.iso"));
-               filterpos += 1 + swprintf(filterpos, _16("Cue files (*.cue)"));
-               filterpos += 1 + swprintf(filterpos, _16("*.cue"));
-               filterpos += 1 + swprintf(filterpos, _16("Iso files (*.iso)"));
-               filterpos += 1 + swprintf(filterpos, _16("*.iso"));
-               filterpos += 1 + swprintf(filterpos, _16("All files (*.*)"));
-               filterpos += 1 + swprintf(filterpos, _16("*.*"));
-               *filterpos = '\0';
+
+               CreateFilter(filter, 1024,
+                  "Supported image files (*.cue, *.iso)", "*.cue;*.iso",
+                  "Cue files (*.cue)", "*.cue",
+                  "Iso files (*.iso)", "*.iso",
+                  "All files (*.*)", "*.*", NULL);
+
                ofn.lpstrFilter = filter;
                GetDlgItemText(hDlg, IDC_IMAGEEDIT, tempwstr, MAX_PATH);
                ofn.lpstrFile = tempwstr;
@@ -645,17 +642,16 @@ LRESULT CALLBACK BasicSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             {
                WCHAR tempwstr[MAX_PATH];
                WCHAR filter[1024];
-               WCHAR * filterpos = filter;
                OPENFILENAME ofn;
                // setup ofn structure
                ZeroMemory(&ofn, sizeof(OPENFILENAME));
                ofn.lStructSize = sizeof(OPENFILENAME);
                ofn.hwndOwner = hDlg;
-               filterpos += 1 + swprintf(filterpos, _16("Binaries (*.bin)"));
-               filterpos += 1 + swprintf(filterpos, _16("*.bin"));
-               filterpos += 1 + swprintf(filterpos, _16("All Files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.*"));
-               *filterpos = '\0';
+
+               CreateFilter(filter, 1024,
+                  "Binaries (*.bin)", "*.bin",
+                  "All Files", "*.*", NULL);
+
                ofn.lpstrFilter = filter;
                GetDlgItemText(hDlg, IDC_BIOSEDIT, tempwstr, MAX_PATH);
                ofn.lpstrFile = tempwstr;
@@ -675,17 +671,16 @@ LRESULT CALLBACK BasicSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             {
                WCHAR tempwstr[MAX_PATH];
                WCHAR filter[1024];
-               WCHAR * filterpos = filter;
                OPENFILENAME ofn;
                // setup ofn structure
                ZeroMemory(&ofn, sizeof(OPENFILENAME));
                ofn.lStructSize = sizeof(OPENFILENAME);
                ofn.hwndOwner = hDlg;
-               filterpos += 1 + swprintf(filterpos, _16("Binaries (*.bin)"));
-               filterpos += 1 + swprintf(filterpos, _16("*.bin"));
-               filterpos += 1 + swprintf(filterpos, _16("All Files (*.*)"));
-               filterpos += 1 + swprintf(filterpos, _16("*.*"));
-               *filterpos = '\0';
+
+               CreateFilter(filter, 1024,
+                  "Binaries (*.bin)", "*.bin",
+                  "All Files", "*.*", NULL);
+
                ofn.lpstrFilter = filter;
                GetDlgItemText(hDlg, IDC_BACKUPRAMEDIT, tempwstr, MAX_PATH);
                ofn.lpstrFile = tempwstr;
@@ -704,17 +699,16 @@ LRESULT CALLBACK BasicSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             {
                WCHAR tempwstr[MAX_PATH];
                WCHAR filter[1024];
-               WCHAR * filterpos = filter;
                OPENFILENAME ofn;
                // setup ofn structure
                ZeroMemory(&ofn, sizeof(OPENFILENAME));
                ofn.lStructSize = sizeof(OPENFILENAME);
                ofn.hwndOwner = hDlg;
-               filterpos += 1 + swprintf(filterpos, _16("Binaries (*.bin)"));
-               filterpos += 1 + swprintf(filterpos, _16("*.bin"));
-               filterpos += 1 + swprintf(filterpos, _16("All Files (*.*)"));
-               filterpos += 1 + swprintf(filterpos, _16("*.*"));
-               *filterpos = '\0';
+
+               CreateFilter(filter, 1024,
+                  "Binaries (*.bin)", "*.bin",
+                  "All Files", "*.*", NULL);
+
                ofn.lpstrFilter = filter;
                GetDlgItemText(hDlg, IDC_MPEGROMEDIT, tempwstr, MAX_PATH);
                ofn.lpstrFile = tempwstr;
@@ -734,7 +728,6 @@ LRESULT CALLBACK BasicSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             {
                WCHAR tempwstr[MAX_PATH];
                WCHAR filter[1024];
-               WCHAR * filterpos = filter;
                OPENFILENAME ofn;
                u8 cursel=0;
 
@@ -742,11 +735,11 @@ LRESULT CALLBACK BasicSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                ZeroMemory(&ofn, sizeof(OPENFILENAME));
                ofn.lStructSize = sizeof(OPENFILENAME);
                ofn.hwndOwner = hDlg;
-               filterpos += 1 + swprintf(filterpos, _16("Binaries (*.bin)"));
-               filterpos += 1 + swprintf(filterpos, _16("*.bin"));
-               filterpos += 1 + swprintf(filterpos, _16("All Files (*.*)"));
-               filterpos += 1 + swprintf(filterpos, _16("*.*"));
-               *filterpos = '\0';
+
+               CreateFilter(filter, 1024,
+                  "Binaries (*.bin)", "*.bin",
+                  "All Files", "*.*", NULL);
+
                ofn.lpstrFilter = filter;
                GetDlgItemText(hDlg, IDC_CARTEDIT, tempwstr, MAX_PATH);
                ofn.lpstrFile = tempwstr;
@@ -1889,18 +1882,17 @@ LRESULT CALLBACK LogSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             {
                WCHAR tempwstr[MAX_PATH];
                WCHAR filter[1024];
-               WCHAR * filterpos = filter;
                OPENFILENAME ofn;
 
                // setup ofn structure
                ZeroMemory(&ofn, sizeof(ofn));
                ofn.lStructSize = sizeof(ofn);
                ofn.hwndOwner = hDlg;
-               filterpos += 1 + swprintf(filterpos, _16("Text Files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.txt"));
-               filterpos += 1 + swprintf(filterpos, _16("All Files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.*"));
-               *filterpos = '\0';
+
+               CreateFilter(filter, 1024,
+                  "Text Files", "*.txt",
+                  "All Files", "*.*", NULL);
+
                ofn.lpstrFilter = filter;
                ofn.nFilterIndex = 1;
                GetDlgItemText(hDlg, IDC_IMAGEEDIT, tempwstr, MAX_PATH);
@@ -2221,6 +2213,33 @@ void DestroyHelpBalloons(helpballoon_struct *hb)
          hb[i].hWnd = NULL;
       }
    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void CreateFilter(WCHAR * filter, size_t maxlen, ...)
+{
+   va_list list;
+   const char * str;
+   WCHAR * filterpos = filter;
+   int wrote;
+
+   va_start(list, maxlen);
+
+   str = va_arg(list, const char *);
+   while(str != NULL) {
+#ifdef __MINGW32_VERSION
+      wrote = swprintf(filterpos, _16(str));
+#else
+      wrote = swprintf(filterpos, maxlen, _16(str));
+#endif
+      filterpos += 1 + wrote;
+      maxlen -= 1 + wrote;
+      str = va_arg(list, const char *);
+   }
+   *filterpos = '\0';
+
+   va_end(list);
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -218,13 +218,10 @@ LRESULT CALLBACK MemTransferDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                if (SendMessage(GetDlgItem(hDlg, IDC_DOWNLOADMEM), BM_GETCHECK, 0, 0) == BST_CHECKED)
                {
                   WCHAR filter[1024];
-                  WCHAR * filterpos = filter;
 
-                  filterpos += 1 + swprintf(filterpos, _16("All Files"));
-                  filterpos += 1 + swprintf(filterpos, _16("*.*"));
-                  filterpos += 1 + swprintf(filterpos, _16("Binary Files"));
-                  filterpos += 1 + swprintf(filterpos, _16("*.BIN"));
-                  *filterpos = '\0';
+                  CreateFilter(filter, 1024,
+                     "All files (*.*)", "*.*",
+                     "Binary Files", "*.BIN", NULL);
 
                   SetupOFN(&ofn, OFN_DEFAULTSAVE, hDlg, filter,
                            mtrnsfilename, sizeof(mtrnsfilename));
@@ -235,15 +232,11 @@ LRESULT CALLBACK MemTransferDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                else
                {
                   WCHAR filter[1024];
-                  WCHAR * filterpos = filter;
 
-                  filterpos += 1 + swprintf(filterpos, _16("All Files"));
-                  filterpos += 1 + swprintf(filterpos, _16("*.*"));
-                  filterpos += 1 + swprintf(filterpos, _16("Binary Files"));
-                  filterpos += 1 + swprintf(filterpos, _16("*.BIN"));
-                  filterpos += 1 + swprintf(filterpos, _16("COFF Files"));
-                  filterpos += 1 + swprintf(filterpos, _16("*.COF;*.COFF"));
-                  *filterpos = '\0';
+                  CreateFilter(filter, 1024,
+                     "All files (*.*)", "*.*",
+                     "Binary Files", "*.BIN",
+                     "COFF Files", "*.COF;*.COFF", NULL);
 
                   // setup ofn structure
                   SetupOFN(&ofn, OFN_DEFAULTLOAD, hDlg, filter,
@@ -966,13 +959,10 @@ LRESULT CALLBACK VDP1DebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             {
                OPENFILENAME ofn;
                WCHAR filter[1024];
-               WCHAR * filterpos = filter;
 
-               filterpos += 1 + swprintf(filterpos, _16("Bitmap Files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.BMP"));
-               filterpos += 1 + swprintf(filterpos, _16("All Files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.*"));
-               *filterpos = '\0';
+               CreateFilter(filter, 1024,
+                  "Bitmap Files", "*.BMP",
+                  "All files (*.*)", "*.*", NULL);
 
                SetupOFN(&ofn, OFN_DEFAULTSAVE, hDlg, filter, filename, sizeof(filename));
                ofn.lpstrDefExt = _16("BMP");
@@ -1114,13 +1104,10 @@ LRESULT CALLBACK VDP2ViewerDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             {
                OPENFILENAME ofn;
                WCHAR filter[1024];
-               WCHAR * filterpos = filter;
 
-               filterpos += 1 + swprintf(filterpos, _16("Bitmap Files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.BMP"));
-               filterpos += 1 + swprintf(filterpos, _16("All Files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.*"));
-               *filterpos = '\0';
+               CreateFilter(filter, 1024,
+                  "Bitmap Files", "*.BMP",
+                  "All files (*.*)", "*.*", NULL);
 
                SetupOFN(&ofn, OFN_DEFAULTSAVE, hDlg, filter, filename, sizeof(filename));
                ofn.lpstrDefExt = _16("BMP");
@@ -1903,16 +1890,13 @@ LRESULT CALLBACK SCSPDebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                OPENFILENAME ofn;
                u8 cursel=0;
                WCHAR filter[1024];
-               WCHAR * filterpos = filter;
 
                cursel = (u8)SendDlgItemMessage(hDlg, IDC_SCSPSLOTCB, CB_GETCURSEL, 0, 0);
                sprintf(tempstr, "channel%02d.wav", cursel);
 
-               filterpos += 1 + swprintf(filterpos, _16("WAV Files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.WAV"));
-               filterpos += 1 + swprintf(filterpos, _16("All Files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.*"));
-               *filterpos = '\0';
+               CreateFilter(filter, 1024,
+                  "WAV Files", "*.WAV",
+                  "All files (*.*)", "*.*", NULL);
 
                // setup ofn structure
                SetupOFN(&ofn, OFN_DEFAULTSAVE, hDlg, filter, tempstr, sizeof(tempstr));
@@ -1928,16 +1912,13 @@ LRESULT CALLBACK SCSPDebugDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                OPENFILENAME ofn;
                u8 cursel=0;
                WCHAR filter[1024];
-               WCHAR * filterpos = filter;
 
                cursel = (u8)SendDlgItemMessage(hDlg, IDC_SCSPSLOTCB, CB_GETCURSEL, 0, 0);
                sprintf(tempstr, "channel%02dregs.bin", cursel);
 
-               filterpos += 1 + swprintf(filterpos, _16("Binary Files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.BIN"));
-               filterpos += 1 + swprintf(filterpos, _16("All Files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.*"));
-               *filterpos = '\0';
+               CreateFilter(filter, 1024,
+                  "Binary Files", "*.BIN",
+                  "All files (*.*)", "*.*", NULL);
 
                // setup ofn structure
                SetupOFN(&ofn, OFN_DEFAULTSAVE, hDlg, filter, tempstr, sizeof(tempstr));
@@ -2481,13 +2462,10 @@ LRESULT CALLBACK LogDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             {
                OPENFILENAME ofn;
                WCHAR filter[1024];
-               WCHAR * filterpos = filter;
 
-               filterpos += 1 + swprintf(filterpos, _16("Text Files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.txt"));
-               filterpos += 1 + swprintf(filterpos, _16("All Files"));
-               filterpos += 1 + swprintf(filterpos, _16("*.*"));
-               *filterpos = '\0';
+               CreateFilter(filter, 1024,
+                  "Text Files", "*.txt",
+                  "All files (*.*)", "*.*", NULL);
 
                // setup ofn structure
                SetupOFN(&ofn, OFN_DEFAULTSAVE, hDlg, filter, logfilename, sizeof(logfilename));

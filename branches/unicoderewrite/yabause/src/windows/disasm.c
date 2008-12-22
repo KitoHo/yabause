@@ -94,7 +94,7 @@ LRESULT DisasmCtl_OnPaint(DisasmCtl_struct *cc, WPARAM wParam, LPARAM lParam)
          SetTextColor(hdc, cc->text_color);
          SetBkColor(hdc, cc->bg_color);
       }
-      ExtTextOutA(hdc, x, y, ETO_OPAQUE | ETO_CLIPPED, &clip, text, lstrlen(text), 0);
+      ExtTextOutA(hdc, x, y, ETO_OPAQUE | ETO_CLIPPED, &clip, text, strlen(text), 0);
       y += size.cy;
    }
 

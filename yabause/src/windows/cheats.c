@@ -23,6 +23,7 @@
 #include "cheats.h"
 #include "../cheat.h"
 #include "resource.h"
+#include "settings.h"
 #include "../memory.h"
 #include "yuidebug.h"
 
@@ -147,7 +148,6 @@ LRESULT CALLBACK AddARCodeDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                if (HIWORD(wParam) == EN_CHANGE)
                {
                   WCHAR wtext[14];
-                  char text[14];
                   LRESULT ret;
 
                   if ((ret = GetDlgItemText(hDlg, IDC_CODE, wtext, 14)) <= 0)

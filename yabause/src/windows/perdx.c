@@ -744,12 +744,11 @@ int PERDXInitControlConfig(HWND hWnd, u8 padnum, int *controlmap, const char *in
    char string1[20];
    GUID guid;
    u32 i;
-   int idlist[] = { IDC_UPTEXT, IDC_DOWNTEXT, IDC_LEFTTEXT, IDC_RIGHTTEXT,
+   int idlist[] = { IDC_UPTEXT, IDC_RIGHTTEXT, IDC_DOWNTEXT, IDC_LEFTTEXT,
+                    IDC_RTEXT, IDC_LTEXT, IDC_STARTTEXT,
                     IDC_ATEXT, IDC_BTEXT, IDC_CTEXT,
-                    IDC_XTEXT, IDC_YTEXT, IDC_ZTEXT,
-                    IDC_LTEXT, IDC_RTEXT, IDC_STARTTEXT
+                    IDC_XTEXT, IDC_YTEXT, IDC_ZTEXT
                   };
-
 
    sprintf(string1, "Peripheral%d", padnum+1);
 
@@ -832,6 +831,7 @@ int PERDXInitControlConfig(HWND hWnd, u8 padnum, int *controlmap, const char *in
          for (i = 0; i < 13; i++)
          {
             buttonid = GetPrivateProfileIntA(string1, pad_names[i], 0, inifilename);
+            printf("%2d: %d\n", i, buttonid);
             controlmap[i] = buttonid;
             ConvertKBIDToName(buttonid, tempstr);
             SetDlgItemText(hWnd, idlist[i], _16(tempstr));

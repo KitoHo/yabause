@@ -2506,7 +2506,7 @@ void UpdateLogCallback (char *string)
    int len = GetWindowTextLength(GetDlgItem(LogWin, IDC_LOGET));
    sprintf(logbuffer, "%s\r\n", string);
    SendDlgItemMessage(LogWin, IDC_LOGET, EM_SETSEL, len, len);
-   SendDlgItemMessage(LogWin, IDC_LOGET, EM_REPLACESEL, FALSE, (LPARAM)logbuffer);  
+   SendDlgItemMessage(LogWin, IDC_LOGET, EM_REPLACESEL, FALSE, (LPARAM)_16(logbuffer));  
 }
 
 //////////////////////////////////////////////////////////////////////////////

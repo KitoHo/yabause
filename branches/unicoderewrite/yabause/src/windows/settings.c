@@ -611,7 +611,6 @@ LRESULT CALLBACK BasicSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                WCHAR tempwstr[MAX_PATH];
                WCHAR filter[1024];
                OPENFILENAME ofn;
-               char tempstr[MAX_PATH];
 
                // setup ofn structure
                ZeroMemory(&ofn, sizeof(OPENFILENAME));
@@ -1973,7 +1972,7 @@ void RefreshSaveList(HWND hDlg)
    SendDlgItemMessage(hDlg, IDC_BUPSAVELB, LB_RESETCONTENT, 0, 0);
 
    for (i = 0; i < numsaves; i++)
-      SendDlgItemMessage(hDlg, IDC_BUPSAVELB, LB_ADDSTRING, 0, (LPARAM)saves[i].filename);
+      SendDlgItemMessageA(hDlg, IDC_BUPSAVELB, LB_ADDSTRING, 0, (LPARAM)saves[i].filename);
 
    BupGetStats(currentbupdevice, &freespace, &maxspace);
    sprintf(tempstr, "%d/%d blocks free", (int)freespace, (int)maxspace);

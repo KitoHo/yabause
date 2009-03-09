@@ -442,7 +442,11 @@ int YabauseExec(void) {
          }
       }
 
-      yabsys.CycleCountII += yabsys.DecilineStop + MSH2->cycles;
+#ifdef PSP_TIMING_TWEAKS
+      yabsys.CycleCountII += sh2cycles;
+#else
+      yabsys.CycleCountII += sh2cycles + MSH2->cycles;
+#endif
 
       {
          u32 usec = 0;

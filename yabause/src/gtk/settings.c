@@ -29,6 +29,9 @@
 YuiRangeItem sh2interpreters[] = {
   { "0", "Fast Interpreter" },
   { "1", "Debug Interpreter" },
+#ifdef TEST_PSP_SH2
+  { "1486", "PSP Interpreter (for debugging)" },
+#endif
   { 0, 0 }
 };
 

@@ -42,6 +42,7 @@
 #include "../m68kcore.h"
 #include "../m68kc68k.h"
 #include "pergtk.h"
+#include "../psp/psp-sh2.h"
 
 #include "settings.h"
 
@@ -65,6 +66,9 @@ NULL
 SH2Interface_struct *SH2CoreList[] = {
 &SH2Interpreter,
 &SH2DebugInterpreter,
+#ifdef TEST_PSP_SH2
+&SH2PSP,
+#endif
 NULL
 };
 

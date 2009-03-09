@@ -39,7 +39,8 @@ SH2Interface_struct SH2Interpreter = {
    SH2InterpreterInit,
    SH2InterpreterDeInit,
    SH2InterpreterReset,
-   SH2InterpreterExec
+   SH2InterpreterExec,
+   NULL  // SH2WriteNotify not used
 };
 
 SH2Interface_struct SH2DebugInterpreter = {
@@ -48,7 +49,8 @@ SH2Interface_struct SH2DebugInterpreter = {
    SH2DebugInterpreterInit,
    SH2InterpreterDeInit,
    SH2InterpreterReset,
-   SH2DebugInterpreterExec
+   SH2DebugInterpreterExec,
+   NULL  // SH2WriteNotify not used
 };
 
 fetchfunc fetchlist[0x100];

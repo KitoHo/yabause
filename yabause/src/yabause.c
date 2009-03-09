@@ -354,20 +354,54 @@ int YabauseExec(void) {
 
    while (!oneframeexec)
    {
+#ifdef NO_DECILINE
+      const unsigned int sh2cycles = yabsys.DecilineStop * 10;
+#else
+      const unsigned int sh2cycles = yabsys.DecilineStop;
+#endif
+
       PROFILE_START("Total Emulation");
+
+#ifdef NO_DECILINE
+
+      PROFILE_START("MSH2");
+      SH2Exec(MSH2, sh2cycles - yabsys.DecilineStop);
+      PROFILE_STOP("MSH2");
+      PROFILE_START("SSH2");
+      if (yabsys.IsSSH2Running)
+         SH2Exec(SSH2, sh2cycles - yabsys.DecilineStop);
+      PROFILE_STOP("SSH2");
+
+      PROFILE_START("hblankin");
+      Vdp2HBlankIN();
+      PROFILE_STOP("hblankin");
+
       PROFILE_START("MSH2");
       SH2Exec(MSH2, yabsys.DecilineStop);
       PROFILE_STOP("MSH2");
-
       PROFILE_START("SSH2");
       if (yabsys.IsSSH2Running)
          SH2Exec(SSH2, yabsys.DecilineStop);
       PROFILE_STOP("SSH2");
 
+#else // !NO_DECILINE
+
+      PROFILE_START("MSH2");
+      SH2Exec(MSH2, sh2cycles);
+      PROFILE_STOP("MSH2");
+
+      PROFILE_START("SSH2");
+      if (yabsys.IsSSH2Running)
+         SH2Exec(SSH2, sh2cycles);
+      PROFILE_STOP("SSH2");
+
+#endif
+
       PROFILE_START("SCU");
-      ScuExec(yabsys.DecilineStop >> 1);
+      ScuExec(sh2cycles / 2);
       PROFILE_STOP("SCU");
 
+#ifndef NO_DECILINE
       yabsys.DecilineCount++;
       if(yabsys.DecilineCount == 9)
       {
@@ -377,6 +411,7 @@ int YabauseExec(void) {
          PROFILE_STOP("hblankin");
       }
       else if (yabsys.DecilineCount == 10)
+#endif
       {
          // HBlankOUT
          PROFILE_START("hblankout");
@@ -409,19 +444,34 @@ int YabauseExec(void) {
 
       yabsys.CycleCountII += yabsys.DecilineStop + MSH2->cycles;
 
-      while (yabsys.CycleCountII > yabsys.Duf)
       {
-         /* Decrement the counter first, since ChangeTiming() may zero it */
-         yabsys.CycleCountII -= yabsys.Duf;
-         PROFILE_START("SMPC");
-         SmpcExec(10);
-         PROFILE_STOP("SMPC");
-         PROFILE_START("CDB");
-         Cs2Exec(10);
-         PROFILE_STOP("CDB");
+         u32 usec = 0;
+         while (yabsys.CycleCountII > yabsys.Duf)
+         {
+             yabsys.CycleCountII -= yabsys.Duf;
+             usec += 10;
+         }
+         if (usec > 0)
+         {
+            PROFILE_START("SMPC");
+            SmpcExec(usec);
+            PROFILE_STOP("SMPC");
+            PROFILE_START("CDB");
+            Cs2Exec(usec);
+            PROFILE_STOP("CDB");
+         }
       }
 
       PROFILE_START("68K");
+#ifdef NO_DECILINE
+      /* 11.2896MHz / 60Hz / 262.5 lines = 716.8 cycles/line */
+      M68k_cycles = 716;
+      M68k_centicycles += 80;
+      if (M68k_centicycles >= 100) {
+         M68k_cycles++;
+         M68k_centicycles -= 100;
+      }
+#else
       /* 11.2896MHz / 60Hz / 262.5 lines / 10 calls/line = 71.68 cycles/call */
       M68k_cycles = 71;
       M68k_centicycles += 68;
@@ -429,6 +479,7 @@ int YabauseExec(void) {
          M68k_cycles++;
          M68k_centicycles -= 100;
       }
+#endif
       M68KExec(M68k_cycles);
       PROFILE_STOP("68K");
 

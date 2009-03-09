@@ -60,8 +60,12 @@
 extern long long gettime();
 #endif
 
-#define DONT_PROFILE
-#include "profile.h"
+#ifdef SYS_PROFILE_H
+ #include SYS_PROFILE_H
+#else
+ #define DONT_PROFILE
+ #include "profile.h"
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 

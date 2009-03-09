@@ -59,6 +59,9 @@
 #include <ogc/lwp_watchdog.h>
 extern long long gettime();
 #endif
+#ifdef PSP
+#include "psp/common.h"
+#endif
 
 #ifdef SYS_PROFILE_H
  #include SYS_PROFILE_H
@@ -529,6 +532,8 @@ u64 YabauseGetTicks(void) {
    return (u64) timer_ms_gettime64();
 #elif defined(GEKKO)  
    return gettime();
+#elif defined(PSP)
+   return sceKernelGetSystemTimeWide();
 #elif defined(HAVE_GETTIMEOFDAY)
    struct timeval tv;
    gettimeofday(&tv, NULL);
@@ -549,6 +554,8 @@ void YabauseSetVideoFormat(int type) {
    yabsys.tickfreq = 1000;
 #elif defined(GEKKO)
    yabsys.tickfreq = secs_to_ticks(1);
+#elif defined(PSP)
+   yabsys.tickfreq = 1000000;
 #elif defined(HAVE_GETTIMEOFDAY)
    yabsys.tickfreq = 1000000;
 #elif defined(HAVE_LIBSDL)

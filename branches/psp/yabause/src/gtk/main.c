@@ -56,6 +56,9 @@ M68K_struct * M68KCoreList[] = {
 #ifdef HAVE_C68K
 &M68KC68K,
 #endif
+#ifdef HAVE_Q68
+&M68KQ68,
+#endif
 NULL
 };
 
@@ -268,6 +271,13 @@ gboolean yui_settings_load(void) {
 	tmp = yinit.sh2coretype;
 	yinit.sh2coretype = g_key_file_get_integer(keyfile, "General", "SH2Int", 0);
 	if ((YUI_WINDOW(yui)->state & YUI_IS_INIT) && (tmp != yinit.sh2coretype)) {
+		mustRestart = TRUE;
+	}
+
+	/* m68k */
+	tmp = yinit.m68kcoretype;
+	yinit.m68kcoretype = g_key_file_get_integer(keyfile, "General", "M68kInt", 0);
+	if ((YUI_WINDOW(yui)->state & YUI_IS_INIT) && (tmp != yinit.m68kcoretype)) {
 		mustRestart = TRUE;
 	}
 

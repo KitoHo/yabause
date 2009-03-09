@@ -161,7 +161,8 @@ void FASTCALL SH2Exec(SH2_struct *context, u32 cycles)
          context->regs.SR.part.I = context->interrupts[context->NumberOfInterrupts-1].level;
          context->regs.PC = MappedMemoryReadLong(context->regs.VBR + (context->interrupts[context->NumberOfInterrupts-1].vector << 2));
          context->NumberOfInterrupts--;
-	 context->isIdle = 0;
+         context->isIdle = 0;
+         context->isSleeping = 0;
       }
    }
 
@@ -251,6 +252,13 @@ void SH2SetRegisters(SH2_struct *context, sh2regs_struct * r)
    if (r != NULL) {
       memcpy(&context->regs, r, sizeof(context->regs));
    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void SH2WriteNotify(u32 start, u32 length) {
+   if (SH2Core->WriteNotify)
+      SH2Core->WriteNotify(start, length);
 }
 
 //////////////////////////////////////////////////////////////////////////////

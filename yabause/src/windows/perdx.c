@@ -31,7 +31,7 @@
 int PERDXInit(void);
 void PERDXDeInit(void);
 int PERDXHandleEvents(void);
-//void YuiCaptureVideo(void);
+void YuiCaptureVideo(void);
 int Check_Skip_Key();
 
 PerInterface_struct PERDIRECTX = {
@@ -42,8 +42,8 @@ PERDXDeInit,
 PERDXHandleEvents
 };
 
-HWND YabWin;
-HINSTANCE y_hInstance;
+extern HWND YabWin;
+extern HINSTANCE y_hInstance;
 
 LPDIRECTINPUT8 lpDI8 = NULL;
 LPDIRECTINPUTDEVICE8 lpDIDevice[256]; // I hope that's enough
@@ -640,18 +640,65 @@ void PollKeys(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
+int FrameAdvanceKeyDown=0;
+static DWORD tgtime;
+
 int PERDXHandleEvents(void)
 {
    PollKeys();
 
+   	if (Check_Skip_Key())
+	{
+		FrameAdvanceVariable = NeedAdvance;
+		tgtime = timeGetTime();
+	}
+
    if (YabauseExec() != 0)
       return -1;
 
-   Update_RAM_Search();
    Update_RAM_Watch();
    YuiCaptureVideo();
 
    return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+int SkipKeyIsPressed=0;
+int DelayFactor = 5;
+
+int Check_Skip_Key()
+{
+	static time_t lastSkipTime = 0;
+	const int skipPressedNew = FrameAdvanceKeyDown;
+	static int checks = 0;
+
+	if(GetAsyncKeyState(VK_SPACE) & 0x8000)
+		FrameAdvanceKeyDown=1;
+	else
+		FrameAdvanceKeyDown=0;
+	
+	if(skipPressedNew && timeGetTime()-lastSkipTime >= 5)
+	{
+		checks++;
+		if(checks > 8000 + 60)
+			checks -= 8000;
+		lastSkipTime = timeGetTime();
+	}
+
+	if(skipPressedNew && (!SkipKeyIsPressed || ((checks > 60) && ((checks % DelayFactor) == 0))))
+	{
+		SkipKeyIsPressed=1;
+		return 1;
+	}
+	else {
+		if(!skipPressedNew && SkipKeyIsPressed)
+		{
+			SkipKeyIsPressed=0;
+			checks=0;
+		}
+		return 0;
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////////

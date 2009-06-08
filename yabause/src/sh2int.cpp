@@ -360,7 +360,7 @@ TEMPLATE void FASTCALL SH2braf()
 
 //////////////////////////////////////////////////////////////////////////////
 
-TEMPLATE void SH2bsr()
+TEMPLATE void FASTCALL SH2bsr()
 {
    u32 temp;
    s32 disp = INSTRUCTION_BCD(sh->instruction);

@@ -85,6 +85,7 @@ protected slots:
 	void refreshStatesActions();
 	// file menu
 	void on_aFileSettings_triggered();
+	void on_mFile_aboutToShow();
 	void on_aFileOpenISO_triggered();
 	void on_aFileOpenCDRom_triggered();
 	void on_mFileSaveState_triggered( QAction* );

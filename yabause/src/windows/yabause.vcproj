@@ -748,10 +748,6 @@
 					>
 				</File>
 				<File
-					RelativePath=".\movie.cpp"
-					>
-				</File>
-				<File
 					RelativePath=".\perdx.c"
 					>
 					<FileConfiguration
@@ -1015,54 +1011,6 @@
 						</FileConfiguration>
 					</File>
 				</Filter>
-				<Filter
-					Name="utils"
-					>
-					<File
-						RelativePath=".\utils\ConvertUTF.c"
-						>
-					</File>
-					<File
-						RelativePath=".\utils\ConvertUTF.h"
-						>
-					</File>
-					<File
-						RelativePath=".\utils\guid.cpp"
-						>
-					</File>
-					<File
-						RelativePath=".\utils\guid.h"
-						>
-					</File>
-					<File
-						RelativePath=".\utils\md5.cpp"
-						>
-					</File>
-					<File
-						RelativePath=".\utils\md5.h"
-						>
-					</File>
-					<File
-						RelativePath=".\utils\readwrite.cpp"
-						>
-					</File>
-					<File
-						RelativePath=".\utils\readwrite.h"
-						>
-					</File>
-					<File
-						RelativePath=".\utils\valuearray.h"
-						>
-					</File>
-					<File
-						RelativePath=".\utils\xstring.cpp"
-						>
-					</File>
-					<File
-						RelativePath=".\utils\xstring.h"
-						>
-					</File>
-				</Filter>
 			</Filter>
 			<Filter
 				Name="emulation core"
@@ -1120,6 +1068,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\movie.cpp"
+					>
+				</File>
+				<File
 					RelativePath="..\netlink.c"
 					>
 				</File>
@@ -1152,7 +1104,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\sh2int.c"
+					RelativePath="..\sh2int.cpp"
 					>
 					<FileConfiguration
 						Name="Release|Win32"
@@ -1223,6 +1175,26 @@
 					RelativePath="..\ygl.c"
 					>
 				</File>
+				<Filter
+					Name="utils"
+					>
+					<File
+						RelativePath="..\utils\readwrite.cpp"
+						>
+					</File>
+					<File
+						RelativePath=".\utils\readwrite.h"
+						>
+					</File>
+					<File
+						RelativePath="..\utils\xstring.cpp"
+						>
+					</File>
+					<File
+						RelativePath="..\utils\xstring.h"
+						>
+					</File>
+				</Filter>
 			</Filter>
 		</Filter>
 		<Filter
@@ -1243,10 +1215,6 @@
 				</File>
 				<File
 					RelativePath=".\hotkey.h"
-					>
-				</File>
-				<File
-					RelativePath=".\movie.h"
 					>
 				</File>
 				<File
@@ -1407,6 +1375,10 @@
 				</File>
 				<File
 					RelativePath="..\memory.h"
+					>
+				</File>
+				<File
+					RelativePath=".\movie.h"
 					>
 				</File>
 				<File

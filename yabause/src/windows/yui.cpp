@@ -47,7 +47,7 @@ extern "C" {
 
 #include "resource.h"
 #include "ram_search.h"
-#include "movie.h"
+#include "../movie.h"
 
 #ifdef NOC68K
 #include "../m68kc68k.h"

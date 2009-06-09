@@ -20,8 +20,10 @@
 */
 
 #include "readwrite.h"
-//#include "types.h"
 #include "../core.h"
+#ifdef WIN32
+#include "../windows/settings/settings.h"
+#endif
 
 # define LE_TO_LOCAL_16(x) ((((x)&0xff)<<8)|(((x)>>8)&0xff))
 # define LE_TO_LOCAL_64(x) (x)

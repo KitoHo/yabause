@@ -26,12 +26,16 @@
 #include "utils/xstring.h"
 #include "movie.h"
 extern "C" {
-#include "../peripheral.h"
-#include "../yabause.h"
-#include "../cs2.h"
-#include "../vdp2.h"
-#include "../bios.h"
+#include "peripheral.h"
+#include "yabause.h"
+#include "cs2.h"
+#include "vdp2.h"
+#include "bios.h"
 }
+
+#ifdef WIN32
+#include "windows/settings/settings.h"
+#endif
 
 #include "utils/readwrite.h"
 
@@ -481,8 +485,6 @@ void FCEUI_StopMovie()
 	curMovieFilename[0] = 0;
 	freshMovie = false;
 }
-#ifndef INT_MAX#define INT_MAX 2147483647
-#endif
 
 //begin playing an existing movie
 void FCEUI_LoadMovie(const char *fname, bool _read_only, bool tasedit, int _pauseframe)
@@ -849,8 +851,8 @@ bool mov_loadstate(std::istream* is, int size)//std::istream* is
 
 	int cookie;
 	if(read32le(&cookie,is) != 1) return false;
-//	if(cookie == kNOMO)
-//		return true;
+	if(cookie == kNOMO)
+		return true;
 	else if(cookie != kMOVI)
 		return false;
 

@@ -1,7 +1,7 @@
 #ifndef _READWRITE_H_
 #define _READWRITE_H_
 
-#include "../../core.h"
+#include "../core.h"
 #include <iostream>
 #include <cstdio>
 

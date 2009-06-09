@@ -10,7 +10,8 @@
 #include <iostream>
 #include <cstdio>
 
-#include "../../core.h"
+//#include "../types.h"
+#include "../settings/settings.h"
 
 
 //definitions for str_strip() flags

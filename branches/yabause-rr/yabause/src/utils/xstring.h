@@ -10,9 +10,7 @@
 #include <iostream>
 #include <cstdio>
 
-//#include "../types.h"
-#include "../settings/settings.h"
-
+#include "../core.h"
 
 //definitions for str_strip() flags
 #define STRIP_SP	0x01 // space

@@ -110,6 +110,6 @@ SOURCES	+= main.cpp \
 	ui/UIBackupRam.cpp \
 	ui/UIPortManager.cpp \
 	ui/UIPadSetting.cpp \
-	../windows/movie.cpp \
-	../windows/utils/xstring.cpp \
-	../windows/utils/readwrite.cpp
+	../movie.cpp \
+	../utils/xstring.cpp \
+	../utils/readwrite.cpp

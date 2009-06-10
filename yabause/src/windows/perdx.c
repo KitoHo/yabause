@@ -359,7 +359,11 @@ void PERDXLoadDevices(char *inifilename)
                coopflags = DISCL_FOREGROUND | DISCL_EXCLUSIVE;
             }
 
-            hr = IDirectInputDevice8_SetCooperativeLevel(lpDIDevice[i], YabWin, coopflags);
+			if(lpDIDevice[i]) 
+				hr = IDirectInputDevice8_SetCooperativeLevel(lpDIDevice[i], YabWin, coopflags);
+			else
+				YuiErrorMsg(_("lpDIDevice[i] is a bad pointer\n"));
+
             if (FAILED(hr))
                continue;
 

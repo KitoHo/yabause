@@ -146,16 +146,20 @@ LRESULT CALLBACK InputSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             if (paddevice[j].emulatetype != 0)
             {
                int id=0;
-               switch (pad[j]->perid)
-               {
-                  case PERPAD:
-                     id = 1;
-                     break;
-                  case PERMOUSE:
-                     id = 2;
-                     break;
-                  default: break;
-               }
+			   if(pad[j]) {
+				   switch (pad[j]->perid)
+				   {
+				   case PERPAD:
+					   id = 1;
+					   break;
+				   case PERMOUSE:
+					   id = 2;
+					   break;
+				   default: break;
+				   }
+			   }
+			   else
+				   YuiErrorMsg(_("pad[j] is a bad pointer\n"));
 
                SendDlgItemMessage(hDlg, IDC_PORT1ATYPECB+j, CB_SETCURSEL, id, 0);
                EnableWindow(GetDlgItem(hDlg, IDC_PORT1ACFGPB+j), TRUE);            

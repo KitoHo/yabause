@@ -54,7 +54,7 @@ extern "C"
 #endif
 }
 
-#include "../windows/movie.h"
+#include "../movie.h"
 
 #include <QString>
 #include <QMap>

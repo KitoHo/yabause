@@ -539,7 +539,7 @@ static INLINE void FASTCALL Vdp2MapCalcXY(vdp2draw_struct *info, int *x, int *y,
                                  screeninfo_struct *sinfo)
 {
    int planenum;
-   const int pagesize_bits=info->pagewh_bits+1;
+   const int pagesize_bits=info->pagewh_bits*2;
    const int cellwh=(2 + info->patternwh);
 
    const int check = ((y[0] >> cellwh) << 16) | (x[0] >> cellwh);
@@ -690,7 +690,6 @@ void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, in
    screeninfo_struct sinfo;
    int scrollx, scrolly;
    int *mosaic_y, *mosaic_x;
-   int mosaic_x_multiplied_and_scrolled[1024];
 
    info->coordincx *= (float)resxratio;
    info->coordincy *= (float)resyratio;
@@ -721,8 +720,6 @@ void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, in
 	   }
 	   mosaic_x = &mosaic_table[info->mosaicxmask-1];
 	   mosaic_y = &mosaic_table[info->mosaicymask-1];
-	   for(i=0;i<width;i++)
-		   mosaic_x_multiplied_and_scrolled[i] = info->x + mosaic_x[i]*info->coordincx;
    }
 
    for (j = 0; j < height; j++)
@@ -793,7 +790,7 @@ void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, in
          }
 
          //x = info->x+((int)(info->coordincx*(float)((info->mosaicxmask > 1) ? (i / info->mosaicxmask * info->mosaicxmask) : i)));
-		 x = mosaic_x_multiplied_and_scrolled[i];
+		 x = info->x + mosaic_x[i]*info->coordincx;
          x &= sinfo.xmask;
 		 
 		 //This is sucha  trivial amount of work, it is better not to have to do the control logic

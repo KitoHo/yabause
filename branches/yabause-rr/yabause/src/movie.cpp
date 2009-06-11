@@ -20,7 +20,7 @@
 */
 
 #include <assert.h>
-//#include <limits.h>
+#include <limits.h>
 #include <fstream>
 //#include "utils/guid.h"
 #include "utils/xstring.h"
@@ -279,6 +279,20 @@ void MovieData::installValue(std::string& key, std::string& val)
 	}
 }
 
+char* RemovePath(char * input) {
+
+	char* temp=(char*)malloc(1024);
+	strcpy(temp, input);
+
+	if (strrchr(temp, '/'))
+        temp = 1 + strrchr(temp, '/');
+
+	if (strrchr(temp, '\\'))
+        temp = 1 + strrchr(temp, '\\');
+
+	return temp;
+}
+
 
 int MovieData::dump(std::ostream *os, bool binary)
 {
@@ -292,7 +306,7 @@ int MovieData::dump(std::ostream *os, bool binary)
 	*os << "cdVersion " << cdip->version << endl;
 	*os << "cdDate " << cdip->date << endl;
 	*os << "cdRegion " << cdip->region << endl;
-	*os << "emulateBios " << yabsys.emulatebios << endl;
+	*os << "emulatedBios " << yabsys.emulatebios << endl;
 	*os << "isPal " << yabsys.IsPal << endl;
 #ifdef WIN32
 	*os << "sh2CoreType " << int(sh2coretype) << endl;
@@ -300,17 +314,9 @@ int MovieData::dump(std::ostream *os, bool binary)
 	*os << "vidCoreType " << int(vidcoretype) << endl;
 	*os << "cartType " << carttype << endl;
 
-	char* temp=(char*)malloc(1024);
-	strcpy(temp, cdrompath);
-
-	if (strrchr(temp, '/'))
-        temp = 1 + strrchr(temp, '/');
-
-	if (strrchr(temp, '\\'))
-        temp = 1 + strrchr(temp, '\\');
-
-	*os << "cdRomPath " << temp << endl;
-
+	*os << "cdRomPath " << RemovePath(cdrompath) << endl;
+	*os << "biosFilename " << RemovePath(biosfilename) << endl;
+	*os << "cartFilename " << RemovePath(cartfilename) << endl;
 #endif
 
 //	fwrite("YMV", sizeof("YMV"), 1, fp);

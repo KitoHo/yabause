@@ -793,11 +793,10 @@ void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, in
 		 x = info->x + mosaic_x[i]*info->coordincx;
          x &= sinfo.xmask;
 		 
-		 //This is sucha  trivial amount of work, it is better not to have to do the control logic
-         //if (linescrollx) {
+         if (linescrollx) {
             x += linescrollx;
             x &= 0x3FF;
-         //}
+         }
 
          // Fetch Pixel, if it isn't transparent, continue
          if (!info->isbitmap)

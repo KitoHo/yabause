@@ -3333,6 +3333,11 @@ void VIDSoftVdp1EraseFrameBuffer(void)
 
 void VIDSoftGetGlSize(int *width, int *height)
 {
+#ifdef USE_OPENGL
    *width = outputwidth;
    *height = outputheight;
+#else
+   *width = vdp2width;
+   *height = vdp2height;
+#endif
 }

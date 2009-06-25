@@ -8,7 +8,7 @@
 #include <string>
 #include <ostream>
 #include <istream>
-#include "../../core.h"
+#include "core.h"
 //#include "utils/guid.h"
 //#include "utils/md5.h"
 

@@ -15,6 +15,8 @@ yabause_SOURCES = gtkglwidget.c gtkglwidget.h main.c settings.c menu.c gtk-compa
 yabause_CFLAGS = $(YAB_CFLAGS)
 yabause_LDADD = ../libyabause.a $(YAB_LIBS)
 yabause_CPPFLAGS = -DYTSDIR=\"$(datadir)/$(PACKAGE)/yts\"
+yabause_LINK = $(CXX) $(yabause_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
 
 install-data-hook:
 	@for f in "$(DESTDIR)$(Applicationsdir)/yabause.desktop" ; do \

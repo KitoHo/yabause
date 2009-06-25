@@ -98,7 +98,7 @@ static void yui_sh_class_init (UNUSED YuiShClass * klass) {
 static void yui_sh_init (YuiSh * sh2) {
   //GtkWidget *vboxBp;
 
-  sh2->breakpointEnabled = MSH2->breakpointEnabled; 
+  sh2->breakpointEnabled = MSH2.breakpointEnabled; 
 
   gtk_window_set_title(GTK_WINDOW(sh2), "SH");
 
@@ -348,7 +348,7 @@ GtkWidget * yui_sh_new(YuiWindow * y, gboolean bMaster) {
 */
 
   sh2->bMaster = bMaster;
-  sh2->debugsh = bMaster ? MSH2 : SSH2; 
+  sh2->debugsh = bMaster ? &MSH2 : &SSH2; 
 
   SH2SetBreakpointCallBack(sh2->debugsh, (void (*)(void *, u32))SH2BreakpointHandler);
 
@@ -734,7 +734,7 @@ static void SH2BreakpointHandler (SH2_struct *context, u32 addr) {
   yui_window_pause(NULL, yui);
   {
     sh2regs_struct sh2regs;
-    YuiSh* sh2 = YUI_SH(yui_sh_new( yui, context == MSH2 ));
+    YuiSh* sh2 = YUI_SH(yui_sh_new( yui, context == &MSH2 ));
     
     SH2GetRegisters(sh2->debugsh, &sh2regs);
     SH2UpdateRegList(sh2, &sh2regs);
@@ -753,7 +753,7 @@ void yui_sh_update(YuiSh * sh) {
   gtk_widget_set_sensitive(sh->mbpList, TRUE);
   gtk_widget_set_sensitive(sh->regList, TRUE);
   gtk_widget_set_sensitive(GTK_WIDGET(sh->buttonStep), 
-			   !sh->debugsh->isIdle && !(( sh->debugsh == SSH2 )&&( !yabsys.IsSSH2Running )));
+			   !sh->debugsh->isIdle && !(( sh->debugsh == &SSH2 )&&( !yabsys.IsSSH2Running )));
 }
 
 void yui_sh_destroy(YuiSh * sh) {

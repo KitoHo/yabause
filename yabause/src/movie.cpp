@@ -86,9 +86,9 @@ char str[40];
 char InputDisplayString[40];
 
 //adelikat: Adding this specifically for the crappy yabause OSD, to return a string of /xxxx to add to a movie if in playback mode
-char* GetMovieLengthStr()
+void GetMovieLengthStr(char * str)
 {
-	char str[10] = "";
+        str[0] = 0;
 	int length;
 
 	if (MovieIsActive() && movie_readonly)
@@ -96,8 +96,6 @@ char* GetMovieLengthStr()
 		length = (int)currMovieData.records.size();
 		sprintf(str, "/%d", length);
 	}
-
-	return str;
 }
 
 void SetInputDisplayCharacters(void) {

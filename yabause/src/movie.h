@@ -211,7 +211,7 @@ void FCEUMOV_AddInputState();
 
 void PauseOrUnpause(void);
 void MakeMovieStateName(const char *filename);
-char* GetMovieLengthStr();
+void GetMovieLengthStr(char * str);
 
 #ifdef __cplusplus
 }

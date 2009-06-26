@@ -28,7 +28,6 @@
 
 char OSDMessage[32] = "";	//adelikat: For showing on screen messages such as savestate loaded/saved
 int OSDMessageTimer = 120;
-char frameTotal[10] = "";
 
 u8 * Vdp2Ram;
 u8 * Vdp2ColorRam;
@@ -305,12 +304,14 @@ void Vdp2HBlankOUT(void) {
 
 void FPSDisplay(void)
 {
+   char frameTotal[10] = "";
+
    if (fpstoggle)
    {
       if (!OSDMessageTimer)
 		OSDMessage[0] = 0;
 
-	  strcpy(frameTotal, GetMovieLengthStr());
+	  GetMovieLengthStr(frameTotal);
 
 	  VIDCore->OnScreenDebugMessage("%02d/%02d FPS %d%s %d %s %s %s", fps, yabsys.IsPal ? 50 : 60, currFrameCounter, frameTotal, LagFrameCounter, MovieStatus, InputDisplayString, OSDMessage);
 	  if (OSDMessageTimer > 0)

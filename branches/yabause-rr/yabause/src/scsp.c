@@ -3318,6 +3318,8 @@ int SoundSaveState(FILE *fp)
    int offset;
    u8 nextphase;
    IOCheck_struct check;
+   u8 lfoemw;
+   u8 lfofmw;
 
    offset = StateWriteHeader(fp, "SCSP", 2);
 
@@ -3431,6 +3433,20 @@ int SoundSaveState(FILE *fp)
 
 	  //lfofmw and lfoemw will need regeneration
 
+	  if(scsp.slot[i].lfofmw == scsp_lfo_sawt_f)		lfofmw = 0;
+	  else if (scsp.slot[i].lfofmw == scsp_lfo_squa_f)  lfofmw = 1;
+	  else if (scsp.slot[i].lfofmw == scsp_lfo_tri_f)   lfofmw = 2;
+	  else if (scsp.slot[i].lfofmw == scsp_lfo_noi_f)   lfofmw = 3;
+
+	  ywrite(&check, (void *)&lfofmw, 1, 1, fp);
+
+	  if(scsp.slot[i].lfoemw == scsp_lfo_sawt_e)      lfoemw = 0;
+	  else if (scsp.slot[i].lfoemw == scsp_lfo_squa_e)lfoemw = 1;
+	  else if (scsp.slot[i].lfoemw == scsp_lfo_tri_e) lfoemw = 2;
+	  else if (scsp.slot[i].lfoemw == scsp_lfo_noi_e) lfoemw = 3;
+
+	  ywrite(&check, (void *)&lfoemw, 1, 1, fp);
+
 	  ywrite(&check, (void *)&scsp.slot[i].lfofms, sizeof(u8), 1, fp);
 	  ywrite(&check, (void *)&scsp.slot[i].lfoems, sizeof(u8), 1, fp);
 	  ywrite(&check, (void *)&scsp.slot[i].fsft, sizeof(u8), 1, fp);
@@ -3497,6 +3513,8 @@ int SoundLoadState(FILE *fp, int version, int size)
    int i, i2;
    u32 temp;
    u8 nextphase;
+   u8 lfoemw;
+   u8 lfofmw;
    IOCheck_struct check;
 
    // Read 68k registers first
@@ -3622,13 +3640,41 @@ int SoundLoadState(FILE *fp, int version, int size)
 	  yread(&check, (void *)&scsp.slot[i].sr, sizeof(s32), 1, fp);
 	  yread(&check, (void *)&scsp.slot[i].rr, sizeof(s32), 1, fp);
 
-	  //TODO
-	  //arp, drp, srp, rrp will need regeneration
+	  //regenerate arp, drp, srp, rrp
+
+	if (scsp.slot[i].ar) scsp.slot[i].arp = &scsp_attack_rate[scsp.slot[i].ar << 1];
+	else scsp.slot[i].arp = &scsp_null_rate[0];
+
+	if (scsp.slot[i].dr) scsp.slot[i].drp = &scsp_decay_rate[scsp.slot[i].dr << 1];
+	else scsp.slot[i].drp = &scsp_null_rate[0];
+
+	if (scsp.slot[i].sr) scsp.slot[i].srp = &scsp_decay_rate[scsp.slot[i].sr << 1];
+	else scsp.slot[i].srp = &scsp_null_rate[0];
+
+	if (scsp.slot[i].rr) scsp.slot[i].rrp = &scsp_decay_rate[scsp.slot[i].rr << 1];
+	else scsp.slot[i].rrp = &scsp_null_rate[0];
 
 	  yread(&check, (void *)&scsp.slot[i].krs, sizeof(u32), 1, fp);
 
-	  //TODO
-	  //lfofmw and lfoemw will need regeneration
+	  //regenerate lfofmw and lfoemw
+
+	  yread(&check, (void *)&lfofmw, 1, 1, fp);
+
+	  switch(lfofmw){
+		  case 0: scsp.slot[i].lfofmw = scsp_lfo_sawt_f; break;
+		  case 1: scsp.slot[i].lfofmw = scsp_lfo_squa_f; break;
+		  case 2: scsp.slot[i].lfofmw = scsp_lfo_tri_f; break;
+		  case 3: scsp.slot[i].lfofmw = scsp_lfo_noi_f; break;
+	  }
+
+	  yread(&check, (void *)&lfoemw, 1, 1, fp);
+
+	  switch(lfoemw){
+		  case 0: scsp.slot[i].lfoemw = scsp_lfo_sawt_e; break;
+		  case 1: scsp.slot[i].lfoemw = scsp_lfo_squa_e; break;
+		  case 2: scsp.slot[i].lfoemw = scsp_lfo_tri_e; break;
+		  case 3: scsp.slot[i].lfoemw = scsp_lfo_noi_e; break;
+	  }
 
 	  yread(&check, (void *)&scsp.slot[i].lfofms, sizeof(u8), 1, fp);
 	  yread(&check, (void *)&scsp.slot[i].lfoems, sizeof(u8), 1, fp);

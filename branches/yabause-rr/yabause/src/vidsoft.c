@@ -110,7 +110,17 @@ VIDSoftVdp1DrawEnd,
 VIDSoftVdp1NormalSpriteDraw,
 VIDSoftVdp1ScaledSpriteDraw,
 VIDSoftVdp1DistortedSpriteDraw,
-VIDSoftVdp1PolygonDraw,
+//for the actual hardware, polygons are essentially identical to distorted sprites
+//the previous polygon algorithm didn't draw the curves that happen on the real hardware for concave shapes at all
+//the current distorted sprite algorithm produces similar results to the hardware for distorted sprites and polygons,
+//but that algorithm is not how the actual hardware draws.
+
+//the actual hardware draws using diagonal lines, which is why using half-transparent processing
+//on distorted sprites and polygons is not recommended since the hardware overdraws to prevent gaps
+//thus, with half-transparent processing some pixels will be processed more than once, producing moire patterns in the drawn shapes
+
+//in order to have accurate goraud shading and endcode handling it may be necessary to correct the algorithm
+VIDSoftVdp1DistortedSpriteDraw,
 VIDSoftVdp1PolylineDraw,
 VIDSoftVdp1LineDraw,
 VIDSoftVdp1UserClipping,
@@ -2441,188 +2451,6 @@ void VIDSoftVdp1ScaledSpriteDraw(void)
      h0 += stepH;
    }
    if (cmd.CMDPMOD & 0x0400) PopUserClipping();
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-int fcmpy_vdp1vertex( const void* v1, const void* v2 ) {
-
-  return ( ((vdp1vertex*)v1)->y <= ((vdp1vertex*)v2)->y )? -1 : 1;
-}
-
-void VIDSoftVdp1PolygonDraw(void) {
-
-  vdp1vertex v[4];
-  float xleft, xwidth;
-  int y, x;
-  int zA, zB, zC, zD, zE, zF;
-  int y01, y02, y03, y12, y13, y23;
-  float stepA, stepB, stepC, stepD, stepE, stepF;
-  int zAplus, zBplus, zEminus;
-  u16 *fb;
-  u16 color = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x6);
-  u16 cmdpmod = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
-  int mesh;
-  int fbx;
-
-  mesh = cmdpmod & 0x0100;
-
-  if (cmdpmod & 0x0400) PushUserClipping((cmdpmod >> 9) & 0x1);
-
-  v[0].x = (int)Vdp1Regs->localX + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x0C));
-  v[1].x = (int)Vdp1Regs->localX + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x10));
-  v[2].x = (int)Vdp1Regs->localX + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x14));
-  v[3].x = (int)Vdp1Regs->localX + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x18));
-  v[0].y = (int)Vdp1Regs->localY + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x0E));
-  v[1].y = (int)Vdp1Regs->localY + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x12));
-  v[2].y = (int)Vdp1Regs->localY + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x16));
-  v[3].y = (int)Vdp1Regs->localY + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1A));
-
-  /* points 0,1,2,3 are sorted by increasing y */
-  qsort( v, 4, sizeof( vdp1vertex ), fcmpy_vdp1vertex );
-
-  y01 = v[1].y - v[0].y;
-  y02 = v[2].y - v[0].y;
-  y03 = v[3].y - v[0].y;
-  y12 = v[2].y - v[1].y;
-  y13 = v[3].y - v[1].y;
-  y23 = v[3].y - v[2].y;
-  stepA = y01 ? (zA = 0, (float)( v[1].x - v[0].x ) / (y01)) : (zA = 1, v[1].x - v[0].x);  /* edge A = 01 */
-  stepB = y02 ? (zB = 0, (float)( v[2].x - v[0].x ) / (y02)) : (zB = 1, v[2].x - v[0].x); /* edge B = 02 */
-  stepC = y13 ? (zC = 0, (float)( v[3].x - v[1].x ) / (y13)) : (zC = 1, v[3].x - v[1].x); /* edge C = 13 */
-  stepD = y23 ? (zD = 0, (float)( v[3].x - v[2].x ) / (y23)) : (zD = 1, v[3].x - v[2].x); /* edge D = 23 */
-  stepE = y03 ? (zE = 0, (float)( v[3].x - v[0].x ) / (y03)) : (zE = 1, v[3].x - v[0].x); /* edge E = 03 */
-  stepF = y12 ? (zF = 0, (float)( v[2].x - v[1].x ) / (y12)) : (zF = 1, v[2].x - v[1].x); /* edge F = 12 */
-
-  zAplus = zA && ( stepA >= 0 );
-  zBplus = zB && ( stepB >= 0 );
-  zEminus = zE && ( stepE < 0 );
-
-  xleft = v[0].x;
-  xwidth = 1;
-  y = v[0].y;
-
-#define SET_PIXEL { \
-  	  if(mesh) { \
-	      if((fbx^y)&1) { \
-		     fb++; fbx++; \
-		  } \
-          else  { \
-             *(fb++) = color; fbx++;\
-          } \
-	  } else {*(fb++) = color; fbx++;}}
-
-#define POLYGON_PAINT_PART( pBegin, pEnd, stepLeft, stepRight, zLeft, zRight ) \
-    if ( y == v[pEnd].y ) { \
-      if ( zLeft ) { xleft += stepLeft; xwidth -= stepLeft; stepLeft = 0; } \
-      if ( zRight ) { xwidth += stepRight; stepRight = 0; }\
-      if (( y >= vdp1clipystart )&&( y <= vdp1clipyend)) { \
-        int x1 = (int)xleft;				   \
-        int x2 = x1 + (int)xwidth;			   \
-        if ( x1 < vdp1clipxstart ) x1 = vdp1clipxstart; \
-        if ( x2 > vdp1clipxend ) x2 = vdp1clipxend;\
-        fb = (u16 *)vdp1backframebuffer + y*vdp1width + x1; fbx = x1; \
-        for ( ; x1<=x2 ; x1++ ) *(fb++) = color; \
-      }} \
-    if ( v[pBegin].y <= vdp1clipystart ) { \
-      if ( v[pEnd].y <= vdp1clipystart ) y = v[pEnd].y; else y = vdp1clipystart;\
-      xleft += stepLeft * (y-v[pBegin].y);\
-      xwidth += (stepRight - stepLeft) * (y-v[pBegin].y);\
-    }\
-    while (( y < v[pEnd].y ) && (y <= vdp1clipyend)) { \
-      \
-      xwidth += stepRight - stepLeft;\
-      xleft += stepLeft;\
-      { \
-        int x1 = (int)xleft;				   \
-        int x2 = x1 + (int)xwidth;			   \
-        if ( x1 < vdp1clipxstart ) x1 = vdp1clipxstart; \
-        if ( x2 > vdp1clipxend ) x2 = vdp1clipxend;\
-        fb = (u16 *)vdp1backframebuffer + y*vdp1width + x1; fbx = x1; \
-        for ( ; x1<=x2 ; x1++ ) SET_PIXEL; \
-      } \
-      y++;  \
-    }
-
-#define POLYGON_PAINT_PART_NOCLIP( pBegin, pEnd, stepLeft, stepRight, zLeft, zRight ) \
-    if ( y == v[pEnd].y ) { \
-      if ( zLeft ) { xleft += stepLeft; xwidth -= stepLeft; stepLeft = 0; } \
-      if ( zRight ) { xwidth += stepRight; stepRight = 0; }\
-    fb = (u16 *)vdp1backframebuffer + y*vdp1width + (int)xleft; fbx = (int)xleft; \
-    for ( x = (int)xwidth ; x>=0 ; x-- ) SET_PIXEL; \
-    }  \
-    while ( y < v[pEnd].y ) { \
-      \
-      xwidth += stepRight - stepLeft;\
-      xleft += stepLeft;\
-      \
-      fb = (u16 *)vdp1backframebuffer + y*vdp1width + (int)xleft; fbx = (int)xleft; \
-	  for ( x = (int)xwidth ; x>=0 ; x-- ) SET_PIXEL; \
-      y++; \
-	}
-
-  if (( v[0].y < vdp1clipystart )||( v[3].y > vdp1clipyend )
-      ||( v[0].x < vdp1clipxstart )||( v[0].x > vdp1clipxend )
-      ||( v[1].x < vdp1clipxstart )||( v[1].x > vdp1clipxend )
-      ||( v[2].x < vdp1clipxstart )||( v[2].x > vdp1clipxend )
-	  ||( v[3].x < vdp1clipxstart )||( v[3].x > vdp1clipxend )) {
-    
-    if ( (stepE < stepB) || zEminus || zBplus ) {
-      if ( (stepE < stepA) || zEminus || zAplus ) {
-
-	POLYGON_PAINT_PART( 0, 1, stepE, stepA, zE, zA );
-	POLYGON_PAINT_PART( 1, 2, stepE, stepF, zE, zF );
-	POLYGON_PAINT_PART( 2, 3, stepE, stepD, zE, zD );
-      } else {
-	
-	POLYGON_PAINT_PART( 0, 1, stepA, stepB, zA, zB );
-	POLYGON_PAINT_PART( 1, 2, stepC, stepB, zC, zB );
-	POLYGON_PAINT_PART( 2, 3, stepC, stepD, zC, zD );
-      }
-    } else {
-      
-      if ( (stepE < stepA) || zEminus || zAplus ) {
-	
-	POLYGON_PAINT_PART( 0, 1, stepB, stepA, zB, zA );
-	POLYGON_PAINT_PART( 1, 2, stepB, stepC, zB, zC );
-	POLYGON_PAINT_PART( 2, 3, stepD, stepC, zD, zC );
-      } else {
-	
-	POLYGON_PAINT_PART( 0, 1, stepA, stepE, zA, zE );
-	POLYGON_PAINT_PART( 1, 2, stepF, stepE, zF, zE );
-	POLYGON_PAINT_PART( 2, 3, stepD, stepE, zD, zE );
-      }
-    }
-  } else {
-    if ( (stepE < stepB) || zEminus || zBplus ) {
-      if ( (stepE < stepA) || zEminus || zAplus ) {
-	
-	POLYGON_PAINT_PART_NOCLIP( 0, 1, stepE, stepA, zE, zA );
-	POLYGON_PAINT_PART_NOCLIP( 1, 2, stepE, stepF, zE, zF );
-	POLYGON_PAINT_PART_NOCLIP( 2, 3, stepE, stepD, zE, zD );
-      } else {
-	
-	POLYGON_PAINT_PART_NOCLIP( 0, 1, stepA, stepB, zA, zB );
-	POLYGON_PAINT_PART_NOCLIP( 1, 2, stepC, stepB, zC, zB );
-	POLYGON_PAINT_PART_NOCLIP( 2, 3, stepC, stepD, zC, zD );
-      }
-    } else {
-      
-      if ( (stepE < stepA) || zEminus || zAplus ) { 
-	
-	POLYGON_PAINT_PART_NOCLIP( 0, 1, stepB, stepA, zB, zA );
-	POLYGON_PAINT_PART_NOCLIP( 1, 2, stepB, stepC, zB, zC );
-	POLYGON_PAINT_PART_NOCLIP( 2, 3, stepD, stepC, zD, zC );
-      } else {
-	
-	POLYGON_PAINT_PART_NOCLIP( 0, 1, stepA, stepE, zA, zE );
-	POLYGON_PAINT_PART_NOCLIP( 1, 2, stepF, stepE, zF, zE );
-	POLYGON_PAINT_PART_NOCLIP( 2, 3, stepD, stepE, zD, zE );
-      }
-    }
-  }
-
-  if (cmdpmod & 0x0400) PopUserClipping();
 }
 
 //////////////////////////////////////////////////////////////////////////////

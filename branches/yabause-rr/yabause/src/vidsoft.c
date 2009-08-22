@@ -1661,10 +1661,17 @@ void VIDSoftVdp1DistortedSpriteDraw() {
   float stepW, stepH;
 
   int mesh;
+  int isPoly = 0;
+  u16 polyColor;
 
   Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
 
   mesh = cmd.CMDPMOD & 0x0100;
+
+  if((cmd.CMDCTRL & 0x7) == 4) {
+	  isPoly = 1;
+	  polyColor = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x6);
+  }
 
   if (cmd.CMDPMOD & 0x0400) PushUserClipping((cmd.CMDPMOD >> 9) & 0x1);
 
@@ -1792,10 +1799,10 @@ void VIDSoftVdp1DistortedSpriteDraw() {
 
 		if(mesh) {
 			if(((int)xM^(int)yM)&1) {
-				DISTORTED_SPRITE_PUT( colorbank | dot );}
+				DISTORTED_SPRITE_PUT( isPoly?polyColor:(colorbank | dot) );}
 		}
 		else
-			DISTORTED_SPRITE_PUT( colorbank | dot );
+			DISTORTED_SPRITE_PUT( isPoly?polyColor:(colorbank | dot) );
 
       DISTORTED_SPRITE_LOOP_END
       break;
@@ -1811,11 +1818,11 @@ void VIDSoftVdp1DistortedSpriteDraw() {
 
 		if(mesh) {
 			if(((int)xM^(int)yM)&1) {
-				DISTORTED_SPRITE_PUT( T1ReadWord(Vdp1Ram, (dot * 2 + colorlut) & 0x7FFFF ) );
+				DISTORTED_SPRITE_PUT( isPoly?polyColor:(T1ReadWord(Vdp1Ram, (dot * 2 + colorlut) & 0x7FFFF )) );
 		}
 		}
 		else
-			DISTORTED_SPRITE_PUT( T1ReadWord(Vdp1Ram, (dot * 2 + colorlut) & 0x7FFFF ) );
+			DISTORTED_SPRITE_PUT( isPoly?polyColor:(T1ReadWord(Vdp1Ram, (dot * 2 + colorlut) & 0x7FFFF )) );
 	
     
       DISTORTED_SPRITE_LOOP_END
@@ -1832,11 +1839,11 @@ void VIDSoftVdp1DistortedSpriteDraw() {
 
 		if(mesh) {
 			if(((int)xM^(int)yM)&1) {
-				DISTORTED_SPRITE_PUT( colorbank | dot );
+				DISTORTED_SPRITE_PUT( isPoly?polyColor:(colorbank | dot) );
 			}
 		}
 		else
-			DISTORTED_SPRITE_PUT( colorbank | dot );
+			DISTORTED_SPRITE_PUT( isPoly?polyColor:(colorbank | dot) );
       
       DISTORTED_SPRITE_LOOP_END
       break;
@@ -1852,11 +1859,11 @@ void VIDSoftVdp1DistortedSpriteDraw() {
 
 		if(mesh) {
 			if(((int)xM^(int)yM)&1) {
-				DISTORTED_SPRITE_PUT( colorbank | dot );
+				DISTORTED_SPRITE_PUT( isPoly?polyColor:(colorbank | dot) );
 			}
 		}
 		else
-			DISTORTED_SPRITE_PUT( colorbank | dot );
+			DISTORTED_SPRITE_PUT( isPoly?polyColor:(colorbank | dot) );
       
       DISTORTED_SPRITE_LOOP_END
       break;
@@ -1872,11 +1879,11 @@ void VIDSoftVdp1DistortedSpriteDraw() {
 
 		if(mesh) {
 			if(((int)xM^(int)yM)&1) {
-				DISTORTED_SPRITE_PUT( colorbank | dot );
+				DISTORTED_SPRITE_PUT( isPoly?polyColor:(colorbank | dot) );
 			}
 		}
 		else
-			DISTORTED_SPRITE_PUT( colorbank | dot );
+			DISTORTED_SPRITE_PUT( isPoly?polyColor:(colorbank | dot) );
 
       DISTORTED_SPRITE_LOOP_END
       break;
@@ -1891,11 +1898,11 @@ void VIDSoftVdp1DistortedSpriteDraw() {
         DISTORTED_SPRITE_ENDCODE_BREAK(0x7FFF);
 		if(mesh) {
 			if(((int)xM^(int)yM)&1) {
-				DISTORTED_SPRITE_PUT( dot );
+				DISTORTED_SPRITE_PUT( isPoly?polyColor:dot );
 			}
 		}
 		else
-			DISTORTED_SPRITE_PUT( dot );
+			DISTORTED_SPRITE_PUT( isPoly?polyColor:dot );
 		
       DISTORTED_SPRITE_LOOP_END
       break;      

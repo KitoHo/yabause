@@ -1622,6 +1622,160 @@ static INLINE u16  Vdp1ReadPattern64k( u32 base, u32 offset ) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+INLINE u32 alphablend16(u32 d, u32 s, u32 level)
+{
+	int r,g,b,sr,sg,sb,dr,dg,db;
+
+	int invlevel = 256-level;
+	sr = s & 0x001f; dr = d & 0x001f; 
+	r = (sr*level + dr*invlevel)>>8; r&= 0x1f;
+	sg = s & 0x03e0; dg = d & 0x03e0;
+	g = (sg*level + dg*invlevel)>>8; g&= 0x03e0;
+	sb = s & 0x7c00; db = d & 0x7c00;
+	b = (sb*level + db*invlevel)>>8; b&= 0x7c00;
+	return r|g|b;
+}
+
+INLINE int putpixel(int x, int y, u16* iPix, int h0, int w) {
+
+	int mesh;
+	vdp1cmd_struct cmd;
+	u16 dot;
+	u16 colorbank;
+	u8 SPD;
+	u32 addr;
+	s16 W;
+	u32 colorlut;
+	int mode;
+	int visible;
+	int endcode;
+	int endcodesEnabled;
+	int isPoly = 0;
+	u16 polyColor;
+
+	Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
+
+	W = ((cmd.CMDSIZE >> 8) & 0x3F) * 8;
+	addr = cmd.CMDSRCA << 3;
+	colorbank = cmd.CMDCOLR;
+	colorlut = (u32)colorbank << 3;
+	SPD = ((cmd.CMDPMOD & 0x40) != 0);//show the actual color of transparent pixels if 1 (they won't be drawn transparent)
+	mesh = cmd.CMDPMOD & 0x0100;
+	endcodesEnabled = (( cmd.CMDPMOD & 0x80) == 0 )?1:0;
+
+	if((cmd.CMDCTRL & 0x7) == 4) {
+		isPoly = 1;
+		polyColor = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x6);
+	}
+
+	if(mesh && (x^y)&1)
+		return;
+
+	//is this still necessary? probably has been fixed now
+	if((iPix > vdp1backframebuffer + 0x40000) || (iPix == 0))
+		return 0;
+
+	switch ((cmd.CMDPMOD >> 3) & 0x7)
+	{
+		case 0x0: //4bpp bank
+			endcode = 0xf;
+			dot = Vdp1ReadPattern16( addr + h0*(W>>1), w );
+			if(endcodesEnabled && dot == endcode)
+				return 1;
+			if (!((dot == 0) && !SPD)) 
+				dot = colorbank | dot;
+			visible = 0xf;
+			break;
+
+		case 0x1://4bpp lut
+			endcode = 0xf;
+			dot = Vdp1ReadPattern16( addr + h0*(W>>1), w );
+			if(endcodesEnabled && dot == endcode)
+				return 1;
+			if (!(dot == 0 && !SPD))
+				dot = T1ReadWord(Vdp1Ram, (dot * 2 + colorlut) & 0x7FFFF);
+			visible = 0xf;
+			break;
+		case 0x2://8pp bank (64 color)
+			//is there a hardware bug with endcodes in this color mode?
+			//there are white lines around some characters in scud
+			//using an endcode of 63 eliminates the white lines
+			//but also causes some dropout due to endcodes being triggered that aren't triggered on hardware
+			//the closest thing i can do to match the hardware is make all pixels with color index 63 transparent
+			//this needs more hardware testing
+
+			endcode = 63;
+			dot = Vdp1ReadPattern64( addr + h0*W, w );
+			if(endcodesEnabled && dot == endcode)
+				dot = 0;
+		//		return 1;
+			if (!((dot == 0) && !SPD)) 
+				dot = colorbank | dot;
+			visible = 0x3f;
+			break;
+		case 0x3://128 color
+			endcode = 0xff;
+			dot = Vdp1ReadPattern128( addr + h0*W, w );
+			if(endcodesEnabled && dot == endcode)
+				return 1;
+			if (!((dot == 0) && !SPD)) 
+				dot = colorbank | dot;
+			visible = 0x7f;
+			break;
+		case 0x4://256 color
+			endcode = 0xff;
+			dot = Vdp1ReadPattern256( addr + h0*W, w );
+			if(endcodesEnabled && dot == endcode)
+				return 1;
+			visible = 0xff;
+			if (!((dot == 0) && !SPD)) 
+				dot = colorbank | dot;
+			break;
+		case 0x5://16bpp bank
+			endcode = 0x7fff;
+			dot = Vdp1ReadPattern64k( addr + 2*h0*W, w );
+			if(endcodesEnabled && dot == endcode)
+				return 1;
+			visible = 0xffff;
+			break;
+	}
+
+	if(isPoly)
+		dot = polyColor;
+
+	//force the MSB to be on if MSBON is set
+	dot |= cmd.CMDPMOD & (1 << 15);
+
+	if ( SPD || (dot & visible))
+	{
+		switch( cmd.CMDPMOD & 0x7 )//we want bits 0,1,2
+		{
+		case 0:	// replace
+			if (!((dot == 0) && !SPD)) 
+				*(iPix) = dot;
+			break;
+		case 1: // shadow, TODO
+			*(iPix) = dot;
+			break;
+		case 2: // half luminance
+			*(iPix) = ((dot & ~0x8421) >> 1) | (1 << 15);
+			break;
+		case 3: // half transparent
+			if ( *(iPix) & (1 << 15) )//only if MSB of framebuffer data is set 
+				*(iPix) = alphablend16( *(iPix), dot, (1 << 7) ) | (1 << 15);
+			else
+				*(iPix) = dot;
+			break;
+		case 4: //gouraud, TODO
+			*(iPix) = dot;
+			break;
+		default:
+			break;
+		}
+	}
+	return 0;
+}
+
 void VIDSoftVdp1DistortedSpriteDraw() {
   
 #define max4(a,b,c,d) (a>b)?( (c>d)?( (a>c)?a:c ):( (a>d)?a:d ) ):( (c>d)?( (b>c)?b:c ):( (b>d)?b:d ) )
@@ -1741,178 +1895,59 @@ void VIDSoftVdp1DistortedSpriteDraw() {
   stepW = (float)(lW-1) / xLead;
   stepH = (float)(lH-1) / yLead;
 
-#define DISTORTED_SPRITE_LOOP_BEGIN       for ( x = xLead ; x ; x-- ) { \
-    if (( xM >= vdp1clipxstart )&&( yM >= vdp1clipystart )&&( xM < vdp1clipxend )&&( yM < vdp1clipyend )) {
-      
-#define DISTORTED_SPRITE_LOOP_END    	} \
-      W += stepW;  \
-      xM += xStepM;\
-      yM += yStepM;}
-
-#define DISTORTED_SPRITE_PUT(color) if ( SPD | dot ) \
-          ((u16 *)vdp1backframebuffer)[((int)yM * vdp1width) + (int)xM] = color;
-
-#define DISTORTED_SPRITE_ENDCODE_BREAK( code ) \
-	if(endCode) {\
-		if(last_iw != iW) {\
-			last_iw = iW; \
-			if(dot == code) {\
-			   if (endCode == 1) { \
-				 endCode = 2;\
-				 W += stepW;  \
-				 xM += xStepM;\
-				 yM += yStepM;\
-				 continue;\
-				} \
-				else { break; } \
-			} \
-		} else if(dot == code) { \
-			 W += stepW;  \
-			 xM += xStepM;\
-			 yM += yStepM;\
-			 continue; \
-		} \
-	} \
- 
   for ( y = yLead ; y ; y-- ) {
 
-    float xM = xN;
-    float yM = yN;
-    float W = 0;
-    int iHaddr;
-    int x;
+	  float xM = xN;
+	  float yM = yN;
+	  float W = 0;
+	  int iHaddr;
+	  int x;
+	  u16* iPix;
 
-	int last_iw = 0x7FFFFFFF;
+	  int last_iw = 0x7FFFFFFF;
 
-    if ( endCode ) endCode = 1;
-    switch ( type ) {
-      
-    case 0x10:
-      // 4 bpp Bank mode -> 16-bit FB Pixel
-      iHaddr = addr + (int)H * (lW>>1);
-      
-      DISTORTED_SPRITE_LOOP_BEGIN
-	
-	int iW = W;
-        u16 dot = Vdp1ReadPattern16( iHaddr, iW );
-	DISTORTED_SPRITE_ENDCODE_BREAK(0xF);
+	  if ( endCode ) endCode = 1;
 
-		if(mesh) {
-			if(((int)xM^(int)yM)&1) {
-				DISTORTED_SPRITE_PUT( isPoly?polyColor:(colorbank | dot) );}
-		}
-		else
-			DISTORTED_SPRITE_PUT( isPoly?polyColor:(colorbank | dot) );
+	  for ( x = xLead ; x ; x-- ) {
+		  if (( xM >= vdp1clipxstart )&&( yM >= vdp1clipystart )&&( xM < vdp1clipxend )&&( yM < vdp1clipyend )) {
 
-      DISTORTED_SPRITE_LOOP_END
-      break;
-    case 0x11:
-      // 4 bpp LUT mode -> 16-bit FB Pixel
-      iHaddr = addr + (int)H * (lW>>1);
-      
-      DISTORTED_SPRITE_LOOP_BEGIN
-      
-        int iW = W;
-        u16 dot = Vdp1ReadPattern16( iHaddr, iW );
-        DISTORTED_SPRITE_ENDCODE_BREAK(0xF);
+			  int iW = W;
 
-		if(mesh) {
-			if(((int)xM^(int)yM)&1) {
-				DISTORTED_SPRITE_PUT( isPoly?polyColor:(T1ReadWord(Vdp1Ram, (dot * 2 + colorlut) & 0x7FFFF )) );
-		}
-		}
-		else
-			DISTORTED_SPRITE_PUT( isPoly?polyColor:(T1ReadWord(Vdp1Ram, (dot * 2 + colorlut) & 0x7FFFF )) );
-	
-    
-      DISTORTED_SPRITE_LOOP_END
-      break;
-    case 0x12:
-      // 8 bpp(64 color) Bank mode -> 16-bit FB Pixel
-      iHaddr = addr + (int)H * lW;
-      
-      DISTORTED_SPRITE_LOOP_BEGIN
-	
-		  int iW = W;
-        u16 dot = Vdp1ReadPattern64( iHaddr, iW );
-        DISTORTED_SPRITE_ENDCODE_BREAK(0xFF);
+			  iPix = ((u16*)vdp1backframebuffer) + ((int)yM*vdp1width) + (int)xM;
 
-		if(mesh) {
-			if(((int)xM^(int)yM)&1) {
-				DISTORTED_SPRITE_PUT( isPoly?polyColor:(colorbank | dot) );
-			}
-		}
-		else
-			DISTORTED_SPRITE_PUT( isPoly?polyColor:(colorbank | dot) );
-      
-      DISTORTED_SPRITE_LOOP_END
-      break;
-    case 0x13:
-      // 8 bpp(128 color) Bank mode -> 16-bit FB Pixel
-      iHaddr = addr + (int)H * lW;
-      
-      DISTORTED_SPRITE_LOOP_BEGIN
-      
-		  int iW = W;
-	u16 dot = Vdp1ReadPattern128( iHaddr, iW );
-        DISTORTED_SPRITE_ENDCODE_BREAK(0xFF);
-
-		if(mesh) {
-			if(((int)xM^(int)yM)&1) {
-				DISTORTED_SPRITE_PUT( isPoly?polyColor:(colorbank | dot) );
-			}
-		}
-		else
-			DISTORTED_SPRITE_PUT( isPoly?polyColor:(colorbank | dot) );
-      
-      DISTORTED_SPRITE_LOOP_END
-      break;
-    case 0x14:
-      // 8 bpp(256 color) Bank mode -> 16-bit FB Pixel
-      iHaddr = addr + (int)H * lW;
-      
-      DISTORTED_SPRITE_LOOP_BEGIN
-
-		  int iW = W;
-        u16 dot = Vdp1ReadPattern256( iHaddr, iW );
-        DISTORTED_SPRITE_ENDCODE_BREAK(0xFF);
-
-		if(mesh) {
-			if(((int)xM^(int)yM)&1) {
-				DISTORTED_SPRITE_PUT( isPoly?polyColor:(colorbank | dot) );
-			}
-		}
-		else
-			DISTORTED_SPRITE_PUT( isPoly?polyColor:(colorbank | dot) );
-
-      DISTORTED_SPRITE_LOOP_END
-      break;
-    case 0x15:
-      // 16 bpp Bank mode -> 16-bit FB Pixel
-      iHaddr = addr + 2*((int)H * lW);
-      
-      DISTORTED_SPRITE_LOOP_BEGIN
-
-		  int iW = W;
-        u16 dot = Vdp1ReadPattern64k( iHaddr, iW );
-        DISTORTED_SPRITE_ENDCODE_BREAK(0x7FFF);
-		if(mesh) {
-			if(((int)xM^(int)yM)&1) {
-				DISTORTED_SPRITE_PUT( isPoly?polyColor:dot );
-			}
-		}
-		else
-			DISTORTED_SPRITE_PUT( isPoly?polyColor:dot );
-		
-      DISTORTED_SPRITE_LOOP_END
-      break;      
-    }
-
-    xStepM += xStepStepM;
-    yStepM += yStepStepM;
-    xN += xStepC;
-    yN += yStepC;
-    H += stepH;
+			  if(endCode) {
+				  if(last_iw != iW) {
+					  last_iw = iW;
+					  if(putpixel(xM,yM,(u16*)iPix,H,iW)) {
+						  if (endCode == 1) {
+							  endCode = 2;
+							  W += stepW;
+							  xM += xStepM;
+							  yM += yStepM;
+							  continue;
+						  }
+						  else { break; }
+					  }
+				  } 
+				  else if(putpixel(xM,yM,(u16*)iPix,H,iW)) {
+					  W += stepW;
+					  xM += xStepM;
+					  yM += yStepM;
+					  continue;
+				  }
+			  }
+			  
+			  putpixel((int)xM,(int)yM,(u16*)iPix,(int)H,iW);
+		  }
+		  W += stepW;
+		  xM += xStepM;
+		  yM += yStepM;
+	  }
+	  xStepM += xStepStepM;
+	  yStepM += yStepStepM;
+	  xN += xStepC;
+	  yN += yStepC;
+	  H += stepH;
   }
 
   if (cmd.CMDPMOD & 0x0400) PopUserClipping();
@@ -1923,11 +1958,11 @@ void VIDSoftVdp1DistortedSpriteDraw() {
 void VIDSoftVdp1NormalSpriteDraw(void)
 {
    vdp1cmd_struct cmd;
-   s16 x0, y0, x1, y1, W, H;
+   s16 x0, y0, x1, y1, spriteWidth, spriteHeight;
    u8 flip, SPD, endCode;
    u16 colorbank;
    int type;
-   u32 addr;
+   u32 characterAddress;
    int h0, w0, stepH, stepW;
    s32   clipx1, clipx2, clipy1, clipy2;
    u16* iPix;
@@ -1942,38 +1977,38 @@ void VIDSoftVdp1NormalSpriteDraw(void)
 
    x0 = cmd.CMDXA + Vdp1Regs->localX;
    y0 = cmd.CMDYA + Vdp1Regs->localY;
-   W = ((cmd.CMDSIZE >> 8) & 0x3F) * 8;
-   H = cmd.CMDSIZE & 0xFF;
+   spriteWidth = ((cmd.CMDSIZE >> 8) & 0x3F) * 8;
+   spriteHeight = cmd.CMDSIZE & 0xFF;
    type = (vdp1pixelsize << 3) | ((cmd.CMDPMOD >> 3) & 0x7);
    flip = (cmd.CMDCTRL & 0x30) >> 4;
    colorbank = cmd.CMDCOLR;
    colorlut = (u32)colorbank << 3;
    SPD = ((cmd.CMDPMOD & 0x40) != 0);
    endCode = (( cmd.CMDPMOD & 0x80) == 0 )?1:0;
-   addr = cmd.CMDSRCA << 3;
+   characterAddress = cmd.CMDSRCA << 3;
 
    if ( x0 < vdp1clipxstart ) {
      
-     if ( x0+W < vdp1clipxstart ) return;
+     if ( x0+spriteWidth < vdp1clipxstart ) return;
      clipx1 = vdp1clipxstart-x0;
    } else clipx1 = 0;
 
-   if ( x0+W > vdp1clipxend ) {
+   if ( x0+spriteWidth > vdp1clipxend ) {
      
      if ( x0 > vdp1clipxend ) return;
-     clipx2 = x0+W-vdp1clipxend;
+     clipx2 = x0+spriteWidth-vdp1clipxend;
    } else clipx2 = 0;
 
    if ( y0 < vdp1clipystart ) {
      
-     if ( y0+H < vdp1clipystart ) return;
+     if ( y0+spriteHeight < vdp1clipystart ) return;
      clipy1 = vdp1clipystart-y0;
    } else clipy1 = 0;
 
-   if ( y0+H > vdp1clipyend ) {
+   if ( y0+spriteHeight > vdp1clipyend ) {
      
      if ( y0 > vdp1clipyend ) return;
-     clipy2 = y0+H-vdp1clipyend;
+     clipy2 = y0+spriteHeight-vdp1clipyend;
    } else clipy2 = 0;
 
    switch( flip ) {
@@ -1991,154 +2026,68 @@ void VIDSoftVdp1NormalSpriteDraw(void)
      stepH = 1;
      stepW = -1;
      h0 = clipy1;
-     w0 = W-1-clipx1;
+     w0 = spriteWidth-1-clipx1;
      break;
    case 2:
      // Vertical flipping
      stepH = -1;
      stepW = 1;
-     h0 = H-1-clipy1;
+     h0 = spriteHeight-1-clipy1;
      w0 = clipx1;
      break;
    case 3:
      // Horizontal/Vertical flipping
      stepH = -1;
      stepW = -1;
-     h0 = H-1-clipy1;
-     w0 = W-1-clipx1;
+     h0 = spriteHeight-1-clipy1;
+     w0 = spriteWidth-1-clipx1;
      break;
    }
 
-   y1 = H - (clipy1 + clipy2);
-   x1 = W - (clipx1 + clipx2);
+   y1 = spriteHeight - (clipy1 + clipy2);
+   x1 = spriteWidth - (clipx1 + clipx2);
 
    iPix = ((u16*)vdp1backframebuffer) + (y0+clipy1) * vdp1width + x0+clipx1;
    stepPix = vdp1width - x1;
 
-#define NORMAL_SPRITE_ENDCODE_BREAK( code ) \
-  	 if (endCode && (dot == code)) {\
-           if (endCode == 1) { \
-             endCode = 2;\
-             iPix++; \
-             w += stepW; \
-             continue; \
-           } \
-	   else {\
-	     iPix += x;\
-	     w += x*stepW;\
-	     break;\
-	   }}
-
    for ( ; y1 ; y1-- ) {
-     
-     int w = w0;
-     int iAddr;
-     int x = x1;
-     if ( endCode ) endCode = 1;
-     
-     switch ( type ) {
-       
-     case 0x10:
-       // 4 bpp Bank mode -> 16-bit FB Pixel
-      
-       iAddr = addr + h0*(W>>1);
-       for ( ; x ; x-- ) {
-	
-	 u16 dot = Vdp1ReadPattern16( iAddr, w );
-	 NORMAL_SPRITE_ENDCODE_BREAK(0xF);
-	 if(mesh && (x^y1)&1)
-		dot = 0;
-         if (!(dot == 0 && !SPD)) *(iPix) = colorbank | dot;
+	   int w = w0;
+	   int iAddr;
+	   int x = x1;
 
+	   iAddr = characterAddress + h0*(spriteWidth>>1);
 
-	 iPix++;      
-	 w += stepW;
-       }
-       break;
-     case 0x11:
-       // 4 bpp LUT mode -> 16-bit FB Pixel
-       iAddr = addr + h0*(W>>1);
-      
-       for ( ; x ; x-- ) {
+	   if ( endCode ) endCode = 1;//reset for every line
 
-	 u16 dot = Vdp1ReadPattern16( iAddr, w );
-	 NORMAL_SPRITE_ENDCODE_BREAK(0xF);
-	 if(mesh && (x^y1)&1)
-		dot = 0;
-         if (!(dot == 0 && !SPD)) *(iPix) = T1ReadWord(Vdp1Ram, (dot * 2 + colorlut) & 0x7FFFF);
+	   for ( ; x ; x-- ) {
 
-	 iPix++;      
-	 w += stepW;
-       }
-       break;
-     case 0x12:
-       // 8 bpp(64 color) Bank mode -> 16-bit FB Pixel
+		   //putpixel returns 1 if it was about to put an endcode
+		   //enter if endcodes are enabled and it was an endcode
+		   if(putpixel(x,y1, iPix, h0, w) == 1 && endCode) {
 
-       iAddr = addr + h0*W;
-       for ( ; x ; x-- ) {
-	
-	 u16 dot = Vdp1ReadPattern64( iAddr, w );
-	 NORMAL_SPRITE_ENDCODE_BREAK(0xFF);
-	 if(mesh && (x^y1)&1)
-		dot = 0;
-         if (!((dot == 0) && !SPD)) *(iPix) = colorbank | dot;
+			   //1st endcode of a line, continue drawing
+			   if(endCode == 1) {
+				   endCode = 2;
+				   iPix++;
+				   w += stepW;
+				   continue;
+			   }
+			   //2nd endcode of a line, we move to the next line
+			   //by breaking out of the x loop and updating our indexes
+			   else {
+				   iPix+=x;
+				   w+=x*stepW;
+				   break;
+			   }
+		   }
+		   iPix++;
+		   w += stepW;
+	   }
 
-	 iPix++;      
-	 w += stepW;
-       }
-       break;
-     case 0x13:
-       // 8 bpp(128 color) Bank mode -> 16-bit FB Pixel
-
-       iAddr = addr + h0*W;
-       for ( ; x ; x-- ) {
-	
-	 u16 dot = Vdp1ReadPattern128( iAddr, w );
-	 NORMAL_SPRITE_ENDCODE_BREAK(0xFF);
-	 if(mesh && (x^y1)&1)
-		dot = 0;
-	 if (!((dot == 0) && !SPD)) *(iPix) = colorbank | dot;
-
-	 iPix++;      
-	 w += stepW;
-       }
-       break;
-     case 0x14:
-       // 8 bpp(256 color) Bank mode -> 16-bit FB Pixel
-
-       iAddr = addr + h0*W;
-       for ( ; x ; x-- ) {
-	
-	 u16 dot = Vdp1ReadPattern256( iAddr, w );
-	 NORMAL_SPRITE_ENDCODE_BREAK(0xFF);
-	 if(mesh && (x^y1)&1)
-		dot = 0;
-         if (!((dot == 0) && !SPD)) *(iPix) = colorbank | dot;
-
-	 iPix++;      
-	 w += stepW;
-       }
-       break;
-     case 0x15:
-       // 16 bpp Bank mode -> 16-bit FB Pixel
-      
-       iAddr = addr + 2*h0*W;
-       for ( ; x ; x-- ) {
-	
-	 u16 dot = Vdp1ReadPattern64k( iAddr, w );
-         NORMAL_SPRITE_ENDCODE_BREAK(0x7FFF);
-	 if(mesh && (x^y1)&1)
-		dot = 0;
-         if (!((dot == 0) && !SPD)) *(iPix) = dot;
-	 iPix++;      
-	 w += stepW;
-       }
-       break;
-     }
-    
-     iPix += stepPix;
-     h0 += stepH;
+	   iPix += stepPix;
+	   h0 += stepH;
    }
+
    if (cmd.CMDPMOD & 0x0400) PopUserClipping();
 }
 
@@ -2312,151 +2261,53 @@ void VIDSoftVdp1ScaledSpriteDraw(void)
    iPix = ((u16*)vdp1backframebuffer) + (y0+clipy1) * vdp1width + x0+clipx1;
    stepPix = vdp1width - x1;
 
-#define SCALED_SPRITE_ENDCODE_BREAK( code ) \
-			if(endCode) {\
-			if(last_iw != iw) {\
-				last_iw = iw; \
-				if(dot == code) {\
-					if (endCode == 1) { \
-						endCode = 2;\
-						iPix++;\
-						w += stepW;\
-						continue;\
-					} \
-					else {\
-						iPix += x;\
-						w += x*stepW; \
-						break;\
-						last_iw = iw; \
-					}\
-				}\
-			}\
-			else if( dot == code) {\
-				iPix++;\
-				w += stepW;\
-				continue;\
-			}\
-			}
-
-#define MESH \
-	 if(mesh) { \
-	 if((x^y1)&1) \
-	 dot=0; } 			
-
    for ( ; y1 ; y1-- ) {
-     
-     float w = w0;
-     int iAddr;
-     int x = x1;
+	   float w = w0;
+	   int iAddr;
+	   int x = x1;
 
-     if ( endCode ) endCode = 1;
-     
-     switch ( type ) {
+	   int last_iw = 0x7FFFFFFF;
 
-	int last_iw = 0x7FFFFFFF;
+	   iAddr = addr + h0*(W>>1);
 
-     case 0x10:
-       // 4 bpp Bank mode -> 16-bit FB Pixel
-      
-       iAddr = addr + (int)h0*(W>>1);
+	   if ( endCode ) endCode = 1;//reset for every line
 
-       for ( ; x ; x-- ) {
-	
-	 int iw = w;
-	 u16 dot = Vdp1ReadPattern16( iAddr, iw );
-	 SCALED_SPRITE_ENDCODE_BREAK(0xF);
-	 MESH;
-	 if (!(dot == 0 && !SPD)) *(iPix) = colorbank | dot;
+	   for ( ; x ; x-- ) {
 
-	 iPix++;      
-	 w += stepW;
-       }
-       break;
-     case 0x11:
-       // 4 bpp LUT mode -> 16-bit FB Pixel
-       iAddr = addr + (int)h0*(W>>1);
-      
-       for ( ; x ; x-- ) {
-
-	 int iw = w;
-	 u16 dot = Vdp1ReadPattern16( iAddr, iw );
-	 SCALED_SPRITE_ENDCODE_BREAK(0xF);
-	 MESH;
-	 if (!(dot == 0 && !SPD)) *(iPix) = T1ReadWord(Vdp1Ram, (dot * 2 + colorlut) & 0x7FFFF);
-
-	 iPix++;      
-	 w += stepW;
-       }
-       break;
-     case 0x12:
-       // 8 bpp(64 color) Bank mode -> 16-bit FB Pixel
-
-       iAddr = addr + (int)h0*W;
-       for ( ; x ; x-- ) {
-	
 		   int iw = w;
-	 u16 dot = Vdp1ReadPattern64( iAddr, iw );
-	 SCALED_SPRITE_ENDCODE_BREAK(0xFF);
-	 MESH;
-	 if (!((dot == 0) && !SPD)) *(iPix) = colorbank | dot;
-	
-	 iPix++;      
-	 w += stepW;
-       }
-       break;
-     case 0x13:
-       // 8 bpp(128 color) Bank mode -> 16-bit FB Pixel
 
-       iAddr = addr + (int)h0*W;
-       for ( ; x ; x-- ) {
-	
-		   int iw = w;
-	 u16 dot = Vdp1ReadPattern128( iAddr, iw );
-	 SCALED_SPRITE_ENDCODE_BREAK(0xFF);
-	 MESH;
-	 if (!((dot == 0) && !SPD)) *(iPix) = colorbank | dot;
-	
-	 iPix++;      
-	 w += stepW;
-       }
-       break;
-     case 0x14:
-       // 8 bpp(256 color) Bank mode -> 16-bit FB Pixel
-
-       iAddr = addr + (int)h0*W;
-       for ( ; x ; x-- ) {
-	
-		   int iw = w;
-	 u16 dot = Vdp1ReadPattern256( iAddr, iw );
-	 SCALED_SPRITE_ENDCODE_BREAK(0xFF);
-	 MESH;
-	 if (!((dot == 0) && !SPD)) *(iPix) = colorbank | dot;
-	
-	 iPix++;      
-	 w += stepW;
-       }
-       break;
-     case 0x15:
-       // 16 bpp Bank mode -> 16-bit FB Pixel
-      
-       iAddr = addr + 2*(int)h0*W;
-       for ( ; x ; x-- ) {
-	
-		   int iw = w;
-	 u16 dot = Vdp1ReadPattern64k( iAddr, iw );
-	 SCALED_SPRITE_ENDCODE_BREAK(0x7FFF);
-	 MESH;
-	 if (!((dot == 0) && !SPD)) *(iPix) = dot;
-	
-	 iPix++;      
-	 w += stepW;
-       }
-       break;
-	 }
-    
-     iPix += stepPix;
-     h0 += stepH;
+		   if(endCode) {
+			   if(last_iw != iw) {
+				   last_iw = iw;
+				   if(putpixel(x,y1, iPix, h0, w)) {
+					   if (endCode == 1) {
+						   endCode = 2;
+						   iPix++;
+						   w += stepW;
+						   continue;
+					   }
+					   else {
+						   iPix += x;
+						   w += x*stepW;
+						   break;
+						   last_iw = iw;
+					   }
+				   }
+			   }
+			   else if(putpixel(x,y1, iPix, h0, w)) {
+				   iPix++;
+				   w += stepW;
+				   continue;
+			   }
+		   }
+		   putpixel(x,y1, iPix, h0, w);
+		   iPix++;
+		   w += stepW;
+	   }
+	   iPix += stepPix;
+	   h0 += stepH;
    }
+
    if (cmd.CMDPMOD & 0x0400) PopUserClipping();
 }
 

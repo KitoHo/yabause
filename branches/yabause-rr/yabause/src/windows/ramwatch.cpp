@@ -3,6 +3,7 @@
 
 #include "resource.h"
 #include "ramwatch.h"
+#include "ram_search.h"
 
 
 
@@ -12,13 +13,14 @@ extern "C" {
 #include "./settings/settings.h"
 #include "./cpudebug/yuidebug.h"
 #include "yuiwin.h"
+#include <ctype.h>
 }
 #include "windows.h"
 #include "commctrl.h"
 
 HWND RamWatchHWnd = NULL;
 
-char Str_Tmp[1024];
+static char Str_Tmp[1024];
 char Rom_Name[64] = "test"; //TODO
 
 static HMENU ramwatchmenu;
@@ -747,13 +749,6 @@ void RemoveWatch(int watchIndex)
 		rswatches[i] = rswatches[i+1];
 	WatchCount--;
 }
-
-int IsHardwareRAMAddressValid(unsigned int address) {
-
-	return 1;
-
-
-};
 
 char s;
 char t;

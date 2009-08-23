@@ -40,7 +40,7 @@
 #include <list>
 #include <vector>
 #ifdef _WIN32
-   #include "BaseTsd.h"
+ //  #include "BaseTsd.h"
    typedef INT_PTR intptr_t;
 #else
    #include "stdint.h"
@@ -53,7 +53,7 @@ extern "C" HINSTANCE y_hInstance;
 
 extern HWND RamWatchHWnd;
 
-WCHAR Str_Tmp[1024];
+static WCHAR Str_Tmp[1024];
 
 int Rom_Size; //TODO
 unsigned char* Rom_Data; //TODO

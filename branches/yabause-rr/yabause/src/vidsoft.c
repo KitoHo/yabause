@@ -1636,65 +1636,78 @@ INLINE u32 alphablend16(u32 d, u32 s, u32 level)
 	return r|g|b;
 }
 
-INLINE int putpixel(int x, int y, u16* iPix, int h0, int w) {
+double leftColumnRed, leftColumnGreen, leftColumnBlue;
+int currentPixel;
+int currentPixelIsVisible;
+vdp1cmd_struct cmd;
 
-	int mesh;
-	vdp1cmd_struct cmd;
-	u16 dot;
+int getpixel(int linenumber, int currentlineindex) {
+	
+	u32 characterAddress;
+	u32 colorlut;
 	u16 colorbank;
 	u8 SPD;
-	u32 addr;
-	s16 W;
-	u32 colorlut;
-	int mode;
-	int visible;
 	int endcode;
 	int endcodesEnabled;
-	int isPoly = 0;
-	u16 polyColor;
+	int characterWidth;
+	int untexturedColor;
+	int isTextured = 1;
+	int currentShape = cmd.CMDCTRL & 0x7;
+	int flip;
+	int characterHeight;
 
-	Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
-
-	W = ((cmd.CMDSIZE >> 8) & 0x3F) * 8;
-	addr = cmd.CMDSRCA << 3;
+	characterAddress = cmd.CMDSRCA << 3;
+	characterWidth = ((cmd.CMDSIZE >> 8) & 0x3F) * 8;
 	colorbank = cmd.CMDCOLR;
 	colorlut = (u32)colorbank << 3;
 	SPD = ((cmd.CMDPMOD & 0x40) != 0);//show the actual color of transparent pixels if 1 (they won't be drawn transparent)
-	mesh = cmd.CMDPMOD & 0x0100;
 	endcodesEnabled = (( cmd.CMDPMOD & 0x80) == 0 )?1:0;
+	characterHeight = cmd.CMDSIZE & 0xFF;
+	flip = (cmd.CMDCTRL & 0x30) >> 4;
 
-	if((cmd.CMDCTRL & 0x7) == 4) {
-		isPoly = 1;
-		polyColor = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x6);
+	//4 polygon, 5 polyline or 6 line
+	if(currentShape == 4 || currentShape == 5 || currentShape == 6) {
+		isTextured = 0;
+		untexturedColor = cmd.CMDCOLR;
 	}
 
-	if(mesh && (x^y)&1)
-		return;
+	switch( flip ) {
+		case 1:
+			// Horizontal flipping
+			currentlineindex = characterWidth - currentlineindex-1;
+			break;
+		case 2:
+			// Vertical flipping
+			linenumber = characterHeight - linenumber-1;
 
-	//is this still necessary? probably has been fixed now
-	if((iPix > vdp1backframebuffer + 0x40000) || (iPix == 0))
-		return 0;
+			break;
+		case 3:
+			// Horizontal/Vertical flipping
+			linenumber = characterHeight - linenumber-1;
+			currentlineindex = characterWidth - currentlineindex-1;
+			break;
+	}
 
 	switch ((cmd.CMDPMOD >> 3) & 0x7)
 	{
 		case 0x0: //4bpp bank
 			endcode = 0xf;
-			dot = Vdp1ReadPattern16( addr + h0*(W>>1), w );
-			if(endcodesEnabled && dot == endcode)
+			currentPixel = Vdp1ReadPattern16( characterAddress + (linenumber*(characterWidth>>1)), currentlineindex );
+			if(isTextured && endcodesEnabled && currentPixel == endcode)
 				return 1;
-			if (!((dot == 0) && !SPD)) 
-				dot = colorbank | dot;
-			visible = 0xf;
+			if (!((currentPixel == 0) && !SPD)) 
+				currentPixel = colorbank | currentPixel;
+			currentPixelIsVisible = 0xf;
 			break;
 
 		case 0x1://4bpp lut
 			endcode = 0xf;
-			dot = Vdp1ReadPattern16( addr + h0*(W>>1), w );
-			if(endcodesEnabled && dot == endcode)
+			currentPixel = Vdp1ReadPattern16( characterAddress + (linenumber*(characterWidth>>1)), currentlineindex );
+			if(isTextured && endcodesEnabled && currentPixel == endcode)
 				return 1;
-			if (!(dot == 0 && !SPD))
-				dot = T1ReadWord(Vdp1Ram, (dot * 2 + colorlut) & 0x7FFFF);
-			visible = 0xf;
+			if (!(currentPixel == 0 && !SPD))
+				currentPixel = T1ReadWord(Vdp1Ram, (currentPixel * 2 + colorlut) & 0x7FFFF);
+			currentPixelIsVisible = 0xffff;
 			break;
 		case 0x2://8pp bank (64 color)
 			//is there a hardware bug with endcodes in this color mode?
@@ -1705,795 +1718,771 @@ INLINE int putpixel(int x, int y, u16* iPix, int h0, int w) {
 			//this needs more hardware testing
 
 			endcode = 63;
-			dot = Vdp1ReadPattern64( addr + h0*W, w );
-			if(endcodesEnabled && dot == endcode)
-				dot = 0;
+			currentPixel = Vdp1ReadPattern64( characterAddress + (linenumber*(characterWidth)), currentlineindex );
+			if(isTextured && endcodesEnabled && currentPixel == endcode)
+				currentPixel = 0;
 		//		return 1;
-			if (!((dot == 0) && !SPD)) 
-				dot = colorbank | dot;
-			visible = 0x3f;
+			if (!((currentPixel == 0) && !SPD)) 
+				currentPixel = colorbank | currentPixel;
+			currentPixelIsVisible = 0x3f;
 			break;
 		case 0x3://128 color
 			endcode = 0xff;
-			dot = Vdp1ReadPattern128( addr + h0*W, w );
-			if(endcodesEnabled && dot == endcode)
+			currentPixel = Vdp1ReadPattern128( characterAddress + (linenumber*characterWidth), currentlineindex );
+			if(isTextured && endcodesEnabled && currentPixel == endcode)
 				return 1;
-			if (!((dot == 0) && !SPD)) 
-				dot = colorbank | dot;
-			visible = 0x7f;
+			if (!((currentPixel == 0) && !SPD)) 
+				currentPixel = colorbank | currentPixel;
+			currentPixelIsVisible = 0x7f;
 			break;
 		case 0x4://256 color
 			endcode = 0xff;
-			dot = Vdp1ReadPattern256( addr + h0*W, w );
-			if(endcodesEnabled && dot == endcode)
+			currentPixel = Vdp1ReadPattern256( characterAddress + (linenumber*characterWidth), currentlineindex );
+			if(isTextured && endcodesEnabled && currentPixel == endcode)
 				return 1;
-			visible = 0xff;
-			if (!((dot == 0) && !SPD)) 
-				dot = colorbank | dot;
+			currentPixelIsVisible = 0xff;
+			if (!((currentPixel == 0) && !SPD)) 
+				currentPixel = colorbank | currentPixel;
 			break;
 		case 0x5://16bpp bank
 			endcode = 0x7fff;
-			dot = Vdp1ReadPattern64k( addr + 2*h0*W, w );
-			if(endcodesEnabled && dot == endcode)
+			currentPixel = Vdp1ReadPattern64k( characterAddress + (linenumber*characterWidth*2), currentlineindex );
+			if(isTextured && endcodesEnabled && currentPixel == endcode)
 				return 1;
-			visible = 0xffff;
+			currentPixelIsVisible = 0xffff;
 			break;
 	}
 
-	if(isPoly)
-		dot = polyColor;
+	if(!isTextured)
+		currentPixel = untexturedColor;
 
 	//force the MSB to be on if MSBON is set
-	dot |= cmd.CMDPMOD & (1 << 15);
+	currentPixel |= cmd.CMDPMOD & (1 << 15);
 
-	if ( SPD || (dot & visible))
+	return 0;
+}
+
+int gouraudAdjust( int color, int tableValue )
+{
+	color += (tableValue - 0x10);
+
+	if ( color < 0 ) color = 0;
+	if ( color > 0x1f ) color = 0x1f;
+
+	return color;
+}
+
+void putpixel(int x, int y) {
+
+	u16* iPix = &((u16 *)vdp1backframebuffer)[(y * vdp1width) + x];
+	int mesh = cmd.CMDPMOD & 0x0100;
+	int SPD = ((cmd.CMDPMOD & 0x40) != 0);//show the actual color of transparent pixels if 1 (they won't be drawn transparent)
+	int currentShape = cmd.CMDCTRL & 0x7;
+	int isTextured=1;
+
+	if(mesh && (x^y)&1)
+		return;
+
+	if(currentShape == 4 || currentShape == 5 || currentShape == 6)
+		isTextured = 0;
+
+	if (cmd.CMDPMOD & 0x0400) PushUserClipping((cmd.CMDPMOD >> 9) & 0x1);
+
+	if (x >= vdp1clipxstart &&
+		x < vdp1clipxend &&
+		y >= vdp1clipystart &&
+		y < vdp1clipyend)
+	{}
+	else
+		return;
+
+	if (cmd.CMDPMOD & 0x0400) PopUserClipping();
+
+
+	if ( SPD || (currentPixel & currentPixelIsVisible))
 	{
 		switch( cmd.CMDPMOD & 0x7 )//we want bits 0,1,2
 		{
 		case 0:	// replace
-			if (!((dot == 0) && !SPD)) 
-				*(iPix) = dot;
+			if (!((currentPixel == 0) && !SPD)) 
+				*(iPix) = currentPixel;
 			break;
 		case 1: // shadow, TODO
-			*(iPix) = dot;
+			*(iPix) = currentPixel;
 			break;
 		case 2: // half luminance
-			*(iPix) = ((dot & ~0x8421) >> 1) | (1 << 15);
+			*(iPix) = ((currentPixel & ~0x8421) >> 1) | (1 << 15);
 			break;
 		case 3: // half transparent
 			if ( *(iPix) & (1 << 15) )//only if MSB of framebuffer data is set 
-				*(iPix) = alphablend16( *(iPix), dot, (1 << 7) ) | (1 << 15);
+				*(iPix) = alphablend16( *(iPix), currentPixel, (1 << 7) ) | (1 << 15);
 			else
-				*(iPix) = dot;
+				*(iPix) = currentPixel;
 			break;
-		case 4: //gouraud, TODO
-			*(iPix) = dot;
+		case 4: //gouraud
+			#define COLOR(r,g,b)    (((r)&0x1F)|((g)&0x1F)<<5|((b)&0x1F)<<10 |0x8000 )
+
+			*(iPix) = COLOR(
+				gouraudAdjust(
+				currentPixel&0x001F,
+				(int)leftColumnRed),
+
+				gouraudAdjust(
+				(currentPixel&0x03e0) >> 5,
+				(int)leftColumnGreen),
+
+				gouraudAdjust(
+				(currentPixel&0x7c00) >> 10,
+				(int)leftColumnBlue)
+				);
 			break;
 		default:
+			*(iPix) = alphablend16( COLOR((int)leftColumnRed,(int)leftColumnGreen, (int)leftColumnBlue), currentPixel, (1 << 7) ) | (1 << 15);
 			break;
 		}
 	}
-	return 0;
+}
+
+//TODO consolidate the following 3 functions
+int bresenham( int x1, int y1, int x2, int y2, int x[], int y[])
+{
+	int dx, dy, xf, yf, a, b, c, i;
+
+	if (x2>x1) {
+		dx = x2-x1;
+		xf = 1;
+	}
+	else {
+		dx = x1-x2;
+		xf = -1;
+	}
+
+	if (y2>y1) {
+		dy = y2-y1;
+		yf = 1;
+	}
+	else {
+		dy = y1-y2;
+		yf = -1;
+	}
+
+	//burning rangers tries to draw huge shapes
+	//this will at least let it run
+	if(dx > 999 || dy > 999)
+		return INT_MAX;
+
+	if (dx>dy) {
+		a = dy+dy;
+		c = a-dx;
+		b = c-dx;
+		for (i=0;i<=dx;i++) {
+			x[i] = x1; y[i] = y1;
+			x1 += xf;
+			if (c<0) {
+				c += a;
+			}
+			else {
+				c += b;
+				y1 += yf;
+			}
+		}
+		return dx+1;
+	}
+	else {
+		a = dx+dx;
+		c = a-dy;
+		b = c-dy;
+		for (i=0;i<=dy;i++) {
+			x[i] = x1; y[i] = y1;
+			y1 += yf;
+			if (c<0) {
+				c += a;
+			}
+			else {
+				c += b;
+				x1 += xf;
+			}
+		}
+		return dy+1;
+	}
+}
+
+int DrawLine( int x1, int y1, int x2, int y2, double linenumber, double texturestep, double xredstep, double xbluestep, double xgreenstep)
+{
+	int dx, dy, xf, yf, a, b, c, i;
+	int endcodesdetected=0;
+	int previousStep = 123456789;
+
+	if (x2>x1) {
+		dx = x2-x1;
+		xf = 1;
+	}
+	else {
+		dx = x1-x2;
+		xf = -1;
+	}
+
+	if (y2>y1) {
+		dy = y2-y1;
+		yf = 1;
+	}
+	else {
+		dy = y1-y2;
+		yf = -1;
+	}
+
+	if (dx>dy) {
+		a = dy+dy;
+		c = a-dx;
+		b = c-dx;
+		for (i=0;i<=dx;i++) {
+			leftColumnRed+=xredstep;
+			leftColumnGreen+=xgreenstep;
+			leftColumnBlue+=xbluestep;
+
+			if(getpixel(linenumber,(int)i*texturestep)) {
+				if(currentPixel != previousStep) {
+					previousStep = (int)i*texturestep;
+					endcodesdetected++;
+				}
+			}
+			else
+				putpixel(x1,y1);
+
+			previousStep = currentPixel;
+
+			if(endcodesdetected==2)
+				break;
+
+			x1 += xf;
+			if (c<0) {
+				c += a;
+			}
+			else {
+				putpixel(x1,y1);
+				c += b;
+				y1 += yf;
+/*
+				//same as sega's way, but just move the code down here instead
+				//and use the pixel we already have instead of the next one
+				if(xf>1&&yf>1) putpixel(x1,y1-1); //case 1
+				if(xf<1&&yf<1) putpixel(x1,y1+1); //case 2
+				if(xf<1&&yf>1) putpixel(x1+1,y1); //case 7
+				if(xf>1&&yf<1) putpixel(x1-1,y1); //case 8*/
+			}
+		}
+		return dx+1;
+	}
+	else {
+		a = dx+dx;
+		c = a-dy;
+		b = c-dy;	
+	for (i=0;i<=dy;i++) {
+			leftColumnRed+=xredstep;
+			leftColumnGreen+=xgreenstep;
+			leftColumnBlue+=xbluestep;
+
+			if(getpixel(linenumber,(int)i*texturestep)) {
+				if(currentPixel != previousStep) {
+					previousStep = (int)i*texturestep;
+					endcodesdetected++;
+				}
+			}
+			else
+				putpixel(x1,y1);
+
+			previousStep = currentPixel;
+
+			if(endcodesdetected==2)
+				break;
+
+			y1 += yf;
+			if (c<0) {
+				c += a;
+			}
+			else {
+				putpixel(x1,y1);
+				c += b;
+				x1 += xf;
+/*				
+				if(xf>1&&yf>1) putpixel(x1,y1-1); //case 3
+				if(xf<1&&yf<1) putpixel(x1,y1+1); //case 4
+				if(xf<1&&yf>1) putpixel(x1+1,y1); //case 5
+				if(xf>1&&yf<1) putpixel(x1-1,y1); //case 6*/
+
+			}
+		}
+		return dy+1;
+	}
+}
+
+int getlinelength(int x1, int y1, int x2, int y2) {
+	int dx, dy, xf, yf, a, b, c, i;
+
+	if (x2>x1) {
+		dx = x2-x1;
+		xf = 1;
+	}
+	else {
+		dx = x1-x2;
+		xf = -1;
+	}
+
+	if (y2>y1) {
+		dy = y2-y1;
+		yf = 1;
+	}
+	else {
+		dy = y1-y2;
+		yf = -1;
+	}
+
+	if (dx>dy) {
+		a = dy+dy;
+		c = a-dx;
+		b = c-dx;
+		for (i=0;i<=dx;i++) {
+
+			x1 += xf;
+			if (c<0) {
+				c += a;
+			}
+			else {
+				c += b;
+				y1 += yf;
+			}
+		}
+		return dx+1;
+	}
+	else {
+		a = dx+dx;
+		c = a-dy;
+		b = c-dy;	
+	for (i=0;i<=dy;i++) {
+			y1 += yf;
+			if (c<0) {
+				c += a;
+			}
+			else {
+				c += b;
+				x1 += xf;
+			}
+		}
+		return dy+1;
+	}
+}
+
+INLINE double interpolate(double start, double end, int numberofsteps) {
+
+	double stepvalue = 0;
+
+	if(numberofsteps == 0)
+		return 1;
+
+	stepvalue = (end - start) / numberofsteps;
+
+	return stepvalue;
+}
+
+int gouraudA;
+int gouraudB;
+int gouraudC;
+int gouraudD;
+
+void gouraudTable()
+{
+	int gouraudTableAddress;
+
+	Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
+
+	gouraudTableAddress = (((unsigned int)cmd.CMDGRDA) << 3);
+
+	gouraudA = T1ReadWord(Vdp1Ram,gouraudTableAddress)   & ~(1 << 15);
+	gouraudC = T1ReadWord(Vdp1Ram,gouraudTableAddress+2) & ~(1 << 15);
+	gouraudB = T1ReadWord(Vdp1Ram,gouraudTableAddress+4) & ~(1 << 15);
+	gouraudD = T1ReadWord(Vdp1Ram,gouraudTableAddress+6) & ~(1 << 15);
+}
+
+int xleft[1000];
+int yleft[1000];
+int xright[1000];
+int yright[1000];
+
+//a real vdp1 draws with arbitrary lines
+//this is why endcodes are possible
+//this is also the reason why half-transparent shading causes moire patterns
+//and the reason why gouraud shading can be applied to a single line draw command
+void drawQuad(s32 ax, s32 ay, s32 bx, s32 by, s32 cx, s32 cy, s32 dx, s32 dy){
+
+	int totalleft;
+	int totalright;
+	int total;
+	int i;
+
+	double topLeftToBottomLeftRedStep,topLeftToBottomLeftGreenStep,topLeftToBottomLeftBlueStep;
+	double topRightToBottomRightRedStep, topRightToBottomRightGreenStep, topRightToBottomRightBlueStep;
+
+	//how quickly we step through the line arrays
+	double leftLineStep = 1;
+	double rightLineStep = 1; 
+
+	int characterWidth;
+	int characterHeight;
+	
+	Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
+	characterWidth = ((cmd.CMDSIZE >> 8) & 0x3F) * 8;
+	characterHeight = cmd.CMDSIZE & 0xFF;
+
+	totalleft  = bresenham(ax,ay,dx,dy,xleft,yleft);
+	totalright = bresenham(bx,by,cx,cy,xright,yright);
+
+	//just for now since burning rangers will freeze up trying to draw huge shapes
+	if(totalleft == INT_MAX || totalright == INT_MAX)
+		return;
+
+	total = max(totalleft,totalright);
+
+	if(cmd.CMDPMOD & (1 << 2)) {
+
+		gouraudTable();
+
+		//calculate steps for the left column, from the top left corner to the bottom left
+		topLeftToBottomLeftRedStep =interpolate(gouraudA&0x1f,gouraudD&0x1f,totalleft);
+
+		topLeftToBottomLeftGreenStep =
+			interpolate(
+			((gouraudA&0x03e0) >> 5),
+			((gouraudD&0x03e0) >> 5),
+			total);
+
+		topLeftToBottomLeftBlueStep =
+			interpolate(
+			((gouraudA&0x7c00) >> 10),
+			((gouraudD&0x7c00) >> 10),
+			total);
+
+		//calculate steps for right column, from the top right corner to the bottom right
+		topRightToBottomRightRedStep =interpolate(gouraudC&0x1f,gouraudB&0x1f,totalright);
+
+		topRightToBottomRightGreenStep =
+			interpolate(
+			((gouraudB&0x03e0) >> 5),
+			((gouraudC&0x03e0) >> 5),
+			total);
+
+		topRightToBottomRightBlueStep =
+			interpolate(
+			((gouraudB&0x7c00) >> 10),
+			((gouraudC&0x7c00) >> 10),
+			total);
+	}
+
+	//we have to step the equivalent of less than one pixel on the shorter side
+	//to make sure textures stretch properly and the shape is correct
+	if(total == totalleft && totalleft != totalright) {
+		//left side is larger
+		leftLineStep = 1;
+		rightLineStep = (double)totalright / totalleft;
+	}
+	else if(totalleft != totalright){
+		//right side is larger
+		rightLineStep = 1;
+		leftLineStep = (double)totalleft / totalright;
+	}
+
+	for(i = 0; i < total; i++) {
+
+		int xlinelength;
+
+		double xtexturestep;
+		double ytexturestep;
+
+		double rightColumnRed, rightColumnGreen, rightColumnBlue;
+
+		double leftToRightRedStep = 0,leftToRightGreenStep = 0,leftToRightBlueStep = 0;
+
+		//get the length of the line we are about to draw
+		xlinelength = getlinelength(
+			xleft[(int)(i*leftLineStep)],
+			yleft[(int)(i*leftLineStep)],
+			xright[(int)(i*rightLineStep)],
+			yright[(int)(i*rightLineStep)]);
+
+		//so from 0 to the width of the texture / the length of the line is how far we need to step
+		xtexturestep=interpolate(0,characterWidth,xlinelength);
+
+		//now we need to interpolate the y texture coordinate across multiple lines
+		ytexturestep=interpolate(0,characterHeight,total);
+
+		//gouraud interpolation
+		if(cmd.CMDPMOD & (1 << 2)) {
+
+			//for each new line we need to step once more through each column
+			//and add the orignal color + the number of steps taken times the step value to the bottom of the shape
+			//to get the current colors to use to interpolate across the line
+
+			leftColumnRed = (gouraudA&0x1f)+(topLeftToBottomLeftRedStep*i);
+			leftColumnGreen = ((gouraudA&0x03e0)>> 5) +(topLeftToBottomLeftGreenStep*i);
+			leftColumnBlue = ((gouraudA&0x7c00) >> 10)+(topLeftToBottomLeftBlueStep*i);
+
+			rightColumnRed = (gouraudB&0x1f)+(topRightToBottomRightRedStep*i);
+			rightColumnGreen = ((gouraudB&0x03e0) >> 5) +(topRightToBottomRightGreenStep*i);
+			rightColumnBlue = ((gouraudB&0x7c00) >> 10) +(topRightToBottomRightBlueStep*i);
+
+			//interpolate colors across to get the right step values
+			leftToRightRedStep = interpolate(leftColumnRed,rightColumnRed,xlinelength);
+			leftToRightGreenStep = interpolate(leftColumnGreen,rightColumnGreen,xlinelength);
+			leftToRightBlueStep = interpolate(leftColumnBlue,rightColumnBlue,xlinelength);
+		}
+
+		DrawLine(
+			xleft[(int)(i*leftLineStep)],
+			yleft[(int)(i*leftLineStep)],
+			xright[(int)(i*rightLineStep)],
+			yright[(int)(i*rightLineStep)],
+			ytexturestep*i, 
+			xtexturestep,
+			leftToRightRedStep,
+			leftToRightGreenStep,
+			leftToRightBlueStep
+			);
+	}
+}
+
+void VIDSoftVdp1NormalSpriteDraw() {
+
+	s32 topLeftx,topLefty,topRightx,topRighty,bottomRightx,bottomRighty,bottomLeftx,bottomLefty;
+	int spriteWidth;
+	int spriteHeight;
+	Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
+
+	topLeftx = cmd.CMDXA + Vdp1Regs->localX;
+	topLefty = cmd.CMDYA + Vdp1Regs->localY;
+	spriteWidth = ((cmd.CMDSIZE >> 8) & 0x3F) * 8;
+	spriteHeight = cmd.CMDSIZE & 0xFF;
+
+	topRightx = topLeftx+spriteWidth;
+	topRighty = topLefty;
+	bottomRightx = topLeftx+spriteWidth;
+	bottomRighty = topLefty+spriteHeight;
+	bottomLeftx = topLeftx;
+	bottomLefty = topLefty+spriteHeight;
+
+	drawQuad(topLeftx,topLefty,topRightx,topRighty,bottomRightx,bottomRighty,bottomLeftx,bottomLefty);
+}
+
+void VIDSoftVdp1ScaledSpriteDraw(){
+
+	s32 topLeftx,topLefty,topRightx,topRighty,bottomRightx,bottomRighty,bottomLeftx,bottomLefty;
+	int spriteWidth;
+	int spriteHeight;
+	int flip = 0;
+	int x0,y0,x1,y1;
+	Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
+
+	x0 = cmd.CMDXA + Vdp1Regs->localX;
+	y0 = cmd.CMDYA + Vdp1Regs->localY;
+
+	switch ((cmd.CMDCTRL >> 8) & 0xF)
+	{
+	case 0x0: // Only two coordinates
+	default:
+		x1 = ((int)cmd.CMDXC) - x0 + Vdp1Regs->localX + 1;
+		y1 = ((int)cmd.CMDYC) - y0 + Vdp1Regs->localY + 1;
+		if (x1<0) { x1 = -x1; x0 -= x1; flip ^= 1; }
+		if (y1<0) { y1 = -y1; y0 -= y1; flip ^= 2; }
+		break;
+	case 0x5: // Upper-left
+		x1 = ((int)cmd.CMDXB) + 1;
+		y1 = ((int)cmd.CMDYB) + 1;
+		break;
+	case 0x6: // Upper-Center
+		x1 = ((int)cmd.CMDXB);
+		y1 = ((int)cmd.CMDYB);
+		x0 = x0 - x1/2;
+		x1++;
+		y1++;
+		break;
+	case 0x7: // Upper-Right
+		x1 = ((int)cmd.CMDXB);
+		y1 = ((int)cmd.CMDYB);
+		x0 = x0 - x1;
+		x1++;
+		y1++;
+		break;
+	case 0x9: // Center-left
+		x1 = ((int)cmd.CMDXB);
+		y1 = ((int)cmd.CMDYB);
+		y0 = y0 - y1/2;
+		x1++;
+		y1++;
+		break;
+	case 0xA: // Center-center
+		x1 = ((int)cmd.CMDXB);
+		y1 = ((int)cmd.CMDYB);
+		x0 = x0 - x1/2;
+		y0 = y0 - y1/2;
+		x1++;
+		y1++;
+		break;
+	case 0xB: // Center-right
+		x1 = ((int)cmd.CMDXB);
+		y1 = ((int)cmd.CMDYB);
+		x0 = x0 - x1;
+		y0 = y0 - y1/2;
+		x1++;
+		y1++;
+		break;
+	case 0xD: // Lower-left
+		x1 = ((int)cmd.CMDXB);
+		y1 = ((int)cmd.CMDYB);
+		y0 = y0 - y1;
+		x1++;
+		y1++;
+		break;
+	case 0xE: // Lower-center
+		x1 = ((int)cmd.CMDXB);
+		y1 = ((int)cmd.CMDYB);
+		x0 = x0 - x1/2;
+		y0 = y0 - y1;
+		x1++;
+		y1++;
+		break;
+	case 0xF: // Lower-right
+		x1 = ((int)cmd.CMDXB);
+		y1 = ((int)cmd.CMDYB);
+		x0 = x0 - x1;
+		y0 = y0 - y1;
+		x1++;
+		y1++;
+		break;
+	}
+
+	spriteWidth = ((cmd.CMDSIZE >> 8) & 0x3F) * 8;
+	spriteHeight = cmd.CMDSIZE & 0xFF;
+
+	topLeftx = x0;
+	topLefty = y0;
+
+	topRightx = x1+x0;
+	topRighty = topLefty;
+
+	bottomRightx = x1+x0;
+	bottomRighty = y1+y0;
+
+	bottomLeftx = topLeftx;
+	bottomLefty = y1+y0;
+
+	drawQuad(topLeftx,topLefty,topRightx,topRighty,bottomRightx,bottomRighty,bottomLeftx,bottomLefty);
 }
 
 void VIDSoftVdp1DistortedSpriteDraw() {
-  
-#define max4(a,b,c,d) (a>b)?( (c>d)?( (a>c)?a:c ):( (a>d)?a:d ) ):( (c>d)?( (b>c)?b:c ):( (b>d)?b:d ) )
-#define max2(a,b) (a>b)?a:b
 
-  static int flipVerticesAssign[4][8] = {
-    {0,1,2,3,4,5,6,7}, // no flip
-    {2,3,0,1,6,7,4,5}, // horz flip
-    {6,7,4,5,2,3,0,1}, // vert flip
-    {4,5,6,7,0,1,2,3}}; // horz & vert flip
+	s32 xa,ya,xb,yb,xc,yc,xd,yd;
 
-  vdp1cmd_struct cmd;
-  s32 x1, y1, x2, y2, x3, y3, x4, y4;
-  s32 lW, lH;
+	Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
 
-  int type;
-  u16 colorbank;
-  u32 colorlut;
-  u32 addr;
-  u8 SPD;
-  u8 endCode;
-  u8 flipfunction;
+    xa = (s32)(cmd.CMDXA + Vdp1Regs->localX);
+    ya = (s32)(cmd.CMDYA + Vdp1Regs->localY);
 
-  s32 xLead, yLead;
+    xb = (s32)(cmd.CMDXB + Vdp1Regs->localX);
+    yb = (s32)(cmd.CMDYB + Vdp1Regs->localY);
 
-  float xStepC, yStepC;
-  float xStepM, yStepM;
-  float xStepB, yStepB;
-  
-  float xN, yN;
+    xc = (s32)(cmd.CMDXC + Vdp1Regs->localX);
+    yc = (s32)(cmd.CMDYC + Vdp1Regs->localY);
 
-  float H = 0;
-  int y;
+    xd = (s32)(cmd.CMDXD + Vdp1Regs->localX);
+    yd = (s32)(cmd.CMDYD + Vdp1Regs->localY);
 
-  float xStepStepM, yStepStepM;
-
-  float stepW, stepH;
-
-  int mesh;
-  int isPoly = 0;
-  u16 polyColor;
-
-  Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
-
-  mesh = cmd.CMDPMOD & 0x0100;
-
-  if((cmd.CMDCTRL & 0x7) == 4) {
-	  isPoly = 1;
-	  polyColor = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x6);
-  }
-
-  if (cmd.CMDPMOD & 0x0400) PushUserClipping((cmd.CMDPMOD >> 9) & 0x1);
-
-  flipfunction = (cmd.CMDCTRL & 0x30) >> 4;
-  {
-    s32 vertices[8];
-    vertices[0] = (s32)(cmd.CMDXA + Vdp1Regs->localX);
-    vertices[1] = (s32)(cmd.CMDYA + Vdp1Regs->localY);
-    vertices[2] = (s32)((cmd.CMDXB + 1) + Vdp1Regs->localX);
-    vertices[3] = (s32)(cmd.CMDYB + Vdp1Regs->localY);
-    vertices[4] = (s32)((cmd.CMDXC + 1) + Vdp1Regs->localX);
-    vertices[5] = (s32)((cmd.CMDYC + 1) + Vdp1Regs->localY);
-    vertices[6] = (s32)(cmd.CMDXD + Vdp1Regs->localX);
-    vertices[7] = (s32)((cmd.CMDYD + 1) + Vdp1Regs->localY);
-    
-    x1 = vertices[flipVerticesAssign[flipfunction][0]];
-    y1 = vertices[flipVerticesAssign[flipfunction][1]];
-    x4 = vertices[flipVerticesAssign[flipfunction][2]];
-    y4 = vertices[flipVerticesAssign[flipfunction][3]];
-    x3 = vertices[flipVerticesAssign[flipfunction][4]];
-    y3 = vertices[flipVerticesAssign[flipfunction][5]];
-    x2 = vertices[flipVerticesAssign[flipfunction][6]];
-    y2 = vertices[flipVerticesAssign[flipfunction][7]];
-  }
-
-  addr = cmd.CMDSRCA << 3;
-  type = (vdp1pixelsize << 3) | ((cmd.CMDPMOD >> 3) & 0x7);
-  colorbank = cmd.CMDCOLR;
-  colorlut = (u32)colorbank << 3;
-  SPD = ((cmd.CMDPMOD & 0x40) != 0);
-  endCode = (( cmd.CMDPMOD & 0x80) == 0 )?1:0;
-  lW = ((cmd.CMDSIZE >> 8) & 0x3F) * 8;
-  lH = cmd.CMDSIZE & 0xFF;
-
-  xN = x1;
-  yN = y1;
-  
-  {
-    s32 xA = x4-x1;
-    s32 yA = y4-y1;
-    s32 xB = x3-x2;
-    s32 yB = y3-y2;
-    s32 xC = x2-x1;
-    s32 yC = y2-y1;
-    s32 xD = x3-x4;
-    s32 yD = y3-y4;
-
-    s32 xLeadA = abs(xA)+abs(yA);
-    s32 xLeadB = abs(xB)+abs(yB);
-    s32 yLeadC = abs(xC)+abs(yC);
-    s32 yLeadD = abs(xD)+abs(yD);
-    
-    xLead = max2(xLeadA, xLeadB)+1;
-    yLead = max2(yLeadC, yLeadD)+1;
-
-    xStepC = 1.0*xC / yLead;
-    yStepC = 1.0*yC / yLead;
-    xStepM = 1.0*xA / xLead;
-    yStepM = 1.0*yA / xLead;
-    xStepB = 1.0*xB / xLead;
-    yStepB = 1.0*yB / xLead;
-  }
-  
-  xStepStepM = (xStepB - xStepM) / yLead;
-  yStepStepM = (yStepB - yStepM) / yLead;
-  
-  stepW = (float)(lW-1) / xLead;
-  stepH = (float)(lH-1) / yLead;
-
-  for ( y = yLead ; y ; y-- ) {
-
-	  float xM = xN;
-	  float yM = yN;
-	  float W = 0;
-	  int iHaddr;
-	  int x;
-	  u16* iPix;
-
-	  int last_iw = 0x7FFFFFFF;
-
-	  if ( endCode ) endCode = 1;
-
-	  for ( x = xLead ; x ; x-- ) {
-		  if (( xM >= vdp1clipxstart )&&( yM >= vdp1clipystart )&&( xM < vdp1clipxend )&&( yM < vdp1clipyend )) {
-
-			  int iW = W;
-
-			  iPix = ((u16*)vdp1backframebuffer) + ((int)yM*vdp1width) + (int)xM;
-
-			  if(endCode) {
-				  if(last_iw != iW) {
-					  last_iw = iW;
-					  if(putpixel(xM,yM,(u16*)iPix,H,iW)) {
-						  if (endCode == 1) {
-							  endCode = 2;
-							  W += stepW;
-							  xM += xStepM;
-							  yM += yStepM;
-							  continue;
-						  }
-						  else { break; }
-					  }
-				  } 
-				  else if(putpixel(xM,yM,(u16*)iPix,H,iW)) {
-					  W += stepW;
-					  xM += xStepM;
-					  yM += yStepM;
-					  continue;
-				  }
-			  }
-			  
-			  putpixel((int)xM,(int)yM,(u16*)iPix,(int)H,iW);
-		  }
-		  W += stepW;
-		  xM += xStepM;
-		  yM += yStepM;
-	  }
-	  xStepM += xStepStepM;
-	  yStepM += yStepStepM;
-	  xN += xStepC;
-	  yN += yStepC;
-	  H += stepH;
-  }
-
-  if (cmd.CMDPMOD & 0x0400) PopUserClipping();
+	drawQuad(xa,ya,xb,yb,xc,yc,xd,yd);
 }
 
-/////////////////////////////////////////////////////////////////////////////
+void gouraudLineSetup(double * redstep, double * greenstep, double * bluestep, int length, int table1, int table2) {
 
-void VIDSoftVdp1NormalSpriteDraw(void)
-{
-   vdp1cmd_struct cmd;
-   s16 x0, y0, x1, y1, spriteWidth, spriteHeight;
-   u8 flip, SPD, endCode;
-   u16 colorbank;
-   int type;
-   u32 characterAddress;
-   int h0, w0, stepH, stepW;
-   s32   clipx1, clipx2, clipy1, clipy2;
-   u16* iPix;
-   int stepPix;
-   u32 colorlut;
-   int mesh;
-   
-   Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
-   if (cmd.CMDPMOD & 0x0400) PushUserClipping((cmd.CMDPMOD >> 9) & 0x1);
+	gouraudTable();
 
-   mesh = cmd.CMDPMOD & 0x0100;
+	*redstep =interpolate(table1&0x1f,table2&0x1f,length);
 
-   x0 = cmd.CMDXA + Vdp1Regs->localX;
-   y0 = cmd.CMDYA + Vdp1Regs->localY;
-   spriteWidth = ((cmd.CMDSIZE >> 8) & 0x3F) * 8;
-   spriteHeight = cmd.CMDSIZE & 0xFF;
-   type = (vdp1pixelsize << 3) | ((cmd.CMDPMOD >> 3) & 0x7);
-   flip = (cmd.CMDCTRL & 0x30) >> 4;
-   colorbank = cmd.CMDCOLR;
-   colorlut = (u32)colorbank << 3;
-   SPD = ((cmd.CMDPMOD & 0x40) != 0);
-   endCode = (( cmd.CMDPMOD & 0x80) == 0 )?1:0;
-   characterAddress = cmd.CMDSRCA << 3;
+	*greenstep =
+		interpolate(
+		((table1&0x03e0) >> 5),
+		((table2&0x03e0) >> 5),
+		length);
 
-   if ( x0 < vdp1clipxstart ) {
-     
-     if ( x0+spriteWidth < vdp1clipxstart ) return;
-     clipx1 = vdp1clipxstart-x0;
-   } else clipx1 = 0;
+	*bluestep =
+		interpolate(
+		((table1&0x7c00) >> 10),
+		((table2&0x7c00) >> 10),
+		length);
 
-   if ( x0+spriteWidth > vdp1clipxend ) {
-     
-     if ( x0 > vdp1clipxend ) return;
-     clipx2 = x0+spriteWidth-vdp1clipxend;
-   } else clipx2 = 0;
-
-   if ( y0 < vdp1clipystart ) {
-     
-     if ( y0+spriteHeight < vdp1clipystart ) return;
-     clipy1 = vdp1clipystart-y0;
-   } else clipy1 = 0;
-
-   if ( y0+spriteHeight > vdp1clipyend ) {
-     
-     if ( y0 > vdp1clipyend ) return;
-     clipy2 = y0+spriteHeight-vdp1clipyend;
-   } else clipy2 = 0;
-
-   switch( flip ) {
-     
-   case 0:
-   default:
-     // No flipping
-     stepH = 1;
-     stepW = 1;
-     h0 = clipy1;
-     w0 = clipx1;
-     break;
-   case 1:
-     // Horizontal flipping
-     stepH = 1;
-     stepW = -1;
-     h0 = clipy1;
-     w0 = spriteWidth-1-clipx1;
-     break;
-   case 2:
-     // Vertical flipping
-     stepH = -1;
-     stepW = 1;
-     h0 = spriteHeight-1-clipy1;
-     w0 = clipx1;
-     break;
-   case 3:
-     // Horizontal/Vertical flipping
-     stepH = -1;
-     stepW = -1;
-     h0 = spriteHeight-1-clipy1;
-     w0 = spriteWidth-1-clipx1;
-     break;
-   }
-
-   y1 = spriteHeight - (clipy1 + clipy2);
-   x1 = spriteWidth - (clipx1 + clipx2);
-
-   iPix = ((u16*)vdp1backframebuffer) + (y0+clipy1) * vdp1width + x0+clipx1;
-   stepPix = vdp1width - x1;
-
-   for ( ; y1 ; y1-- ) {
-	   int w = w0;
-	   int iAddr;
-	   int x = x1;
-
-	   iAddr = characterAddress + h0*(spriteWidth>>1);
-
-	   if ( endCode ) endCode = 1;//reset for every line
-
-	   for ( ; x ; x-- ) {
-
-		   //putpixel returns 1 if it was about to put an endcode
-		   //enter if endcodes are enabled and it was an endcode
-		   if(putpixel(x,y1, iPix, h0, w) == 1 && endCode) {
-
-			   //1st endcode of a line, continue drawing
-			   if(endCode == 1) {
-				   endCode = 2;
-				   iPix++;
-				   w += stepW;
-				   continue;
-			   }
-			   //2nd endcode of a line, we move to the next line
-			   //by breaking out of the x loop and updating our indexes
-			   else {
-				   iPix+=x;
-				   w+=x*stepW;
-				   break;
-			   }
-		   }
-		   iPix++;
-		   w += stepW;
-	   }
-
-	   iPix += stepPix;
-	   h0 += stepH;
-   }
-
-   if (cmd.CMDPMOD & 0x0400) PopUserClipping();
+	leftColumnRed = (table1&0x1f);
+	leftColumnGreen = ((table1&0x03e0)>> 5);
+	leftColumnBlue = ((table1&0x7c00) >> 10);
 }
-
-//////////////////////////////////////////////////////////////////////////////
-
-void VIDSoftVdp1ScaledSpriteDraw(void)
-{
-   vdp1cmd_struct cmd;
-
-   s32 x0, y0, x1, y1, W, H;
-   u8 flip, SPD, endCode;
-   u16 colorbank;
-   int type;
-   u32 addr;
-   float h0, w0, stepH, stepW;
-   s32   clipx1, clipx2, clipy1, clipy2;
-   u16* iPix;
-   int stepPix;
-   u32 colorlut;
-   int mesh;
-
-   Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
-   if (cmd.CMDPMOD & 0x0400) PushUserClipping((cmd.CMDPMOD >> 9) & 0x1);
-
-   flip = (cmd.CMDCTRL & 0x30) >> 4;
-   endCode = (( cmd.CMDPMOD & 0x80) == 0 )?1:0;
-   mesh = cmd.CMDPMOD & 0x0100;
-
-   x0 = cmd.CMDXA + Vdp1Regs->localX;
-   y0 = cmd.CMDYA + Vdp1Regs->localY;
-
-   switch ((cmd.CMDCTRL >> 8) & 0xF)
-   {
-      case 0x0: // Only two coordinates
-      default:
-         x1 = ((int)cmd.CMDXC) - x0 + Vdp1Regs->localX + 1;
-         y1 = ((int)cmd.CMDYC) - y0 + Vdp1Regs->localY + 1;
-	 if (x1<0) { x1 = -x1; x0 -= x1; flip ^= 1; }
-	 if (y1<0) { y1 = -y1; y0 -= y1; flip ^= 2; }
-         break;
-      case 0x5: // Upper-left
-         x1 = ((int)cmd.CMDXB) + 1;
-         y1 = ((int)cmd.CMDYB) + 1;
-         break;
-      case 0x6: // Upper-Center
-         x1 = ((int)cmd.CMDXB);
-         y1 = ((int)cmd.CMDYB);
-         x0 = x0 - x1/2;
-         x1++;
-         y1++;
-         break;
-      case 0x7: // Upper-Right
-         x1 = ((int)cmd.CMDXB);
-         y1 = ((int)cmd.CMDYB);
-         x0 = x0 - x1;
-         x1++;
-         y1++;
-         break;
-      case 0x9: // Center-left
-         x1 = ((int)cmd.CMDXB);
-         y1 = ((int)cmd.CMDYB);
-         y0 = y0 - y1/2;
-         x1++;
-         y1++;
-         break;
-      case 0xA: // Center-center
-         x1 = ((int)cmd.CMDXB);
-         y1 = ((int)cmd.CMDYB);
-         x0 = x0 - x1/2;
-         y0 = y0 - y1/2;
-         x1++;
-         y1++;
-         break;
-      case 0xB: // Center-right
-         x1 = ((int)cmd.CMDXB);
-         y1 = ((int)cmd.CMDYB);
-         x0 = x0 - x1;
-         y0 = y0 - y1/2;
-         x1++;
-         y1++;
-         break;
-      case 0xD: // Lower-left
-         x1 = ((int)cmd.CMDXB);
-         y1 = ((int)cmd.CMDYB);
-         y0 = y0 - y1;
-         x1++;
-         y1++;
-         break;
-      case 0xE: // Lower-center
-         x1 = ((int)cmd.CMDXB);
-         y1 = ((int)cmd.CMDYB);
-         x0 = x0 - x1/2;
-         y0 = y0 - y1;
-         x1++;
-         y1++;
-         break;
-      case 0xF: // Lower-right
-         x1 = ((int)cmd.CMDXB);
-         y1 = ((int)cmd.CMDYB);
-         x0 = x0 - x1;
-         y0 = y0 - y1;
-         x1++;
-         y1++;
-         break;
-   }
-
-   W = ((cmd.CMDSIZE >> 8) & 0x3F) * 8;
-   H = cmd.CMDSIZE & 0xFF;
-   type = (vdp1pixelsize << 3) | ((cmd.CMDPMOD >> 3) & 0x7);
-   colorbank = cmd.CMDCOLR;
-   colorlut = (u32)colorbank << 3;
-   SPD = ((cmd.CMDPMOD & 0x40) != 0);
-   addr = cmd.CMDSRCA << 3;
-
-   if ( x0 < vdp1clipxstart ) {
-     
-     if ( x0+x1 < vdp1clipxstart ) return;
-     clipx1 = vdp1clipxstart-x0;
-   } else clipx1 = 0;
-   
-   if ( x0+x1 > vdp1clipxend ) {
-     
-     if ( x0 > vdp1clipxend ) return;
-     clipx2 = x0+x1-vdp1clipxend;
-   } else clipx2 = 0;
-   
-   if ( y0 < vdp1clipystart ) {
-     
-     if ( y0+y1 < vdp1clipystart ) return;
-     clipy1 = vdp1clipystart-y0;
-   } else clipy1 = 0;
-   
-   if ( y0+y1 > vdp1clipyend ) {
-     
-     if ( y0 > vdp1clipyend ) return;
-     clipy2 = y0+y1-vdp1clipyend;
-   } else clipy2 = 0;
-   
-   switch( flip ) {
-     
-   case 0:
-   default:
-     stepH = (float)H/y1;
-     stepW = (float)W/x1;
-     h0 = clipy1*stepH;
-     w0 = clipx1*stepW;
-     break;
-   case 1:
-     stepH = (float)H/y1;
-     stepW = -(float)W/x1;
-     h0 = clipy1*stepH;
-     w0 = W+clipx1*stepW;
-     break;
-   case 2:
-     stepH = -(float)H/y1;
-     stepW = (float)W/x1;
-     h0 = H+clipy1*stepH;
-     w0 = clipx1*stepW;
-     break;
-   case 3:
-     stepH = -(float)H/y1;
-     stepW = -(float)W/x1;
-     h0 = H+clipy1*stepH;
-     w0 = W+clipx1*stepW;
-     break;
-   }
-   
-   y1 -= clipy1 + clipy2;
-   x1 -= clipx1 + clipx2;
-   
-   iPix = ((u16*)vdp1backframebuffer) + (y0+clipy1) * vdp1width + x0+clipx1;
-   stepPix = vdp1width - x1;
-
-   for ( ; y1 ; y1-- ) {
-	   float w = w0;
-	   int iAddr;
-	   int x = x1;
-
-	   int last_iw = 0x7FFFFFFF;
-
-	   iAddr = addr + h0*(W>>1);
-
-	   if ( endCode ) endCode = 1;//reset for every line
-
-	   for ( ; x ; x-- ) {
-
-		   int iw = w;
-
-		   if(endCode) {
-			   if(last_iw != iw) {
-				   last_iw = iw;
-				   if(putpixel(x,y1, iPix, h0, w)) {
-					   if (endCode == 1) {
-						   endCode = 2;
-						   iPix++;
-						   w += stepW;
-						   continue;
-					   }
-					   else {
-						   iPix += x;
-						   w += x*stepW;
-						   break;
-						   last_iw = iw;
-					   }
-				   }
-			   }
-			   else if(putpixel(x,y1, iPix, h0, w)) {
-				   iPix++;
-				   w += stepW;
-				   continue;
-			   }
-		   }
-		   putpixel(x,y1, iPix, h0, w);
-		   iPix++;
-		   w += stepW;
-	   }
-	   iPix += stepPix;
-	   h0 += stepH;
-   }
-
-   if (cmd.CMDPMOD & 0x0400) PopUserClipping();
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-INLINE int ClipLine(int *x1, int *y1, int *x2, int *y2)
-{
-   int point1vis=0;
-   int point2vis=0;
-
-   // Let's see if point 1 is clipped
-   if (*x1 >= vdp1clipxstart &&
-       *x1 < vdp1clipxend &&
-       *y1 >= vdp1clipystart &&
-       *y1 < vdp1clipyend)
-      point1vis = 1;
-
-   // Let's see if point 1 is clipped
-   if (*x2 >= vdp1clipxstart &&
-       *x2 < vdp1clipxend &&
-       *y2 >= vdp1clipystart &&
-       *y2 < vdp1clipyend)
-      point2vis = 1;
-
-   // Both points are visible, so don't do any clipping
-   if (point1vis && point2vis)
-      return 1;
-
-   // Both points are invisible, so don't draw
-   if (point1vis == 0 && point2vis == 0)
-      return 0;
-
-   if (point1vis == 0)
-   {
-      if (*x1 < vdp1clipxstart)
-          *x1 = vdp1clipxstart;
-      else if (*x1 > vdp1clipxend)
-          *x1 = vdp1clipxend;
-      if (*y1 < vdp1clipystart)
-          *y1 = vdp1clipystart;
-      else if (*y1 > vdp1clipyend)
-          *y1 = vdp1clipyend;
-   }
-   else
-   {
-      if (*x2 < vdp1clipxstart)
-          *x2 = vdp1clipxstart;
-      else if (*x2 > vdp1clipxend)
-          *x2 = vdp1clipxend;
-      if (*y2 < vdp1clipystart)
-          *y2 = vdp1clipystart;
-      else if (*y2 > vdp1clipyend)
-          *y2 = vdp1clipyend;
-   }
-
-   return 1;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-void FASTCALL DrawLine(int x1, int y1, int x2, int y2, u16 color)
-{
-   // Uses Bresenham's line algorithm(eventually this should be changed over
-   // to Wu's symmetric double step
-   u16 *fbstart = &((u16 *)vdp1backframebuffer)[(y1 * vdp1width) + x1];
-   int deltax, deltay, xinc, yinc, i;
-   int error=0;
-
-   deltax = x2-x1;
-   deltay = y2-y1;
-
-   if (deltax >= 0)
-     // Line is going right
-     xinc = 1;
-   else
-   {
-      // Line is going left
-      xinc = -1;
-      deltax = 0 - deltax;
-   }
-
-   if (deltay >= 0)
-      // Line is going down
-      yinc = vdp1width;
-   else
-   {
-      // Line is going up
-      yinc = 0 - vdp1width;
-      deltay = 0 - deltay;
-   }
-
-   // Draw the line
-   if (deltax > deltay)
-   {
-      for (i = 0; i <= deltax; i++)
-      {
-         fbstart[0] = color;
-
-         error += deltay;
-
-         if (error > deltax)
-         {
-            // Handle error
-            error -= deltax;
-            fbstart += yinc;
-         }
-
-         fbstart += xinc;
-      }
-   }
-   else
-   {
-      for (i = 0; i <= deltay; i++)
-      {
-         *fbstart = color;
-         error += deltax;
-
-         if (error > 0)
-         {
-            error -= deltay;
-            fbstart += xinc;
-         }
-
-         fbstart += yinc;
-      }
-   }
-}
-
-//////////////////////////////////////////////////////////////////////////////
 
 void VIDSoftVdp1PolylineDraw(void)
 {
-   int X[4];
-   int Y[4];
-   u16 color;
-   u16 cmdpmod;
+	int X[4];
+	int Y[4];
+	double redstep = 0, greenstep = 0, bluestep = 0;
+	int length;
 
-   X[0] = (int)Vdp1Regs->localX + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x0C));
-   Y[0] = (int)Vdp1Regs->localY + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x0E));
-   X[1] = (int)Vdp1Regs->localX + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x10));
-   Y[1] = (int)Vdp1Regs->localY + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x12));
-   X[2] = (int)Vdp1Regs->localX + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x14));
-   Y[2] = (int)Vdp1Regs->localY + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x16));
-   X[3] = (int)Vdp1Regs->localX + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x18));
-   Y[3] = (int)Vdp1Regs->localY + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1A));
+	Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
 
-   color = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x6);
+	X[0] = (int)Vdp1Regs->localX + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x0C));
+	Y[0] = (int)Vdp1Regs->localY + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x0E));
+	X[1] = (int)Vdp1Regs->localX + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x10));
+	Y[1] = (int)Vdp1Regs->localY + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x12));
+	X[2] = (int)Vdp1Regs->localX + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x14));
+	Y[2] = (int)Vdp1Regs->localY + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x16));
+	X[3] = (int)Vdp1Regs->localX + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x18));
+	Y[3] = (int)Vdp1Regs->localY + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1A));
 
-   cmdpmod = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
-   if (cmdpmod & 0x0400) PushUserClipping((cmdpmod >> 9) & 0x1);
+	length = getlinelength(X[0], Y[0], X[1], Y[1]);
+	gouraudLineSetup(&redstep,&bluestep,&greenstep,length, gouraudA, gouraudB);
+	DrawLine(X[0], Y[0], X[1], Y[1], 0,0,redstep,bluestep,greenstep);
 
-   if (ClipLine(&X[0], &Y[0], &X[1], &Y[1]))
-      DrawLine(X[0], Y[0], X[1], Y[1], color);
+	length = getlinelength(X[1], Y[1], X[2], Y[2]);
+	gouraudLineSetup(&redstep,&bluestep,&greenstep,length, gouraudB, gouraudC);
+	leftColumnRed = (gouraudC&0x1f);
+	leftColumnGreen = ((gouraudC&0x03e0)>> 5);
+	leftColumnBlue = ((gouraudC&0x7c00) >> 10);
+	DrawLine(X[1], Y[1], X[2], Y[2], 0,0,redstep,bluestep,greenstep);
 
-   if (ClipLine(&X[1], &Y[1], &X[2], &Y[2]))
-      DrawLine(X[1], Y[1], X[2], Y[2], color);
+	length = getlinelength(X[2], Y[2], X[3], Y[3]);
+	gouraudLineSetup(&redstep,&bluestep,&greenstep,length, gouraudD, gouraudC);
+	DrawLine(X[3], Y[3], X[2], Y[2], 0,0,redstep,bluestep,greenstep);
 
-   if (ClipLine(&X[2], &Y[2], &X[3], &Y[3]))
-      DrawLine(X[2], Y[2], X[3], Y[3], color);
-
-   if (ClipLine(&X[3], &Y[3], &X[0], &Y[0]))
-      DrawLine(X[3], Y[3], X[0], Y[0], color);
-
-   if (cmdpmod & 0x0400) PopUserClipping();
+	length = getlinelength(X[3], Y[3], X[0], Y[0]);
+	gouraudLineSetup(&redstep,&bluestep,&greenstep,length, gouraudA,gouraudD);
+	DrawLine(X[0], Y[0], X[3], Y[3], 0,0,redstep,bluestep,greenstep);
 }
-
-//////////////////////////////////////////////////////////////////////////////
 
 void VIDSoftVdp1LineDraw(void)
 {
-   int x1, y1, x2, y2;
-   u16 cmdpmod;
+	int x1, y1, x2, y2;
+	double redstep = 0, greenstep = 0, bluestep = 0;
+	int length;
 
-   x1 = (int)Vdp1Regs->localX + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x0C));
-   y1 = (int)Vdp1Regs->localY + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x0E));
-   x2 = (int)Vdp1Regs->localX + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x10));
-   y2 = (int)Vdp1Regs->localY + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x12));
+	Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
 
-   cmdpmod = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
-   if (cmdpmod & 0x0400) PushUserClipping((cmdpmod >> 9) & 0x1);
+	x1 = (int)Vdp1Regs->localX + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x0C));
+	y1 = (int)Vdp1Regs->localY + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x0E));
+	x2 = (int)Vdp1Regs->localX + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x10));
+	y2 = (int)Vdp1Regs->localY + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x12));
 
-   if (ClipLine(&x1, &y1, &x2, &y2))
-      DrawLine(x1, y1, x2, y2, T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x6));
-
-   if (cmdpmod & 0x0400) PopUserClipping();
+	length = getlinelength(x1, y1, x2, y2);
+	gouraudLineSetup(&redstep,&bluestep,&greenstep,length, gouraudA, gouraudB);
+	DrawLine(x1, y1, x2, y2, 0,0,redstep,bluestep,greenstep);
 }
+
+
+
+
+
+
+
+
 
 //////////////////////////////////////////////////////////////////////////////
 

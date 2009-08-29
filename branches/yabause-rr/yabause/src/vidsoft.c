@@ -111,15 +111,9 @@ VIDSoftVdp1NormalSpriteDraw,
 VIDSoftVdp1ScaledSpriteDraw,
 VIDSoftVdp1DistortedSpriteDraw,
 //for the actual hardware, polygons are essentially identical to distorted sprites
-//the previous polygon algorithm didn't draw the curves that happen on the real hardware for concave shapes at all
-//the current distorted sprite algorithm produces similar results to the hardware for distorted sprites and polygons,
-//but that algorithm is not how the actual hardware draws.
-
 //the actual hardware draws using diagonal lines, which is why using half-transparent processing
 //on distorted sprites and polygons is not recommended since the hardware overdraws to prevent gaps
 //thus, with half-transparent processing some pixels will be processed more than once, producing moire patterns in the drawn shapes
-
-//in order to have accurate goraud shading and endcode handling it may be necessary to correct the algorithm
 VIDSoftVdp1DistortedSpriteDraw,
 VIDSoftVdp1PolylineDraw,
 VIDSoftVdp1LineDraw,
@@ -1636,10 +1630,19 @@ INLINE u32 alphablend16(u32 d, u32 s, u32 level)
 	return r|g|b;
 }
 
-double leftColumnRed, leftColumnGreen, leftColumnBlue;
+typedef struct _COLOR_PARAMS
+{
+	double r,g,b;
+} COLOR_PARAMS;
+
+COLOR_PARAMS leftColumnColor;
+
+vdp1cmd_struct cmd;
+
 int currentPixel;
 int currentPixelIsVisible;
-vdp1cmd_struct cmd;
+int characterWidth;
+int characterHeight;
 
 int getpixel(int linenumber, int currentlineindex) {
 	
@@ -1649,20 +1652,16 @@ int getpixel(int linenumber, int currentlineindex) {
 	u8 SPD;
 	int endcode;
 	int endcodesEnabled;
-	int characterWidth;
 	int untexturedColor;
 	int isTextured = 1;
 	int currentShape = cmd.CMDCTRL & 0x7;
 	int flip;
-	int characterHeight;
 
 	characterAddress = cmd.CMDSRCA << 3;
-	characterWidth = ((cmd.CMDSIZE >> 8) & 0x3F) * 8;
 	colorbank = cmd.CMDCOLR;
 	colorlut = (u32)colorbank << 3;
 	SPD = ((cmd.CMDPMOD & 0x40) != 0);//show the actual color of transparent pixels if 1 (they won't be drawn transparent)
 	endcodesEnabled = (( cmd.CMDPMOD & 0x80) == 0 )?1:0;
-	characterHeight = cmd.CMDSIZE & 0xFF;
 	flip = (cmd.CMDCTRL & 0x30) >> 4;
 
 	//4 polygon, 5 polyline or 6 line
@@ -1820,24 +1819,24 @@ void putpixel(int x, int y) {
 				*(iPix) = currentPixel;
 			break;
 		case 4: //gouraud
-			#define COLOR(r,g,b)    (((r)&0x1F)|((g)&0x1F)<<5|((b)&0x1F)<<10 |0x8000 )
+			#define COLOR(r,g,b)    (((r)&0x1F)|(((g)&0x1F)<<5)|(((b)&0x1F)<<10) |0x8000 )
 
 			*(iPix) = COLOR(
 				gouraudAdjust(
 				currentPixel&0x001F,
-				(int)leftColumnRed),
+				(int)leftColumnColor.r),
 
 				gouraudAdjust(
 				(currentPixel&0x03e0) >> 5,
-				(int)leftColumnGreen),
+				(int)leftColumnColor.g),
 
 				gouraudAdjust(
 				(currentPixel&0x7c00) >> 10,
-				(int)leftColumnBlue)
+				(int)leftColumnColor.b)
 				);
 			break;
 		default:
-			*(iPix) = alphablend16( COLOR((int)leftColumnRed,(int)leftColumnGreen, (int)leftColumnBlue), currentPixel, (1 << 7) ) | (1 << 15);
+			*(iPix) = alphablend16( COLOR((int)leftColumnColor.r,(int)leftColumnColor.g, (int)leftColumnColor.b), currentPixel, (1 << 7) ) | (1 << 15);
 			break;
 		}
 	}
@@ -1907,7 +1906,7 @@ int bresenham( int x1, int y1, int x2, int y2, int x[], int y[])
 	}
 }
 
-int DrawLine( int x1, int y1, int x2, int y2, double linenumber, double texturestep, double xredstep, double xbluestep, double xgreenstep)
+int DrawLine( int x1, int y1, int x2, int y2, double linenumber, double texturestep, double xredstep, double xgreenstep, double xbluestep)
 {
 	int dx, dy, xf, yf, a, b, c, i;
 	int endcodesdetected=0;
@@ -1936,9 +1935,9 @@ int DrawLine( int x1, int y1, int x2, int y2, double linenumber, double textures
 		c = a-dx;
 		b = c-dx;
 		for (i=0;i<=dx;i++) {
-			leftColumnRed+=xredstep;
-			leftColumnGreen+=xgreenstep;
-			leftColumnBlue+=xbluestep;
+			leftColumnColor.r+=xredstep;
+			leftColumnColor.g+=xgreenstep;
+			leftColumnColor.b+=xbluestep;
 
 			if(getpixel(linenumber,(int)i*texturestep)) {
 				if(currentPixel != previousStep) {
@@ -1978,9 +1977,9 @@ int DrawLine( int x1, int y1, int x2, int y2, double linenumber, double textures
 		c = a-dy;
 		b = c-dy;	
 	for (i=0;i<=dy;i++) {
-			leftColumnRed+=xredstep;
-			leftColumnGreen+=xgreenstep;
-			leftColumnBlue+=xbluestep;
+			leftColumnColor.r+=xredstep;
+			leftColumnColor.g+=xgreenstep;
+			leftColumnColor.b+=xbluestep;
 
 			if(getpixel(linenumber,(int)i*texturestep)) {
 				if(currentPixel != previousStep) {
@@ -2084,10 +2083,28 @@ INLINE double interpolate(double start, double end, int numberofsteps) {
 	return stepvalue;
 }
 
-int gouraudA;
-int gouraudB;
-int gouraudC;
-int gouraudD;
+typedef union _COLOR { // xbgr x555
+	struct {
+#ifdef WORDS_BIGENDIAN
+	u16 x:1;
+	u16 b:5;
+	u16 g:5;
+	u16 r:5;
+#else
+     u16 r:5;
+     u16 g:5;
+     u16 b:5;
+     u16 x:1;
+#endif
+	};
+	u16 value;
+} COLOR;
+
+
+COLOR gouraudA;
+COLOR gouraudB;
+COLOR gouraudC;
+COLOR gouraudD;
 
 void gouraudTable()
 {
@@ -2097,10 +2114,10 @@ void gouraudTable()
 
 	gouraudTableAddress = (((unsigned int)cmd.CMDGRDA) << 3);
 
-	gouraudA = T1ReadWord(Vdp1Ram,gouraudTableAddress)   & ~(1 << 15);
-	gouraudC = T1ReadWord(Vdp1Ram,gouraudTableAddress+2) & ~(1 << 15);
-	gouraudB = T1ReadWord(Vdp1Ram,gouraudTableAddress+4) & ~(1 << 15);
-	gouraudD = T1ReadWord(Vdp1Ram,gouraudTableAddress+6) & ~(1 << 15);
+	gouraudA.value = T1ReadWord(Vdp1Ram,gouraudTableAddress);
+	gouraudB.value = T1ReadWord(Vdp1Ram,gouraudTableAddress+2);
+	gouraudC.value = T1ReadWord(Vdp1Ram,gouraudTableAddress+4);
+	gouraudD.value = T1ReadWord(Vdp1Ram,gouraudTableAddress+6);
 }
 
 int xleft[1000];
@@ -2112,29 +2129,28 @@ int yright[1000];
 //this is why endcodes are possible
 //this is also the reason why half-transparent shading causes moire patterns
 //and the reason why gouraud shading can be applied to a single line draw command
-void drawQuad(s32 ax, s32 ay, s32 bx, s32 by, s32 cx, s32 cy, s32 dx, s32 dy){
+void drawQuad(s32 tl_x, s32 tl_y, s32 bl_x, s32 bl_y, s32 tr_x, s32 tr_y, s32 br_x, s32 br_y){
 
 	int totalleft;
 	int totalright;
 	int total;
 	int i;
 
-	double topLeftToBottomLeftRedStep,topLeftToBottomLeftGreenStep,topLeftToBottomLeftBlueStep;
-	double topRightToBottomRightRedStep, topRightToBottomRightGreenStep, topRightToBottomRightBlueStep;
-
+	COLOR_PARAMS topLeftToBottomLeftColorStep, topRightToBottomRightColorStep;
+		
 	//how quickly we step through the line arrays
 	double leftLineStep = 1;
 	double rightLineStep = 1; 
 
-	int characterWidth;
-	int characterHeight;
-	
+	//a lookup table for the gouraud colors
+	COLOR colors[4];
+
 	Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
 	characterWidth = ((cmd.CMDSIZE >> 8) & 0x3F) * 8;
 	characterHeight = cmd.CMDSIZE & 0xFF;
 
-	totalleft  = bresenham(ax,ay,dx,dy,xleft,yleft);
-	totalright = bresenham(bx,by,cx,cy,xright,yright);
+	totalleft  = bresenham(tl_x,tl_y,bl_x,bl_y,xleft,yleft);
+	totalright = bresenham(tr_x,tr_y,br_x,br_y,xright,yright);
 
 	//just for now since burning rangers will freeze up trying to draw huge shapes
 	if(totalleft == INT_MAX || totalright == INT_MAX)
@@ -2142,39 +2158,20 @@ void drawQuad(s32 ax, s32 ay, s32 bx, s32 by, s32 cx, s32 cy, s32 dx, s32 dy){
 
 	total = max(totalleft,totalright);
 
+
 	if(cmd.CMDPMOD & (1 << 2)) {
 
 		gouraudTable();
 
-		//calculate steps for the left column, from the top left corner to the bottom left
-		topLeftToBottomLeftRedStep =interpolate(gouraudA&0x1f,gouraudD&0x1f,totalleft);
+		{ colors[0] = gouraudA; colors[1] = gouraudD; colors[2] = gouraudB; colors[3] = gouraudC; }
 
-		topLeftToBottomLeftGreenStep =
-			interpolate(
-			((gouraudA&0x03e0) >> 5),
-			((gouraudD&0x03e0) >> 5),
-			total);
+		topLeftToBottomLeftColorStep.r = interpolate(colors[0].r,colors[1].r,total);
+		topLeftToBottomLeftColorStep.g = interpolate(colors[0].g,colors[1].g,total);
+		topLeftToBottomLeftColorStep.b = interpolate(colors[0].b,colors[1].b,total);
 
-		topLeftToBottomLeftBlueStep =
-			interpolate(
-			((gouraudA&0x7c00) >> 10),
-			((gouraudD&0x7c00) >> 10),
-			total);
-
-		//calculate steps for right column, from the top right corner to the bottom right
-		topRightToBottomRightRedStep =interpolate(gouraudC&0x1f,gouraudB&0x1f,totalright);
-
-		topRightToBottomRightGreenStep =
-			interpolate(
-			((gouraudB&0x03e0) >> 5),
-			((gouraudC&0x03e0) >> 5),
-			total);
-
-		topRightToBottomRightBlueStep =
-			interpolate(
-			((gouraudB&0x7c00) >> 10),
-			((gouraudC&0x7c00) >> 10),
-			total);
+		topRightToBottomRightColorStep.r = interpolate(colors[2].r,colors[3].r,total);
+		topRightToBottomRightColorStep.g = interpolate(colors[2].g,colors[3].g,total);
+		topRightToBottomRightColorStep.b = interpolate(colors[2].b,colors[3].b,total);
 	}
 
 	//we have to step the equivalent of less than one pixel on the shorter side
@@ -2197,9 +2194,9 @@ void drawQuad(s32 ax, s32 ay, s32 bx, s32 by, s32 cx, s32 cy, s32 dx, s32 dy){
 		double xtexturestep;
 		double ytexturestep;
 
-		double rightColumnRed, rightColumnGreen, rightColumnBlue;
+		COLOR_PARAMS rightColumnColor;
 
-		double leftToRightRedStep = 0,leftToRightGreenStep = 0,leftToRightBlueStep = 0;
+		COLOR_PARAMS leftToRightStep;
 
 		//get the length of the line we are about to draw
 		xlinelength = getlinelength(
@@ -2221,18 +2218,18 @@ void drawQuad(s32 ax, s32 ay, s32 bx, s32 by, s32 cx, s32 cy, s32 dx, s32 dy){
 			//and add the orignal color + the number of steps taken times the step value to the bottom of the shape
 			//to get the current colors to use to interpolate across the line
 
-			leftColumnRed = (gouraudA&0x1f)+(topLeftToBottomLeftRedStep*i);
-			leftColumnGreen = ((gouraudA&0x03e0)>> 5) +(topLeftToBottomLeftGreenStep*i);
-			leftColumnBlue = ((gouraudA&0x7c00) >> 10)+(topLeftToBottomLeftBlueStep*i);
+			leftColumnColor.r = colors[0].r +(topLeftToBottomLeftColorStep.r*i);
+			leftColumnColor.g = colors[0].g +(topLeftToBottomLeftColorStep.g*i);
+			leftColumnColor.b = colors[0].b +(topLeftToBottomLeftColorStep.b*i);
 
-			rightColumnRed = (gouraudB&0x1f)+(topRightToBottomRightRedStep*i);
-			rightColumnGreen = ((gouraudB&0x03e0) >> 5) +(topRightToBottomRightGreenStep*i);
-			rightColumnBlue = ((gouraudB&0x7c00) >> 10) +(topRightToBottomRightBlueStep*i);
+			rightColumnColor.r = colors[2].r +(topRightToBottomRightColorStep.r*i);
+			rightColumnColor.g = colors[2].g +(topRightToBottomRightColorStep.g*i);
+			rightColumnColor.b = colors[2].b +(topRightToBottomRightColorStep.b*i);
 
 			//interpolate colors across to get the right step values
-			leftToRightRedStep = interpolate(leftColumnRed,rightColumnRed,xlinelength);
-			leftToRightGreenStep = interpolate(leftColumnGreen,rightColumnGreen,xlinelength);
-			leftToRightBlueStep = interpolate(leftColumnBlue,rightColumnBlue,xlinelength);
+			leftToRightStep.r = interpolate(leftColumnColor.r,rightColumnColor.r,xlinelength);
+			leftToRightStep.g = interpolate(leftColumnColor.g,rightColumnColor.g,xlinelength);
+			leftToRightStep.b = interpolate(leftColumnColor.b,rightColumnColor.b,xlinelength);
 		}
 
 		DrawLine(
@@ -2242,9 +2239,9 @@ void drawQuad(s32 ax, s32 ay, s32 bx, s32 by, s32 cx, s32 cy, s32 dx, s32 dy){
 			yright[(int)(i*rightLineStep)],
 			ytexturestep*i, 
 			xtexturestep,
-			leftToRightRedStep,
-			leftToRightGreenStep,
-			leftToRightBlueStep
+			leftToRightStep.r,
+			leftToRightStep.g,
+			leftToRightStep.b
 			);
 	}
 }
@@ -2268,7 +2265,7 @@ void VIDSoftVdp1NormalSpriteDraw() {
 	bottomLeftx = topLeftx;
 	bottomLefty = topLefty+spriteHeight;
 
-	drawQuad(topLeftx,topLefty,topRightx,topRighty,bottomRightx,bottomRighty,bottomLeftx,bottomLefty);
+	drawQuad(topLeftx,topLefty,bottomLeftx,bottomLefty,topRightx,topRighty,bottomRightx,bottomRighty);
 }
 
 void VIDSoftVdp1ScaledSpriteDraw(){
@@ -2373,7 +2370,7 @@ void VIDSoftVdp1ScaledSpriteDraw(){
 	bottomLeftx = topLeftx;
 	bottomLefty = y1+y0;
 
-	drawQuad(topLeftx,topLefty,topRightx,topRighty,bottomRightx,bottomRighty,bottomLeftx,bottomLefty);
+	drawQuad(topLeftx,topLefty,bottomLeftx,bottomLefty,topRightx,topRighty,bottomRightx,bottomRighty);
 }
 
 void VIDSoftVdp1DistortedSpriteDraw() {
@@ -2394,30 +2391,20 @@ void VIDSoftVdp1DistortedSpriteDraw() {
     xd = (s32)(cmd.CMDXD + Vdp1Regs->localX);
     yd = (s32)(cmd.CMDYD + Vdp1Regs->localY);
 
-	drawQuad(xa,ya,xb,yb,xc,yc,xd,yd);
+	drawQuad(xa,ya,xd,yd,xb,yb,xc,yc);
 }
 
-void gouraudLineSetup(double * redstep, double * greenstep, double * bluestep, int length, int table1, int table2) {
+void gouraudLineSetup(double * redstep, double * greenstep, double * bluestep, int length, COLOR table1, COLOR table2) {
 
 	gouraudTable();
 
-	*redstep =interpolate(table1&0x1f,table2&0x1f,length);
+	*redstep =interpolate(table1.r,table2.r,length);
+	*greenstep =interpolate(table1.g,table2.g,length);
+	*bluestep =interpolate(table1.b,table2.b,length);
 
-	*greenstep =
-		interpolate(
-		((table1&0x03e0) >> 5),
-		((table2&0x03e0) >> 5),
-		length);
-
-	*bluestep =
-		interpolate(
-		((table1&0x7c00) >> 10),
-		((table2&0x7c00) >> 10),
-		length);
-
-	leftColumnRed = (table1&0x1f);
-	leftColumnGreen = ((table1&0x03e0)>> 5);
-	leftColumnBlue = ((table1&0x7c00) >> 10);
+	leftColumnColor.r = table1.r;
+	leftColumnColor.g = table1.g;
+	leftColumnColor.b = table1.b;
 }
 
 void VIDSoftVdp1PolylineDraw(void)
@@ -2439,23 +2426,20 @@ void VIDSoftVdp1PolylineDraw(void)
 	Y[3] = (int)Vdp1Regs->localY + (int)((s16)T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1A));
 
 	length = getlinelength(X[0], Y[0], X[1], Y[1]);
-	gouraudLineSetup(&redstep,&bluestep,&greenstep,length, gouraudA, gouraudB);
-	DrawLine(X[0], Y[0], X[1], Y[1], 0,0,redstep,bluestep,greenstep);
+	gouraudLineSetup(&redstep,&greenstep,&bluestep,length, gouraudA, gouraudB);
+	DrawLine(X[0], Y[0], X[1], Y[1], 0,0,redstep,greenstep,bluestep);
 
 	length = getlinelength(X[1], Y[1], X[2], Y[2]);
-	gouraudLineSetup(&redstep,&bluestep,&greenstep,length, gouraudB, gouraudC);
-	leftColumnRed = (gouraudC&0x1f);
-	leftColumnGreen = ((gouraudC&0x03e0)>> 5);
-	leftColumnBlue = ((gouraudC&0x7c00) >> 10);
-	DrawLine(X[1], Y[1], X[2], Y[2], 0,0,redstep,bluestep,greenstep);
+	gouraudLineSetup(&redstep,&greenstep,&bluestep,length, gouraudB, gouraudC);
+	DrawLine(X[1], Y[1], X[2], Y[2], 0,0,redstep,greenstep,bluestep);
 
 	length = getlinelength(X[2], Y[2], X[3], Y[3]);
-	gouraudLineSetup(&redstep,&bluestep,&greenstep,length, gouraudD, gouraudC);
-	DrawLine(X[3], Y[3], X[2], Y[2], 0,0,redstep,bluestep,greenstep);
+	gouraudLineSetup(&redstep,&greenstep,&bluestep,length, gouraudD, gouraudC);
+	DrawLine(X[3], Y[3], X[2], Y[2], 0,0,redstep,greenstep,bluestep);
 
 	length = getlinelength(X[3], Y[3], X[0], Y[0]);
-	gouraudLineSetup(&redstep,&bluestep,&greenstep,length, gouraudA,gouraudD);
-	DrawLine(X[0], Y[0], X[3], Y[3], 0,0,redstep,bluestep,greenstep);
+	gouraudLineSetup(&redstep,&greenstep,&bluestep,length, gouraudA,gouraudD);
+	DrawLine(X[0], Y[0], X[3], Y[3], 0,0,redstep,greenstep,bluestep);
 }
 
 void VIDSoftVdp1LineDraw(void)
@@ -2473,16 +2457,8 @@ void VIDSoftVdp1LineDraw(void)
 
 	length = getlinelength(x1, y1, x2, y2);
 	gouraudLineSetup(&redstep,&bluestep,&greenstep,length, gouraudA, gouraudB);
-	DrawLine(x1, y1, x2, y2, 0,0,redstep,bluestep,greenstep);
+	DrawLine(x1, y1, x2, y2, 0,0,redstep,greenstep,bluestep);
 }
-
-
-
-
-
-
-
-
 
 //////////////////////////////////////////////////////////////////////////////
 

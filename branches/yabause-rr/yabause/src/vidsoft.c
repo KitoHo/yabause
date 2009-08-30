@@ -1821,6 +1821,20 @@ void putpixel(int x, int y) {
 		case 4: //gouraud
 			#define COLOR(r,g,b)    (((r)&0x1F)|(((g)&0x1F)<<5)|(((b)&0x1F)<<10) |0x8000 )
 
+			//handle the special case demonstrated in the sgl chrome demo
+			//if we are in a paletted bank mode and the other two colors are unused, adjust the index value instead of rgb
+			if(
+				(((cmd.CMDPMOD >> 3) & 0x7) != 5) &&
+				(((cmd.CMDPMOD >> 3) & 0x7) != 1) && 
+				(int)leftColumnColor.g == 16 && 
+				(int)leftColumnColor.b == 16) 
+			{
+				int c = (int)(leftColumnColor.r-0x10);
+				if(c < 0) c = 0;
+				currentPixel = currentPixel+c;
+				*(iPix) = currentPixel;
+				break;
+			}
 			*(iPix) = COLOR(
 				gouraudAdjust(
 				currentPixel&0x001F,
@@ -1958,6 +1972,7 @@ int DrawLine( int x1, int y1, int x2, int y2, double linenumber, double textures
 				c += a;
 			}
 			else {
+				getpixel(linenumber,(int)i*texturestep);
 				putpixel(x1,y1);
 				c += b;
 				y1 += yf;
@@ -2000,6 +2015,7 @@ int DrawLine( int x1, int y1, int x2, int y2, double linenumber, double textures
 				c += a;
 			}
 			else {
+				getpixel(linenumber,(int)i*texturestep);
 				putpixel(x1,y1);
 				c += b;
 				x1 += xf;

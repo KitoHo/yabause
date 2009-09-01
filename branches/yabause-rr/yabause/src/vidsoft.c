@@ -519,6 +519,10 @@ static INLINE int TestWindow(int wctl, int enablemask, int inoutmask, clipping_s
          if (x >= clip->xstart && x <= clip->xend &&
              y >= clip->ystart && y <= clip->yend)
             return 0;
+
+		 //it seems to overflow vertically on hardware
+		 if(clip->yend > vdp2height && (x >= clip->xstart && x <= clip->xend ))
+			 return 0;
       }
    }
    return 1;
@@ -1217,7 +1221,7 @@ static void Vdp2DrawNBG1(void)
    info.coloroffset = (Vdp2Regs->CRAOFA & 0x70) << 4;
    ReadVdp2ColorOffset(&info, 0x2, 0x2);
    info.coordincx = (Vdp2Regs->ZMXN1.all & 0x7FF00) / (float) 65536;
-   info.coordincy = (Vdp2Regs->ZMXN1.all & 0x7FF00) / (float) 65536;
+   info.coordincy = (Vdp2Regs->ZMYN1.all & 0x7FF00) / (float) 65536;
 
    info.priority = nbg1priority;
    info.PlaneAddr = (void FASTCALL (*)(void *, int))&Vdp2NBG1PlaneAddr;
@@ -2212,7 +2216,7 @@ void drawQuad(s32 tl_x, s32 tl_y, s32 bl_x, s32 bl_y, s32 tr_x, s32 tr_y, s32 br
 
 		COLOR_PARAMS rightColumnColor;
 
-		COLOR_PARAMS leftToRightStep;
+		COLOR_PARAMS leftToRightStep = {0,0,0};
 
 		//get the length of the line we are about to draw
 		xlinelength = getlinelength(

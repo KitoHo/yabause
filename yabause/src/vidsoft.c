@@ -783,19 +783,28 @@ void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, in
          u32 color;
 
          // See if screen position is clipped, if it isn't, continue
-         // Window 0
-         if (!TestWindow(info->wctl, 0x2, 0x1, &clip[0], i, j))
-         {
-            textdata++;
-            continue;
-         }
+		 // AND window logic
+		 if(!TestWindow(info->wctl, 0x2, 0x1, &clip[0], i, j) && !TestWindow(info->wctl, 0x8, 0x4, &clip[1], i, j) && (info->wctl & 0x80) == 0x80)
+		 {
+			 textdata++;
+			 continue;
+		 }
+		 //OR window logic
+		 else if ((info->wctl & 0x80) == 0)
+		 {
+			 if (!TestWindow(info->wctl, 0x2, 0x1, &clip[0], i, j))
+			 {
+				 textdata++;
+				 continue;
+			 }
 
-         // Window 1
-         if (!TestWindow(info->wctl, 0x8, 0x4, &clip[1], i, j))
-         {
-            textdata++;
-            continue;
-         }
+			 // Window 1
+			 if (!TestWindow(info->wctl, 0x8, 0x4, &clip[1], i,j))
+			 {
+				 textdata++;
+				 continue;
+			 }
+		 }
 
          //x = info->x+((int)(info->coordincx*(float)((info->mosaicxmask > 1) ? (i / info->mosaicxmask * info->mosaicxmask) : i)));
 		 x = info->x + mosaic_x[i]*info->coordincx;

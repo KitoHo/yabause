@@ -36,6 +36,7 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
+#include <limits.h>
 
 #if defined WORDS_BIGENDIAN
 INLINE u32 COLSAT2YAB16(int priority,u32 temp)            { return (priority | (temp & 0x7C00) << 1 | (temp & 0x3E0) << 14 | (temp & 0x1F) << 27); }
@@ -2185,7 +2186,7 @@ void drawQuad(s32 tl_x, s32 tl_y, s32 bl_x, s32 bl_y, s32 tr_x, s32 tr_y, s32 br
 	if(totalleft == INT_MAX || totalright == INT_MAX)
 		return;
 
-	total = max(totalleft,totalright);
+	total = totalleft > totalright ? totalleft : totalright;
 
 
 	if(cmd.CMDPMOD & (1 << 2)) {

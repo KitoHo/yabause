@@ -2315,8 +2315,6 @@ void VIDSoftVdp1ScaledSpriteDraw(){
 	default:
 		x1 = ((int)cmd.CMDXC) - x0 + Vdp1Regs->localX + 1;
 		y1 = ((int)cmd.CMDYC) - y0 + Vdp1Regs->localY + 1;
-		if (x1<0) { x1 = -x1; x0 -= x1; flip ^= 1; }
-		if (y1<0) { y1 = -y1; y0 -= y1; flip ^= 2; }
 		break;
 	case 0x5: // Upper-left
 		x1 = ((int)cmd.CMDXB) + 1;

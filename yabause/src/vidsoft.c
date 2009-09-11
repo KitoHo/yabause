@@ -2278,7 +2278,7 @@ void drawQuad(s32 tl_x, s32 tl_y, s32 bl_x, s32 bl_y, s32 tr_x, s32 tr_y, s32 br
 
 void VIDSoftVdp1NormalSpriteDraw() {
 
-	s32 topLeftx,topLefty,topRightx,topRighty,bottomRightx,bottomRighty,bottomLeftx,bottomLefty;
+	s16 topLeftx,topLefty,topRightx,topRighty,bottomRightx,bottomRighty,bottomLeftx,bottomLefty;
 	int spriteWidth;
 	int spriteHeight;
 	Vdp1ReadCommand(&cmd, Vdp1Regs->addr);

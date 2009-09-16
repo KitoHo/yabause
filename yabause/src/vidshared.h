@@ -438,17 +438,17 @@ static INLINE void ReadWindowData(int wctl, clipping_struct *clip)
 {
    if (wctl & 0x2)
    {
-      clip[0].xstart = Vdp2Regs->WPSX0 >> 1; // fix me
+      clip[0].xstart = Vdp2Regs->WPSX0; 
       clip[0].ystart = Vdp2Regs->WPSY0;
-      clip[0].xend = Vdp2Regs->WPEX0 >> 1; // fix me
+      clip[0].xend = Vdp2Regs->WPEX0; 
       clip[0].yend = Vdp2Regs->WPEY0;
    }
 
    if (wctl & 0x8)
    {
-      clip[1].xstart = Vdp2Regs->WPSX1 >> 1; // fix me
+      clip[1].xstart = Vdp2Regs->WPSX1;
       clip[1].ystart = Vdp2Regs->WPSY1;
-      clip[1].xend = Vdp2Regs->WPEX1 >> 1; // fix me
+      clip[1].xend = Vdp2Regs->WPEX1;
       clip[1].yend = Vdp2Regs->WPEY1;
    }
 

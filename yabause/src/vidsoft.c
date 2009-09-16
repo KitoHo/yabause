@@ -142,6 +142,12 @@ u8 *vdp1backframebuffer;
 
 u32 *vdp2framebuffer=NULL;
 
+u32 *nbg0framebuffer=NULL;
+u32 *nbg1framebuffer=NULL;
+u32 *nbg2framebuffer=NULL;
+u32 *nbg3framebuffer=NULL;
+u32 *rbg0framebuffer=NULL;
+
 static int vdp1width;
 static int vdp1height;
 static int vdp1clipxstart;
@@ -694,8 +700,6 @@ void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, in
 {
    int i, j;
    int x, y;
-   clipping_struct clip[2];
-   u32 linewnd0addr, linewnd1addr;
    screeninfo_struct sinfo;
    int scrollx, scrolly;
    int *mosaic_y, *mosaic_x;
@@ -707,12 +711,6 @@ void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, in
 
    scrollx = info->x;
    scrolly = info->y;
-
-   clip[0].xstart = clip[0].ystart = clip[0].xend = clip[0].yend = 0;
-   clip[1].xstart = clip[1].ystart = clip[1].xend = clip[1].yend = 0;
-   ReadWindowData(info->wctl, clip);
-   linewnd0addr = linewnd1addr = 0;
-   ReadLineWindowData(&info->islinewindow, info->wctl, &linewnd0addr, &linewnd1addr);
 
    {
 	   static int tables_initialized = 0;
@@ -763,8 +761,6 @@ void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, in
          //y = info->y+((int)(info->coordincy *(float)(info->mosaicymask > 1 ? (j / info->mosaicymask * info->mosaicymask) : j)));
 		 y = info->y + info->coordincy*mosaic_y[j];
 
-      // if line window is enabled, adjust clipping values
-      ReadLineWindowClip(info->islinewindow, clip, &linewnd0addr, &linewnd1addr);
       y &= sinfo.ymask;
 
       if (info->isverticalscroll)
@@ -783,30 +779,6 @@ void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, in
       {
          u32 color;
 
-         // See if screen position is clipped, if it isn't, continue
-		 // AND window logic
-		 if(!TestWindow(info->wctl, 0x2, 0x1, &clip[0], i, j) && !TestWindow(info->wctl, 0x8, 0x4, &clip[1], i, j) && (info->wctl & 0x80) == 0x80)
-		 {
-			 textdata++;
-			 continue;
-		 }
-		 //OR window logic
-		 else if ((info->wctl & 0x80) == 0)
-		 {
-			 if (!TestWindow(info->wctl, 0x2, 0x1, &clip[0], i, j))
-			 {
-				 textdata++;
-				 continue;
-			 }
-
-			 // Window 1
-			 if (!TestWindow(info->wctl, 0x8, 0x4, &clip[1], i,j))
-			 {
-				 textdata++;
-				 continue;
-			 }
-		 }
-
          //x = info->x+((int)(info->coordincx*(float)((info->mosaicxmask > 1) ? (i / info->mosaicxmask * info->mosaicxmask) : i)));
 		 x = info->x + mosaic_x[i]*info->coordincx;
          x &= sinfo.xmask;
@@ -822,14 +794,6 @@ void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, in
             // Tile
             y=Y;
             Vdp2MapCalcXY(info, &x, &y, &sinfo);
-         }
-
-         // If priority of screen is less than current top pixel and per
-         // pixel priority isn't used, skip it
-         if (Vdp2GetPixelPriority(textdata[0]) > info->priority)
-         {
-            textdata++;
-            continue;
          }
 
          if (!Vdp2FetchPixel(info, x, y, &color))
@@ -849,6 +813,69 @@ void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, in
          textdata++;
       }
    }    
+}
+
+enum LayerNames{
+	NBG0,NBG1,NBG2,NBG3,SPRITE,RBG0
+}layername;
+
+void composite(u32* source, int priority, enum layername layer){
+	u32* dst = vdp2framebuffer;
+	u32* src = source;
+	int height = vdp2height;
+	int width = vdp2width;
+	int i,j;
+	clipping_struct clip[2];
+	u32 linewnd0addr, linewnd1addr;
+	int wctl;
+	int islinewindow = 0;
+	int srcindex = 0;
+
+	if(layer == NBG0)
+		wctl = Vdp2Regs->WCTLA;
+	if(layer == NBG1)
+		wctl = Vdp2Regs->WCTLA >> 8;
+	if(layer == NBG2)
+		wctl = Vdp2Regs->WCTLB;
+	if(layer == NBG3)
+		wctl = Vdp2Regs->WCTLB >> 8;
+
+	clip[0].xstart = clip[0].ystart = clip[0].xend = clip[0].yend = 0;
+	clip[1].xstart = clip[1].ystart = clip[1].xend = clip[1].yend = 0;
+	ReadWindowData(wctl, clip);
+	linewnd0addr = linewnd1addr = 0;
+	ReadLineWindowData(&islinewindow, wctl, &linewnd0addr, &linewnd1addr);
+
+	for (j = 0; j < height; j++) {
+
+		// if line window is enabled, adjust clipping values
+		ReadLineWindowClip(islinewindow, clip, &linewnd0addr, &linewnd1addr);
+
+		for (i = 0; i < width; i++, dst++, src++) {
+
+			//if both windows are enabled and AND is enabled
+			if((wctl & 0x2) && (wctl & 0x8) && (wctl & 0x80) == 0x80) {
+				// test AND window logic
+				if(!TestWindow(wctl, 0x2, 0x1, &clip[0], i, j) && !TestWindow(wctl, 0x8, 0x4, &clip[1], i, j))
+					continue;
+			}
+			else
+			{
+				//or window logic
+				if (!TestWindow(wctl, 0x2, 0x1, &clip[0], i, j) || !TestWindow(wctl, 0x8, 0x4, &clip[1], i,j))
+					continue;
+			}
+
+			if (Vdp2GetPixelPriority(dst[0]) > priority)
+				continue;
+
+			//transparent
+			if (src[0] == 0)
+				continue;
+
+			dst[0] = COLSAT2YAB32(priority, src[0]);
+		}
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -893,7 +920,7 @@ static void FASTCALL Vdp2DrawRotationFP(vdp2draw_struct *info, vdp2rotationparam
       }
       else
       {
-         u32 *textdata=vdp2framebuffer;
+         u32 *textdata=rbg0framebuffer;
 
          GenerateRotatedVarFP(p, &xmul, &ymul, &C, &F);
 
@@ -919,14 +946,6 @@ static void FASTCALL Vdp2DrawRotationFP(vdp2draw_struct *info, vdp2rotationparam
                   Vdp2MapCalcXY(info, &x, &y, &sinfo);
                }
  
-               // If priority of screen is less than current top pixel and per
-               // pixel priority isn't used, skip it
-               if (Vdp2GetPixelPriority(textdata[0]) > info->priority)
-               {
-                  textdata++;
-                  continue;
-               }
-
                // Fetch pixel
                if (!Vdp2FetchPixel(info, x, y, &color))
                {
@@ -996,14 +1015,6 @@ static void FASTCALL Vdp2DrawRotationFP(vdp2draw_struct *info, vdp2rotationparam
             {
                // Tile
                Vdp2MapCalcXY(info, &x, &y, &sinfo);
-            }
-
-            // If priority of screen is less than current top pixel and per
-            // pixel priority isn't used, skip it
-            if (Vdp2GetPixelPriority(textdata[0]) > info->priority)
-            {
-               textdata++;
-               continue;
             }
 
             // Fetch pixel
@@ -1180,7 +1191,7 @@ static void Vdp2DrawNBG0(void)
    if (info.enable == 1)
    {
       // NBG0 draw
-      Vdp2DrawScroll(&info, vdp2framebuffer, vdp2width, vdp2height);
+      Vdp2DrawScroll(&info, nbg0framebuffer, vdp2width, vdp2height);
    }
    else
    {
@@ -1259,7 +1270,7 @@ static void Vdp2DrawNBG1(void)
       info.isverticalscroll = 0;
    info.wctl = Vdp2Regs->WCTLA >> 8;
 
-   Vdp2DrawScroll(&info, vdp2framebuffer, vdp2width, vdp2height);
+   Vdp2DrawScroll(&info, nbg1framebuffer, vdp2width, vdp2height);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1299,7 +1310,7 @@ static void Vdp2DrawNBG2(void)
    info.wctl = Vdp2Regs->WCTLB;
    info.isbitmap = 0;
 
-   Vdp2DrawScroll(&info, vdp2framebuffer, vdp2width, vdp2height);
+   Vdp2DrawScroll(&info, nbg2framebuffer, vdp2width, vdp2height);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1340,7 +1351,7 @@ static void Vdp2DrawNBG3(void)
    info.wctl = Vdp2Regs->WCTLB >> 8;
    info.isbitmap = 0;
 
-   Vdp2DrawScroll(&info, vdp2framebuffer, vdp2width, vdp2height);
+   Vdp2DrawScroll(&info, nbg3framebuffer, vdp2width, vdp2height);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1452,6 +1463,18 @@ int VIDSoftInit(void)
 
    // Initialize VDP2 framebuffer
    if ((vdp2framebuffer = (u32 *)calloc(sizeof(u32), 704 * 512)) == NULL)
+      return -1;
+
+
+   if ((nbg0framebuffer = (u32 *)calloc(sizeof(u32), 704 * 512)) == NULL)
+      return -1;
+   if ((nbg1framebuffer = (u32 *)calloc(sizeof(u32), 704 * 512)) == NULL)
+      return -1;
+   if ((nbg2framebuffer = (u32 *)calloc(sizeof(u32), 704 * 512)) == NULL)
+      return -1;
+   if ((nbg3framebuffer = (u32 *)calloc(sizeof(u32), 704 * 512)) == NULL)
+      return -1;
+   if ((rbg0framebuffer = (u32 *)calloc(sizeof(u32), 704 * 512)) == NULL)
       return -1;
 
    vdp1backframebuffer = vdp1framebuffer[0];
@@ -2832,28 +2855,35 @@ void VIDSoftVdp2DrawEnd(void)
    YuiSwapBuffers();
 }
 
-//////////////////////////////////////////////////////////////////////////////
+void VIDSoftVdp2DrawScreens(){
+	int i;
 
-void VIDSoftVdp2DrawScreens(void)
-{
-   int i;
+	memset(nbg3framebuffer,0,vdp2width*vdp2height*sizeof(u32));
+	memset(nbg2framebuffer,0,vdp2width*vdp2height*sizeof(u32));
+	memset(nbg1framebuffer,0,vdp2width*vdp2height*sizeof(u32));
+	memset(nbg0framebuffer,0,vdp2width*vdp2height*sizeof(u32));
+	memset(rbg0framebuffer,0,vdp2width*vdp2height*sizeof(u32));
 
-   for (i = 7; i > 0; i--)
-   {   
-      if (nbg3priority == i)
-         Vdp2DrawNBG3();
-      if (nbg2priority == i)
-         Vdp2DrawNBG2();
-      if (nbg1priority == i)
-         Vdp2DrawNBG1();
-      if (nbg0priority == i)
-         Vdp2DrawNBG0();
-      if (rbg0priority == i)
-         Vdp2DrawRBG0();
-   }
+	Vdp2DrawNBG3();
+	Vdp2DrawNBG2();
+	Vdp2DrawNBG1();
+	Vdp2DrawNBG0();
+	Vdp2DrawRBG0();
+
+	for (i = 7; i > 0; i--)
+	{
+		if (nbg3priority == i)
+			composite(nbg3framebuffer, i, NBG3);
+		if (nbg2priority == i)
+			composite(nbg2framebuffer, i, NBG2);
+		if (nbg1priority == i)
+			composite(nbg1framebuffer, i, NBG1);
+		if (nbg0priority == i)
+			composite(nbg0framebuffer, i, NBG0);
+		if (rbg0priority == i)
+			composite(rbg0framebuffer, i, RBG0);
+	}
 }
-
-//////////////////////////////////////////////////////////////////////////////
 
 void VIDSoftVdp2SetResolution(u16 TVMD)
 {

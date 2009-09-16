@@ -154,7 +154,7 @@ static int vdp1clipxstart;
 static int vdp1clipxend;
 static int vdp1clipystart;
 static int vdp1clipyend;
-static int vdp1pixelsize;
+static int vdp1pixelsize = 1;
 static int vdp1spritetype;
 int vdp2width;
 int vdp2height;
@@ -704,9 +704,6 @@ void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, in
    int scrollx, scrolly;
    int *mosaic_y, *mosaic_x;
 
-   info->coordincx *= (float)resxratio;
-   info->coordincy *= (float)resyratio;
-
    SetupScreenVars(info, &sinfo);
 
    scrollx = info->x;
@@ -724,37 +721,37 @@ void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, in
 				for(j=0;j<1024;j++)
 					mosaic_table[i][j] = j/m*m;
 			}
-	   }
-	   mosaic_x = &mosaic_table[info->mosaicxmask-1];
-	   mosaic_y = &mosaic_table[info->mosaicymask-1];
-   }
+		}
+		mosaic_x = &mosaic_table[info->mosaicxmask-1];
+		mosaic_y = &mosaic_table[info->mosaicymask-1];
+	}
 
-   for (j = 0; j < height; j++)
-   {
-      int Y;
-      int linescrollx = 0;
-      // precalculate the coordinate for the line(it's faster) and do line
-      // scroll
-      if (info->islinescroll)
-      {
-         if (info->islinescroll & 0x1)
-         {
-            linescrollx = (T1ReadLong(Vdp2Ram, info->linescrolltbl) >> 16) & 0x7FF;
-            info->linescrolltbl += 4;
-         }
-         if (info->islinescroll & 0x2)
-         {
-            info->y = (T1ReadWord(Vdp2Ram, info->linescrolltbl) & 0x7FF) + scrolly;
-            info->linescrolltbl += 4;
-            y = info->y;
-         }
-         else
-            //y = info->y+((int)(info->coordincy *(float)(info->mosaicymask > 1 ? (j / info->mosaicymask * info->mosaicymask) : j)));
-			y = info->y + info->coordincy*mosaic_y[j];
-         if (info->islinescroll & 0x4)
-         {
-            info->coordincx = (T1ReadLong(Vdp2Ram, info->linescrolltbl) & 0x7FF00) / (float)65536.0;
-            info->linescrolltbl += 4;
+	for (j = 0; j < height; j++)
+	{
+		int Y;
+		int linescrollx = 0;
+		// precalculate the coordinate for the line(it's faster) and do line
+		// scroll
+		if (info->islinescroll)
+		{
+			if (info->islinescroll & 0x1)
+			{
+				linescrollx = (T1ReadLong(Vdp2Ram, info->linescrolltbl) >> 16) & 0x7FF;
+				info->linescrolltbl += 4;
+			}
+			if (info->islinescroll & 0x2)
+			{
+				info->y = (T1ReadWord(Vdp2Ram, info->linescrolltbl) & 0x7FF) + scrolly;
+				info->linescrolltbl += 4;
+				y = info->y;
+			}
+			else
+				//y = info->y+((int)(info->coordincy *(float)(info->mosaicymask > 1 ? (j / info->mosaicymask * info->mosaicymask) : j)));
+				y = info->y + info->coordincy*mosaic_y[j];
+			if (info->islinescroll & 0x4)
+			{
+				info->coordincx = (T1ReadLong(Vdp2Ram, info->linescrolltbl) & 0x7FF00) / (float)65536.0;
+				info->linescrolltbl += 4;
          }
       }
       else
@@ -768,9 +765,9 @@ void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, in
          // this is *wrong*, vertical scroll use a different value per cell
          // info->verticalscrolltbl should be incremented by info->verticalscrollinc
          // each time there's a cell change and reseted at the end of the line...
-         // or something like that :)
-         y += T1ReadLong(Vdp2Ram, info->verticalscrolltbl) >> 16;
-         y &= 0x1FF;
+			// or something like that :)
+			y += T1ReadLong(Vdp2Ram, info->verticalscrolltbl) >> 16;
+			y &= 0x1FF;
       }
 
       Y=y;
@@ -785,13 +782,13 @@ void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, in
 		 
          if (linescrollx) {
             x += linescrollx;
-            x &= 0x3FF;
-         }
+				x &= 0x3FF;
+			}
 
-         // Fetch Pixel, if it isn't transparent, continue
-         if (!info->isbitmap)
-         {
-            // Tile
+			// Fetch Pixel, if it isn't transparent, continue
+			if (!info->isbitmap)
+			{
+				// Tile
             y=Y;
             Vdp2MapCalcXY(info, &x, &y, &sinfo);
          }
@@ -806,8 +803,8 @@ void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, in
 
          // Apply color offset and color calculation/special color calculation
          // and then continue.
-         // We almost need to know well ahead of time what the top
-         // and second pixel is in order to work this.
+			// We almost need to know well ahead of time what the top
+			// and second pixel is in order to work this.
 
          textdata[0] = COLSAT2YAB32(info->priority, info->PostPixelFetchCalc(info, color));
          textdata++;
@@ -830,6 +827,8 @@ void composite(u32* source, int priority, enum layername layer){
 	int wctl;
 	int islinewindow = 0;
 	int srcindex = 0;
+	int xratio = resxratio;
+	int yratio = 1;
 
 	if(layer == NBG0)
 		wctl = Vdp2Regs->WCTLA;
@@ -839,6 +838,11 @@ void composite(u32* source, int priority, enum layername layer){
 		wctl = Vdp2Regs->WCTLB;
 	if(layer == NBG3)
 		wctl = Vdp2Regs->WCTLB >> 8;
+	if(layer == RBG0) {//rbg0 always displays the same regardless of resolution settings
+		xratio = 2;
+		if(((Vdp2Regs->TVMD >> 6) & 0x3) == 3)
+			yratio = 2;
+	}
 
 	clip[0].xstart = clip[0].ystart = clip[0].xend = clip[0].yend = 0;
 	clip[1].xstart = clip[1].ystart = clip[1].xend = clip[1].yend = 0;
@@ -851,7 +855,7 @@ void composite(u32* source, int priority, enum layername layer){
 		// if line window is enabled, adjust clipping values
 		ReadLineWindowClip(islinewindow, clip, &linewnd0addr, &linewnd1addr);
 
-		for (i = 0; i < width; i++, dst++, src++) {
+		for (i = 0; i < width; i++, dst++) {
 
 			//if both windows are enabled and AND is enabled
 			if((wctl & 0x2) && (wctl & 0x8) && (wctl & 0x80) == 0x80) {
@@ -869,11 +873,13 @@ void composite(u32* source, int priority, enum layername layer){
 			if (Vdp2GetPixelPriority(dst[0]) > priority)
 				continue;
 
+			srcindex = ((j/yratio * vdp2width)+i/xratio);
+
 			//transparent
-			if (src[0] == 0)
+			if (src[srcindex] == 0)
 				continue;
 
-			dst[0] = COLSAT2YAB32(priority, src[0]);
+			dst[0] = COLSAT2YAB32(priority, src[srcindex]);
 		}
 	}
 }
@@ -907,66 +913,54 @@ static void FASTCALL Vdp2DrawRotationFP(vdp2draw_struct *info, vdp2rotationparam
 
    if (!p->coefenab)
    {
-      fixed32 xmul, ymul, C, F;
+	   fixed32 xmul, ymul, C, F;
 
-      // Since coefficients aren't being used, we can simplify the drawing process
-      if (IsScreenRotatedFP(p))
-      {
-         // No rotation
-         info->x = touint(mulfixed(p->kx, (p->Xst - p->Px)) + p->Px + p->Mx);
-         info->y = touint(mulfixed(p->ky, (p->Yst - p->Py)) + p->Py + p->My);
-         info->coordincx = tofloat(p->kx);
-         info->coordincy = tofloat(p->ky);
-      }
-      else
-      {
-         u32 *textdata=rbg0framebuffer;
+	   u32 *textdata=rbg0framebuffer;
 
-         GenerateRotatedVarFP(p, &xmul, &ymul, &C, &F);
+	   GenerateRotatedVarFP(p, &xmul, &ymul, &C, &F);
 
-         // Do simple rotation
-         CalculateRotationValuesFP(p);
+	   // Do simple rotation
+	   CalculateRotationValuesFP(p);
 
-         SetupScreenVars(info, &sinfo);
+	   SetupScreenVars(info, &sinfo);
 
-         for (j = 0; j < vdp2height; j++)
-         {
-            for (i = 0; i < vdp2width; i++)
-            {
-               u32 color;
+	   for (j = 0; j < vdp2height; j++)
+	   {
+		   for (i = 0; i < vdp2width; i++)
+		   {
+			   u32 color;
 
-               x = GenerateRotatedXPosFP(p, i, xmul, ymul, C) & sinfo.xmask;
-               y = GenerateRotatedYPosFP(p, i, xmul, ymul, F) & sinfo.ymask;
-               xmul += p->deltaXst;
+			   x = GenerateRotatedXPosFP(p, i, xmul, ymul, C) & sinfo.xmask;
+			   y = GenerateRotatedYPosFP(p, i, xmul, ymul, F) & sinfo.ymask;
+			   xmul += p->deltaXst;
 
-               // Convert coordinates into graphics
-               if (!info->isbitmap)
-               {
-                  // Tile
-                  Vdp2MapCalcXY(info, &x, &y, &sinfo);
-               }
- 
-               // Fetch pixel
-               if (!Vdp2FetchPixel(info, x, y, &color))
-               {
-                  textdata++;
-                  continue;
-               }
+			   // Convert coordinates into graphics
+			   if (!info->isbitmap)
+			   {
+				   // Tile
+				   Vdp2MapCalcXY(info, &x, &y, &sinfo);
+			   }
 
-               textdata[0] = COLSAT2YAB32(info->priority, info->PostPixelFetchCalc(info, color));
-               textdata++;
-            }
-            ymul += p->deltaYst;
-         }
+			   // Fetch pixel
+			   if (!Vdp2FetchPixel(info, x, y, &color))
+			   {
+				   textdata++;
+				   continue;
+			   }
 
-         return;
-      }
+			   textdata[0] = COLSAT2YAB32(info->priority, info->PostPixelFetchCalc(info, color));
+			   textdata++;
+		   }
+		   ymul += p->deltaYst;
+	   }
+
+	   return;
    }
    else
    {
       fixed32 xmul, ymul, C, F;
       fixed32 coefx, coefy;
-      u32 *textdata=vdp2framebuffer;
+      u32 *textdata=rbg0framebuffer;
 
       GenerateRotatedVarFP(p, &xmul, &ymul, &C, &F);
 
@@ -1454,11 +1448,11 @@ int VIDSoftInit(void)
       return -1;
 
    // Initialize VDP1 framebuffer 1
-   if ((vdp1framebuffer[0] = (u8 *)calloc(sizeof(u8), 0x40000)) == NULL)
+   if ((vdp1framebuffer[0] = (u8 *)calloc(sizeof(u8), 0x40000*5)) == NULL)
       return -1;
 
    // Initialize VDP1 framebuffer 2
-   if ((vdp1framebuffer[1] = (u8 *)calloc(sizeof(u8), 0x40000)) == NULL)
+   if ((vdp1framebuffer[1] = (u8 *)calloc(sizeof(u8), 0x40000*5)) == NULL)
       return -1;
 
    // Initialize VDP2 framebuffer
@@ -1587,32 +1581,39 @@ int VIDSoftVdp1Reset(void)
 
 void VIDSoftVdp1DrawStart(void)
 {
-   if (Vdp1Regs->TVMR & 0x1)
-   {
-      if (Vdp1Regs->TVMR & 0x2)
-      {
-         // Rotation 8-bit
-         vdp1width = 512;
-         vdp1height = 512;
-      }
-      else
-      {
-         // Normal 8-bit
-         vdp1width = 1024;
-         vdp1width = 256;
-      }
-
-      vdp1pixelsize = 1;
-   }
-   else
-   {
-      // Rotation/Normal 16-bit
-      vdp1width = 512;
-      vdp1height = 256;
-      vdp1pixelsize = 2;
-   }
-
-   VIDSoftVdp1EraseFrameBuffer();
+	switch(Vdp1Regs->TVMR & 7) {
+	//Normal
+	case 0:
+		vdp1width = 512;
+		vdp1height = 256;
+		vdp1pixelsize = 2;
+		break;
+	//Hi resolution
+	case 1:
+		vdp1width = 1024;
+		vdp1height = 256;
+		vdp1pixelsize = 1;
+		break;
+	//Rotation 16
+	case 2:
+		vdp1width = 512;
+		vdp1height = 256;
+		vdp1pixelsize = 2;
+		break;
+	//Rotation 8
+	case 3:
+		vdp1width = 512;
+		vdp1height = 512;
+		vdp1pixelsize = 1;
+		break;
+	//HDTV
+	case 4:
+		vdp1width = 512;
+		vdp1height = 256;
+		vdp1pixelsize = 2;
+		break;
+	}
+	VIDSoftVdp1EraseFrameBuffer();
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2715,19 +2716,19 @@ void VIDSoftVdp2DrawEnd(void)
                info.PostPixelFetchCalc = &DoColorOffset;
          }
       }
-      else // color offset disable
-      {
-         if (Vdp2Regs->CCCTL & 0x40)
-            info.PostPixelFetchCalc = &DoColorCalc;
-         else
-            info.PostPixelFetchCalc = &DoNothing;
-      }
+	  else // color offset disable
+	  {
+		  if (Vdp2Regs->CCCTL & 0x40)
+			  info.PostPixelFetchCalc = &DoColorCalc;
+		  else
+			  info.PostPixelFetchCalc = &DoNothing;
+	  }
 
-      wctl = Vdp2Regs->WCTLC >> 8;
-      clip[0].xstart = clip[0].ystart = clip[0].xend = clip[0].yend = 0;
-      clip[1].xstart = clip[1].ystart = clip[1].xend = clip[1].yend = 0;
-      ReadWindowData(wctl, clip);
-      linewnd0addr = linewnd1addr = 0;
+	  wctl = Vdp2Regs->WCTLC >> 8;
+	  clip[0].xstart = clip[0].ystart = clip[0].xend = clip[0].yend = 0;
+	  clip[1].xstart = clip[1].ystart = clip[1].xend = clip[1].yend = 0;
+	  ReadWindowData(wctl, clip);
+	  linewnd0addr = linewnd1addr = 0;
       ReadLineWindowData(&islinewindow, wctl, &linewnd0addr, &linewnd1addr);
 
       for (i2 = 0; i2 < vdp2height; i2++)
@@ -2758,7 +2759,8 @@ void VIDSoftVdp2DrawEnd(void)
             if (vdp1pixelsize == 2)
             {
                // 16-bit pixel size
-               pixel = ((u16 *)vdp1frontframebuffer)[(i2 * vdp1width) + i];
+				//16 bit pixels will be drawn at 2x width, and sometimes 2x height
+               pixel = ((u16 *)vdp1frontframebuffer)[(i2/resyratio * vdp1width) + i/2];
 
                if (pixel == 0)
                   dst[0] = COLSATSTRIPPRIORITY(vdp2src[0]);
@@ -2796,16 +2798,12 @@ void VIDSoftVdp2DrawEnd(void)
             else
             {
                // 8-bit pixel size
-               pixel = vdp1frontframebuffer[(i2 * vdp1width) + i];
+				  pixel = vdp1frontframebuffer[(i2*2 * vdp1width) + (i*2)];
 
-               if (pixel == 0)
-                  dst[0] = COLSATSTRIPPRIORITY(vdp2src[0]);
-               else
-               {
-                  // Color bank(fix me)
-                  LOG("8-bit Color Bank draw - %02X\n", pixel);
-                  dst[0] = COLSATSTRIPPRIORITY(vdp2src[0]);
-               }
+				  if (pixel == 0)
+					  dst[0] = COLSATSTRIPPRIORITY(vdp2src[0]);
+				  else if(prioritytable[0] >= Vdp2GetPixelPriority(vdp2src[0]))
+				  	  dst[0] = COLSAT2YAB32(0xFF, Vdp2ColorRamGetColor(vdp1coloroffset + pixel)); 
             }
             vdp2src++;
             dst++;
@@ -2816,7 +2814,7 @@ void VIDSoftVdp2DrawEnd(void)
    {
       // Render VDP2 only
       for (i = 0; i < (vdp2width*vdp2height); i++)
-         dispbuffer[i] = COLSATSTRIPPRIORITY(vdp2framebuffer[i]);
+		   dispbuffer[i] = COLSATSTRIPPRIORITY(vdp2framebuffer[i]);
    }
 
    VIDSoftVdp1SwapFrameBuffer();
@@ -2892,37 +2890,37 @@ void VIDSoftVdp2SetResolution(u16 TVMD)
    // Horizontal Resolution
    switch (TVMD & 0x7)
    {
-      case 0:
-         vdp2width = 320;
-         resxratio=1;
+      case 0://320
+         vdp2width = 640;
+         resxratio=2;
          break;
-      case 1:
-         vdp2width = 352;
-         resxratio=1;
+      case 1://352
+         vdp2width = 704;
+         resxratio=2;
          break;
       case 2: // 640
-         vdp2width = 320;
-         resxratio=2;
+         vdp2width = 640;
+         resxratio=1;
          break;
       case 3: // 704
-         vdp2width = 352;
+         vdp2width = 704;
+         resxratio=1;
+         break;
+      case 4://320
+         vdp2width = 640;
          resxratio=2;
          break;
-      case 4:
-         vdp2width = 320;
-         resxratio=1;
-         break;
-      case 5:
-         vdp2width = 352;
-         resxratio=1;
+      case 5://352
+         vdp2width = 704;
+         resxratio=2;
          break;
       case 6: // 640
-         vdp2width = 320;
-         resxratio=2;
+         vdp2width = 640;
+         resxratio=1;
          break;
       case 7: // 704
-         vdp2width = 352;
-         resxratio=2;
+         vdp2width = 704;
+         resxratio=1;
          break;
    }
 
@@ -2946,7 +2944,7 @@ void VIDSoftVdp2SetResolution(u16 TVMD)
    switch ((TVMD >> 6) & 0x3)
    {
       case 3: // Double-density Interlace
-//         vdp2height *= 2;
+         vdp2height *= 2;
          resyratio=2;
          break;
       case 2: // Single-density Interlace
@@ -3025,10 +3023,23 @@ void VIDSoftVdp1EraseFrameBuffer(void)
 {   
    int i,i2;
    int w,h;
+   int interlaced = 1;
 
    h = (Vdp1Regs->EWRR & 0x1FF) + 1;
-   if (h > vdp1height) h = vdp1height;
+
+   //doubled if we are double interlaced
+   if(((Vdp2Regs->TVMD >> 6) & 0x3) == 3) {
+	   h*=2;
+	   interlaced = 2;
+   }
+
+   if (h > vdp1height*interlaced) h = vdp1height*interlaced;
    w = ((Vdp1Regs->EWRR >> 6) & 0x3F8) + 8;
+
+   //width is in 16 pixel units for hi resolution, rotation 8
+   if(vdp1pixelsize == 1)
+	   w*=2;
+   
    if (w > vdp1width) w = vdp1width;
 
    for (i2 = (Vdp1Regs->EWLR & 0x1FF); i2 < h; i2++)

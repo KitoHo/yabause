@@ -37,7 +37,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <limits.h>
-
+}
 #if defined WORDS_BIGENDIAN
 INLINE u32 COLSAT2YAB16(int priority,u32 temp)            { return (priority | (temp & 0x7C00) << 1 | (temp & 0x3E0) << 14 | (temp & 0x1F) << 27); }
 INLINE u32 COLSAT2YAB32(int priority,u32 temp)            { return (((temp & 0xFF) << 24) | ((temp & 0xFF00) << 8) | ((temp & 0xFF0000) >> 8) | priority); }
@@ -217,39 +217,7 @@ static INLINE void puthline16(s32 x, s32 y, s32 width, u16 color, int priority)
       buffer[i] = dot;
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
-static INLINE u32 FASTCALL Vdp2ColorRamGetColor(u32 addr)
-{
-   switch(Vdp2Internal.ColorMode)
-   {
-      case 0:
-      {
-         u32 tmp;
-         addr <<= 1;
-         tmp = T2ReadWord(Vdp2ColorRam, addr & 0xFFF);
-         return (((tmp & 0x1F) << 3) | ((tmp & 0x03E0) << 6) | ((tmp & 0x7C00) << 9));
-      }
-      case 1:
-      {
-         u32 tmp;
-         addr <<= 1;
-         tmp = T2ReadWord(Vdp2ColorRam, addr & 0xFFF);
-         return (((tmp & 0x1F) << 3) | ((tmp & 0x03E0) << 6) | ((tmp & 0x7C00) << 9));
-      }
-      case 2:
-      {
-         addr <<= 2;   
-         return T2ReadLong(Vdp2ColorRam, addr & 0xFFF);
-      }
-      default: break;
-   }
-
-   return 0;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
+static INLINE u32 FASTCALL Vdp2ColorRamGetColor(u32 addr);
 static INLINE void Vdp2PatternAddr(vdp2draw_struct *info)
 {
    switch(info->patterndatasize)
@@ -324,189 +292,7 @@ static INLINE void Vdp2PatternAddr(vdp2draw_struct *info)
    }
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
-static INLINE u32 FASTCALL DoNothing(UNUSED void *info, u32 pixel)
-{
-   return pixel;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-INLINE u32 FASTCALL DoColorOffset(void *info, u32 pixel)
-{
-    return COLOR_ADD(pixel, ((vdp2draw_struct *)info)->cor,
-                     ((vdp2draw_struct *)info)->cog,
-                     ((vdp2draw_struct *)info)->cob);
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-static INLINE u32 FASTCALL DoColorCalc(void *info, u32 pixel)
-{
-#if 0
-   u8 oldr, oldg, oldb;
-   u8 r, g, b;
-   u32 oldpixel = 0x00FFFFFF; // fix me
-
-   static int topratio[32] = {
-      31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16,
-      15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0
-   };
-   static int bottomratio[32] = {
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-      17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
-   };
-
-   // separate color components for top and second pixel
-   r = (pixel & 0xFF) * topratio[((vdp2draw_struct *)info)->alpha] >> 5;
-   g = ((pixel >> 8) & 0xFF) * topratio[((vdp2draw_struct *)info)->alpha] >> 5;
-   b = ((pixel >> 16) & 0xFF) * topratio[((vdp2draw_struct *)info)->alpha] >> 5;
-
-#ifdef WORDS_BIGENDIAN
-   oldr = ((oldpixel >> 24) & 0xFF) * bottomratio[((vdp2draw_struct *)info)->alpha] >> 5;
-   oldg = ((oldpixel >> 16) & 0xFF) * bottomratio[((vdp2draw_struct *)info)->alpha] >> 5;
-   oldb = ((oldpixel >> 8) & 0xFF) * bottomratio[((vdp2draw_struct *)info)->alpha] >> 5;
-#else
-   oldr = (oldpixel & 0xFF) * bottomratio[((vdp2draw_struct *)info)->alpha] >> 5;
-   oldg = ((oldpixel >> 8) & 0xFF) * bottomratio[((vdp2draw_struct *)info)->alpha] >> 5;
-   oldb = ((oldpixel >> 16) & 0xFF) * bottomratio[((vdp2draw_struct *)info)->alpha] >> 5;
-#endif
-
-   // add color components and reform the pixel
-   pixel = ((b + oldb) << 16) | ((g + oldg) << 8) | (r + oldr);
-#endif
-   return pixel;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-static INLINE u32 FASTCALL DoColorCalcWithColorOffset(void *info, u32 pixel)
-{
-   pixel = DoColorCalc(info, pixel);
-
-   return COLOR_ADD(pixel, ((vdp2draw_struct *)info)->cor,
-                    ((vdp2draw_struct *)info)->cog,
-                    ((vdp2draw_struct *)info)->cob);
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-static INLINE void ReadVdp2ColorOffset(vdp2draw_struct *info, int clofmask, int ccmask)
-{
-   if (Vdp2Regs->CLOFEN & clofmask)
-   {
-      // color offset enable
-      if (Vdp2Regs->CLOFSL & clofmask)
-      {
-         // color offset B
-         info->cor = Vdp2Regs->COBR & 0xFF;
-         if (Vdp2Regs->COBR & 0x100)
-            info->cor |= 0xFFFFFF00;
-
-         info->cog = Vdp2Regs->COBG & 0xFF;
-         if (Vdp2Regs->COBG & 0x100)
-            info->cog |= 0xFFFFFF00;
-
-         info->cob = Vdp2Regs->COBB & 0xFF;
-         if (Vdp2Regs->COBB & 0x100)
-            info->cob |= 0xFFFFFF00;
-      }
-      else
-      {
-         // color offset A
-         info->cor = Vdp2Regs->COAR & 0xFF;
-         if (Vdp2Regs->COAR & 0x100)
-            info->cor |= 0xFFFFFF00;
-
-         info->cog = Vdp2Regs->COAG & 0xFF;
-         if (Vdp2Regs->COAG & 0x100)
-            info->cog |= 0xFFFFFF00;
-
-         info->cob = Vdp2Regs->COAB & 0xFF;
-         if (Vdp2Regs->COAB & 0x100)
-            info->cob |= 0xFFFFFF00;
-      }
-
-      if (info->cor == 0 && info->cog == 0 && info->cob == 0)
-      {
-         if (Vdp2Regs->CCCTL & ccmask)
-            info->PostPixelFetchCalc = &DoColorCalc;
-         else
-            info->PostPixelFetchCalc = &DoNothing;
-      }
-      else
-      {
-         if (Vdp2Regs->CCCTL & ccmask)
-            info->PostPixelFetchCalc = &DoColorCalcWithColorOffset;
-         else
-            info->PostPixelFetchCalc = &DoColorOffset;
-      }
-   }
-   else // color offset disable
-   {
-      if (Vdp2Regs->CCCTL & ccmask)
-         info->PostPixelFetchCalc = &DoColorCalc;
-      else
-         info->PostPixelFetchCalc = &DoNothing;
-   }
-
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-static INLINE int Vdp2FetchPixel(vdp2draw_struct *info, int x, int y, u32 *color)
-{
-   u32 dot;
-
-   switch(info->colornumber)
-   {
-      case 0: // 4 BPP
-         dot = T1ReadByte(Vdp2Ram, ((info->charaddr + ((y * info->cellw) + x) / 2) & 0x7FFFF));
-         if (!(x & 0x1)) dot >>= 4;
-         if (!(dot & 0xF) && info->transparencyenable) return 0;
-         else
-         {
-            *color = Vdp2ColorRamGetColor(info->coloroffset + (info->paladdr | (dot & 0xF)));
-            return 1;
-         }
-      case 1: // 8 BPP
-         dot = T1ReadByte(Vdp2Ram, ((info->charaddr + (y * info->cellw) + x) & 0x7FFFF));
-         if (!(dot & 0xFF) && info->transparencyenable) return 0;
-         else
-         {
-            *color = Vdp2ColorRamGetColor(info->coloroffset + (info->paladdr | (dot & 0xFF)));
-            return 1;
-         }
-      case 2: // 16 BPP(palette)
-         dot = T1ReadWord(Vdp2Ram, ((info->charaddr + ((y * info->cellw) + x) * 2) & 0x7FFFF));
-         if ((dot == 0) && info->transparencyenable) return 0;
-         else
-         {
-            *color = Vdp2ColorRamGetColor(info->coloroffset + dot);
-            return 1;
-         }
-      case 3: // 16 BPP(RGB)      
-         dot = T1ReadWord(Vdp2Ram, ((info->charaddr + ((y * info->cellw) + x) * 2) & 0x7FFFF));
-         if (!(dot & 0x8000) && info->transparencyenable) return 0;
-         else
-         {
-            *color = COLSAT2YAB16(0, dot);
-            return 1;
-         }
-      case 4: // 32 BPP
-         dot = T1ReadLong(Vdp2Ram, ((info->charaddr + ((y * info->cellw) + x) * 4) & 0x7FFFF));
-         if (!(dot & 0x80000000) && info->transparencyenable) return 0;
-         else
-         {
-            *color = COLSAT2YAB32(0, dot);
-            return 1;
-         }
-      default:
-         return 0;
-   }
-}
-
+static INLINE int Vdp2FetchPixel(vdp2draw_struct *info, int x, int y, u32 *color);
 //////////////////////////////////////////////////////////////////////////////
 
 static INLINE int TestWindow(int wctl, int enablemask, int inoutmask, clipping_struct *clip, int x, int y)
@@ -696,7 +482,47 @@ static INLINE void SetupScreenVars(vdp2draw_struct *info, screeninfo_struct *sin
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, int height)
+enum LayerNames{
+	_NULL,NBG0,NBG1,NBG2,NBG3,SPRITE,RBG0
+};
+
+struct pixeldata {
+	int pixel;
+	LayerNames layer;
+	int priority;
+	bool transparent;
+	bool colorCalcWindow;
+	int colorCount;
+	bool isSpriteColorCalc;
+	int spriteColorCalcRatio;
+	bool isNormalShadow;
+	bool isMSBShadow;
+};
+
+pixeldata initPixelData() {
+	pixeldata p;
+	p.pixel = 0;
+	p.layer = _NULL;
+	p.priority = 0;
+	p.transparent = true;
+	p.colorCalcWindow = false;
+	p.colorCount = 0;
+	p.isSpriteColorCalc = false;
+	p.spriteColorCalcRatio = 0;
+	p.isNormalShadow = false;
+	p.isMSBShadow = false;
+	return p;
+}
+
+pixeldata rbg0buf[704*512];
+pixeldata nbg0buf[704*512];
+pixeldata nbg1buf[704*512];
+pixeldata nbg2buf[704*512];
+pixeldata nbg3buf[704*512];
+pixeldata backbuf[704*512];
+pixeldata spritebuf[704*512];
+
+extern "C" void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, LayerNames layer, int width, int height)
 {
    int i, j;
    int x, y;
@@ -722,8 +548,8 @@ void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, in
 					mosaic_table[i][j] = j/m*m;
 			}
 		}
-		mosaic_x = &mosaic_table[info->mosaicxmask-1];
-		mosaic_y = &mosaic_table[info->mosaicymask-1];
+		mosaic_x = (int*)&mosaic_table[info->mosaicxmask-1];
+		mosaic_y = (int*)&mosaic_table[info->mosaicymask-1];
 	}
 
 	for (j = 0; j < height; j++)
@@ -777,7 +603,7 @@ void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, in
          u32 color;
 
          //x = info->x+((int)(info->coordincx*(float)((info->mosaicxmask > 1) ? (i / info->mosaicxmask * info->mosaicxmask) : i)));
-		 x = info->x + mosaic_x[i]*info->coordincx;
+		 x = info->x + mosaic_x[i/resxratio]*info->coordincx;
          x &= sinfo.xmask;
 		 
          if (linescrollx) {
@@ -793,95 +619,771 @@ void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, u32 *textdata, int width, in
             Vdp2MapCalcXY(info, &x, &y, &sinfo);
          }
 
+			pixeldata p = initPixelData();
+
          if (!Vdp2FetchPixel(info, x, y, &color))
          {
-            textdata++;
-            continue;
+			 p.transparent = true;
          }
-
-         // check special priority somewhere here
-
-         // Apply color offset and color calculation/special color calculation
-         // and then continue.
-			// We almost need to know well ahead of time what the top
-			// and second pixel is in order to work this.
-
-         textdata[0] = COLSAT2YAB32(info->priority, info->PostPixelFetchCalc(info, color));
-         textdata++;
+		 else
+			 p.transparent = false;
+		 
+		 p.pixel = color;
+		 p.layer = layer;
+		 
+		 if(layer == NBG0)
+			 nbg0buf[(j * vdp2width)+i] = p;
+		 if(layer == NBG1)
+			 nbg1buf[(j * vdp2width)+i] = p;
+		 if(layer == NBG2)
+			 nbg2buf[(j * vdp2width)+i] = p;
+		 if(layer == NBG3)
+			 nbg3buf[(j * vdp2width)+i] = p;
       }
    }    
 }
+static void Vdp2DrawNBG0(void);
+static void Vdp2DrawNBG1(void);
+static void Vdp2DrawNBG2(void);
+static void Vdp2DrawNBG3(void);
+static void Vdp2DrawRBG0(void);
 
-enum LayerNames{
-	NBG0,NBG1,NBG2,NBG3,SPRITE,RBG0
-}layername;
+u32 ColorCalc(u32 toppixel, u32 bottompixel, u32 alpha);
 
-void composite(u32* source, int priority, enum layername layer){
-	u32* dst = vdp2framebuffer;
-	u32* src = source;
-	int height = vdp2height;
-	int width = vdp2width;
-	int i,j;
-	clipping_struct clip[2];
-	u32 linewnd0addr, linewnd1addr;
-	int wctl;
-	int islinewindow = 0;
-	int srcindex = 0;
-	int xratio = resxratio;
-	int yratio = 1;
+//reduce luminance of specified vdp2 pixel
+u32 Shadow(u32 vdp2, u32 intensity)
+{
+	s16 r, g, b;
 
-	if(layer == NBG0)
-		wctl = Vdp2Regs->WCTLA;
-	if(layer == NBG1)
-		wctl = Vdp2Regs->WCTLA >> 8;
-	if(layer == NBG2)
-		wctl = Vdp2Regs->WCTLB;
-	if(layer == NBG3)
-		wctl = Vdp2Regs->WCTLB >> 8;
-	if(layer == RBG0) {//rbg0 always displays the same regardless of resolution settings
-		xratio = 2;
-		if(((Vdp2Regs->TVMD >> 6) & 0x3) == 3)
-			yratio = 2;
+	r = (vdp2 & 0xFF);
+	g = ((vdp2 >> 8) & 0xFF);
+	b = ((vdp2 >> 16) & 0xFF);
+
+	r = r - intensity;
+	g = g - intensity;
+	b = b - intensity;
+
+	if(b < 0) b = 0;
+	if(g < 0) g = 0;
+	if(r < 0) r = 0;
+
+	vdp2 = (b << 16) | (g << 8) | r;
+
+	return vdp2;
+}
+bool isSpriteColorCalc(u8 prioritytable[], int priorityRegisterNumber, int msb) {
+
+	//must be enabled
+	if(!(Vdp2Regs->CCCTL & (1 << 6)))
+		return false;
+
+	//the color calculation enable condition number
+	int colorCalculationConditionNumber = (Vdp2Regs->SPCTL & 0x700) >> 8;
+	//(Vdp2Regs->SPCTL & 0x700) >> 8)
+	//check if color calc is enabled for this sprite pixel
+	switch ((Vdp2Regs->SPCTL & 0x3000) >> 12) {
+		case 0:
+			if(prioritytable[priorityRegisterNumber] <= colorCalculationConditionNumber)
+				return true;
+			break;
+		case 1:
+			if(prioritytable[priorityRegisterNumber] == colorCalculationConditionNumber)
+				return true;
+			break;
+		case 2:
+			if(prioritytable[priorityRegisterNumber] >= colorCalculationConditionNumber)
+				return true;
+			break;
+		case 3:
+			if(msb)
+				return true;
+			break;
+	}
+	return false;
+}
+
+bool isSpriteNormalShadow(int pixel) {
+
+	//see if the color data meets the conditions for normal shadow
+	//if each color data bit is set except the lsb then it's a shadow
+	switch(vdp1spritetype) {
+	case 0:
+	case 1:
+	case 2:
+	case 3:
+	case 5:
+	if(pixel == 0x7fe)
+		return true;
+	break;
+
+	case 4:
+	case 6:
+	if(pixel == 0x3fe)
+		return true;
+	break;
+
+	case 7:
+	if(pixel == 0x1fe)
+		return true;
+	break;
+
+	//6 bit color data
+	case 8:
+	case 0xC:
+	if(pixel == 0x7e)
+		return true;
+	break;
+
+	// 5 bit color data
+	case 9:
+	case 0xA:
+	case 0xB:
+	case 0xD:
+	case 0xE:
+	case 0xF:
+	if(pixel == 0x3e)
+		return true;
+	break;
 	}
 
-	clip[0].xstart = clip[0].ystart = clip[0].xend = clip[0].yend = 0;
-	clip[1].xstart = clip[1].ystart = clip[1].xend = clip[1].yend = 0;
-	ReadWindowData(wctl, clip);
-	linewnd0addr = linewnd1addr = 0;
-	ReadLineWindowData(&islinewindow, wctl, &linewnd0addr, &linewnd1addr);
+	return false;
+}
 
-	for (j = 0; j < height; j++) {
 
-		// if line window is enabled, adjust clipping values
-		ReadLineWindowClip(islinewindow, clip, &linewnd0addr, &linewnd1addr);
+void Vdp2DrawSprites(){
+	int i, i2;
+	u16 pixel;
+	u8 prioritytable[8];
+	u32 vdp1coloroffset;
+	int colormode = Vdp2Regs->SPCTL & 0x20;
 
-		for (i = 0; i < width; i++, dst++) {
+	if (!Vdp1Regs->disptoggle)
+		return;
 
-			//if both windows are enabled and AND is enabled
-			if((wctl & 0x2) && (wctl & 0x8) && (wctl & 0x80) == 0x80) {
-				// test AND window logic
-				if(!TestWindow(wctl, 0x2, 0x1, &clip[0], i, j) && !TestWindow(wctl, 0x8, 0x4, &clip[1], i, j))
-					continue;
+	int colorCalculationRatio[8];
+
+	//get all the sprite color calc ratios
+	colorCalculationRatio[0] = Vdp2Regs->CCRSA & 0x1f;
+	colorCalculationRatio[1] = Vdp2Regs->CCRSA >> 8;
+	colorCalculationRatio[2] = Vdp2Regs->CCRSB & 0x1f;
+	colorCalculationRatio[3] = Vdp2Regs->CCRSB >> 8;
+	colorCalculationRatio[4] = Vdp2Regs->CCRSC & 0x1f;
+	colorCalculationRatio[5] = Vdp2Regs->CCRSC >> 8;
+	colorCalculationRatio[6] = Vdp2Regs->CCRSD & 0x1f;
+	colorCalculationRatio[7] = Vdp2Regs->CCRSD >> 8;
+
+	prioritytable[0] = Vdp2Regs->PRISA & 0x7;
+	prioritytable[1] = (Vdp2Regs->PRISA >> 8) & 0x7;
+	prioritytable[2] = Vdp2Regs->PRISB & 0x7;
+	prioritytable[3] = (Vdp2Regs->PRISB >> 8) & 0x7;
+	prioritytable[4] = Vdp2Regs->PRISC & 0x7;
+	prioritytable[5] = (Vdp2Regs->PRISC >> 8) & 0x7;
+	prioritytable[6] = Vdp2Regs->PRISD & 0x7;
+	prioritytable[7] = (Vdp2Regs->PRISD >> 8) & 0x7;
+
+	vdp1coloroffset = (Vdp2Regs->CRAOFB & 0x70) << 4;
+	vdp1spritetype = Vdp2Regs->SPCTL & 0xF;
+
+	for (i2 = 0; i2 < vdp2height; i2++)
+	{
+		for (i = 0; i < vdp2width; i++)
+		{
+			pixeldata p = initPixelData();
+			p.layer = SPRITE;
+			if (vdp1pixelsize == 2)
+			{
+				// 16-bit pixel size
+				//16 bit pixels will be drawn at 2x width, and sometimes 2x height
+				pixel = ((u16 *)vdp1frontframebuffer)[(i2/resyratio * vdp1width) + i/2];
+
+				if (pixel == 0)
+					p.transparent = true;
+				else if (pixel & 0x8000 && colormode)
+				{
+					// 16 BPP
+					// if pixel is 0x8000, only draw pixel if sprite window
+					// is disabled/sprite type 2-7. sprite types 0 and 1 are
+					// -always- drawn and sprite types 8-F are always
+					// transparent.
+					if (pixel != 0x8000 || vdp1spritetype < 2 || (vdp1spritetype < 8 && !(Vdp2Regs->SPCTL & 0x10))) {
+						p.pixel = COLSAT2YAB16(0xFF, pixel);//info.PostPixelFetchCalc(&info, COLSAT2YAB16(0xFF, pixel));
+						p.priority = prioritytable[0];//currentpriority;
+						p.transparent = false;
+					}
+					else
+						p.transparent = true;
+				}
+				else
+				{
+					//Color bank mode
+					int priorityRegisterNumber;
+					int shadow;
+					int colorcalc;
+					int msb = pixel & 0x8000;
+					int pixelcopy = pixel;
+					Vdp1ProcessSpritePixel(vdp1spritetype, &pixel, &shadow, &priorityRegisterNumber, &colorcalc);
+					p.transparent = false;
+					p.isMSBShadow = (shadow && (Vdp2Regs->SDCTL & 0x100));
+					//i go to color ram with this i'll get garbage and break msb shadow on backgrounds
+					//apparently if the pixel is 0x8000 it doesn't go to color ram and instead just uses it as is
+					if(pixelcopy == 0x8000 && p.isMSBShadow) {
+						p.pixel = 0x8000;
+						p.layer = SPRITE;
+						p.priority = prioritytable[priorityRegisterNumber];
+					}
+					else {
+						
+					p.pixel = Vdp2ColorRamGetColor(vdp1coloroffset + pixel);
+					//strange crash in taromaru "fix", TODO figure out the actual issue
+					if(priorityRegisterNumber>7)priorityRegisterNumber=7;
+					p.priority = prioritytable[priorityRegisterNumber];
+					p.isSpriteColorCalc = isSpriteColorCalc(prioritytable, priorityRegisterNumber, msb);
+					p.spriteColorCalcRatio = colorCalculationRatio[colorcalc];
+					p.isNormalShadow = isSpriteNormalShadow(pixel);
+					}
+					
+				}
 			}
 			else
 			{
-				//or window logic
-				if (!TestWindow(wctl, 0x2, 0x1, &clip[0], i, j) || !TestWindow(wctl, 0x8, 0x4, &clip[1], i,j))
-					continue;
+				// 8-bit pixel size
+				pixel = vdp1frontframebuffer[(i2*2 * vdp1width) + (i*2)];
+
+				p.transparent = false;
+
+				if (pixel == 0)
+					p.transparent = true;
+
+				p.pixel = COLSAT2YAB32(0xFF, Vdp2ColorRamGetColor(vdp1coloroffset + pixel));
+				p.priority = prioritytable[0];
+				
 			}
-
-			if (Vdp2GetPixelPriority(dst[0]) > priority)
-				continue;
-
-			srcindex = ((j/yratio * vdp2width)+i/xratio);
-
-			//transparent
-			if (src[srcindex] == 0)
-				continue;
-
-			dst[0] = COLSAT2YAB32(priority, src[srcindex]);
+			spritebuf[(i2 * vdp2width)+i] = p;
 		}
 	}
+}
+	
+void readLayerInfo(pixeldata first, int &wctl, int &colorCalculationEnable, int &alpha, int &specialColorCalculationMode, int &colorOffsetMask, int i, int j);
+
+bool doTest(int wctl, clipping_struct clip[], int i, int j) {
+	//if both windows are enabled and AND is enabled
+	if((wctl & 0x2) && (wctl & 0x8) && (wctl & 0x80) == 0x80) {
+		// test AND window logic
+		if(!TestWindow(wctl, 0x2, 0x1, &clip[0], i, j) && !TestWindow(wctl, 0x8, 0x4, &clip[1], i, j)) {
+			return true;
+		}
+	}
+	else
+	{
+		//or window logic
+		if (!TestWindow(wctl, 0x2, 0x1, &clip[0], i, j) || !TestWindow(wctl, 0x8, 0x4, &clip[1], i,j)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool testWindow(pixeldata &p, int i, int j) {
+
+	int wctl,colorCalculationEnable,alpha,specialColorCalculationMode,colorOffsetMask;
+	int islinewindow = false;
+
+	p.colorCalcWindow = false;
+
+	u32 linewnd0addr, linewnd1addr;
+	clipping_struct clip[2];
+	clip[0].xstart = clip[0].ystart = clip[0].xend = clip[0].yend = 0;
+	clip[1].xstart = clip[1].ystart = clip[1].xend = clip[1].yend = 0;
+
+	linewnd0addr = linewnd1addr = 0;
+
+	readLayerInfo(p, wctl, colorCalculationEnable, alpha, specialColorCalculationMode, colorOffsetMask,i,j);
+
+	//this just reads the coordinates for the two regular rectangular windows
+	ReadWindowData(wctl, clip);
+
+	ReadLineWindowData(&islinewindow, wctl, &linewnd0addr, &linewnd1addr);
+	// if line window is enabled, adjust clipping values
+	ReadLineWindowClip(islinewindow, clip, linewnd0addr+(j*4), linewnd1addr+(j*4));
+
+	if(doTest(wctl, clip, i, j))
+		return true;
+
+	//now that we have checked for regular window and made it here
+	//if either window is being used for color calc window
+	//no idea if any games use color calc line or sprite window
+	if(Vdp2Regs->WCTLD & (1 << 9) || Vdp2Regs->WCTLD & (1 << 10)) {
+
+		wctl = Vdp2Regs->WCTLD >> 8;
+
+		ReadWindowData(wctl, clip);
+
+		if(doTest(wctl, clip, i, j)) {
+			p.colorCalcWindow = true;
+			return false;
+		}
+	}
+
+	return false;
+}
+
+struct ColorOffsetData {
+	int red;
+	int green;
+	int blue;
+};
+
+ColorOffsetData colorOffset;
+
+void readColorOffset(int offset){
+
+	if (Vdp2Regs->CLOFSL & offset)
+	{
+		// color offset B
+		colorOffset.red = Vdp2Regs->COBR & 0xFF;
+		if (Vdp2Regs->COBR & 0x100)
+			colorOffset.red |= 0xFFFFFF00;
+
+		colorOffset.green = Vdp2Regs->COBG & 0xFF;
+		if (Vdp2Regs->COBG & 0x100)
+			colorOffset.green |= 0xFFFFFF00;
+
+		colorOffset.blue = Vdp2Regs->COBB & 0xFF;
+		if (Vdp2Regs->COBB & 0x100)
+			colorOffset.blue |= 0xFFFFFF00;
+	}
+	else
+	{
+		// color offset A
+		colorOffset.red = Vdp2Regs->COAR & 0xFF;
+		if (Vdp2Regs->COAR & 0x100)
+			colorOffset.red |= 0xFFFFFF00;
+
+		colorOffset.green = Vdp2Regs->COAG & 0xFF;
+		if (Vdp2Regs->COAG & 0x100)
+			colorOffset.green |= 0xFFFFFF00;
+
+		colorOffset.blue = Vdp2Regs->COAB & 0xFF;
+		if (Vdp2Regs->COAB & 0x100)
+			colorOffset.blue |= 0xFFFFFF00;
+	}
+}
+
+void readLayerInfo(pixeldata first, int &wctl, int &colorCalculationEnable, int &alpha, int &specialColorCalculationMode, int &colorOffsetMask, int i, int j) {
+
+	colorCalculationEnable = false;
+
+	if(first.layer == NBG0) {
+		wctl = Vdp2Regs->WCTLA;
+		colorCalculationEnable = Vdp2Regs->CCCTL & 0x1;
+		alpha = Vdp2Regs->CCRNA & 0x1f;
+		specialColorCalculationMode = Vdp2Regs->SFCCMD & 0x3;
+		colorOffsetMask = 1;
+	}
+	if(first.layer == NBG1) {
+		wctl = Vdp2Regs->WCTLA >> 8;
+		colorCalculationEnable = Vdp2Regs->CCCTL & 0x2;
+		alpha = Vdp2Regs->CCRNA >> 8;
+		specialColorCalculationMode = (Vdp2Regs->SFCCMD >> 2) & 0x3;
+		colorOffsetMask = 2;
+	}
+	if(first.layer == NBG2) {
+		wctl = Vdp2Regs->WCTLB;
+		colorCalculationEnable = Vdp2Regs->CCCTL & 0x4;
+		alpha = Vdp2Regs->CCRNB & 0x1f;
+		specialColorCalculationMode = (Vdp2Regs->SFCCMD >> 4) & 0x3;
+		colorOffsetMask = 4;
+	}
+	if(first.layer == NBG3) {
+		wctl = Vdp2Regs->WCTLB >> 8;
+		colorCalculationEnable = Vdp2Regs->CCCTL & 0x8;
+		alpha = Vdp2Regs->CCRNB >> 8;
+		specialColorCalculationMode = (Vdp2Regs->SFCCMD >> 6) & 0x3;
+		colorOffsetMask = 8;
+	}
+
+	if(first.layer == RBG0) {
+		wctl = Vdp2Regs->WCTLC & 0x1f;
+		colorCalculationEnable = Vdp2Regs->CCCTL & 0x10;
+		alpha = Vdp2Regs->CCRR & 0x1f;
+		colorOffsetMask = 0x10;
+	}
+
+	if(first.layer == SPRITE) {
+		wctl = Vdp2Regs->WCTLC >> 8;
+		colorCalculationEnable = first.isSpriteColorCalc;
+		alpha = first.spriteColorCalcRatio;
+		colorOffsetMask = 0x40;
+	}
+
+	readColorOffset(colorOffsetMask);
+}
+
+pixeldata pixelstack[0x7];
+
+void getColorCount(pixeldata &p) {
+	//need to look up format of the pixel
+	if(p.layer == NBG0)
+		p.colorCount = (Vdp2Regs->CHCTLA & 0x70) >> 4;
+	if(p.layer == NBG1)
+		p.colorCount = (Vdp2Regs->CHCTLA & 0x1800) >> 12;
+	if(p.layer == NBG2)
+		p.colorCount = (Vdp2Regs->CHCTLB & 0x1);
+	if(p.layer == NBG3)
+		p.colorCount = (Vdp2Regs->CHCTLB & (1 << 5)) >> 5;
+	if(p.layer == RBG0)
+		p.colorCount = (Vdp2Regs->CHCTLB & 0x7000) >> 12;
+}
+
+void composite(pixeldata pixelstack[], int i, int j){
+
+	int wctl;
+	int colorCalculationEnable = 0;
+	int alpha = 0;
+	int specialColorCalculationMode = 0;
+	int colorOffsetMask = 0;
+
+	pixeldata first = pixelstack[0];
+	pixeldata second = pixelstack[1];
+	pixeldata third = pixelstack[2];
+
+	readLayerInfo(first, wctl, colorCalculationEnable, alpha, specialColorCalculationMode, colorOffsetMask, i, j);
+
+	//extended color calculation is enabled
+	if(Vdp2Regs->CCCTL & (1 << 10)) {
+
+		//we have to know the bit depth of the pixels to be blended
+		getColorCount(second);
+		getColorCount(third);
+
+		//blend the second and third pixels
+		//and write the result over the second
+
+		//color ram mode 0
+		if(((Vdp2Regs->RAMCTL & 0x3000) >> 12) == 0) {
+			printf("mode 0 extended color calc");
+			//line color screen does not insert
+			if(!(Vdp2Regs->CCCTL & (1 << 5))) {
+
+				//2nd and 3rd images can be palette or rbg format
+				int a;
+				int enabled;
+
+				//got to check if the second pixel has color calc enabled
+				readLayerInfo(second, a, enabled, a, a, a, i, j);
+
+				if(enabled) {
+					//2:2:0
+					second.pixel = ColorCalc(second.pixel,third.pixel,15);
+				}
+				else {
+					//2nd pixel is 100% visible
+				}
+			}
+			//line color screen inserts
+			else {
+				printf("mode 0 extended color calc + lcl");
+			}
+		}
+
+		//color ram mode 1 or 2
+		else {
+			//line color screen does not insert
+			if(!(Vdp2Regs->CCCTL & (1 << 5))) {
+
+				//3rd image is palette format
+				if(third.colorCount < 3) {
+					//the second layer pixel is 100% visible
+				}
+				//3rd image is rgb format
+				if(third.colorCount >= 3) {
+					int a;
+					int enabled;
+
+					//got to check if the second pixel has color calc enabled
+					readLayerInfo(second, a, enabled, a, a, a, i, j);
+
+					if(enabled) {
+						//2:2:0
+						second.pixel = ColorCalc(second.pixel,third.pixel,15);
+					}
+					else {
+						//2nd pixel is 100% visible
+					}
+				}
+			}
+			//line color screen inserts
+			else {
+				printf("mode 1 or 2 extended + lcl");
+			}
+		}
+	}
+	//if we are selecting color calc by the second screen side
+	//parodius penguin boss uses this
+	if(Vdp2Regs->CCCTL & (1 << 9)) {
+
+		colorCalculationEnable = false;
+		if(second.layer == NBG0 && (Vdp2Regs->CCCTL & 0x1)) {
+			alpha = Vdp2Regs->CCRNA & 0x1f;
+			colorCalculationEnable = true;
+		}
+		if(second.layer == NBG1 && (Vdp2Regs->CCCTL & 0x2)) {
+			alpha = Vdp2Regs->CCRNA >> 8;
+			colorCalculationEnable = true;
+		}
+		if(second.layer == NBG2 && (Vdp2Regs->CCCTL & 0x4)) {
+			alpha = Vdp2Regs->CCRNB & 0x1f;
+			colorCalculationEnable = true;
+		}
+		if(second.layer == NBG3 && (Vdp2Regs->CCCTL & 0x8)) {
+			alpha = Vdp2Regs->CCRNB >> 8;
+			colorCalculationEnable = true;
+		}
+		if(second.layer == RBG0 && (Vdp2Regs->CCCTL & 0x10)) {
+			colorCalculationEnable = true;
+			alpha = Vdp2Regs->CCRR & 0x1f;
+		}
+		if(second.layer == SPRITE && (Vdp2Regs->CCCTL & ( 1 << 6))) {
+			colorCalculationEnable = true;
+			alpha = second.spriteColorCalcRatio;
+		}
+	}
+
+	if(specialColorCalculationMode==1){
+		printf("a");
+	}
+	if(specialColorCalculationMode==2){
+		printf("b");
+	}
+	//activated based on the msb of the color data
+	//in the case of radiant silvergun portraits it is looked up
+	//and the value is actually from color ram transferred to first.pixel
+	if(specialColorCalculationMode == 3) {
+		if(first.pixel &(0x8000 << 9))//i'm not really sure pixel data gets stored like this internally but this is ok for now i guess
+			colorCalculationEnable = 1;
+		else
+			colorCalculationEnable = 0;
+	}
+	///////////////////////////////////////////////////////////////////
+	//temporary line color screen testing////////////////////
+	int lineColor;
+	int scrAddr;
+	bool lineColorScreen = (Vdp2Regs->CCCTL & (1 << 5));
+
+      if (Vdp2Regs->VRSIZE & 0x8000)	  
+         scrAddr = ((Vdp2Regs->LCTA.all & 0x7FFFFUL) * 2);
+      else
+         scrAddr = ((Vdp2Regs->LCTA.all & 0x7FFFFUL) * 2);
+
+	lineColor = T1ReadWord(Vdp2Ram, scrAddr);
+	
+
+	if(lineColorScreen && !first.colorCalcWindow) {
+		alpha = Vdp2Regs->CCRLB & 0x1f;
+		first.pixel = ColorCalc(lineColor, first.pixel, alpha);
+	}
+	/////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////
+	else if(colorCalculationEnable && !first.colorCalcWindow)
+		first.pixel = ColorCalc(first.pixel, second.pixel, alpha);
+	else
+		first.pixel = COLSAT2YAB32(0, first.pixel);
+
+	//is color offset enabled?
+	if (Vdp2Regs->CLOFEN & colorOffsetMask)// && first.layer == SPRITE
+		first.pixel = COLOR_ADD(first.pixel,colorOffset.red,colorOffset.green,colorOffset.blue);
+		bool shadowEnabled = false;
+
+		//we need to check if the layer underneath has shadow enabled
+		if(second.layer == NBG0)
+			shadowEnabled = Vdp2Regs->SDCTL & (1 << 0);
+		if(second.layer == NBG1)
+			shadowEnabled = Vdp2Regs->SDCTL & (1 << 1);
+		if(second.layer == NBG2)
+			shadowEnabled = Vdp2Regs->SDCTL & (1 << 2);
+		if(second.layer == NBG3)
+			shadowEnabled = Vdp2Regs->SDCTL & (1 << 3);
+		if(second.layer == RBG0)
+			shadowEnabled = Vdp2Regs->SDCTL & (1 << 4);
+
+	//shadow is processed after color calculation and color offset functions
+	//normal shadow is displayed regardless of bit 8 SDCTL
+	//puyo tsuu uses msb shadow in menu
+	//normal shadow is always enabled, so games should not be using the reserved color value unless they want a shadow
+	if(first.layer == SPRITE && first.isNormalShadow) {
+
+		if(shadowEnabled)
+			first.pixel = Shadow(second.pixel,80);
+	}
+	else if(first.layer == SPRITE && first.isMSBShadow) {
+
+		//puyo tsuu has issues
+		//it is not shading correctly
+
+		//MSB shadow and the value of the sprite is greater than 0x8000, we shade the sprite instead of the background
+		//sexy parodius corn boss
+		if(first.pixel > 0x8000)
+			first.pixel = Shadow(first.pixel,80);//&& (Vdp2Regs->SDCTL & (1 << 8)
+		else //if (shadowEnabled)
+			//this isn't right, taromaru looks correct if you use third.pixel, 20
+			//can it skip over a layer and do a shadow?
+			//second happens to be that layer of transparent mist,
+			//so perhaps it skips color calculated layers?
+			first.pixel = Shadow(second.pixel,80);
+	}
+
+	vdp2framebuffer[(j*vdp2width)+i] = first.pixel;
+
+
+	// dst[(j*vdp2width)+i] = nbg0buf[(j*vdp2width)+i].pixel;
+	// dst[(j*vdp2width)+i] = spritebuf[(j*vdp2width)+i].pixel;
+	// dst[(j*vdp2width)+i] = first.pixel;
+}
+
+int pixelindex;
+
+void layerStuff(pixeldata buf[], int i, int j, pixeldata arr[]) {
+
+	pixeldata p = initPixelData();
+//	p.pixel = INT_MAX;
+	p = buf[(j*vdp2width)+i];
+
+	if(testWindow(p, i, j))
+		return;
+	if(p.layer == _NULL)
+		return;
+	if(!p.transparent)
+		arr[pixelindex++] = p;
+}
+static void Vdp2DrawBackScreen(void);
+
+void VIDSoftVdp2DrawScreens(){
+
+	memset(spritebuf,0,sizeof(spritebuf));
+	memset(rbg0buf,0,sizeof(rbg0buf));
+	memset(nbg0buf,0,sizeof(nbg0buf));
+	memset(nbg1buf,0,sizeof(nbg1buf));
+	memset(nbg2buf,0,sizeof(nbg2buf));
+	memset(nbg3buf,0,sizeof(nbg3buf));
+
+	Vdp2DrawSprites();
+	Vdp2DrawRBG0();
+	Vdp2DrawNBG0();
+	Vdp2DrawNBG1();
+	Vdp2DrawNBG2();
+	Vdp2DrawNBG3();
+	Vdp2DrawBackScreen();
+
+
+	for (int j = 0; j < vdp2height; j++) {
+		for (int i = 0; i < vdp2width; i++) {
+			memset(pixelstack,0,sizeof(pixelstack));
+			pixelindex = 0;
+			for (int priority = 7; priority > 0; priority--) {
+
+				if(spritebuf[(j*vdp2width)+i].priority == priority)
+					layerStuff(spritebuf, i, j, pixelstack);
+
+				if (rbg0priority == priority)
+					layerStuff(rbg0buf, i, j, pixelstack);
+				if (nbg0priority == priority)
+					layerStuff(nbg0buf, i, j, pixelstack);
+				if (nbg1priority == priority)
+					layerStuff(nbg1buf, i, j, pixelstack);
+				if (nbg2priority == priority)
+					layerStuff(nbg2buf, i, j, pixelstack);
+				if (nbg3priority == priority)
+					layerStuff(nbg3buf, i, j, pixelstack);
+
+			}
+			pixelstack[pixelindex] = backbuf[(j*vdp2width)+i];
+			composite(pixelstack, i, j);	
+		}
+	}
+}
+
+static INLINE u32 FASTCALL Vdp2ColorRamGetColor(u32 addr)
+{
+   switch(Vdp2Internal.ColorMode)
+   {
+      case 0:
+      {
+         u32 tmp;
+         addr <<= 1;
+         tmp = T2ReadWord(Vdp2ColorRam, addr & 0xFFF);
+
+         return (((tmp & 0x1F) << 3) | ((tmp & 0x03E0) << 6) | ((tmp & 0x7C00) << 9));
+      }
+      case 1:
+      {
+         u32 tmp;
+         addr <<= 1;
+         tmp = T2ReadWord(Vdp2ColorRam, addr & 0xFFF);
+         return (((tmp & 0x1F) << 3) | ((tmp & 0x03E0) << 6) | ((tmp & 0xFC00) << 9));//changed to FC to preserve the msb for per pixel color calc
+      }
+      case 2:
+      {
+         addr <<= 2;   
+         return T2ReadLong(Vdp2ColorRam, addr & 0xFFF);
+      }
+      default: break;
+   }
+
+   return 0;
+}
+
+
+static INLINE int Vdp2FetchPixel(vdp2draw_struct *info, int x, int y, u32 *color)
+{
+   u32 dot;
+
+   switch(info->colornumber)
+   {
+      case 0: // 4 BPP
+         dot = T1ReadByte(Vdp2Ram, ((info->charaddr + ((y * info->cellw) + x) / 2) & 0x7FFFF));
+         if (!(x & 0x1)) dot >>= 4;
+         if (!(dot & 0xF) && info->transparencyenable) return 0;
+         else
+         {
+            *color = Vdp2ColorRamGetColor(info->coloroffset + (info->paladdr | (dot & 0xF)));
+
+            return 1;
+         }
+      case 1: // 8 BPP
+         dot = T1ReadByte(Vdp2Ram, ((info->charaddr + (y * info->cellw) + x) & 0x7FFFF));
+         if (!(dot & 0xFF) && info->transparencyenable) return 0;
+         else
+         {
+            *color = Vdp2ColorRamGetColor(info->coloroffset + (info->paladdr | (dot & 0xFF)));
+            return 1;
+         }
+      case 2: // 16 BPP(palette)
+         dot = T1ReadWord(Vdp2Ram, ((info->charaddr + ((y * info->cellw) + x) * 2) & 0x7FFFF));
+         if ((dot == 0) && info->transparencyenable) return 0;
+         else
+         {
+            *color = Vdp2ColorRamGetColor(info->coloroffset + dot);
+            return 1;
+         }
+      case 3: // 16 BPP(RGB)      
+         dot = T1ReadWord(Vdp2Ram, ((info->charaddr + ((y * info->cellw) + x) * 2) & 0x7FFFF));
+         if (!(dot & 0x8000) && info->transparencyenable) return 0;
+         else
+         {
+            *color = COLSAT2YAB16(0, dot);
+            return 1;
+         }
+      case 4: // 32 BPP
+         dot = T1ReadLong(Vdp2Ram, ((info->charaddr + ((y * info->cellw) + x) * 4) & 0x7FFFF));
+         if (!(dot & 0x80000000) && info->transparencyenable) return 0;
+         else
+         {
+            *color = COLSAT2YAB32(0, dot);
+            return 1;
+         }
+      default:
+         return 0;
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -904,145 +1406,151 @@ void SetupRotationInfo(vdp2draw_struct *info, vdp2rotationparameterfp_struct *p)
 
 static void FASTCALL Vdp2DrawRotationFP(vdp2draw_struct *info, vdp2rotationparameterfp_struct *parameter)
 {
-   int i, j;
-   int x, y;
-   screeninfo_struct sinfo;
-   vdp2rotationparameterfp_struct *p=&parameter[info->rotatenum];
+	int i, j;
+	int x, y;
+	screeninfo_struct sinfo;
+	vdp2rotationparameterfp_struct *p=&parameter[info->rotatenum];
+	int doubley = 1;
 
-   SetupRotationInfo(info, parameter);
+	if(((Vdp2Regs->TVMD >> 6) & 0x3) == 3)
+		doubley = 2;
 
-   if (!p->coefenab)
-   {
-	   fixed32 xmul, ymul, C, F;
 
-	   u32 *textdata=rbg0framebuffer;
+	SetupRotationInfo(info, parameter);
 
-	   GenerateRotatedVarFP(p, &xmul, &ymul, &C, &F);
+	if (!p->coefenab)
+	{
+		fixed32 xmul, ymul, C, F;
 
-	   // Do simple rotation
-	   CalculateRotationValuesFP(p);
+		GenerateRotatedVarFP(p, &xmul, &ymul, &C, &F);
 
-	   SetupScreenVars(info, &sinfo);
+		// Do simple rotation
+		CalculateRotationValuesFP(p);
 
-	   for (j = 0; j < vdp2height; j++)
-	   {
-		   for (i = 0; i < vdp2width; i++)
-		   {
-			   u32 color;
+		SetupScreenVars(info, &sinfo);
 
-			   x = GenerateRotatedXPosFP(p, i, xmul, ymul, C) & sinfo.xmask;
-			   y = GenerateRotatedYPosFP(p, i, xmul, ymul, F) & sinfo.ymask;
-			   xmul += p->deltaXst;
+		for (j = 0; j < vdp2height; j++)
+		{
+			for (i = 0; i < vdp2width; i++)
+			{
+				u32 color;
 
-			   // Convert coordinates into graphics
-			   if (!info->isbitmap)
-			   {
-				   // Tile
-				   Vdp2MapCalcXY(info, &x, &y, &sinfo);
-			   }
+				x = GenerateRotatedXPosFP(p, i/2, xmul, ymul, C) & sinfo.xmask;
+				y = GenerateRotatedYPosFP(p, i/2, xmul, ymul, F) & sinfo.ymask;
+				xmul += p->deltaXst;
 
-			   // Fetch pixel
-			   if (!Vdp2FetchPixel(info, x, y, &color))
-			   {
-				   textdata++;
-				   continue;
-			   }
+				// Convert coordinates into graphics
+				if (!info->isbitmap)
+				{
+					// Tile
+					Vdp2MapCalcXY(info, &x, &y, &sinfo);
+				}
+				pixeldata pix = initPixelData();
+				// Fetch pixel
+				if (!Vdp2FetchPixel(info, x, y, &color))
+				{
+					pix.transparent = true;
+				}
+				else
+					pix.transparent = false;
 
-			   textdata[0] = COLSAT2YAB32(info->priority, info->PostPixelFetchCalc(info, color));
-			   textdata++;
-		   }
-		   ymul += p->deltaYst;
-	   }
+				pix.pixel = color;
+				pix.layer = RBG0;
 
-	   return;
-   }
-   else
-   {
-      fixed32 xmul, ymul, C, F;
-      fixed32 coefx, coefy;
-      u32 *textdata=rbg0framebuffer;
+				rbg0buf[(j * vdp2width)+i] = pix;
+			}
+			ymul += p->deltaYst;
+		}
 
-      GenerateRotatedVarFP(p, &xmul, &ymul, &C, &F);
+		return;
+	}
+	else
+	{
+		fixed32 xmul, ymul, C, F;
+		fixed32 coefx, coefy;
 
-      // Rotation using Coefficient Tables(now this stuff just gets wacky. It
-      // has to be done in software, no exceptions)
-      CalculateRotationValuesFP(p);
+		GenerateRotatedVarFP(p, &xmul, &ymul, &C, &F);
 
-      SetupScreenVars(info, &sinfo);
-      coefx = coefy = 0;
+		// Rotation using Coefficient Tables(now this stuff just gets wacky. It
+		// has to be done in software, no exceptions)
+		CalculateRotationValuesFP(p);
 
-      for (j = 0; j < vdp2height; j++)
-      {
-         if (p->deltaKAx == 0)
-         {
-            Vdp2ReadCoefficientFP(p,
-                                  p->coeftbladdr +
-                                  touint(coefy) *
-                                  p->coefdatasize);
-         }
+		SetupScreenVars(info, &sinfo);
+		coefx = coefy = 0;
 
-         for (i = 0; i < vdp2width; i++)
-         {
-            u32 color;
+		for (j = 0; j < vdp2height; j++)
+		{
+			if (p->deltaKAx == 0)
+			{
+				Vdp2ReadCoefficientFP(p,
+					p->coeftbladdr +
+					touint(coefy) *
+					p->coefdatasize);
+			}
 
-            if (p->deltaKAx != 0)
-            {
-               Vdp2ReadCoefficientFP(p,
-                                     p->coeftbladdr +
-                                     toint(coefy + coefx) *
-                                     p->coefdatasize);
-               coefx += p->deltaKAx;
-            }
+			for (i = 0; i < vdp2width; i++)
+			{
+				u32 color;
 
-            if (p->msb)
-            {
-               textdata++;
-               continue;
-            }
+				if (p->deltaKAx != 0)
+				{
+					Vdp2ReadCoefficientFP(p,
+						p->coeftbladdr +
+						toint(coefy + coefx) *
+						p->coefdatasize);
+					coefx += p->deltaKAx;
+				}
+				pixeldata pix = initPixelData();
+				if (p->msb)
+				{
+					pix.transparent = true;
+				}
 
-            x = GenerateRotatedXPosFP(p, i, xmul, ymul, C) & sinfo.xmask;
-            y = GenerateRotatedYPosFP(p, i, xmul, ymul, F) & sinfo.ymask;
-            xmul += p->deltaXst;
+				x = GenerateRotatedXPosFP(p, i/2, xmul, ymul, C) & sinfo.xmask;
+				y = GenerateRotatedYPosFP(p, i/2, xmul, ymul, F) & sinfo.ymask;
+				xmul += p->deltaXst;
 
-            // Convert coordinates into graphics
-            if (!info->isbitmap)
-            {
-               // Tile
-               Vdp2MapCalcXY(info, &x, &y, &sinfo);
-            }
+				// Convert coordinates into graphics
+				if (!info->isbitmap)
+				{
+					// Tile
+					Vdp2MapCalcXY(info, &x, &y, &sinfo);
+				}
 
-            // Fetch pixel
-            if (!Vdp2FetchPixel(info, x, y, &color))
-            {
-               textdata++;
-               continue;
-            }
+				// Fetch pixel
+				if (!Vdp2FetchPixel(info, x, y, &color))
+				{
+					pix.transparent = true;
+				}
+				else
+					pix.transparent = false;
 
-            textdata[0] = COLSAT2YAB32(info->priority, info->PostPixelFetchCalc(info, color));
-            textdata++;
-         }
-         ymul += p->deltaYst;
-         coefx = 0;
-         coefy += p->deltaKAst;
-      }
-      return;
-   }
 
-   Vdp2DrawScroll(info, vdp2framebuffer, vdp2width, vdp2height);
+				pix.pixel = color;
+				pix.layer = RBG0;
+				rbg0buf[(j * vdp2width)+i] = pix;
+			}
+			ymul += p->deltaYst;
+			coefx = 0;
+			coefy += p->deltaKAst;
+		}
+		return;
+	}
+
+	// Vdp2DrawScroll(info, RBG0, vdp2width, vdp2height);
 }
-
-//////////////////////////////////////////////////////////////////////////////
 
 static void Vdp2DrawBackScreen(void)
 {
    int i;
-
+	pixeldata p = initPixelData();
+	p.pixel = 0;
    // Only draw black if TVMD's DISP and BDCLMD bits are cleared
    if ((Vdp2Regs->TVMD & 0x8000) == 0 && (Vdp2Regs->TVMD & 0x100) == 0)
    {
       // Draw Black
       for (i = 0; i < (vdp2width * vdp2height); i++)
-         vdp2framebuffer[i] = 0;
+		  backbuf[i] = p;
    }
    else
    {
@@ -1063,7 +1571,10 @@ static void Vdp2DrawBackScreen(void)
             dot = T1ReadWord(Vdp2Ram, scrAddr);
             scrAddr += 2;
 
-            puthline16(0, i, vdp2width, dot, 0);
+			p.pixel = COLSAT2YAB16(0, dot);
+
+			for (int x = 0; x < vdp2width; x++)
+				backbuf[(i * vdp2width) + x] = p;
          }
       }
       else
@@ -1071,8 +1582,11 @@ static void Vdp2DrawBackScreen(void)
          // Single Color
          dot = T1ReadWord(Vdp2Ram, scrAddr);
 
-         for (i = 0; i < (vdp2width * vdp2height); i++)
-            vdp2framebuffer[i] = COLSAT2YAB16(0, dot);
+		 p.pixel =  COLSAT2YAB16(0, dot);
+
+		 for (i = 0; i < (vdp2width * vdp2height); i++) {
+			 backbuf[i] = p;
+			}
       }
    }
 }
@@ -1161,7 +1675,6 @@ static void Vdp2DrawNBG0(void)
       info.alpha = Vdp2Regs->CCRNA & 0x1F;
 
    info.coloroffset = (Vdp2Regs->CRAOFA & 0x7) << 8;
-   ReadVdp2ColorOffset(&info, 0x1, 0x1);
    info.priority = nbg0priority;
 
    if (!(info.enable & Vdp2External.disptoggle))
@@ -1185,7 +1698,7 @@ static void Vdp2DrawNBG0(void)
    if (info.enable == 1)
    {
       // NBG0 draw
-      Vdp2DrawScroll(&info, nbg0framebuffer, vdp2width, vdp2height);
+      Vdp2DrawScroll(&info, NBG0, vdp2width, vdp2height);
    }
    else
    {
@@ -1234,7 +1747,6 @@ static void Vdp2DrawNBG1(void)
       info.alpha = (Vdp2Regs->CCRNA >> 8) & 0x1F;
 
    info.coloroffset = (Vdp2Regs->CRAOFA & 0x70) << 4;
-   ReadVdp2ColorOffset(&info, 0x2, 0x2);
    info.coordincx = (Vdp2Regs->ZMXN1.all & 0x7FF00) / (float) 65536;
    info.coordincy = (Vdp2Regs->ZMYN1.all & 0x7FF00) / (float) 65536;
 
@@ -1264,7 +1776,7 @@ static void Vdp2DrawNBG1(void)
       info.isverticalscroll = 0;
    info.wctl = Vdp2Regs->WCTLA >> 8;
 
-   Vdp2DrawScroll(&info, nbg1framebuffer, vdp2width, vdp2height);
+   Vdp2DrawScroll(&info, NBG1, vdp2width, vdp2height);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1289,7 +1801,6 @@ static void Vdp2DrawNBG2(void)
       info.alpha = Vdp2Regs->CCRNB & 0x1F;
 
    info.coloroffset = Vdp2Regs->CRAOFA & 0x700;
-   ReadVdp2ColorOffset(&info, 0x4, 0x4);
    info.coordincx = info.coordincy = 1;
 
    info.priority = nbg2priority;
@@ -1304,7 +1815,7 @@ static void Vdp2DrawNBG2(void)
    info.wctl = Vdp2Regs->WCTLB;
    info.isbitmap = 0;
 
-   Vdp2DrawScroll(&info, nbg2framebuffer, vdp2width, vdp2height);
+   Vdp2DrawScroll(&info, NBG2, vdp2width, vdp2height);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1330,7 +1841,6 @@ static void Vdp2DrawNBG3(void)
       info.alpha = (Vdp2Regs->CCRNB >> 8) & 0x1F;
 
    info.coloroffset = (Vdp2Regs->CRAOFA & 0x7000) >> 4;
-   ReadVdp2ColorOffset(&info, 0x8, 0x8);
    info.coordincx = info.coordincy = 1;
 
    info.priority = nbg3priority;
@@ -1345,7 +1855,7 @@ static void Vdp2DrawNBG3(void)
    info.wctl = Vdp2Regs->WCTLB >> 8;
    info.isbitmap = 0;
 
-   Vdp2DrawScroll(&info, nbg3framebuffer, vdp2width, vdp2height);
+   Vdp2DrawScroll(&info, NBG3, vdp2width, vdp2height);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1428,7 +1938,6 @@ static void Vdp2DrawRBG0(void)
 
    info.coloroffset = (Vdp2Regs->CRAOFB & 0x7) << 8;
 
-   ReadVdp2ColorOffset(&info, 0x10, 0x10);
    info.coordincx = info.coordincy = 1;
 
    ReadMosaicData(&info, 0x10);
@@ -1448,15 +1957,15 @@ int VIDSoftInit(void)
       return -1;
 
    // Initialize VDP1 framebuffer 1
-   if ((vdp1framebuffer[0] = (u8 *)calloc(sizeof(u8), 0x40000*5)) == NULL)
+   if ((vdp1framebuffer[0] = (u8 *)calloc(sizeof(u8), 0x40000*9)) == NULL)
       return -1;
 
    // Initialize VDP1 framebuffer 2
-   if ((vdp1framebuffer[1] = (u8 *)calloc(sizeof(u8), 0x40000*5)) == NULL)
+   if ((vdp1framebuffer[1] = (u8 *)calloc(sizeof(u8), 0x40000*9)) == NULL)
       return -1;
 
    // Initialize VDP2 framebuffer
-   if ((vdp2framebuffer = (u32 *)calloc(sizeof(u32), 704 * 512)) == NULL)
+   if ((vdp2framebuffer = (u32 *)calloc(sizeof(u32), 704 * 512*2)) == NULL)
       return -1;
 
 
@@ -1793,9 +2302,6 @@ int getpixel(int linenumber, int currentlineindex) {
 	if(!isTextured)
 		currentPixel = untexturedColor;
 
-	//force the MSB to be on if MSBON is set
-	currentPixel |= cmd.CMDPMOD & (1 << 15);
-
 	return 0;
 }
 
@@ -1835,6 +2341,19 @@ void putpixel(int x, int y) {
 
 	if (cmd.CMDPMOD & 0x0400) PopUserClipping();
 
+	//see the corn boss in sexy parodius
+	//taromaru demonstrates msb shadow without the overlapping
+	//if MSB ON is set we just modify the msb of the framebuffer pixel
+	if(cmd.CMDPMOD & (1 << 15)) {
+		if(isTextured) {
+			if (!((currentPixel == 0) && !SPD))
+				*(iPix) |= (1 << 15);
+		}
+		else
+			*(iPix) |= (1 << 15);
+
+		return;
+	}
 
 	if ( SPD || (currentPixel & currentPixelIsVisible))
 	{
@@ -1917,9 +2436,8 @@ int bresenham( int x1, int y1, int x2, int y2, int x[], int y[])
 		yf = -1;
 	}
 
-	//burning rangers tries to draw huge shapes
-	//this will at least let it run
-	if(dx > 999 || dy > 999)
+	//buffer protection
+	if(dx > 4095 || dy > 4095)
 		return INT_MAX;
 
 	if (dx>dy) {
@@ -2174,10 +2692,10 @@ void gouraudTable()
 	gouraudD.value = T1ReadWord(Vdp1Ram,gouraudTableAddress+6);
 }
 
-int xleft[1000];
-int yleft[1000];
-int xright[1000];
-int yright[1000];
+int xleft[4096];
+int yleft[4096];
+int xright[4096];
+int yright[4096];
 
 //a real vdp1 draws with arbitrary lines
 //this is why endcodes are possible
@@ -2424,24 +2942,30 @@ void VIDSoftVdp1ScaledSpriteDraw(){
 
 	drawQuad(topLeftx,topLefty,bottomLeftx,bottomLefty,topRightx,topRighty,bottomRightx,bottomRighty);
 }
-
+//the upper bits of the CMD__ parts are designated as code extension
+//i would expect to need to ignore all of them but guardian heroes needs to draw sprites at -1840
+//which is outside the -1024 to 1023 range suggested by the manual
+//ignoring them all would be (((s16)((X)<<5))/32) but guardian heroes breaks so we will leave an additional bit
+//burning rangers wants to draw polygons at 32769 without this
+//more research should be done
+#define TRUNC_10BIT(X) (((s16)((X)<<4))/16) //watch out for right shift arithmetic
 void VIDSoftVdp1DistortedSpriteDraw() {
 
 	s32 xa,ya,xb,yb,xc,yc,xd,yd;
 
 	Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
 
-    xa = (s32)(cmd.CMDXA + Vdp1Regs->localX);
-    ya = (s32)(cmd.CMDYA + Vdp1Regs->localY);
+    xa = (s32)(TRUNC_10BIT(cmd.CMDXA) + Vdp1Regs->localX);
+	ya = (s32)(TRUNC_10BIT(cmd.CMDYA) + Vdp1Regs->localY);
 
-    xb = (s32)(cmd.CMDXB + Vdp1Regs->localX);
-    yb = (s32)(cmd.CMDYB + Vdp1Regs->localY);
+    xb = (s32)(TRUNC_10BIT(cmd.CMDXB) + Vdp1Regs->localX);
+	yb = (s32)(TRUNC_10BIT(cmd.CMDYB) + Vdp1Regs->localY);
 
-    xc = (s32)(cmd.CMDXC + Vdp1Regs->localX);
-    yc = (s32)(cmd.CMDYC + Vdp1Regs->localY);
+    xc = (s32)(TRUNC_10BIT(cmd.CMDXC) + Vdp1Regs->localX);
+	yc = (s32)(TRUNC_10BIT(cmd.CMDYC) + Vdp1Regs->localY);
 
-    xd = (s32)(cmd.CMDXD + Vdp1Regs->localX);
-    yd = (s32)(cmd.CMDYD + Vdp1Regs->localY);
+    xd = (s32)(TRUNC_10BIT(cmd.CMDXD) + Vdp1Regs->localX);
+	yd = (s32)(TRUNC_10BIT(cmd.CMDYD) + Vdp1Regs->localY);
 
 	drawQuad(xa,ya,xd,yd,xb,yb,xc,yc);
 }
@@ -2631,191 +3155,91 @@ int VIDSoftVdp2Reset(void)
 
 void VIDSoftVdp2DrawStart(void)
 {
-   Vdp2DrawBackScreen();
+}
+u32 alphablend(u32 toppixel, u32 bottompixel, u32 alpha)
+{
+
+   u8 oldr, oldg, oldb;
+   u8 r, g, b;
+   u32 oldpixel = bottompixel;
+
+   static int topratio[32] = {
+      31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16,
+      15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0
+   };
+   static int bottomratio[32] = {
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+      17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
+   };
+
+   // separate color components for top and second pixel
+   r = (toppixel & 0xFF) * topratio[alpha] >> 5;
+   g = ((toppixel >> 8) & 0xFF) * topratio[alpha] >> 5;
+   b = ((toppixel >> 16) & 0xFF) * topratio[alpha] >> 5;
+
+#ifdef WORDS_BIGENDIAN
+   oldr = ((oldpixel >> 24) & 0xFF) * bottomratio[alpha] >> 5;
+   oldg = ((oldpixel >> 16) & 0xFF) * bottomratio[alpha] >> 5;
+   oldb = ((oldpixel >> 8) & 0xFF) * bottomratio[alpha] >> 5;
+#else
+   oldr = (oldpixel & 0xFF) * bottomratio[alpha] >> 5;
+   oldg = ((oldpixel >> 8) & 0xFF) * bottomratio[alpha] >> 5;
+   oldb = ((oldpixel >> 16) & 0xFF) * bottomratio[alpha] >> 5;
+#endif
+
+   // add color components and reform the pixel
+   toppixel = ((b + oldb) << 16) | ((g + oldg) << 8) | (r + oldr);
+
+   return toppixel;
 }
 
-//////////////////////////////////////////////////////////////////////////////
+u32 additive(u32 toppixel, u32 bottompixel)
+{
+
+	u16 oldr, oldg, oldb;
+	u16 r, g, b;
+
+	r = (toppixel & 0xFF);
+	g = ((toppixel >> 8) & 0xFF);
+	b = ((toppixel >> 16) & 0xFF);
+
+#ifdef WORDS_BIGENDIAN
+	oldr = ((bottompixel >> 24) & 0xFF);
+	oldg = ((bottompixel >> 16) & 0xFF);
+	oldb = ((bottompixel >> 8) & 0xFF);
+#else
+	oldr = (bottompixel & 0xFF);
+	oldg = ((bottompixel >> 8) & 0xFF);
+	oldb = ((bottompixel >> 16) & 0xFF);
+#endif
+
+	r = r + oldr;
+	g = g + oldg;
+	b = b + oldb;
+
+	if(b > 255) b = 255;
+	if(g > 255) g = 255;
+	if(r > 255) r = 255;
+
+	toppixel = (b << 16) | (g << 8) | r;
+
+	return toppixel;
+}
+
+u32 ColorCalc(u32 toppixel, u32 bottompixel, u32 alpha) {
+	if(Vdp2Regs->CCCTL & (1 << 8))
+		return additive(toppixel, bottompixel);
+	else
+		return alphablend(toppixel,bottompixel,alpha);	
+}
 
 void VIDSoftVdp2DrawEnd(void)
 {
-   int i, i2;
-   u16 pixel;
-   u8 prioritytable[8];
-   u32 vdp1coloroffset;
-   int colormode = Vdp2Regs->SPCTL & 0x20;
-   vdp2draw_struct info;
-   u32 *dst=dispbuffer;
-   u32 *vdp2src=vdp2framebuffer;
-   int islinewindow;
-   clipping_struct clip[2];
-   u32 linewnd0addr, linewnd1addr;
-   int wctl;
+	int i;
 
-   // Figure out whether to draw vdp1 framebuffer or vdp2 framebuffer pixels
-   // based on priority
-   if (Vdp1Regs->disptoggle)
-   {
-      prioritytable[0] = Vdp2Regs->PRISA & 0x7;
-      prioritytable[1] = (Vdp2Regs->PRISA >> 8) & 0x7;
-      prioritytable[2] = Vdp2Regs->PRISB & 0x7;
-      prioritytable[3] = (Vdp2Regs->PRISB >> 8) & 0x7;
-      prioritytable[4] = Vdp2Regs->PRISC & 0x7;
-      prioritytable[5] = (Vdp2Regs->PRISC >> 8) & 0x7;
-      prioritytable[6] = Vdp2Regs->PRISD & 0x7;
-      prioritytable[7] = (Vdp2Regs->PRISD >> 8) & 0x7;
-
-      vdp1coloroffset = (Vdp2Regs->CRAOFB & 0x70) << 4;
-      vdp1spritetype = Vdp2Regs->SPCTL & 0xF;
-
-      if (Vdp2Regs->CLOFEN & 0x40)
-      {
-         // color offset enable
-         if (Vdp2Regs->CLOFSL & 0x40)
-         {
-            // color offset B
-            info.cor = Vdp2Regs->COBR & 0xFF;
-            if (Vdp2Regs->COBR & 0x100)
-               info.cor |= 0xFFFFFF00;
-
-            info.cog = Vdp2Regs->COBG & 0xFF;
-            if (Vdp2Regs->COBG & 0x100)
-               info.cog |= 0xFFFFFF00;
-
-            info.cob = Vdp2Regs->COBB & 0xFF;
-            if (Vdp2Regs->COBB & 0x100)
-               info.cob |= 0xFFFFFF00;
-         }
-         else
-         {
-            // color offset A
-            info.cor = Vdp2Regs->COAR & 0xFF;
-            if (Vdp2Regs->COAR & 0x100)
-               info.cor |= 0xFFFFFF00;
-
-            info.cog = Vdp2Regs->COAG & 0xFF;
-            if (Vdp2Regs->COAG & 0x100)
-               info.cog |= 0xFFFFFF00;
-
-            info.cob = Vdp2Regs->COAB & 0xFF;
-            if (Vdp2Regs->COAB & 0x100)
-               info.cob |= 0xFFFFFF00;
-         }
-
-         if (info.cor == 0 && info.cog == 0 && info.cob == 0)
-         {
-            if (Vdp2Regs->CCCTL & 0x40)
-               info.PostPixelFetchCalc = &DoColorCalc;
-            else
-               info.PostPixelFetchCalc = &DoNothing;
-         }
-         else
-         {
-            if (Vdp2Regs->CCCTL & 0x40)
-               info.PostPixelFetchCalc = &DoColorCalcWithColorOffset;
-            else
-               info.PostPixelFetchCalc = &DoColorOffset;
-         }
-      }
-	  else // color offset disable
-	  {
-		  if (Vdp2Regs->CCCTL & 0x40)
-			  info.PostPixelFetchCalc = &DoColorCalc;
-		  else
-			  info.PostPixelFetchCalc = &DoNothing;
-	  }
-
-	  wctl = Vdp2Regs->WCTLC >> 8;
-	  clip[0].xstart = clip[0].ystart = clip[0].xend = clip[0].yend = 0;
-	  clip[1].xstart = clip[1].ystart = clip[1].xend = clip[1].yend = 0;
-	  ReadWindowData(wctl, clip);
-	  linewnd0addr = linewnd1addr = 0;
-      ReadLineWindowData(&islinewindow, wctl, &linewnd0addr, &linewnd1addr);
-
-      for (i2 = 0; i2 < vdp2height; i2++)
-      {
-         ReadLineWindowClip(islinewindow, clip, &linewnd0addr, &linewnd1addr);
-
-         for (i = 0; i < vdp2width; i++)
-         {
-            // See if screen position is clipped, if it isn't, continue
-            // Window 0
-            if (!TestWindow(wctl, 0x2, 0x1, &clip[0], i, i2))
-            {
-               dst[0] = COLSATSTRIPPRIORITY(vdp2src[0]);
-               vdp2src++;
-               dst++;
-               continue;
-            }
-
-            // Window 1
-            if (!TestWindow(wctl, 0x8, 0x4, &clip[1], i, i2))
-            {
-               vdp2src++;
-               dst[0] = COLSATSTRIPPRIORITY(vdp2src[0]);
-               dst++;
-               continue;
-            }
-
-            if (vdp1pixelsize == 2)
-            {
-               // 16-bit pixel size
-				//16 bit pixels will be drawn at 2x width, and sometimes 2x height
-               pixel = ((u16 *)vdp1frontframebuffer)[(i2/resyratio * vdp1width) + i/2];
-
-               if (pixel == 0)
-                  dst[0] = COLSATSTRIPPRIORITY(vdp2src[0]);
-               else if (pixel & 0x8000 && colormode)
-               {
-                  // 16 BPP               
-                  if (prioritytable[0] >= Vdp2GetPixelPriority(vdp2src[0]))
-                  {
-                     // if pixel is 0x8000, only draw pixel if sprite window
-                     // is disabled/sprite type 2-7. sprite types 0 and 1 are
-                     // -always- drawn and sprite types 8-F are always
-                     // transparent.
-                     if (pixel != 0x8000 || vdp1spritetype < 2 || (vdp1spritetype < 8 && !(Vdp2Regs->SPCTL & 0x10)))
-                        dst[0] = info.PostPixelFetchCalc(&info, COLSAT2YAB16(0xFF, pixel));
-                     else
-                        dst[0] = COLSATSTRIPPRIORITY(vdp2src[0]);
-                  }
-                  else               
-                     dst[0] = COLSATSTRIPPRIORITY(vdp2src[0]);
-               }
-               else
-               {
-                  // Color bank
-		  int priority;
-		  int shadow;
-		  int colorcalc;
-		  priority = 0;  // Avoid compiler warning
-                  Vdp1ProcessSpritePixel(vdp1spritetype, &pixel, &shadow, &priority, &colorcalc);
-                  if (prioritytable[priority] >= Vdp2GetPixelPriority(vdp2src[0]))
-                     dst[0] = info.PostPixelFetchCalc(&info, COLSAT2YAB32(0xFF, Vdp2ColorRamGetColor(vdp1coloroffset + pixel)));
-                  else               
-                     dst[0] = COLSATSTRIPPRIORITY(vdp2src[0]);
-               }
-            }
-            else
-            {
-               // 8-bit pixel size
-				  pixel = vdp1frontframebuffer[(i2*2 * vdp1width) + (i*2)];
-
-				  if (pixel == 0)
-					  dst[0] = COLSATSTRIPPRIORITY(vdp2src[0]);
-				  else if(prioritytable[0] >= Vdp2GetPixelPriority(vdp2src[0]))
-				  	  dst[0] = COLSAT2YAB32(0xFF, Vdp2ColorRamGetColor(vdp1coloroffset + pixel)); 
-            }
-            vdp2src++;
-            dst++;
-         }
-      }
-   }
-   else
-   {
-      // Render VDP2 only
+     // Render VDP2 only
       for (i = 0; i < (vdp2width*vdp2height); i++)
 		   dispbuffer[i] = COLSATSTRIPPRIORITY(vdp2framebuffer[i]);
-   }
 
    VIDSoftVdp1SwapFrameBuffer();
 
@@ -2853,35 +3277,7 @@ void VIDSoftVdp2DrawEnd(void)
    YuiSwapBuffers();
 }
 
-void VIDSoftVdp2DrawScreens(){
-	int i;
 
-	memset(nbg3framebuffer,0,vdp2width*vdp2height*sizeof(u32));
-	memset(nbg2framebuffer,0,vdp2width*vdp2height*sizeof(u32));
-	memset(nbg1framebuffer,0,vdp2width*vdp2height*sizeof(u32));
-	memset(nbg0framebuffer,0,vdp2width*vdp2height*sizeof(u32));
-	memset(rbg0framebuffer,0,vdp2width*vdp2height*sizeof(u32));
-
-	Vdp2DrawNBG3();
-	Vdp2DrawNBG2();
-	Vdp2DrawNBG1();
-	Vdp2DrawNBG0();
-	Vdp2DrawRBG0();
-
-	for (i = 7; i > 0; i--)
-	{
-		if (nbg3priority == i)
-			composite(nbg3framebuffer, i, NBG3);
-		if (nbg2priority == i)
-			composite(nbg2framebuffer, i, NBG2);
-		if (nbg1priority == i)
-			composite(nbg1framebuffer, i, NBG1);
-		if (nbg0priority == i)
-			composite(nbg0framebuffer, i, NBG0);
-		if (rbg0priority == i)
-			composite(rbg0framebuffer, i, RBG0);
-	}
-}
 
 void VIDSoftVdp2SetResolution(u16 TVMD)
 {

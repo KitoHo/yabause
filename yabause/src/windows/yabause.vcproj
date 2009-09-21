@@ -1156,16 +1156,8 @@
 					>
 				</File>
 				<File
-					RelativePath="..\vidsoft.c"
+					RelativePath="..\vidsoft.cpp"
 					>
-					<FileConfiguration
-						Name="Release FastBuild|Win32"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							CompileAs="0"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\yabause.c"

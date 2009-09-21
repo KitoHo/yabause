@@ -444,18 +444,18 @@ static INLINE void ReadWindowData(int wctl, clipping_struct *clip)
       clip[0].yend = Vdp2Regs->WPEY0;
    }
 
-   if (wctl & 0x8)
-   {
-      clip[1].xstart = Vdp2Regs->WPSX1;
-      clip[1].ystart = Vdp2Regs->WPSY1;
-      clip[1].xend = Vdp2Regs->WPEX1;
-      clip[1].yend = Vdp2Regs->WPEY1;
-   }
+	if (wctl & 0x8)
+	{
+		clip[1].xstart = Vdp2Regs->WPSX1;
+		clip[1].ystart = Vdp2Regs->WPSY1;
+		clip[1].xend = Vdp2Regs->WPEX1;
+		clip[1].yend = Vdp2Regs->WPEY1;
+	}
 
-   if (wctl & 0x20)
-   {
-      // fix me
-   }
+	if (wctl & 0x20)
+	{
+		// fix me
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -478,7 +478,7 @@ static INLINE void ReadLineWindowData(int *islinewindow, int wctl, u32 *linewnd0
 
 //////////////////////////////////////////////////////////////////////////////
 
-static INLINE void ReadLineWindowClip(int islinewindow, clipping_struct *clip, u32 *linewnd0addr, u32 *linewnd1addr)
+static INLINE void ReadLineWindowClip(int islinewindow, clipping_struct *clip, u32 linewnd0addr, u32 linewnd1addr)
 {
    if (islinewindow)
    {
@@ -486,18 +486,14 @@ static INLINE void ReadLineWindowClip(int islinewindow, clipping_struct *clip, u
       if (islinewindow & 0x1)
       {
          // Window 0
-         clip[0].xstart = (T1ReadWord(Vdp2Ram, linewnd0addr[0]) & 0x3FF) >> 1; // fix me
-         linewnd0addr[0]+=2;
-         clip[0].xend = (T1ReadWord(Vdp2Ram, linewnd0addr[0]) & 0x3FF) >> 1; // fix me
-         linewnd0addr[0]+=2;
+         clip[0].xstart = (T1ReadWord(Vdp2Ram, linewnd0addr) & 0x3FF);
+         clip[0].xend = (T1ReadWord(Vdp2Ram, linewnd0addr+2) & 0x3FF);
       }
       if (islinewindow & 0x2)
       {
          // Window 1
-         clip[1].xstart = (T1ReadWord(Vdp2Ram, linewnd1addr[0]) & 0x3FF) >> 1; // fix me
-         linewnd1addr[0]+=2;
-         clip[1].xend = (T1ReadWord(Vdp2Ram, linewnd1addr[0]) & 0x3FF) >> 1; // fix me
-         linewnd1addr[0]+=2;
+         clip[1].xstart = (T1ReadWord(Vdp2Ram, linewnd1addr) & 0x3FF);
+         clip[1].xend = (T1ReadWord(Vdp2Ram, linewnd1addr+2) & 0x3FF);
       }
    }
 }

@@ -74,7 +74,7 @@ static char pathsep = '/';
 static void mini18n_pv_get_locale(char ** lang, char ** country) {
 	char * tmp;
 
-	*country = NULL;
+	*country = "";
 	*lang = strdup(getenv("LANG"));
 	if (*lang == NULL) return;
 

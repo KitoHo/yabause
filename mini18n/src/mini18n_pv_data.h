@@ -14,7 +14,7 @@
   
     You should have received a copy of the GNU General Public License
     along with mini18n; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
 #ifndef MINI18N_PV_DATA_H
@@ -24,14 +24,10 @@
 
 typedef struct _mini18n_data_t mini18n_data_t;
 
-typedef size_t (*mini18n_len_func)(const void *);
-typedef void * (*mini18n_dup_func)(const void *);
-typedef int    (*mini18n_cmp_func)(const void *, const void *);
-
 struct _mini18n_data_t {
-	mini18n_len_func len;
-	mini18n_dup_func dup;
-	mini18n_cmp_func cmp;
+	size_t (*len)(const void * data);
+	void * (*dup)(const void * data);
+	int    (*cmp)(const void * data1, const void * data2);
 };
 
 extern mini18n_data_t mini18n_str;

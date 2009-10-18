@@ -14,15 +14,11 @@
   
     You should have received a copy of the GNU General Public License
     along with mini18n; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
 #ifndef MINI18N_H
 #define MINI18N_H
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /** @file */
 
@@ -43,12 +39,6 @@ extern "C" {
  * @returns 0 on success, -1 otherwise
  */
 int mini18n_set_domain(const char * folder);
-/**
- * @brief Load a translation from a file.
- *
- * @param filename of the translation to load.
- * @returns 0 on success, -1 otherwise
- */
 int mini18n_set_locale(const char * locale);
 int mini18n_set_log(const char * filename);
 /**
@@ -67,7 +57,7 @@ const char * mini18n(const char * source);
  * @param source String to translate.
  * @param format The format to convert the string to.
  */
-const void * mini18n_with_conversion(const char * source, unsigned int format);
+void * mini18n_with_conversion(const char * source, unsigned int format);
 void mini18n_close(void);
 
 /**
@@ -89,9 +79,5 @@ void mini18n_close(void);
  * \section extending Extending
  *
  */
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

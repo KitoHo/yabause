@@ -14,7 +14,7 @@
   
     You should have received a copy of the GNU General Public License
     along with mini18n; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
 #include "mini18n.h"
@@ -75,11 +75,8 @@ static void mini18n_pv_get_locale(char ** lang, char ** country) {
 	char * tmp;
 
 	*country = NULL;
-	*lang = NULL;
-	tmp = getenv("LANG");
-	if (tmp == NULL) return;
-
-	*lang = strdup(tmp);
+	*lang = strdup(getenv("LANG"));
+	if (*lang == NULL) return;
 
 	tmp = strchr(*lang, '@');
 	if (tmp != NULL) *tmp = '\0';
@@ -100,8 +97,6 @@ int mini18n_set_domain(const char * folder) {
 	char * fulllocale;
 
 	mini18n_pv_get_locale(&lang, &country);
-
-	if (lang == NULL) return -1;
 
 	if (folder == NULL) {
 		locale = strdup(lang);
@@ -125,17 +120,13 @@ int mini18n_set_domain(const char * folder) {
 			if (! trailing) pos += sprintf(pos, "%c", pathsep);
 			sprintf(pos, "%s.yts", lang);
 
-			if (country == NULL) {
-				fulllocale = NULL;
-			} else {
-				s = n + strlen(country) + 5 + (1 - trailing);
-				fulllocale = malloc(s);
+			s = n + strlen(country) + 5 + (1 - trailing);
+			fulllocale = malloc(s);
 
-				pos = fulllocale;
-				pos += sprintf(pos, "%s", folder);
-				if (! trailing) pos += sprintf(pos, "%c", pathsep);
-				sprintf(pos, "%s.yts", country);
-			}
+			pos = fulllocale;
+			pos += sprintf(pos, "%s", folder);
+			if (! trailing) pos += sprintf(pos, "%c", pathsep);
+			sprintf(pos, "%s.yts", country);
 		}
 	}
 
@@ -204,7 +195,7 @@ const char * mini18n(const char * source) {
 	return translated;
 }
 
-const void * mini18n_with_conversion(const char * source, unsigned int format) {
+void * mini18n_with_conversion(const char * source, unsigned int format) {
 	mini18n_conv_t * converter;
 	const void * conv;
 

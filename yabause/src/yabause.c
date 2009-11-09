@@ -213,7 +213,7 @@ int YabauseInit(yabauseinit_struct *init)
       return -1;
    }
 
-   if (SmpcInit(init->regionid) != 0)
+   if (SmpcInit(init->regionid, init->clocksync, init->basetime) != 0)
    {
       YabSetError(YAB_ERR_CANNOTINIT, _("SMPC"));
       return -1;
@@ -231,7 +231,7 @@ int YabauseInit(yabauseinit_struct *init)
    YabauseChangeTiming(CLKTYPE_26MHZ);
    
    if (init->frameskip)
-       EnableAutoFrameSkip();
+      EnableAutoFrameSkip();
 
    if (init->biospath != NULL && strlen(init->biospath))
    {

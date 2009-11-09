@@ -79,5 +79,8 @@ libyabause_a_SOURCES += cd-windows.c
 endif
 
 if TEST_PSP_SH2
-libyabause_a_SOURCES += psp/psp-sh2.c
+libyabause_a_SOURCES += psp/psp-sh2.c psp/rtl.c psp/rtlexec.c psp/rtlinsn.c \
+                        psp/rtlopt.c psp/rtlunit.c psp/sh2.c \
+                        psp/sh2-interpret.c psp/sh2-opcodeinfo.c \
+                        psp/sh2-optimize.c 
 endif

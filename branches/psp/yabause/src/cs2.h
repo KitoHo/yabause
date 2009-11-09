@@ -254,6 +254,7 @@ void FASTCALL   Cs2RapidCopyT1(void *dest, u32 count);
 void FASTCALL   Cs2RapidCopyT2(void *dest, u32 count);
 
 void Cs2Exec(u32);
+int Cs2GetTimeToNextSector(void);
 void Cs2Execute(void);
 void Cs2Reset(void);
 void Cs2SetTiming(int);

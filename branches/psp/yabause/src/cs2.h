@@ -167,6 +167,7 @@ typedef struct {
   int isdiskchanged;
   int isbufferfull;
   int speed1x;
+  int isaudio;
   u8 transfileinfo[12];
   u8 lastbuffer;
 

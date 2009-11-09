@@ -42,6 +42,8 @@ typedef struct
    const char *netlinksetting;
    int flags;
    int frameskip;
+   int clocksync;  // 1 = sync internal clock to emulation, 0 = realtime clock
+   u32 basetime;   // Initial time in clocksync mode (0 = start w/ system time)
 } yabauseinit_struct;
 
 #define CLKTYPE_26MHZ           0

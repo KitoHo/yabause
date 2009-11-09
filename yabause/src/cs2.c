@@ -960,6 +960,19 @@ void Cs2Exec(u32 timing) {
 
 //////////////////////////////////////////////////////////////////////////////
 
+/* Returns the number of (emulated) microseconds before the next sector
+ * will have been completely read in */
+int Cs2GetTimeToNextSector(void) {
+   if ((Cs2Area->status & 0xF) != CDB_STAT_PLAY) {
+      return 0;
+   } else {
+      int time = Cs2Area->_periodictiming - Cs2Area->_periodiccycles;
+      return time<0 ? 0 : time;
+   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void Cs2Command(void) {
   Cs2Area->_command = 1;
 }

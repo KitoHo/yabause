@@ -59,6 +59,7 @@ void print_usage(const char *program_name);
 void YabauseChangeTiming(int freqtype);
 int YabauseInit(yabauseinit_struct *init);
 void YabauseDeInit(void);
+void YabauseSetDecilineMode(int on);
 void YabauseResetNoLoad(void);
 void YabauseReset(void);
 void YabauseResetButton(void);
@@ -72,6 +73,7 @@ int YabauseQuickLoadGame(void);
 
 typedef struct
 {
+   int DecilineMode;
    int DecilineCount;
    int LineCount;
    int VBlankLineCount;

@@ -2679,13 +2679,12 @@ struct sounddata {
   u32 *data32;
 } scspchannel[2];
 
-static u32 scspsoundlen;     // Samples to output per frame
-static u32 scspsoundbufs;    // Number of "scspsoundlen"-sample buffers
-static u32 scspsoundbufsize; // scspsoundlen * scspsoundbufs
-#ifdef SCSP_FRAME_ACCURATE
-static u32 scspsoundgenpos;  // Offset of next byte to generate
-static u32 scspsoundoutleft; // Samples not yet sent to host driver
-#endif
+static u32 scspsoundlen;        // Samples to output per frame
+static u32 scspsoundbufs;       // Number of "scspsoundlen"-sample buffers
+static u32 scspsoundbufsize;    // scspsoundlen * scspsoundbufs
+static int scspframeaccurate;   // True to generate frame-accurate audio
+static u32 scspsoundgenpos;     // Offset of next byte to generate
+static u32 scspsoundoutleft;    // Samples not yet sent to host driver
 
 static int scsp_alloc_bufs(void) {
    if (scspchannel[0].data32)
@@ -2884,20 +2883,14 @@ int ScspInit(int coreid) {
 
    // Allocate enough memory for each channel buffer(may have to change)
    scspsoundlen = 44100 / 60; // assume it's NTSC timing
-#ifdef SCSP_FRAME_ACCURATE
    scspsoundbufs = 10; // should be enough to prevent skipping
-#else
-   scspsoundbufs = 1; // we output straight to the host hardware
-#endif
    scspsoundbufsize = scspsoundlen * scspsoundbufs;
    if (scsp_alloc_bufs() < 0)
       return -1;
 
-#ifdef SCSP_FRAME_ACCURATE
    // Reset output pointers
    scspsoundgenpos = 0;
    scspsoundoutleft = 0;
-#endif
 
    return ScspChangeSoundCore(coreid);
 }
@@ -2945,6 +2938,13 @@ int ScspChangeSoundCore(int coreid)
    }
 
    return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ScspSetFrameAccurate(int on)
+{
+   scspframeaccurate = (on != 0);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -3091,11 +3091,7 @@ void ScspReceiveCDDA(const u8 *sector) {
 
 void ScspExec() {
 #ifdef WIN32
-# ifdef SCSP_FRAME_ACCURATE
    s16 stereodata16[(44100 / 60) * 16]; //11760
-# else
-   s16 stereodata16[(44100 / 50)*2];
-# endif
 #endif
    u32 audiosize;
 
@@ -3106,68 +3102,70 @@ void ScspExec() {
 
    if (ScspInternalVars->scsptiming1 >= 263)
    {
-#ifdef SCSP_FRAME_ACCURATE
       s32 *bufL, *bufR;
-#endif
 
       ScspInternalVars->scsptiming1 -= 263;
       ScspInternalVars->scsptiming2 = 0;
 
-#ifdef SCSP_FRAME_ACCURATE
-      // Update sound buffers
-      if (scspsoundgenpos + scspsoundlen > scspsoundbufsize) {
-         scspsoundgenpos = 0;
+      if (scspframeaccurate) {
+         // Update sound buffers
+         if (scspsoundgenpos + scspsoundlen > scspsoundbufsize) {
+            scspsoundgenpos = 0;
+         }
+         if (scspsoundoutleft + scspsoundlen > scspsoundbufsize) {
+            u32 overrun = (scspsoundoutleft + scspsoundlen) - scspsoundbufsize;
+            SCSPLOG("WARNING: Sound buffer overrun, %lu samples\n", (long)overrun);
+            scspsoundoutleft -= overrun;
+         }
+         bufL = (s32 *)&scspchannel[0].data32[scspsoundgenpos];
+         bufR = (s32 *)&scspchannel[1].data32[scspsoundgenpos];
+         memset(bufL, 0, sizeof(u32) * scspsoundlen);
+         memset(bufR, 0, sizeof(u32) * scspsoundlen);
+         scsp_update(bufL, bufR, scspsoundlen);
+         scspsoundgenpos += scspsoundlen;
+         scspsoundoutleft += scspsoundlen;
       }
-      if (scspsoundoutleft + scspsoundlen > scspsoundbufsize) {
-         u32 overrun = (scspsoundoutleft + scspsoundlen) - scspsoundbufsize;
-         SCSPLOG("WARNING: Sound buffer overrun, %lu samples\n", (long)overrun);
-         scspsoundoutleft -= overrun;
+   }
+
+   if (scspframeaccurate)
+   {
+      while (scspsoundoutleft > 0 && (audiosize = SNDCore->GetAudioSpace()) > 0)
+      {
+         s32 outstart = (s32)scspsoundgenpos - (s32)scspsoundoutleft;
+         if (outstart < 0)
+            outstart += scspsoundbufsize;
+         if (audiosize > scspsoundoutleft)
+            audiosize = scspsoundoutleft;
+         if (audiosize > scspsoundbufsize - outstart)
+            audiosize = scspsoundbufsize - outstart;
+         SNDCore->UpdateAudio(&scspchannel[0].data32[outstart],
+                              &scspchannel[1].data32[outstart], audiosize);
+         scspsoundoutleft -= audiosize;
+#ifdef WIN32
+         ScspConvert32uto16s(&scspchannel[0].data32[outstart], &scspchannel[1].data32[outstart], (s16 *)stereodata16, audiosize);
+         DRV_AviSoundUpdate(stereodata16, audiosize);
+#endif
       }
-      bufL = (s32 *)&scspchannel[0].data32[scspsoundgenpos];
-      bufR = (s32 *)&scspchannel[1].data32[scspsoundgenpos];
-      memset(bufL, 0, sizeof(u32) * scspsoundlen);
-      memset(bufR, 0, sizeof(u32) * scspsoundlen);
-      scsp_update(bufL, bufR, scspsoundlen);
-      scspsoundgenpos += scspsoundlen;
-      scspsoundoutleft += scspsoundlen;
-#endif
    }
-
-#ifdef SCSP_FRAME_ACCURATE
-   while (scspsoundoutleft > 0 && (audiosize = SNDCore->GetAudioSpace()) > 0)
+   else
    {
-      s32 outstart = (s32)scspsoundgenpos - (s32)scspsoundoutleft;
-      if (outstart < 0)
-         outstart += scspsoundbufsize;
-      if (audiosize > scspsoundoutleft)
-         audiosize = scspsoundoutleft;
-      if (audiosize > scspsoundbufsize - outstart)
-         audiosize = scspsoundbufsize - outstart;
-      SNDCore->UpdateAudio(&scspchannel[0].data32[outstart],
-                           &scspchannel[1].data32[outstart], audiosize);
-      scspsoundoutleft -= audiosize;
-# ifdef WIN32
-      ScspConvert32uto16s(&scspchannel[0].data32[outstart], &scspchannel[1].data32[outstart], (s16 *)stereodata16, audiosize);
-      DRV_AviSoundUpdate(stereodata16, audiosize);
-# endif
-   }
-#else // !SCSP_FRAME_ACCURATE
-   if ((audiosize = SNDCore->GetAudioSpace()))
-   {
-      if (audiosize > (scspsoundlen))
-         audiosize = scspsoundlen;
-      memset(scspchannel[0].data32, 0, sizeof(u32) * audiosize);
-      memset(scspchannel[1].data32, 0, sizeof(u32) * audiosize);
-
-      scsp_update((s32 *)scspchannel[0].data32, (s32 *)scspchannel[1].data32, audiosize);
-      SNDCore->UpdateAudio(scspchannel[0].data32, (u32 *)scspchannel[1].data32, audiosize);
-# ifdef WIN32
-      ScspConvert32uto16s((s32 *)scspchannel[0].data32, (s32 *)scspchannel[1].data32, (s16 *)stereodata16, audiosize);
-      DRV_AviSoundUpdate(stereodata16, audiosize);
-# endif
-
-   }
+      if ((audiosize = SNDCore->GetAudioSpace()))
+      {
+         if (audiosize > scspsoundlen)
+            audiosize = scspsoundlen;
+         memset(scspchannel[0].data32, 0, sizeof(u32) * audiosize);
+         memset(scspchannel[1].data32, 0, sizeof(u32) * audiosize);
+   
+         scsp_update((s32 *)scspchannel[0].data32,
+                     (s32 *)scspchannel[1].data32, audiosize);
+         SNDCore->UpdateAudio(scspchannel[0].data32,
+                              (u32 *)scspchannel[1].data32, audiosize);
+#ifdef WIN32
+         ScspConvert32uto16s((s32 *)scspchannel[0].data32, (s32 *)scspchannel[1].data32, (s16 *)stereodata16, audiosize);
+         DRV_AviSoundUpdate(stereodata16, audiosize);
 #endif
+      }
+   }  // if (scspframeaccurate)
 }
 
 //////////////////////////////////////////////////////////////////////////////

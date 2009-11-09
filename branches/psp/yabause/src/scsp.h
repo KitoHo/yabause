@@ -81,6 +81,7 @@ void FASTCALL SoundRamWriteLong(u32 addr, u32 val);
 
 int ScspInit(int coreid);
 int ScspChangeSoundCore(int coreid);
+void ScspSetFrameAccurate(int on);
 void ScspDeInit(void);
 void M68KReset(void);
 void ScspReset(void);

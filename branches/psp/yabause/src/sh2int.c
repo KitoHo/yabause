@@ -31,10 +31,25 @@
 #include "bios.h"
 #include "yabause.h"
 
-// #define SH2_TRACE  // Uncomment to enable tracing for debug interpreter
+// #define SH2_TRACE  // Uncomment to enable tracing
 
 #ifdef SH2_TRACE
-#include "sh2trace.h"
+# include "sh2trace.h"
+# define MappedMemoryWriteByte(a,v)  do { \
+    uint32_t __a = (a), __v = (v);        \
+    sh2_trace_writeb(__a, __v);           \
+    MappedMemoryWriteByte(__a, __v);      \
+} while (0)
+# define MappedMemoryWriteWord(a,v)  do { \
+    uint32_t __a = (a), __v = (v);        \
+    sh2_trace_writew(__a, __v);           \
+    MappedMemoryWriteWord(__a, __v);      \
+} while (0)
+# define MappedMemoryWriteLong(a,v)  do { \
+    uint32_t __a = (a), __v = (v);        \
+    sh2_trace_writel(__a, __v);           \
+    MappedMemoryWriteLong(__a, __v);      \
+} while (0)
 #endif
 
 
@@ -2685,6 +2700,12 @@ static INLINE void SH2UBCInterrupt(SH2_struct *context, u32 flag)
 
 FASTCALL void SH2DebugInterpreterExec(SH2_struct *context, u32 cycles)
 {
+#ifdef SH2_TRACE
+   /* Avoid accumulating leftover cycles multiple times, since the trace
+    * code automatically adds state->cycles to the cycle accumulator when
+    * printing a trace line */
+   sh2_trace_add_cycles(-(context->cycles));
+#endif
    
    while(context->cycles < cycles)
    {
@@ -2754,7 +2775,7 @@ FASTCALL void SH2DebugInterpreterExec(SH2_struct *context, u32 cycles)
    }
 
 #ifdef SH2_TRACE
-   SH2_TRACE_ADD_CYCLES(cycles);
+   sh2_trace_add_cycles(context->cycles);
 #endif
 }
 

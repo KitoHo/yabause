@@ -49,7 +49,7 @@ if test "x$host_alias" = "xpsp" ; then
 	fi
 	CFLAGS="-G0 -falign-functions=16 -I$PSPSDK/include -DNO_CLI $CFLAGS"
 	LDFLAGS="-specs=$PSPSDK/lib/prxspecs -Wl,-q,-T$PSPSDK/lib/linkfile.prx -L$PSPSDK/lib $LDFLAGS"
-	LIBS="$LIBS -lm -lc -lpspaudio -lpspctrl -lpspdisplay -lpspgu -lpspge -lpsppower -lpspuser"
+	LIBS="$LIBS -lm -lc -lpspaudio -lpspctrl -lpspdisplay -lpspgu -lpspge -lpsppower -lpsputility -lpspuser"
 fi
 
 AC_PROG_CC

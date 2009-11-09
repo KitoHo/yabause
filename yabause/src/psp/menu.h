@@ -1,4 +1,4 @@
-/*  src/psp/psp-sound.h: PSP sound output module header
+/*  src/psp/menu.h: PSP menu interface header
     Copyright 2009 Andrew Church
 
     This file is part of Yabause.
@@ -18,56 +18,55 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
-#ifndef PSP_SOUND_H
-#define PSP_SOUND_H
-
-#include "../scsp.h"  // for SoundInterface_struct
+#ifndef PSP_MENU_H
+#define PSP_MENU_H
 
 /*************************************************************************/
 
-/* Module interface definition */
-extern SoundInterface_struct SNDPSP;
-
-/* Unique module ID (must be different from any in scsp.h) */
-#define SNDCORE_PSP  0x5CE  // "SCE"
-
-/*-----------------------------------------------------------------------*/
-
 /**
- * psp_sound_pause:  Stop audio output.  Called when the system is being
- * suspended.
+ * menu_open:  Open the menu interface.
  *
  * [Parameters]
  *     None
  * [Return value]
  *     None
  */
-extern void psp_sound_pause(void);
+extern void menu_open(void);
 
 /**
- * psp_sound_unpause:  Resume audio output.  Called when the system is
- * resuming from a suspend.
+ * menu_run:  Perform a single frame's processing for the menu interface.
  *
  * [Parameters]
  *     None
  * [Return value]
  *     None
  */
-extern void psp_sound_unpause(void);
+extern void menu_run(void);
 
 /**
- * psp_sound_exit:  Terminate all playback in preparation for exiting.
+ * menu_close:  Close the menu interface.
  *
  * [Parameters]
  *     None
  * [Return value]
  *     None
  */
-extern void psp_sound_exit(void);
+extern void menu_close(void);
+
+/**
+ * menu_set_error:  Set an error message to be displayed on the menu
+ * screen.  If message is NULL, any message currently displayed is cleared.
+ *
+ * [Parameters]
+ *     message: Message text (NULL to clear current message)
+ * [Return value]
+ *     None
+ */
+extern void menu_set_error(const char *message);
 
 /*************************************************************************/
 
-#endif  // PSP_SOUND_H
+#endif  // PSP_MENU_H
 
 /*
  * Local variables:

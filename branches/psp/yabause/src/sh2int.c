@@ -2698,6 +2698,27 @@ static INLINE void SH2UBCInterrupt(SH2_struct *context, u32 flag)
 
 //////////////////////////////////////////////////////////////////////////////
 
+static INLINE void SH2HandleInterrupts(SH2_struct *context)
+{
+   if (context->NumberOfInterrupts != 0)
+   {
+      if (context->interrupts[context->NumberOfInterrupts-1].level > context->regs.SR.part.I)
+      {
+         context->regs.R[15] -= 4;
+         MappedMemoryWriteLong(context->regs.R[15], context->regs.SR.all);
+         context->regs.R[15] -= 4;
+         MappedMemoryWriteLong(context->regs.R[15], context->regs.PC);
+         context->regs.SR.part.I = context->interrupts[context->NumberOfInterrupts-1].level;
+         context->regs.PC = MappedMemoryReadLong(context->regs.VBR + (context->interrupts[context->NumberOfInterrupts-1].vector << 2));
+         context->NumberOfInterrupts--;
+         context->isIdle = 0;
+         context->isSleeping = 0;
+      }
+   }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 FASTCALL void SH2DebugInterpreterExec(SH2_struct *context, u32 cycles)
 {
 #ifdef SH2_TRACE
@@ -2706,7 +2727,9 @@ FASTCALL void SH2DebugInterpreterExec(SH2_struct *context, u32 cycles)
     * printing a trace line */
    sh2_trace_add_cycles(-(context->cycles));
 #endif
-   
+
+   SH2HandleInterrupts(context);
+
    while(context->cycles < cycles)
    {
 #ifdef EMULATEUBC   	   
@@ -2783,6 +2806,8 @@ FASTCALL void SH2DebugInterpreterExec(SH2_struct *context, u32 cycles)
 
 FASTCALL void SH2InterpreterExec(SH2_struct *context, u32 cycles)
 {
+   SH2HandleInterrupts(context);
+
    if (context->isIdle)
       SH2idleParse(context, cycles);
    else

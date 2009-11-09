@@ -2393,6 +2393,24 @@ static int op_Bcc(Q68State *state, uint32_t opcode)
         return 0;
     } else {
         int32_t offset;
+#ifdef Q68_OPTIMIZE_IDLE
+        /* FIXME: Temporary hack to improve PSP performance */
+        if (target == 0x1066
+         && ((cond == COND_EQ && state->current_PC - 2 == 0x001092)
+          || (cond == COND_PL && state->current_PC - 2 == 0x0010B4))
+        ) {
+            /* BIOS intro animation */
+            JIT_EMIT_ADD_CYCLES(current_entry,
+                                468);  // Length of one loop when idle
+        } else if (target == 0x10BC
+                && ((cond == COND_PL && state->current_PC - 2 == 0x001122)
+                 || (cond == COND_T  && state->current_PC - 2 == 0x00116A))
+        ) {
+            /* Azel: Panzer Dragoon RPG (JP) */
+            JIT_EMIT_ADD_CYCLES(current_entry, 
+                                178*4);  // Assuming a cycle_limit of 768
+        }
+#endif
         if (target < state->current_PC) {
             offset = btcache_lookup(target);
         } else {

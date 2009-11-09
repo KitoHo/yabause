@@ -468,6 +468,10 @@ AC_ARG_ENABLE(exec-from-cache, AC_HELP_STRING(--enable-exec-from-cache, [allow c
 	[if test "x$enableval" = "xyes" ; then
 		AC_DEFINE(EXEC_FROM_CACHE)
 	fi])
+AC_ARG_ENABLE(optimized-dma, AC_HELP_STRING(--enable-optimized-dma, [use optimized DMA when possible]),
+	[if test "x$enableval" = "xyes" ; then
+		AC_DEFINE(OPTIMIZED_DMA)
+	fi])
 
 
 #### PSP options

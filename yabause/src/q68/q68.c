@@ -244,20 +244,26 @@ void q68_set_ssp(Q68State *state, uint32_t value)
 
 /**
  * q68_touch_memory:  Clear any cached translations covering the given
- * address.  Users should call this function whenever 68000-accessible
+ * address range.  Users should call this function whenever 68000-accessible
  * memory is modified by an external agent.
  *
  * [Parameters]
  *       state: Processor state block
- *     address: 68000 address of modified data (byte or word)
+ *     address: 68000 address of modified data
+ *        size: Size of modified data (in bytes)
  * [Return value]
  *     None
  */
-void q68_touch_memory(Q68State *state, uint32_t address)
+void q68_touch_memory(Q68State *state, uint32_t address, uint32_t size)
 {
 #ifdef Q68_USE_JIT
-    if (UNLIKELY(JIT_PAGE_TEST(state, address >> Q68_JIT_PAGE_BITS))) {
-        q68_jit_clear_page(state, address);
+    const uint32_t first_page = address >> Q68_JIT_PAGE_BITS;
+    const uint32_t last_page = (address + (size-1)) >> Q68_JIT_PAGE_BITS;
+    uint32_t page;
+    for (page = first_page; page <= last_page; page++) {
+        if (UNLIKELY(JIT_PAGE_TEST(state, page))) {
+            q68_jit_clear_page(state, page << Q68_JIT_PAGE_BITS);
+        }
     }
 #endif
 }

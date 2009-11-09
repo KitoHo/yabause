@@ -60,6 +60,12 @@
 #define Q68_JIT_LOOSE_TIMING
 
 /**
+ * Q68_JIT_VERBOSE:  When defined, outputs some status messages considered
+ * useful in debugging or optimizing the JIT core.
+ */
+// #define Q68_JIT_VERBOSE
+
+/**
  * Q68_DISABLE_ADDRESS_ERROR:  When defined, disables the generation of
  * address error exceptions for unaligned word/longword accesses.  The
  * behavior for such an access will depend on how the host system handles

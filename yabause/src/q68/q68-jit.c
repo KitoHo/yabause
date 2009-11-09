@@ -565,8 +565,10 @@ Q68JitEntry *q68_jit_translate(Q68State *state, uint32_t address)
         }
         if (UNLIKELY(index == hashval)) {
             /* Out of entries, so clear the oldest one and use it */
+#ifdef Q68_JIT_VERBOSE
             DMSG("No free slots for code at $%06X, clearing oldest ($%06X)",
                  (int)address, (int)state->jit_table[oldest].m68k_start);
+#endif
             clear_entry(state, &state->jit_table[oldest]);
             index = oldest;
         }
@@ -807,7 +809,9 @@ void q68_jit_clear(Q68State *state, uint32_t address)
 void q68_jit_clear_page(Q68State *state, uint32_t address)
 {
     const uint32_t page = address >> Q68_JIT_PAGE_BITS;
+#ifdef Q68_JIT_VERBOSE
     DMSG("WARNING: jit_clear_page($%06X)", page << Q68_JIT_PAGE_BITS);
+#endif
 
     int index;
     for (index = 0; index < Q68_JIT_TABLE_SIZE; index++) {
@@ -870,7 +874,9 @@ void q68_jit_clear_write(Q68State *state, uint32_t address, uint32_t size)
      * the beginning of a block. */
     int found = 0;
     uint32_t start = address + size, end = address + (size-1);
+#ifdef Q68_JIT_VERBOSE
     DMSG("WARNING: jit_clear_write($%06X,%d)", (int)address, (int)size);
+#endif
     for (index = 0; index < Q68_JIT_TABLE_SIZE; index++) {
         if (state->jit_table[index].m68k_start == 0) {
             continue;
@@ -899,15 +905,19 @@ void q68_jit_clear_write(Q68State *state, uint32_t address, uint32_t size)
     }
 
     /* Add the blacklist entry */
+#ifdef Q68_JIT_VERBOSE
     DMSG("Blacklisting $%06X...$%06X", (int)start, (int)end);
+#endif
     /* First see if this overlaps with another entry */
     found = 0;
     for (index = 0; index < Q68_JIT_BLACKLIST_SIZE; index++) {
         if (state->jit_blacklist[index].m68k_start <= end
          && state->jit_blacklist[index].m68k_end >= start) {
+#ifdef Q68_JIT_VERBOSE
             DMSG("(Merging with $%06X...%06X)",
                  (int)state->jit_blacklist[index].m68k_start,
                  (int)state->jit_blacklist[index].m68k_end);
+#endif
             if (start > state->jit_blacklist[index].m68k_start) {
                 start = state->jit_blacklist[index].m68k_start;
             }
@@ -1114,7 +1124,7 @@ static int expand_buffer(Q68JitEntry *entry)
     const uint32_t newsize = entry->native_size + Q68_JIT_BLOCK_EXPAND_SIZE;
     void *newptr = realloc(entry->native_code, newsize);
     if (!newptr) {
-        DMSG("out of memory");
+        DMSG("Out of memory");
         return 0;
     }
     entry->native_code = newptr;

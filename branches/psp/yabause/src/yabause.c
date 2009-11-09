@@ -156,6 +156,8 @@ int YabauseInit(yabauseinit_struct *init)
    if (LoadBackupRam(init->buppath) != 0)
       FormatBackupRam(BupRam, 0x10000);
 
+   BupRamWritten = 0;
+
    bupfilename = init->buppath;
 
    if (VideoInit(init->vidcoretype) != 0)

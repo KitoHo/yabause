@@ -1,3 +1,41 @@
+0.9.10 -> ?
+ gtk port:
+  - Added command line option to enable/disable frame skipping / limiting.
+  - Added frame skipping/limiting configuration in settings.
+0.9.9 -> 0.9.10
+ scsp/68k:
+  - Added code to make SCSP emulation frame-accurate (optional,
+    enabled with --enable-scsp-frame-accurate configure switch).
+  - Added a new 68000 emulation core.
+ software video core:
+  - Added line scroll emulation.
+  - Improved user clipping.
+  - Added some basic vertical scroll emulation, enough to get
+    Sonic Jam working.
+ gtk port
+  - Gtk port is now compiling on Mac OS X.
+  - Fixed full software screenshots.
+  - Fixed store function in transfer dialog.
+ windows port:
+  - Added 12 player support.
+  - Fixed a bug that was causing the memory transfer dialog
+    to register the wrong filename after pressing "Browse".
+  - Fixed bugs in Goto Address dialog.
+  - Fixed a bug that was causing the vdp2 viewer dialog
+    to register the wrong filename after pressing "Browse".
+  - Added MD saving in SCU DSP debug dialog.
+  - Added new Ram Watch dialog.
+  - Added video recording feature.
+  - Added move recording feature.
+ general:
+  - Added Lithuanian translation.
+  - New sound core using OpenAL.
+  - Added joystick core for Mac OS X.
+  - Added a joystick core for Linux.
+  - Added a PSP port.
+  - Added support for loading ELF binaries.
+  - Now using gettimeofday when available for better resolution.
+  - Fixed save states.
 0.9.8 -> 0.9.9
  opengl video core:
   - Fixed a bug that was causing some games to

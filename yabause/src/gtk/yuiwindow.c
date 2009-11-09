@@ -31,25 +31,32 @@ static void yui_window_init		(YuiWindow      * yfe);
 static gboolean yui_window_keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_data);
 static gboolean yui_window_keyrelease(GtkWidget *widget, GdkEventKey *event, gpointer user_data);
 static void yui_window_keep_clean(GtkWidget * widget, GdkEventExpose * event, YuiWindow * yui);
+static void yui_window_toggle_fullscreen(GtkWidget * w, YuiWindow * yui);
+static void yui_window_toggle_frameskip(GtkWidget * w, YuiWindow * yui);
 
 static void yui_window_create_actions(YuiWindow * yw) {
 	GtkAction * action;
+	GtkToggleAction * taction;
 
 	action = gtk_action_new("run", _("Run"), _("start emulation"), "gtk-media-play");
 	gtk_action_group_add_action_with_accel(yw->action_group, action, "<Ctrl>r");
-	g_signal_connect(action, "activate", G_CALLBACK(yui_window_run), yw);
+	g_signal_connect_swapped(action, "activate", G_CALLBACK(yui_window_run), yw);
 
 	action = gtk_action_new("pause", _("Pause"), _("pause emulation"), "gtk-media-pause");
 	gtk_action_group_add_action_with_accel(yw->action_group, action, "<Ctrl>p");
-	g_signal_connect(action, "activate", G_CALLBACK(yui_window_pause), yw);
+	g_signal_connect_swapped(action, "activate", G_CALLBACK(yui_window_pause), yw);
 
 	action = gtk_action_new("reset", _("Reset"), _("reset emulation"), NULL);
 	gtk_action_group_add_action_with_accel(yw->action_group, action, NULL);
-	g_signal_connect(action, "activate", G_CALLBACK(yui_window_reset), yw);
+	g_signal_connect_swapped(action, "activate", G_CALLBACK(yui_window_reset), yw);
 
-	action = gtk_action_new("fullscreen", _("Fullscreen"), NULL, "gtk-fullscreen");
-	gtk_action_group_add_action_with_accel(yw->action_group, action, "<Ctrl>f");
-	g_signal_connect(action, "activate", G_CALLBACK(yui_window_toggle_fullscreen), yw);
+	taction = gtk_toggle_action_new("fullscreen", _("Fullscreen"), NULL, "gtk-fullscreen");
+	gtk_action_group_add_action_with_accel(yw->action_group, GTK_ACTION(taction), "<Ctrl>f");
+	g_signal_connect(taction, "activate", G_CALLBACK(yui_window_toggle_fullscreen), yw);
+
+	taction = gtk_toggle_action_new("frameskip", _("Frame Skip/Limiter"), NULL, NULL);
+	gtk_action_group_add_action_with_accel(yw->action_group, GTK_ACTION(taction), NULL);
+	g_signal_connect(taction, "activate", G_CALLBACK(yui_window_toggle_frameskip), yw);
 
 	action = gtk_action_new("quit", _("Quit"), NULL, "gtk-quit");
 	gtk_action_group_add_action_with_accel(yw->action_group, action, "<Ctrl>q");
@@ -96,7 +103,7 @@ static void yui_set_accel_group(gpointer action, gpointer group) {
 	gtk_action_set_accel_group(action, group);
 }
 
-gboolean  yui_window_log_delete(GtkWidget *widget, GdkEvent *event, YuiWindow *yw ) {
+static gboolean yui_window_log_delete(GtkWidget *widget, GdkEvent *event, YuiWindow *yw ) {
 
   yui_window_show_log( yw );
 
@@ -207,11 +214,11 @@ GtkWidget * yui_window_new(YuiAction * act, GCallback ifunc, gpointer idata,
 }
 
 void yui_window_toggle_fullscreen(GtkWidget * w, YuiWindow * yui) {
+	GtkAction * action = gtk_action_group_get_action(yui->action_group, "fullscreen");
 	static unsigned int beforefswidth = 1;
 	static unsigned int beforefsheight = 1;
 
-	yui->fullscreen = 1 - yui->fullscreen;
-	if (yui->fullscreen) {
+	if (gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(action))) {
 		beforefswidth = GTK_WIDGET(yui)->allocation.width;
 		beforefsheight = GTK_WIDGET(yui)->allocation.height;
 		gtk_widget_hide(yui->menu);
@@ -221,6 +228,16 @@ void yui_window_toggle_fullscreen(GtkWidget * w, YuiWindow * yui) {
 		gtk_widget_show(yui->menu);
 		gtk_window_resize(GTK_WINDOW(yui), beforefswidth, beforefsheight);
 	}
+}
+
+void yui_window_toggle_frameskip(GtkWidget * w, YuiWindow * yui) {
+	GtkAction * action = gtk_action_group_get_action(yui->action_group, "frameskip");
+	gboolean active = gtk_toggle_action_get_active(GTK_TOGGLE_ACTION(action));
+
+	if (active)
+		EnableAutoFrameSkip ();
+	else
+		DisableAutoFrameSkip ();
 }
 
 static gboolean yui_window_keypress(GtkWidget *widget, GdkEventKey *event, gpointer user_data) {
@@ -266,7 +283,7 @@ static void yui_window_keep_clean(GtkWidget * widget, GdkEventExpose * event, Yu
 	yui_window_update(yui);
 }
 
-void yui_window_start(GtkWidget * w, YuiWindow * yui) {
+void yui_window_start(YuiWindow * yui) {
 	if ((yui->state & YUI_IS_INIT) == 0) {
 	  if (((int (*)(gpointer)) yui->init_func)(yui->init_data) == 0) {
 	    yui->state |= YUI_IS_INIT;
@@ -276,8 +293,8 @@ void yui_window_start(GtkWidget * w, YuiWindow * yui) {
 	}
 }
 
-void yui_window_run(GtkWidget * w, YuiWindow * yui) {
-	yui_window_start(w, yui);
+void yui_window_run(YuiWindow * yui) {
+	yui_window_start(yui);
 
 	if ((yui->state & YUI_IS_INIT) && ((yui->state & YUI_IS_RUNNING) == 0)) {
 		ScspUnMuteAudio();
@@ -289,7 +306,7 @@ void yui_window_run(GtkWidget * w, YuiWindow * yui) {
 	}
 }
 
-void yui_window_pause(GtkWidget * w, YuiWindow * yui) {
+void yui_window_pause(YuiWindow * yui) {
 	if (yui->state & YUI_IS_RUNNING) {
 		yui_gl_dump_screen(YUI_GL(yui->area));
 		ScspMuteAudio();
@@ -301,13 +318,13 @@ void yui_window_pause(GtkWidget * w, YuiWindow * yui) {
 	}
 }
 
-void yui_window_reset(GtkWidget * w, YuiWindow * yui) {
+void yui_window_reset(YuiWindow * yui) {
 	if (yui->state & YUI_IS_INIT) {
 		yui->reset_func();
 	}
 }
 
-void yui_window_invalidate(GtkWidget * w, YuiWindow * yui ) {
+void yui_window_invalidate(YuiWindow * yui) {
 
   /* Emit a pause signal while already in pause means refresh all debug views */
 
@@ -316,12 +333,11 @@ void yui_window_invalidate(GtkWidget * w, YuiWindow * yui ) {
 }
 
 void yui_window_set_fullscreen(YuiWindow * yui, gboolean f) {
-	if (f) {
-		gtk_widget_hide(yui->menu);
-		gtk_window_fullscreen(GTK_WINDOW(yui));
-	} else {
-		gtk_window_unfullscreen(GTK_WINDOW(yui));
-		gtk_widget_show(yui->menu);
-	}
-	yui->fullscreen = f;
+	GtkAction * action = gtk_action_group_get_action(yui->action_group, "fullscreen");
+	gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action), f);
+}
+
+void yui_window_set_frameskip(YuiWindow * yui, gboolean f) {
+	GtkAction * action = gtk_action_group_get_action(yui->action_group, "frameskip");
+	gtk_toggle_action_set_active(GTK_TOGGLE_ACTION(action), f);
 }

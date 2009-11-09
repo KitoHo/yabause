@@ -29,7 +29,7 @@ Scu * ScuRegs;
 scudspregs_struct * ScuDsp;
 scubp_struct * ScuBP;
 
-void ScuTestInterruptMask();
+static void ScuTestInterruptMask(void);
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -103,7 +103,7 @@ void ScuReset(void) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FASTCALL ScuDMA(scudmainfo_struct *dmainfo) {
+static void FASTCALL ScuDMA(scudmainfo_struct *dmainfo) {
    u8 ReadAdd, WriteAdd;
 
    if (dmainfo->AddValue & 0x100)
@@ -235,9 +235,9 @@ void FASTCALL ScuDMA(scudmainfo_struct *dmainfo) {
          }
          SH2WriteNotify(start, dmainfo->WriteAddress - start);
       }
-      else {
-         LOG("direct DMA, A Bus, not tested yet\n");
+      else {     
          u32 start = dmainfo->WriteAddress;
+		 LOG("direct DMA, A Bus, not tested yet\n");
          while(counter < dmainfo->TransferNumber) {
             MappedMemoryWriteLong(dmainfo->WriteAddress, MappedMemoryReadLong(dmainfo->ReadAddress));
             dmainfo->ReadAddress += ReadAdd;
@@ -262,7 +262,7 @@ void FASTCALL ScuDMA(scudmainfo_struct *dmainfo) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-u32 readgensrc(u8 num)
+static u32 readgensrc(u8 num)
 {
    u32 val;
    switch(num) {
@@ -302,7 +302,7 @@ u32 readgensrc(u8 num)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void writed1busdest(u8 num, u32 val)
+static void writed1busdest(u8 num, u32 val)
 {
    switch(num) { 
       case 0x0:
@@ -357,7 +357,7 @@ void writed1busdest(u8 num, u32 val)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void writeloadimdest(u8 num, u32 val)
+static void writeloadimdest(u8 num, u32 val)
 {
    switch(num) { 
       case 0x0: // MC0
@@ -402,7 +402,7 @@ void writeloadimdest(u8 num, u32 val)
 
 //////////////////////////////////////////////////////////////////////////////
 
-u32 readdmasrc(u8 num, u8 add)
+static u32 readdmasrc(u8 num, u8 add)
 {
    u32 val;
 
@@ -431,7 +431,7 @@ u32 readdmasrc(u8 num, u8 add)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void writedmadest(u8 num, u32 val, u8 add)
+static void writedmadest(u8 num, u32 val, u8 add)
 {
    switch(num) { 
       case 0x0: // M0
@@ -844,12 +844,13 @@ void ScuExec(u32 timing) {
                      if (direction)
                      {
                         u32 WA0temp=ScuDsp->WA0;
+						u32 start;
 
                         // Looks like some bits are ignored on a real saturn(Grandia takes advantage of this)
                         ScuDsp->WA0 &= 0x01FFFFFF;
 
                         // DMA(H) [RAM], D0, ??
-                        u32 start = ScuDsp->WA0 << 2;
+                        start = ScuDsp->WA0 << 2;
                         for (i = 0; i < transferNumber; i++)
                         {                        
                            MappedMemoryWriteLong(ScuDsp->WA0 << 2, readdmasrc((instruction >> 8) & 0x3, 1));
@@ -1038,7 +1039,7 @@ void ScuExec(u32 timing) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-char *disd1bussrc(u8 num)
+static char *disd1bussrc(u8 num)
 {
    switch(num) { 
       case 0x0:
@@ -1069,7 +1070,7 @@ char *disd1bussrc(u8 num)
 
 //////////////////////////////////////////////////////////////////////////////
 
-char *disd1busdest(u8 num)
+static char *disd1busdest(u8 num)
 {
    switch(num) { 
       case 0x0:
@@ -1108,7 +1109,7 @@ char *disd1busdest(u8 num)
 
 //////////////////////////////////////////////////////////////////////////////
 
-char *disloadimdest(u8 num)
+static char *disloadimdest(u8 num)
 {
    switch(num) { 
       case 0x0:
@@ -1139,7 +1140,7 @@ char *disloadimdest(u8 num)
 
 //////////////////////////////////////////////////////////////////////////////
 
-char *disdmaram(u8 num)
+static char *disdmaram(u8 num)
 {
    switch(num)
    {
@@ -1677,7 +1678,7 @@ int ScuDspAddCodeBreakpoint(u32 addr) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ScuDspSortCodeBreakpoints() {
+static void ScuDspSortCodeBreakpoints(void) {
    int i, i2;
    u32 tmp;
 
@@ -1718,13 +1719,13 @@ int ScuDspDelCodeBreakpoint(u32 addr) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-scucodebreakpoint_struct *ScuDspGetBreakpointList() {
+scucodebreakpoint_struct *ScuDspGetBreakpointList(void) {
    return ScuBP->codebreakpoint;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ScuDspClearCodeBreakpoints() {
+void ScuDspClearCodeBreakpoints(void) {
    int i;
    for (i = 0; i < MAX_BREAKPOINTS; i++)
       ScuBP->codebreakpoint[i].addr = 0xFFFFFFFF;
@@ -2029,7 +2030,7 @@ void ScuTestInterruptMask()
 
 //////////////////////////////////////////////////////////////////////////////
 
-void ScuQueueInterrupt(u8 vector, u8 level, u16 mask, u32 statusbit)
+static void ScuQueueInterrupt(u8 vector, u8 level, u16 mask, u32 statusbit)
 {
    u32 i, i2;
    scuinterrupt_struct tmp;

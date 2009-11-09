@@ -113,8 +113,10 @@ static const struct {
     {0xFFF8, 0x4840, "SWAP.W D<reg0>"},
     {0xFFF8, 0x4848, "???"},
     {0xFFC0, 0x4840, "PEA.L <ea.w>"},
+    {0xFFF8, 0x4880, "EXT.W D<reg0>"},
     {0xFFF8, 0x48A0, "MOVEM.W <tsilger>,-(A<reg0>)"},
     {0xFFC0, 0x4880, "MOVEM.W <reglist>,<ea.w>"},
+    {0xFFF8, 0x48C0, "EXT.L D<reg0>"},
     {0xFFF8, 0x48E0, "MOVEM.L <tsilger>,-(A<reg0>)"},
     {0xFFC0, 0x48C0, "MOVEM.L <reglist>,<ea.l>"},
 
@@ -124,8 +126,6 @@ static const struct {
     {0xFFFF, 0x4AFC, "ILLEGAL"},
     {0xFFC0, 0x4AC0, "TAS <ea.b>"},
 
-    {0xFFF8, 0x4C80, "EXT.W D<reg0>"},
-    {0xFFF8, 0x4CC0, "EXT.L D<reg0>"},
     {0xFFC0, 0x4C80, "MOVEM.W <ea.w>,<reglist>"},
     {0xFFC0, 0x4CC0, "MOVEM.L <ea.l>,<reglist>"},
 
@@ -632,6 +632,23 @@ const char *q68_disassemble(Q68State *state, uint32_t address,
 
 /*************************************************************************/
 
+#ifdef PSP
+/**
+ * HEXIT:  Helper routine for q68_trace() to print a value in hexadecimal.
+ * q68_trace() for why we don't just use printf().
+ */
+static inline void HEXIT(char * const ptr, uint32_t val, int ndigits)
+{
+    while (ndigits-- > 0) {
+        const int digit = val & 0xF;
+        val >>= 4;
+        ptr[ndigits] = (digit>9 ? digit+7+'0' : digit+'0');
+    }
+}
+#endif
+
+/*----------------------------------*/
+
 /**
  * q68_trace:  Output a trace for the instruction at the current PC.
  *
@@ -655,13 +672,6 @@ void q68_trace(Q68State *state, FILE *fp, int cycles_done, int cycle_limit)
     static char buf2[] =
         "    D: ........ ........ ........ ........ ........ ........ ........ ........\n"
         "    A: ........ ........ ........ ........ ........ ........ ........ ........\n";
-    auto inline void HEXIT(char * const ptr, uint32_t val, int ndigits) {
-        while (ndigits-- > 0) {
-            const int digit = val & 0xF;
-            val >>= 4;
-            ptr[ndigits] = (digit>9 ? digit+7+'0' : digit+'0');
-        }
-    }
 
     if (nwords > 3) {  // We can only fit 3 words on the line
         nwords = 3;

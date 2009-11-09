@@ -64,7 +64,6 @@ struct _YuiWindow {
 	GCallback reset_func;
 
 	guint state;
-	gboolean fullscreen;
 
 	GtkActionGroup * action_group;
 };
@@ -79,16 +78,16 @@ struct _YuiWindowClass {
 GType		yui_window_get_type	(void);
 GtkWidget *	yui_window_new		(YuiAction * act, GCallback ifunc, gpointer idata,
 					GSourceFunc rfunc, GCallback resetfunc);
-void		yui_window_toggle_fullscreen(GtkWidget * w, YuiWindow * yui);
 void		yui_window_update	(YuiWindow * yui);
 void		yui_window_log		(YuiWindow * yui, const char * message);
 void		yui_window_show_log	(YuiWindow * yui);
-void		yui_window_start	(GtkWidget * w, YuiWindow * yui);
-void		yui_window_run		(GtkWidget * w, YuiWindow * yui);
-void		yui_window_pause	(GtkWidget * w, YuiWindow * yui);
-void		yui_window_reset	(GtkWidget * w, YuiWindow * yui);
-void            yui_window_invalidate(GtkWidget * w, YuiWindow * yui );
-void		yui_window_set_fullscreen(YuiWindow * w, gboolean f);
+void		yui_window_start	(YuiWindow * yui);
+void		yui_window_run		(YuiWindow * yui);
+void		yui_window_pause	(YuiWindow * yui);
+void		yui_window_reset	(YuiWindow * yui);
+void            yui_window_invalidate   (YuiWindow * yui);
+void		yui_window_set_fullscreen(YuiWindow * yui, gboolean f);
+void		yui_window_set_frameskip(YuiWindow * yui, gboolean f);
 
 G_END_DECLS
 

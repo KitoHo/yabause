@@ -40,6 +40,7 @@
 #include "vdp2.h"
 #include "yui.h"
 #include "bios.h"
+#include "movie.h"
 #ifdef HAVE_LIBSDL
  #ifdef __APPLE__
   #include <SDL/SDL.h>
@@ -354,10 +355,42 @@ void YabauseResetButton(void) {
 //////////////////////////////////////////////////////////////////////////////
 
 int YabauseExec(void) {
+
+	//automatically advance lag frames, this should be optional later
+	if (FrameAdvanceVariable > 0 && LagFrameFlag == 1){ 
+		FrameAdvanceVariable = NeedAdvance; //advance a frame
+		YabauseEmulate();
+		FrameAdvanceVariable = Paused; //pause next time
+		return(0);
+	}
+
+	if (FrameAdvanceVariable == Paused){
+		ScspMuteAudio();
+		return(0);
+	}
+  
+	if (FrameAdvanceVariable == NeedAdvance){  //advance a frame
+		FrameAdvanceVariable = Paused; //pause next time
+		ScspUnMuteAudio();
+		YabauseEmulate();
+	}
+	
+	if (FrameAdvanceVariable == RunNormal ) { //run normally
+		ScspUnMuteAudio();	
+		YabauseEmulate();
+	}
+	return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+int YabauseEmulate(void) {
    int M68k_cycles;              // Integral M68k cycles to execute this time
    static int M68k_centicycles;  // Fractional cycle counter for M68k
 
    int oneframeexec=0;
+
+   DoMovie();
 
    while (!oneframeexec)
    {
@@ -475,17 +508,35 @@ int YabauseExec(void) {
 
       PROFILE_START("68K");
 #ifdef NO_DECILINE
-      /* 11.2896MHz / 60Hz / 262.5 lines = 716.8 cycles/line */
-      M68k_cycles = 716;
-      M68k_centicycles += 80;
+      if (yabsys.IsPal)
+      {
+         /* 11.2896MHz / 50Hz / 262.5 lines / 10 calls/line = 86.01 cycles/call */
+         M68k_cycles = 860;
+         M68k_centicycles += 10;
+      }
+      else
+      {
+         /* 11.2896MHz / 60Hz / 262.5 lines / 10 calls/line = 71.68 cycles/call */
+         M68k_cycles = 716;
+         M68k_centicycles += 80;
+      }
       if (M68k_centicycles >= 100) {
          M68k_cycles++;
          M68k_centicycles -= 100;
       }
 #else
-      /* 11.2896MHz / 60Hz / 262.5 lines / 10 calls/line = 71.68 cycles/call */
-      M68k_cycles = 71;
-      M68k_centicycles += 68;
+      if (yabsys.IsPal)
+      {
+         /* 11.2896MHz / 50Hz / 262.5 lines / 10 calls/line = 86.01 cycles/call */
+         M68k_cycles = 86;
+         M68k_centicycles += 1;
+      }
+      else
+      {
+         /* 11.2896MHz / 60Hz / 262.5 lines / 10 calls/line = 71.68 cycles/call */
+         M68k_cycles = 71;
+         M68k_centicycles += 68;
+      }
       if (M68k_centicycles >= 100) {
          M68k_cycles++;
          M68k_centicycles -= 100;

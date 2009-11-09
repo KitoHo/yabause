@@ -30,6 +30,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #else
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -67,12 +68,12 @@ Netlink *NetlinkArea = NULL;
 #define MODEMSTATE_ONLINE       1
 
 #ifdef USESOCKET
-int NetworkInit(void);
-void NetworkDeInit(void);
-int NetworkConnect(const char *ip, const char *port);
-int NetworkWaitForConnect(const char *port);
-int NetworkSend(const char *buffer, int length);
-int NetworkReceive(char *buffer, int maxlength);
+static int NetworkInit(void);
+static void NetworkDeInit(void);
+static int NetworkConnect(const char *ip, const char *port);
+static int NetworkWaitForConnect(const char *port);
+static int NetworkSend(const void *buffer, int length);
+static int NetworkReceive(void *buffer, int maxlength);
 
 #ifndef WIN32
 #define closesocket close
@@ -81,7 +82,7 @@ int NetworkReceive(char *buffer, int maxlength);
 
 //////////////////////////////////////////////////////////////////////////////
 
-void NetlinkLSRChange(u8 val)
+UNUSED static void NetlinkLSRChange(u8 val)
 {
    // If IER bit 2 is set and if any of the error or alarms bits are set(and
    // they weren't previously), trigger an interrupt
@@ -96,7 +97,10 @@ void NetlinkLSRChange(u8 val)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void NetlinkMSRChange(u8 set, u8 clear)
+#ifndef USESOCKET
+UNUSED
+#endif
+static void NetlinkMSRChange(u8 set, u8 clear)
 {
    u8 change;
 
@@ -194,7 +198,7 @@ u8 FASTCALL NetlinkReadByte(u32 addr)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void FASTCALL NetlinkDoATResponse(const char *string)
+static void FASTCALL NetlinkDoATResponse(const char *string)
 {
    strcpy((char *)&NetlinkArea->outbuffer[NetlinkArea->outbufferend], string);
    NetlinkArea->outbufferend += (u32)strlen(string);
@@ -203,7 +207,7 @@ void FASTCALL NetlinkDoATResponse(const char *string)
 
 //////////////////////////////////////////////////////////////////////////////
 
-int FASTCALL NetlinkFetchATParameter(u8 val, u32 *offset)
+static int FASTCALL NetlinkFetchATParameter(u8 val, u32 *offset)
 {
    if (val >= '0' && val <= '9')
    {
@@ -667,7 +671,7 @@ void NetlinkExec(u32 timing)
 //////////////////////////////////////////////////////////////////////////////
 #ifdef USESOCKET
 
-int NetworkInit(void)
+static int NetworkInit(void)
 {
 #ifdef WIN32
    WSADATA wsaData;
@@ -684,7 +688,7 @@ int NetworkInit(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-int NetworkConnect(const char *ip, const char *port)
+static int NetworkConnect(const char *ip, const char *port)
 {
    struct addrinfo *result = NULL,
                    hints;
@@ -722,7 +726,7 @@ int NetworkConnect(const char *ip, const char *port)
 
 //////////////////////////////////////////////////////////////////////////////
 
-int NetworkWaitForConnect(const char *port)
+static int NetworkWaitForConnect(const char *port)
 {
    struct addrinfo *result = NULL,
                    hints;
@@ -796,7 +800,7 @@ int NetworkWaitForConnect(const char *port)
 
 //////////////////////////////////////////////////////////////////////////////
 
-int NetworkSend(const char *buffer, int length)
+static int NetworkSend(const void *buffer, int length)
 {
    int bytessent;
 
@@ -813,7 +817,7 @@ int NetworkSend(const char *buffer, int length)
 
 //////////////////////////////////////////////////////////////////////////////
 
-int NetworkReceive(char *buffer, int maxlength)
+static int NetworkReceive(void *buffer, int maxlength)
 {
    int bytesreceived;
 
@@ -836,7 +840,7 @@ int NetworkReceive(char *buffer, int maxlength)
 
 //////////////////////////////////////////////////////////////////////////////
 
-void NetworkDeInit(void)
+static void NetworkDeInit(void)
 {
    if (NetlinkArea->connectsocket != -1)
       closesocket(NetlinkArea->connectsocket);

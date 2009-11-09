@@ -141,8 +141,8 @@ GtkWidget * yui_m68k_new(YuiWindow * y) {
   yui_m68k = YUI_M68K(dialog);
 
   if (!( yui->state & YUI_IS_INIT )) {
-    yui_window_run(dialog, yui);
-    yui_window_pause(dialog, yui);
+    yui_window_run(yui);
+    yui_window_pause(yui);
   }
 
   M68KSetBreakpointCallBack(&yui_m68k_breakpoint_handler);
@@ -281,7 +281,7 @@ static void yui_m68k_update_codelist( YuiM68k *m68k, u32 addr) {
 static void yui_m68k_step( GtkWidget* widget, YuiM68k * m68k ) {
 
   M68KStep();
-  yui_window_invalidate( widget, yui ); /* update all dialogs, including us */
+  yui_window_invalidate( yui ); /* update all dialogs, including us */
 }
 
 static void yui_m68k_editedReg( GtkCellRendererText *cellrenderertext,
@@ -304,7 +304,7 @@ static void yui_m68k_editedReg( GtkCellRendererText *cellrenderertext,
     m68ksetRegister( m68k, i, addr );
     gtk_list_store_set( GTK_LIST_STORE( m68k->regListStore ), &iter, 1, bptext, -1 );
   }
-  yui_window_invalidate( NULL, yui );
+  yui_window_invalidate( yui );
 }
 
 static void yui_m68k_editedBp( GtkCellRendererText *cellrenderertext,
@@ -332,7 +332,7 @@ static void yui_m68k_editedBp( GtkCellRendererText *cellrenderertext,
   gtk_list_store_set( GTK_LIST_STORE( m68k->bpListStore ), &iter, 0, bptext, -1 );
 }
 
-static void debugPauseLoop() { /* secondary gtk event loop for the "breakpoint pause" state */
+static void debugPauseLoop(void) { /* secondary gtk event loop for the "breakpoint pause" state */
 
   while ( !(yui->state & YUI_IS_RUNNING) )
     if ( gtk_main_iteration() ) return;
@@ -340,7 +340,7 @@ static void debugPauseLoop() { /* secondary gtk event loop for the "breakpoint p
 
 static void yui_m68k_breakpoint_handler (u32 addr) {
 
-  yui_window_pause(NULL, yui);
+  yui_window_pause(yui);
   {
     m68kregs_struct regs;
     YuiM68k* m68k = YUI_M68K(yui_m68k_new( yui ));

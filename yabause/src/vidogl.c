@@ -90,6 +90,7 @@ void FASTCALL VIDOGLVdp2SetPriorityNBG1(int priority);
 void FASTCALL VIDOGLVdp2SetPriorityNBG2(int priority);
 void FASTCALL VIDOGLVdp2SetPriorityNBG3(int priority);
 void FASTCALL VIDOGLVdp2SetPriorityRBG0(int priority);
+void YglGetGlSize(int *width, int *height);
 
 VideoInterface_struct VIDOGL = {
 VIDCORE_OGL,
@@ -120,7 +121,8 @@ VIDOGLVdp2SetPriorityNBG1,
 VIDOGLVdp2SetPriorityNBG2,
 VIDOGLVdp2SetPriorityNBG3,
 VIDOGLVdp2SetPriorityRBG0,
-YglOnScreenDebugMessage
+YglOnScreenDebugMessage,
+YglGetGlSize
 };
 
 static float vdp1wratio=1;
@@ -138,6 +140,9 @@ static int nbg3priority=0;
 static int rbg0priority=0;
 
 static u32 Vdp2ColorRamGetColor(u32 colorindex, int alpha);
+
+static int GlHeight=320;
+static int GlWidth=224;
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -1258,9 +1263,6 @@ static void SetSaturnResolution(int width, int height)
 //////////////////////////////////////////////////////////////////////////////
 
 #ifdef USEMICSHADERS
-#ifndef GLchar
-#define GLchar GLbyte
-#endif
 
 #ifndef GL_FRAGMENT_SHADER
 #define GL_FRAGMENT_SHADER 0x8B30
@@ -1312,7 +1314,7 @@ const GLchar saturnMeshGouraudFragmentShaderCode[] = \
 const GLchar *saturnMeshGouraudFragmentShaderSource[] = {saturnMeshGouraudFragmentShaderCode, NULL};
 
 #ifdef HAVE_GLXGETPROCADDRESS
-void STDCALL * (*yglGetProcAddress)(const char *szProcName) = glXGetProcAddress;
+void STDCALL * (*yglGetProcAddress)(const char *szProcName) = (void STDCALL *(*)(const char *))glXGetProcAddress;
 #elif WIN32
 void STDCALL * (*yglGetProcAddress)(const char *szProcName) = wglGetProcAddress;
 #endif
@@ -1322,7 +1324,7 @@ int VIDOGLInit(void)
 {
 #ifdef USEMICSHADERS
    GLint mytexture;
-   char shaderInfoLog[256];
+   GLchar shaderInfoLog[256];
 #endif
 
    if (YglInit(1024, 1024, 8) != 0)
@@ -1360,10 +1362,10 @@ int VIDOGLInit(void)
 		    useShaders = 1;
 		    pfglShaderSource(saturnMeshGouraudFragmentShader, 1, saturnMeshGouraudFragmentShaderSource, NULL);
 		    pfglCompileShader(saturnMeshGouraudFragmentShader);
-            pfglGetShaderInfoLog(saturnMeshGouraudFragmentShader,255,NULL,shaderInfoLog);
+		    pfglGetShaderInfoLog(saturnMeshGouraudFragmentShader,255,NULL,shaderInfoLog);
 		    pfglAttachShader(shaderProgram, saturnMeshGouraudFragmentShader);
 		    pfglLinkProgram(shaderProgram);
-		    mytexture = pfglGetUniformLocation(shaderProgram, "mytexture");
+		    mytexture = pfglGetUniformLocation(shaderProgram, (const GLchar *)"mytexture");
 		    pfglUniform1i(mytexture, 0);
 		 }
 	  }
@@ -1407,6 +1409,9 @@ void VIDOGLResize(unsigned int w, unsigned int h, int on)
    glViewport(0, 0, w, h);
 
    SetSaturnResolution(vdp2width, vdp2height);
+
+   GlHeight=h;
+   GlWidth=w;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2746,5 +2751,11 @@ void FASTCALL VIDOGLVdp2SetPriorityRBG0(int priority)
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+void YglGetGlSize(int *width, int *height)
+{
+   *width = GlWidth;
+   *height = GlHeight;
+}
 
 #endif

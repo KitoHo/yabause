@@ -159,8 +159,8 @@ GtkWidget * yui_mem_new(YuiWindow * y) {
 	yv->yui = y;
 
 	if (!( yv->yui->state & YUI_IS_INIT )) {
-	  yui_window_run(dialog, yv->yui);
-	  yui_window_pause(dialog, yv->yui);
+	  yui_window_run(yv->yui);
+	  yui_window_pause(yv->yui);
 	}
 
 	{
@@ -275,7 +275,7 @@ static void yui_mem_content_changed( GtkCellRendererText *cellrenderertext,
       }
     }
   }
-  yui_window_invalidate(GTK_WIDGET(ym), ym->yui);
+  yui_window_invalidate(ym->yui);
 }
 
 static void yui_mem_update(YuiMem * ym) {

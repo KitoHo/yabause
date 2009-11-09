@@ -35,6 +35,7 @@ static int DummyCDDeInit(void);
 static int DummyCDGetStatus(void);
 static s32 DummyCDReadTOC(u32 *);
 static int DummyCDReadSectorFAD(u32, void *);
+static void DummyCDReadAheadFAD(u32);
 
 CDInterface DummyCD = {
 CDCORE_DUMMY,
@@ -43,7 +44,8 @@ DummyCDInit,
 DummyCDDeInit,
 DummyCDGetStatus,
 DummyCDReadTOC,
-DummyCDReadSectorFAD
+DummyCDReadSectorFAD,
+DummyCDReadAheadFAD,
 };
 
 static int ISOCDInit(const char *);
@@ -51,6 +53,7 @@ static int ISOCDDeInit(void);
 static int ISOCDGetStatus(void);
 static s32 ISOCDReadTOC(u32 *);
 static int ISOCDReadSectorFAD(u32, void *);
+static void ISOCDReadAheadFAD(u32);
 
 CDInterface ISOCD = {
 CDCORE_ISO,
@@ -59,7 +62,8 @@ ISOCDInit,
 ISOCDDeInit,
 ISOCDGetStatus,
 ISOCDReadTOC,
-ISOCDReadSectorFAD
+ISOCDReadSectorFAD,
+ISOCDReadAheadFAD,
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -163,6 +167,25 @@ static int DummyCDReadSectorFAD(UNUSED u32 FAD, void * buffer)
 	memset(buffer, 0, 2352);
 
 	return 1;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+static void DummyCDReadAheadFAD(UNUSED u32 FAD)
+{
+	// This function is called to tell the driver which sector (FAD
+	// address) is expected to be read next. If the driver supports
+	// read-ahead, it should start reading the given sector in the
+	// background while the emulation continues, so that when the
+	// sector is actually read with ReadSectorFAD() it'll be available
+	// immediately. (Note that there's no guarantee this sector will
+	// actually be requested--the emulated CD might be stopped before
+	// the sector is read, for example.)
+	//
+	// This function should NOT block. If the driver can't perform
+	// asynchronous reads (or you just don't want to bother handling
+	// them), make this function a no-op and just read sectors
+	// normally.
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -475,6 +498,13 @@ static int ISOCDReadSectorFAD(u32 FAD, void *buffer) {
 	}
 	
 	return 1;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+static void ISOCDReadAheadFAD(UNUSED u32 FAD)
+{
+	// No-op
 }
 
 //////////////////////////////////////////////////////////////////////////////

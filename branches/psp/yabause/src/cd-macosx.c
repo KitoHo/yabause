@@ -43,6 +43,7 @@ static int MacOSXCDDeInit();
 static int MacOSXCDGetStatus();
 static s32 MacOSXCDReadTOC(u32 *);
 static int MacOSXCDReadSectorFAD(u32, void *);
+static void MacOSXCDReadAheadFAD(u32);
 
 CDInterface ArchCD = {
 CDCORE_ARCH,
@@ -51,7 +52,8 @@ MacOSXCDInit,
 MacOSXCDDeInit,
 MacOSXCDGetStatus,
 MacOSXCDReadTOC,
-MacOSXCDReadSectorFAD
+MacOSXCDReadSectorFAD,
+MacOSXCDReadAheadFAD,
 };
 
 static int hCDROM;
@@ -197,3 +199,7 @@ static int MacOSXCDReadSectorFAD(u32 FAD, void *buffer)
 	return false;
 }
 
+static void MacOSXCDReadAheadFAD(UNUSED u32 FAD)
+{
+	// No-op
+}

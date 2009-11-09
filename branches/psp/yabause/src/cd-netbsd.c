@@ -35,6 +35,7 @@ static int NetBSDCDDeInit(void);
 static s32 NetBSDCDReadTOC(u32 *);
 static int NetBSDCDGetStatus(void);
 static int NetBSDCDReadSectorFAD(u32, void *);
+static void NetBSDCDReadAheadFAD(u32);
 
 CDInterface ArchCD = {
        CDCORE_ARCH,
@@ -43,7 +44,8 @@ CDInterface ArchCD = {
        NetBSDCDDeInit,
        NetBSDCDGetStatus,
        NetBSDCDReadTOC,
-       NetBSDCDReadSectorFAD
+       NetBSDCDReadSectorFAD,
+       NetBSDCDReadAheadFAD,
 };
 
 static int hCDROM;
@@ -160,4 +162,9 @@ static int NetBSDCDReadSectorFAD(u32 FAD, void *buffer) {
        }
 
        return 0;
+}
+
+static void NetBSDCDReadAheadFAD(UNUSED u32 FAD)
+{
+       // No-op
 }

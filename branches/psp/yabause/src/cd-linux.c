@@ -38,6 +38,7 @@ static int LinuxCDDeInit(void);
 static s32 LinuxCDReadTOC(u32 *);
 static int LinuxCDGetStatus(void);
 static int LinuxCDReadSectorFAD(u32, void *);
+static void LinuxCDReadAheadFAD(u32);
 
 CDInterface ArchCD = {
 	CDCORE_ARCH,
@@ -46,7 +47,8 @@ CDInterface ArchCD = {
 	LinuxCDDeInit,
 	LinuxCDGetStatus,
 	LinuxCDReadTOC,
-	LinuxCDReadSectorFAD
+	LinuxCDReadSectorFAD,
+	LinuxCDReadAheadFAD,
 };
 
 static int hCDROM;
@@ -175,4 +177,9 @@ static int LinuxCDReadSectorFAD(u32 FAD, void *buffer) {
 	}
 
 	return 0;
+}
+
+static void LinuxCDReadAheadFAD(UNUSED u32 FAD)
+{
+	// No-op
 }

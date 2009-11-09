@@ -727,6 +727,7 @@ void Cs2Exec(u32 timing) {
                case 0:
                   // Sector Read OK
                   Cs2Area->FAD++;
+                  Cs2Area->cdi->ReadAheadFAD(Cs2Area->FAD);
 
                   if (playpartition != NULL)
                   {
@@ -1383,6 +1384,7 @@ void Cs2PlayDisc(void) {
 
   Cs2Area->status = CDB_STAT_PLAY;
   Cs2Area->playtype = CDB_PLAYTYPE_SECTOR;
+  Cs2Area->cdi->ReadAheadFAD(Cs2Area->FAD);
 
   doCDReport(Cs2Area->status);
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK;
@@ -2150,6 +2152,7 @@ void Cs2ReadFile(void) {
 
   Cs2Area->status = CDB_STAT_PLAY;
   Cs2Area->playtype = CDB_PLAYTYPE_FILE;
+  Cs2Area->cdi->ReadAheadFAD(Cs2Area->FAD);
 
   doCDReport(Cs2Area->status);
   Cs2Area->reg.HIRQ |= CDB_HIRQ_CMOK;

@@ -334,82 +334,60 @@ u32 FASTCALL Cs2ReadLong(u32 addr) {
     case 0x90028: return ((Cs2Area->reg.MPEGRGB << 16) | Cs2Area->reg.MPEGRGB);
     case 0x18000:
                   // transfer data
-                  switch (Cs2Area->datatranstype) {
-                    case 0:
-                            // get sector
+                  if (Cs2Area->datatranstype != -1)
+                  {
+                     // get sector
 
-                            // Make sure we still have sectors to transfer
-                            if (Cs2Area->datanumsecttrans < Cs2Area->datasectstotrans)
-                            {
-                               // Transfer Data
-                               val = (Cs2Area->datatranspartition->block[Cs2Area->datanumsecttrans]->data[Cs2Area->datatransoffset] << 24) +
-                                     (Cs2Area->datatranspartition->block[Cs2Area->datanumsecttrans]->data[Cs2Area->datatransoffset + 1] << 16) +
-                                     (Cs2Area->datatranspartition->block[Cs2Area->datanumsecttrans]->data[Cs2Area->datatransoffset + 2] << 8) +
-                                      Cs2Area->datatranspartition->block[Cs2Area->datanumsecttrans]->data[Cs2Area->datatransoffset + 3];
+                     // Make sure we still have sectors to transfer
+                     if (Cs2Area->datanumsecttrans < Cs2Area->datasectstotrans)
+                     {
+                        // Transfer Data
+                        const u8 *ptr = &Cs2Area->datatranspartition->block[Cs2Area->datanumsecttrans]->data[Cs2Area->datatransoffset];
+#ifdef WORDS_BIGENDIAN
+                        val = *((const u32 *) ptr);
+#else
+                        val = BSWAP32(*((const u32 *) ptr));
+#endif
 
-                               // increment datatransoffset/cdwnum
-                               Cs2Area->cdwnum += 4;
-                               Cs2Area->datatransoffset += 4;
+                        // increment datatransoffset/cdwnum
+                        Cs2Area->cdwnum += 4;
+                        Cs2Area->datatransoffset += 4;
 
-                               // Make sure we're not beyond the sector size boundry
-                               if (Cs2Area->datatransoffset >= Cs2Area->datatranspartition->block[Cs2Area->datanumsecttrans]->size)
-                               {
-                                  Cs2Area->datatransoffset = 0;
-                                  Cs2Area->datanumsecttrans++;
-                               }
-                            }
+                        // Make sure we're not beyond the sector size boundry
+                        if (Cs2Area->datatransoffset >= Cs2Area->datatranspartition->block[Cs2Area->datanumsecttrans]->size)
+                        {
+                           Cs2Area->datatransoffset = 0;
+                           Cs2Area->datanumsecttrans++;
+                        }
+                     }
+                     else
+                     {
+                        if (Cs2Area->datatranstype == 2)
+                        {
+                           // Ok, so we don't have any more sectors to
+                           // transfer, might as well delete them all.
 
-                            break;
-                    case 2:
-                            // get then delete sector
+                           Cs2Area->datatranstype = -1;
 
-                            // Make sure we still have sectors to transfer
-                            if (Cs2Area->datanumsecttrans < Cs2Area->datasectstotrans)
-                            {
-                               // Transfer Data
-                               val = (Cs2Area->datatranspartition->block[Cs2Area->datatranssectpos+Cs2Area->datanumsecttrans]->data[Cs2Area->datatransoffset] << 24) +
-                                     (Cs2Area->datatranspartition->block[Cs2Area->datatranssectpos+Cs2Area->datanumsecttrans]->data[Cs2Area->datatransoffset + 1] << 16) +
-                                     (Cs2Area->datatranspartition->block[Cs2Area->datatranssectpos+Cs2Area->datanumsecttrans]->data[Cs2Area->datatransoffset + 2] << 8) +
-                                      Cs2Area->datatranspartition->block[Cs2Area->datatranssectpos+Cs2Area->datanumsecttrans]->data[Cs2Area->datatransoffset + 3];
+                           // free blocks
+                           for (i = Cs2Area->datatranssectpos; i < (Cs2Area->datatranssectpos+Cs2Area->datasectstotrans); i++)
+                           {
+                              Cs2FreeBlock(Cs2Area->datatranspartition->block[i]);
+                              Cs2Area->datatranspartition->block[i] = NULL;
+                              Cs2Area->datatranspartition->blocknum[i] = 0xFF;
+                           }
 
-                               // increment datatransoffset/cdwnum
-                               Cs2Area->cdwnum += 4;
-                               Cs2Area->datatransoffset += 4;
+                           // sort remaining blocks
+                           Cs2SortBlocks(Cs2Area->datatranspartition);
 
-                               // Make sure we're not beyond the sector size boundry
-                               if (Cs2Area->datatransoffset >= Cs2Area->datatranspartition->block[Cs2Area->datanumsecttrans]->size)
-                               {
-                                  Cs2Area->datatransoffset = 0;
-                                  Cs2Area->datanumsecttrans++;
-                               }
-                            }
-                            else
-                            {
-                               // Ok, so we don't have any more sectors to
-                               // transfer, might as well delete them all.
+                           Cs2Area->datatranspartition->size -= Cs2Area->cdwnum;
+                           Cs2Area->datatranspartition->numblocks -= Cs2Area->datasectstotrans;
 
-                               Cs2Area->datatranstype = -1;
-
-                               // free blocks
-                               for (i = Cs2Area->datatranssectpos; i < (Cs2Area->datatranssectpos+Cs2Area->datasectstotrans); i++)
-                               {
-                                  Cs2FreeBlock(Cs2Area->datatranspartition->block[i]);
-                                  Cs2Area->datatranspartition->block[i] = NULL;
-                                  Cs2Area->datatranspartition->blocknum[i] = 0xFF;
-                               }
-
-                               // sort remaining blocks
-                               Cs2SortBlocks(Cs2Area->datatranspartition);
-
-                               Cs2Area->datatranspartition->size -= Cs2Area->cdwnum;
-                               Cs2Area->datatranspartition->numblocks -= Cs2Area->datasectstotrans;
-
-                               CDLOG("cs2\t: datatranspartition->size = %x\n", Cs2Area->datatranspartition->size);
-                            }
-                            break;
-                    default: break;
+                           CDLOG("cs2\t: datatranspartition->size = %x\n", Cs2Area->datatranspartition->size);
+                        }
+                     }
                   }
-	          break;
+                  break;
     default:
              LOG("cs2\t: Undocumented register read %08X\n", addr);
 //             val = T3ReadLong(Cs2Area->mem, addr);

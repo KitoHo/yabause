@@ -32,6 +32,13 @@
 #include "yabause.h"
 #include "movie.h"
 
+#ifdef _arch_dreamcast
+# include "dreamcast/localtime.h"
+#endif
+#ifdef PSP
+# include "psp/localtime.h"
+#endif
+
 Smpc * SmpcRegs;
 u8 * SmpcRegsT;
 SmpcInternal * SmpcInternalVars;
@@ -216,12 +223,10 @@ static void SmpcINTBACKStatus(void) {
    tmp = time(NULL);
 #ifdef WIN32
    memcpy(&times, localtime(&tmp), sizeof(times));
-#elif !defined(_arch_dreamcast)
-   localtime_r(&tmp, &times);
-#else
-   struct tm * internal_localtime_r(const time_t * tim_p, struct tm *res);
-
+#elif defined(_arch_dreamcast) || defined(PSP)
    internal_localtime_r(&tmp, &times);
+#else
+   localtime_r(&tmp, &times);
 #endif
    year[0] = (1900 + times.tm_year) / 1000;
    year[1] = ((1900 + times.tm_year) % 1000) / 100;

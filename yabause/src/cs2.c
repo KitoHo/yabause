@@ -573,6 +573,7 @@ void Cs2Reset(void) {
   Cs2Area->isdiskchanged = 1;
   Cs2Area->isbufferfull = 0;
   Cs2Area->isonesectorstored = 0;
+  Cs2Area->isaudio = 0;
 
   Cs2Area->reg.CR1 = ( 0 <<8) | 'C';
   Cs2Area->reg.CR2 = ('D'<<8) | 'B';
@@ -834,7 +835,7 @@ void Cs2Command(void) {
 
 void Cs2SetTiming(int playing) {
   if (playing) {
-     if (Cs2Area->speed1x == 1) // should also verify to make sure it's not reading cd audio
+     if (Cs2Area->isaudio || Cs2Area->speed1x == 1)
         Cs2Area->_periodictiming = 13333;
      else
         Cs2Area->_periodictiming = 6667;
@@ -3199,11 +3200,13 @@ int Cs2ReadFilteredSector(u32 rfsFAD, partition_struct **partition) {
 
      if (memcmp(syncheader, Cs2Area->workblock.data, 12) != 0) isaudio = 1;
 
+     // force 1x speed if reading from an audio track
+     Cs2Area->isaudio = isaudio;
+     Cs2SetTiming(1);
+
      // if mode 2 track, setup the subheader values
      if (isaudio)
      {
-        Cs2Area->speed1x = 1;
-        Cs2SetTiming(1);
         ScspReceiveCDDA(Cs2Area->workblock.data);
         *partition = NULL;
         return 0;
@@ -3376,6 +3379,7 @@ int Cs2SaveState(FILE * fp) {
    ywrite(&check, (void *) &Cs2Area->isdiskchanged, 1, 1, fp);
    ywrite(&check, (void *) &Cs2Area->isbufferfull, 1, 1, fp);
    ywrite(&check, (void *) &Cs2Area->speed1x, 1, 1, fp);
+   ywrite(&check, (void *) &Cs2Area->isaudio, 1, 1, fp);
    ywrite(&check, (void *) &Cs2Area->transfileinfo, 1, 12, fp);
    ywrite(&check, (void *) &Cs2Area->lastbuffer, 1, 1, fp);
    ywrite(&check, (void *) &Cs2Area->_command, 1, 1, fp);
@@ -3468,6 +3472,7 @@ int Cs2LoadState(FILE * fp, UNUSED int version, int size) {
    yread(&check, (void *)&Cs2Area->isdiskchanged, 1, 1, fp);
    yread(&check, (void *)&Cs2Area->isbufferfull, 1, 1, fp);
    yread(&check, (void *)&Cs2Area->speed1x, 1, 1, fp);
+   yread(&check, (void *)&Cs2Area->isaudio, 1, 1, fp);
    yread(&check, (void *)&Cs2Area->transfileinfo, 1, 12, fp);
    yread(&check, (void *)&Cs2Area->lastbuffer, 1, 1, fp);
    yread(&check, (void *)&Cs2Area->_command, 1, 1, fp);

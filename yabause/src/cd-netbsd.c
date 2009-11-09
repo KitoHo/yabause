@@ -31,7 +31,7 @@
 #include "debug.h"
 
 static int NetBSDCDInit(const char *);
-static int NetBSDCDDeInit(void);
+static void NetBSDCDDeInit(void);
 static s32 NetBSDCDReadTOC(u32 *);
 static int NetBSDCDGetStatus(void);
 static int NetBSDCDReadSectorFAD(u32, void *);
@@ -60,15 +60,12 @@ static int NetBSDCDInit(const char * cdrom_name) {
        return 0;
 }
 
-static int NetBSDCDDeInit(void) {
-       if (hCDROM == -1) {
-               return -1;
+static void NetBSDCDDeInit(void) {
+       if (hCDROM != -1) {
+               close(hCDROM);
        }
-       close(hCDROM);
 
        LOG("CDDeInit OK\n");
-
-       return 0;
 }
 
 

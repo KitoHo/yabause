@@ -426,7 +426,7 @@ typedef struct
    const char *Name;
    int (*Init)(void);
    void (*DeInit)(void);
-   int (*Reset)(void);
+   void (*Reset)(void);
    void FASTCALL (*Exec)(SH2_struct *context, u32 cycles);
    void (*WriteNotify)(u32 start, u32 length);
 } SH2Interface_struct;

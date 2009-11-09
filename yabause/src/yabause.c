@@ -484,11 +484,7 @@ int YabauseEmulate(void) {
          }
       }
 
-#ifdef PSP_TIMING_TWEAKS
       yabsys.CycleCountII += sh2cycles;
-#else
-      yabsys.CycleCountII += sh2cycles + MSH2->cycles;
-#endif
 
       {
          u32 usec = 0;

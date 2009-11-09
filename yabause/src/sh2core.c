@@ -1476,11 +1476,7 @@ void FASTCALL DataArrayWriteLong(u32 addr, u32 val)  {
 
 //////////////////////////////////////////////////////////////////////////////
 
-#ifdef PSP_TIMING_TWEAKS
 void FRTExec(u32 cycles)
-#else
-void FRTExec(UNUSED u32 cycles)
-#endif
 {
    u32 frcold;
    u32 frctemp;
@@ -1488,13 +1484,8 @@ void FRTExec(UNUSED u32 cycles)
    frcold = frctemp = (u32)CurrentSH2->onchip.FRC.all;
    
    // Increment FRC
-#ifdef PSP_TIMING_TWEAKS
    frctemp += ((cycles + CurrentSH2->frc.leftover) / CurrentSH2->frc.div);
    CurrentSH2->frc.leftover = (cycles + CurrentSH2->frc.leftover) % CurrentSH2->frc.div;
-#else
-   frctemp += ((CurrentSH2->cycles + CurrentSH2->frc.leftover) / CurrentSH2->frc.div);
-   CurrentSH2->frc.leftover = (CurrentSH2->cycles + CurrentSH2->frc.leftover) % CurrentSH2->frc.div;
-#endif
 
    // Check to see if there is or was a Output Compare A match
    if (frctemp >= CurrentSH2->onchip.OCRA && frcold < CurrentSH2->onchip.OCRA)

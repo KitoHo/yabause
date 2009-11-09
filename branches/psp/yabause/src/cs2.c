@@ -2615,24 +2615,22 @@ void Cs2FreeBlock(block_struct * blk) {
 //////////////////////////////////////////////////////////////////////////////
 
 void Cs2SortBlocks(partition_struct * part) {
-  u32 i, i2;
-  block_struct * blktmp;
-  u8 blktmp2;
+  unsigned int from, to;
 
-  for (i = 0; i < (MAX_BLOCKS-1); i++)
+  for (from = to = 0; from < MAX_BLOCKS; from++)
   {
-     for (i2 = i+1; i2 < MAX_BLOCKS; i2++)
+     if (part->block[from] != NULL)
      {
-        if (part->block[i] == NULL && part->block[i2] != NULL)
+        if (to != from)
         {
-           blktmp = part->block[i];
-           part->block[i] = part->block[i2];
-           part->block[i2] = blktmp;
-           blktmp2 = part->blocknum[i];
-           part->blocknum[i] = part->blocknum[i2];
-           part->blocknum[i2] = blktmp2;
+           part->block[to] = part->block[from];
         }
+        to++;
      }
+  }
+
+  for (; to < MAX_BLOCKS; to++) {
+      part->block[to] = NULL;
   }
 }
 

@@ -180,7 +180,7 @@ GtkWidget * yui_transfer_new(YuiWindow * yw) {
 
 	yui_transfer_check(yfe);
 
-	yui_window_start(yw);
+	yui_window_start(NULL, yw);
 
 	return entry;
 }

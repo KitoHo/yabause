@@ -23,7 +23,6 @@
 #include "yuiwindow.h"
 
 #include "../yabause.h"
-#include "../yui.h"
 #include "../peripheral.h"
 #include "../sh2core.h"
 #include "../sh2int.h"
@@ -118,12 +117,12 @@ GtkWidget * yui;
 GKeyFile * keyfile;
 yabauseinit_struct yinit;
 
-static int yui_main(gpointer data) {
+int yui_main(gpointer data) {
 	PERCore->HandleEvents();
 	return TRUE;
 }
 
-static GtkWidget * yui_new(void) {
+GtkWidget * yui_new() {
 	yui = yui_window_new(NULL, G_CALLBACK(YabauseInit), &yinit, yui_main, G_CALLBACK(YabauseReset));
 
 	gtk_widget_show(yui);
@@ -131,7 +130,7 @@ static GtkWidget * yui_new(void) {
 	return yui;
 }
 
-static void yui_settings_init(void) {
+void yui_settings_init(void) {
 	yinit.m68kcoretype = M68KCORE_C68K;
 	yinit.percoretype = PERCORE_GTK;
 	yinit.sh2coretype = SH2CORE_DEFAULT;
@@ -154,7 +153,7 @@ static void yui_settings_init(void) {
 
 gchar * inifile;
 
-static int safe_strcmp(const char * s1, const char * s2) {
+int safe_strcmp(const char * s1, const char * s2) {
 	if (s1) {
 		if (s2) {
 			return strcmp(s1, s2);
@@ -173,7 +172,7 @@ static int safe_strcmp(const char * s1, const char * s2) {
 extern void * padbits;
 void * padbits;
 
-static gboolean yui_settings_load(void) {
+gboolean yui_settings_load(void) {
 	int i, tmp;
 	gchar * stmp;
 	gboolean mustRestart = FALSE;
@@ -344,8 +343,6 @@ static gboolean yui_settings_load(void) {
 
         yinit.flags = g_key_file_get_integer(keyfile, "General", "VideoFormat", 0);
 
-	yui_window_set_frameskip(YUI_WINDOW(yui), g_key_file_get_integer(keyfile, "General", "Frameskip", NULL));
-
 	return mustRestart;
 }
 
@@ -438,28 +435,14 @@ int main(int argc, char *argv[]) {
          else if (strcmp(argv[i], "-ns") == 0 || strcmp(argv[i], "--nosound") == 0) {
 	    yinit.sndcoretype = 0;
 	 }
-	 // Autoload
-	 else if (strcmp(argv[i], "--autoload") == 0) {
-            yui_window_start(YUI_WINDOW(yui));
-            YuiLoadState();
-            yui_window_run(YUI_WINDOW(yui));
-	 }
 	 // Autostart
 	 else if (strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--autostart") == 0) {
-            yui_window_run(YUI_WINDOW(yui));
+            yui_window_run(NULL, YUI_WINDOW(yui));
 	 }
 	 // Fullscreen
 	 else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--fullscreen") == 0) {
             yui_window_set_fullscreen(YUI_WINDOW(yui), TRUE);
 	 }
-         // Auto frame skip
-         else if (strstr(argv[i], "--autoframeskip=")) {
-            int fscount;
-            int fsenable;
-            fscount = sscanf(argv[i] + strlen("--autoframeskip="), "%d", &fsenable);
-            if (fscount > 0)
-               yui_window_set_frameskip(YUI_WINDOW(yui), fsenable);
-         }
 	 // Binary
 	 else if (strstr(argv[i], "--binary=")) {
 	    char binname[1024];
@@ -470,7 +453,7 @@ int main(int argc, char *argv[]) {
 	    if (bincount > 0) {
 	       if (bincount < 2) binaddress = 0x06004000;
 
-               yui_window_run(YUI_WINDOW(yui));
+               yui_window_run(NULL, YUI_WINDOW(yui));
 	       MappedMemoryLoadExec(binname, binaddress);
 	    }
 	 }
@@ -484,6 +467,9 @@ int main(int argc, char *argv[]) {
 	LogStop();
 
 	return 0;
+}
+
+void YuiVideoResize(unsigned int w, unsigned int h, int isfullscreen) {
 }
 
 void YuiSetVideoAttribute(int type, int val) {

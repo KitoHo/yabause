@@ -397,8 +397,4 @@ void ToggleFullScreen(void);
 void EnableAutoFrameSkip(void);
 void DisableAutoFrameSkip(void);
 
-void DisplayMessage(const char* str);
-int GetOSDToggle(void);
-void SetOSDToggle(int toggle);
-
 #endif

@@ -89,6 +89,8 @@ typedef struct
 
 extern yabsys_struct yabsys;
 
-int YabauseEmulate(void);
+/* Functions that need to be defined by the port: */
+extern void YuiErrorMsg(const char *string);
+extern void YuiSwapBuffers(void);
 
 #endif

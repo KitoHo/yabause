@@ -28,21 +28,15 @@
 int PERDCInit(void);
 void PERDCDeInit(void);
 int PERDCHandleEvents(void);
-void PERDCNothing(void);
-u32 PERDCScan(void);
 
 static PerPad_struct *pad1;
 
 PerInterface_struct PERDC = {
-    PERCORE_DC,
-    "Dreamcast Input Interface",
-    PERDCInit,
-    PERDCDeInit,
-    PERDCHandleEvents,
-    PERDCNothing,
-    PERDCScan,
-    0,
-    PERDCNothing
+	PERCORE_DC,
+	"Dreamcast Input Interface",
+	PERDCInit,
+	PERDCDeInit,
+	PERDCHandleEvents
 };
 
 int PERDCInit(void)	{
@@ -133,13 +127,4 @@ int PERDCHandleEvents(void)	{
     YabauseExec();
 
 	return 0;
-}
-
-void PERDCNothing(void) {
-    /* Nothing */
-}
-
-u32 PERDCScan(void) {
-    /* Nothing */
-    return 0;
 }

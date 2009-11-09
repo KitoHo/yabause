@@ -521,7 +521,7 @@ static void scsp_attack_next(slot_t *slot)
 ////////////////////////////////////////////////////////////////
 // Slot Access
 
-static void scsp_slot_set_b(u32 s, u32 a, u8 d)
+void scsp_slot_set_b(u32 s, u32 a, u8 d)
 {
 	slot_t *slot = &(scsp.slot[s]);
 
@@ -762,7 +762,7 @@ static void scsp_slot_set_b(u32 s, u32 a, u8 d)
 	}
 }
 
-static void scsp_slot_set_w(u32 s, s32 a, u16 d)
+void scsp_slot_set_w(u32 s, s32 a, u16 d)
 {
 	slot_t *slot = &(scsp.slot[s]);
 
@@ -950,7 +950,7 @@ static void scsp_slot_set_w(u32 s, s32 a, u16 d)
 	}
 }
 
-static u8 scsp_slot_get_b(u32 s, u32 a)
+u8 scsp_slot_get_b(u32 s, u32 a)
 {
 	a &= 0x1F;
 
@@ -961,7 +961,7 @@ static u8 scsp_slot_get_b(u32 s, u32 a)
 	return scsp_isr[a ^ 3];
 }
 
-static u16 scsp_slot_get_w(u32 s, u32 a)
+u16 scsp_slot_get_w(u32 s, u32 a)
 {
         a &= 0x1E;
 
@@ -975,7 +975,7 @@ static u16 scsp_slot_get_w(u32 s, u32 a)
 ////////////////////////////////////////////////////////////////
 // SCSP Access
 
-static void scsp_set_b(u32 a, u8 d)
+void scsp_set_b(u32 a, u8 d)
 {
 //      if (a != 0x41D) SCSPLOG("scsp : reg %.2X = %.2X\n", a & 0x3F, d);
         if ((a != 0x408) && (a != 0x41D))
@@ -1143,7 +1143,7 @@ static void scsp_set_b(u32 a, u8 d)
 	}
 }
 
-static void scsp_set_w(u32 a, u16 d)
+void scsp_set_w(u32 a, u16 d)
 {
         if ((a != 0x418) && (a != 0x41A) && (a != 0x422))
 	{
@@ -1265,7 +1265,7 @@ static void scsp_set_w(u32 a, u16 d)
 	}
 }
 
-static u8 scsp_get_b(u32 a)
+u8 scsp_get_b(u32 a)
 {
 	a &= 0x3F;
 
@@ -1320,7 +1320,7 @@ static u8 scsp_get_b(u32 a)
 	return scsp_ccr[a ^ 3];
 }
 
-static u16 scsp_get_w(u32 a)
+u16 scsp_get_w(u32 a)
 {
 	a = (a >> 1) & 0x1F;
 
@@ -2687,7 +2687,7 @@ static u32 scspsoundgenpos;  // Offset of next byte to generate
 static u32 scspsoundoutleft; // Samples not yet sent to host driver
 #endif
 
-static int scsp_alloc_bufs(void) {
+static int scsp_alloc_bufs() {
    if (scspchannel[0].data32)
       free(scspchannel[0].data32);
    scspchannel[0].data32 = NULL;
@@ -2710,7 +2710,7 @@ static s32 savedcycles;  // Cycles left over from the last M68KExec() call
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u32 FASTCALL c68k_byte_read(const u32 adr) {
+u32 FASTCALL c68k_byte_read(const u32 adr) {
   if (adr < 0x100000)
      return T2ReadByte(SoundRam, adr & 0x7FFFF);
   else
@@ -2719,7 +2719,7 @@ static u32 FASTCALL c68k_byte_read(const u32 adr) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void FASTCALL c68k_byte_write(const u32 adr, u32 data) {
+void FASTCALL c68k_byte_write(const u32 adr, u32 data) {
   if (adr < 0x100000)
      T2WriteByte(SoundRam, adr & 0x7FFFF, data);
   else
@@ -2728,7 +2728,6 @@ static void FASTCALL c68k_byte_write(const u32 adr, u32 data) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-/* exported to m68kd.c */
 u32 FASTCALL c68k_word_read(const u32 adr) {
   if (adr < 0x100000)
      return T2ReadWord(SoundRam, adr & 0x7FFFF);
@@ -2738,7 +2737,7 @@ u32 FASTCALL c68k_word_read(const u32 adr) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void FASTCALL c68k_word_write(const u32 adr, u32 data) {
+void FASTCALL c68k_word_write(const u32 adr, u32 data) {
   if (adr < 0x100000)
      T2WriteWord(SoundRam, adr & 0x7FFFF, data);
   else
@@ -2747,14 +2746,14 @@ static void FASTCALL c68k_word_write(const u32 adr, u32 data) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void c68k_interrupt_handler(u32 level) {
+void c68k_interrupt_handler(u32 level) {
    // send interrupt to 68k
    M68K->SetIRQ((s32)level);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void scu_interrupt_handler(void) {
+void scu_interrupt_handler(void) {
   // send interrupt to scu
   ScuSendSoundRequest();
 }
@@ -3013,8 +3012,8 @@ void M68KExec(s32 cycles) {
    {
       if (LIKELY(newcycles < 0))
       {
-         s32 cyclestoexec = -newcycles;
-         newcycles += (*m68kexecptr)(cyclestoexec);
+	 s32 cyclestoexec = -newcycles;
+	 newcycles += (*m68kexecptr)(cyclestoexec);
       }
       savedcycles = newcycles;
    }
@@ -3091,13 +3090,6 @@ void ScspReceiveCDDA(const u8 *sector) {
 //////////////////////////////////////////////////////////////////////////////
 
 void ScspExec() {
-#ifdef WIN32
-# ifdef SCSP_FRAME_ACCURATE
-   s16 stereodata16[(44100 / 60) * 16];//11760
-# else
-   s16 stereodata16[(44100 / 50)*2];
-# endif
-#endif
    u32 audiosize;
 
    ScspInternalVars->scsptiming2 += ((735<<16) + 263/2) / 263;
@@ -3147,10 +3139,6 @@ void ScspExec() {
       SNDCore->UpdateAudio(&scspchannel[0].data32[outstart],
                            &scspchannel[1].data32[outstart], audiosize);
       scspsoundoutleft -= audiosize;
-# ifdef WIN32
-      ScspConvert32uto16s(&scspchannel[0].data32[outstart], &scspchannel[1].data32[outstart], (s16 *)stereodata16, audiosize);
-      DRV_AviSoundUpdate(stereodata16, audiosize);
-# endif
    }
 #else // !SCSP_FRAME_ACCURATE
    if ((audiosize = SNDCore->GetAudioSpace()))
@@ -3162,11 +3150,6 @@ void ScspExec() {
 
       scsp_update((s32 *)scspchannel[0].data32, (s32 *)scspchannel[1].data32, audiosize);
       SNDCore->UpdateAudio(scspchannel[0].data32, (u32 *)scspchannel[1].data32, audiosize);
-# ifdef WIN32
-      ScspConvert32uto16s((s32 *)scspchannel[0].data32, (s32 *)scspchannel[1].data32, (s16 *)stereodata16, audiosize);
-      DRV_AviSoundUpdate(stereodata16, audiosize);
-# endif
-
    }
 #endif
 }
@@ -3255,7 +3238,7 @@ int M68KAddCodeBreakpoint(u32 addr) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void M68KSortCodeBreakpoints(void) {
+void M68KSortCodeBreakpoints() {
   int i, i2;
   u32 tmp;
 
@@ -3287,7 +3270,7 @@ int M68KDelCodeBreakpoint(u32 addr) {
             ScspInternalVars->numcodebreakpoints--;
             if (ScspInternalVars->numcodebreakpoints == 0) {
                m68kexecptr = M68K->Exec;
-            }
+	    }
             return 0;
          }
       }
@@ -3552,7 +3535,7 @@ int SoundLoadState(FILE *fp, int version, int size)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static char *AddSoundLFO(char *outstring, const char *string, u16 level, u16 waveform)
+char *AddSoundLFO(char *outstring, const char *string, u16 level, u16 waveform)
 {
    if (level > 0)
    {
@@ -3578,7 +3561,7 @@ static char *AddSoundLFO(char *outstring, const char *string, u16 level, u16 wav
 
 //////////////////////////////////////////////////////////////////////////////
 
-static char *AddSoundPan(char *outstring, u16 pan)
+char *AddSoundPan(char *outstring, u16 pan)
 {
    if (pan == 0x0F)
    {
@@ -3598,7 +3581,7 @@ static char *AddSoundPan(char *outstring, u16 pan)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static char *AddSoundLevel(char *outstring, u16 level)
+char *AddSoundLevel(char *outstring, u16 level)
 {
    if (level == 0)
    {
@@ -3843,7 +3826,7 @@ int ScspSlotDebugSaveRegisters(u8 slotnum, const char *filename)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u32 ScspSlotDebugAudio(slot_t *slot, u32 *workbuf, s16 *buf, u32 len)
+u32 ScspSlotDebugAudio(slot_t *slot, u32 *workbuf, s16 *buf, u32 len)
 {
    u32 *bufL, *bufR;
 
@@ -3987,15 +3970,15 @@ int ScspSlotDebugAudioSaveWav(u8 slotnum, const char *filename)
 // Dummy Sound Interface
 //////////////////////////////////////////////////////////////////////////////
 
-static int SNDDummyInit(void);
-static void SNDDummyDeInit(void);
-static int SNDDummyReset(void);
-static int SNDDummyChangeVideoFormat(int vertfreq);
-static void SNDDummyUpdateAudio(u32 *leftchanbuffer, u32 *rightchanbuffer, u32 num_samples);
-static u32 SNDDummyGetAudioSpace(void);
-static void SNDDummyMuteAudio(void);
-static void SNDDummyUnMuteAudio(void);
-static void SNDDummySetVolume(int volume);
+int SNDDummyInit();
+void SNDDummyDeInit();
+int SNDDummyReset();
+int SNDDummyChangeVideoFormat(int vertfreq);
+void SNDDummyUpdateAudio(u32 *leftchanbuffer, u32 *rightchanbuffer, u32 num_samples);
+u32 SNDDummyGetAudioSpace();
+void SNDDummyMuteAudio();
+void SNDDummyUnMuteAudio();
+void SNDDummySetVolume(int volume);
 
 SoundInterface_struct SNDDummy = {
 SNDCORE_DUMMY,
@@ -4013,40 +3996,40 @@ SNDDummySetVolume
 
 //////////////////////////////////////////////////////////////////////////////
 
-static int SNDDummyInit(void)
+int SNDDummyInit()
 {
    return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void SNDDummyDeInit(void)
+void SNDDummyDeInit()
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static int SNDDummyReset(void)
-{
-   return 0;
-}
-
-//////////////////////////////////////////////////////////////////////////////
-
-static int SNDDummyChangeVideoFormat(UNUSED int vertfreq)
+int SNDDummyReset()
 {
    return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void SNDDummyUpdateAudio(UNUSED u32 *leftchanbuffer, UNUSED u32 *rightchanbuffer, UNUSED u32 num_samples)
+int SNDDummyChangeVideoFormat(UNUSED int vertfreq)
+{
+   return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void SNDDummyUpdateAudio(UNUSED u32 *leftchanbuffer, UNUSED u32 *rightchanbuffer, UNUSED u32 num_samples)
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u32 SNDDummyGetAudioSpace(void)
+u32 SNDDummyGetAudioSpace()
 {
    /* A "hack" to get dummy sound core working enough
     * so videos are not "freezing". Values have been
@@ -4056,10 +4039,10 @@ static u32 SNDDummyGetAudioSpace(void)
    static int i = 0;
    i++;
    if (i == 55) {
-      i = 0;
-      return 85;
+	i = 0;
+   	return 85;
    } else {
-      return 0;
+        return 0;
    }
 }
 
@@ -4085,15 +4068,15 @@ void SNDDummySetVolume(UNUSED int volume)
 // Wave File Output Sound Interface
 //////////////////////////////////////////////////////////////////////////////
 
-static int SNDWavInit(void);
-static void SNDWavDeInit(void);
-static int SNDWavReset(void);
-static int SNDWavChangeVideoFormat(int vertfreq);
-static void SNDWavUpdateAudio(u32 *leftchanbuffer, u32 *rightchanbuffer, u32 num_samples);
-static u32 SNDWavGetAudioSpace(void);
-static void SNDWavMuteAudio(void);
-static void SNDWavUnMuteAudio(void);
-static void SNDWavSetVolume(int volume);
+int SNDWavInit();
+void SNDWavDeInit();
+int SNDWavReset();
+int SNDWavChangeVideoFormat(int vertfreq);
+void SNDWavUpdateAudio(u32 *leftchanbuffer, u32 *rightchanbuffer, u32 num_samples);
+u32 SNDWavGetAudioSpace();
+void SNDWavMuteAudio();
+void SNDWavUnMuteAudio();
+void SNDWavSetVolume(int volume);
 
 SoundInterface_struct SNDWave = {
 SNDCORE_WAV,
@@ -4114,7 +4097,7 @@ static FILE *wavefp;
 
 //////////////////////////////////////////////////////////////////////////////
 
-static int SNDWavInit(void)
+int SNDWavInit()
 {
    waveheader_struct waveheader;
    fmt_struct fmt;
@@ -4160,7 +4143,7 @@ static int SNDWavInit(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void SNDWavDeInit(void)
+void SNDWavDeInit()
 {
    if (wavefp)
    {
@@ -4181,21 +4164,21 @@ static void SNDWavDeInit(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static int SNDWavReset(void)
+int SNDWavReset()
 {
    return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static int SNDWavChangeVideoFormat(UNUSED int vertfreq)
+int SNDWavChangeVideoFormat(UNUSED int vertfreq)
 {
    return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void SNDWavUpdateAudio(u32 *leftchanbuffer, u32 *rightchanbuffer, u32 num_samples)
+void SNDWavUpdateAudio(u32 *leftchanbuffer, u32 *rightchanbuffer, u32 num_samples)
 {
    s16 stereodata16[44100 / 50];
    ScspConvert32uto16s((s32 *)leftchanbuffer, (s32 *)rightchanbuffer, (s16 *)stereodata16, num_samples);
@@ -4204,7 +4187,7 @@ static void SNDWavUpdateAudio(u32 *leftchanbuffer, u32 *rightchanbuffer, u32 num
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u32 SNDWavGetAudioSpace(void)
+u32 SNDWavGetAudioSpace()
 {
    /* A "hack" to get sound core working enough
     * so videos are not "freezing". Values have been
@@ -4214,28 +4197,28 @@ static u32 SNDWavGetAudioSpace(void)
    static int i = 0;
    i++;
    if (i == 55) {
-      i = 0;
-      return 85;
+	i = 0;
+   	return 85;
    } else {
-      return 0;
+        return 0;
    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void SNDWavMuteAudio(void)
+void SNDWavMuteAudio()
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void SNDWavUnMuteAudio(void)
+void SNDWavUnMuteAudio()
 {
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void SNDWavSetVolume(UNUSED int volume)
+void SNDWavSetVolume(UNUSED int volume)
 {
 }
 

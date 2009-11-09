@@ -35,12 +35,13 @@
 extern GKeyFile * keyfile;
 extern yabauseinit_struct yinit;
 
-extern void YuiSaveState(void);
-extern void YuiLoadState(void);
+extern VideoInterface_struct * VIDCoreList[];
+extern SoundInterface_struct * SNDCoreList[];
 
 GtkWidget* create_dialog1(void);
 GtkWidget* create_menu(YuiWindow *);
 
+void yui_run(void);
 void yui_conf(void);
 void yui_resize(guint, guint, gboolean);
 

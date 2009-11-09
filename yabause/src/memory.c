@@ -40,19 +40,6 @@
 #include "vdp1.h"
 #include "vdp2.h"
 #include "yabause.h"
-#include "yui.h"
-#include "movie.h"
-
-#ifdef HAVE_LIBGL
-#define USE_OPENGL
-#endif
-
-#ifdef USE_OPENGL
-#include "ygl.h"
-#endif
-
-#include "vidsoft.h"
-#include "vidogl.h"
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -143,7 +130,7 @@ void DummyDeInit(UNUSED Dummy * d)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u8 FASTCALL UnhandledMemoryReadByte(USED_IF_DEBUG u32 addr)
+u8 FASTCALL UnhandledMemoryReadByte(USED_IF_DEBUG u32 addr)
 {
    LOG("Unhandled byte read %08X\n", (unsigned int)addr);
    return 0;
@@ -151,7 +138,7 @@ static u8 FASTCALL UnhandledMemoryReadByte(USED_IF_DEBUG u32 addr)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u16 FASTCALL UnhandledMemoryReadWord(USED_IF_DEBUG u32 addr)
+u16 FASTCALL UnhandledMemoryReadWord(USED_IF_DEBUG u32 addr)
 {
    LOG("Unhandled word read %08X\n", (unsigned int)addr);
    return 0;
@@ -159,7 +146,7 @@ static u16 FASTCALL UnhandledMemoryReadWord(USED_IF_DEBUG u32 addr)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u32 FASTCALL UnhandledMemoryReadLong(USED_IF_DEBUG u32 addr)
+u32 FASTCALL UnhandledMemoryReadLong(USED_IF_DEBUG u32 addr)
 {
    LOG("Unhandled long read %08X\n", (unsigned int)addr);
    return 0;
@@ -167,161 +154,162 @@ static u32 FASTCALL UnhandledMemoryReadLong(USED_IF_DEBUG u32 addr)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void FASTCALL UnhandledMemoryWriteByte(USED_IF_DEBUG u32 addr, UNUSED u8 val)
+void FASTCALL UnhandledMemoryWriteByte(USED_IF_DEBUG u32 addr, UNUSED u8 val)
 {
    LOG("Unhandled byte write %08X\n", (unsigned int)addr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void FASTCALL UnhandledMemoryWriteWord(USED_IF_DEBUG u32 addr, UNUSED u16 val)
+void FASTCALL UnhandledMemoryWriteWord(USED_IF_DEBUG u32 addr, UNUSED u16 val)
 {
    LOG("Unhandled word write %08X\n", (unsigned int)addr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void FASTCALL UnhandledMemoryWriteLong(USED_IF_DEBUG u32 addr, UNUSED u32 val)
+void FASTCALL UnhandledMemoryWriteLong(USED_IF_DEBUG u32 addr, UNUSED u32 val)
 {
    LOG("Unhandled long write %08X\n", (unsigned int)addr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u8 FASTCALL HighWramMemoryReadByte(u32 addr)
+u8 FASTCALL HighWramMemoryReadByte(u32 addr)
 {
    return T2ReadByte(HighWram, addr & 0xFFFFF);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u16 FASTCALL HighWramMemoryReadWord(u32 addr)
+u16 FASTCALL HighWramMemoryReadWord(u32 addr)
 {
    return T2ReadWord(HighWram, addr & 0xFFFFF);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u32 FASTCALL HighWramMemoryReadLong(u32 addr)
+u32 FASTCALL HighWramMemoryReadLong(u32 addr)
 {
    return T2ReadLong(HighWram, addr & 0xFFFFF);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void FASTCALL HighWramMemoryWriteByte(u32 addr, u8 val)
+void FASTCALL HighWramMemoryWriteByte(u32 addr, u8 val)
 {
    T2WriteByte(HighWram, addr & 0xFFFFF, val);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void FASTCALL HighWramMemoryWriteWord(u32 addr, u16 val)
+void FASTCALL HighWramMemoryWriteWord(u32 addr, u16 val)
 {
    T2WriteWord(HighWram, addr & 0xFFFFF, val);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void FASTCALL HighWramMemoryWriteLong(u32 addr, u32 val)
+void FASTCALL HighWramMemoryWriteLong(u32 addr, u32 val)
 {
    T2WriteLong(HighWram, addr & 0xFFFFF, val);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u8 FASTCALL LowWramMemoryReadByte(u32 addr)
+u8 FASTCALL LowWramMemoryReadByte(u32 addr)
 {
    return T2ReadByte(LowWram, addr & 0xFFFFF);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u16 FASTCALL LowWramMemoryReadWord(u32 addr)
+u16 FASTCALL LowWramMemoryReadWord(u32 addr)
 {
    return T2ReadWord(LowWram, addr & 0xFFFFF);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u32 FASTCALL LowWramMemoryReadLong(u32 addr)
+u32 FASTCALL LowWramMemoryReadLong(u32 addr)
 {
    return T2ReadLong(LowWram, addr & 0xFFFFF);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void FASTCALL LowWramMemoryWriteByte(u32 addr, u8 val)
+void FASTCALL LowWramMemoryWriteByte(u32 addr, u8 val)
 {
    T2WriteByte(LowWram, addr & 0xFFFFF, val);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void FASTCALL LowWramMemoryWriteWord(u32 addr, u16 val)
+void FASTCALL LowWramMemoryWriteWord(u32 addr, u16 val)
 {
    T2WriteWord(LowWram, addr & 0xFFFFF, val);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void FASTCALL LowWramMemoryWriteLong(u32 addr, u32 val)
+void FASTCALL LowWramMemoryWriteLong(u32 addr, u32 val)
 {
    T2WriteLong(LowWram, addr & 0xFFFFF, val);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u8 FASTCALL BiosRomMemoryReadByte(u32 addr)
+u8 FASTCALL BiosRomMemoryReadByte(u32 addr)
 {
    return T2ReadByte(BiosRom, addr & 0x7FFFF);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u16 FASTCALL BiosRomMemoryReadWord(u32 addr)
+u16 FASTCALL BiosRomMemoryReadWord(u32 addr)
 {
    return T2ReadWord(BiosRom, addr & 0x7FFFF);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u32 FASTCALL BiosRomMemoryReadLong(u32 addr)
+u32 FASTCALL BiosRomMemoryReadLong(u32 addr)
 {
    return T2ReadLong(BiosRom, addr & 0x7FFFF);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void FASTCALL BiosRomMemoryWriteByte(UNUSED u32 addr, UNUSED u8 val)
+void FASTCALL BiosRomMemoryWriteByte(UNUSED u32 addr, UNUSED u8 val)
 {
    // read-only
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void FASTCALL BiosRomMemoryWriteWord(UNUSED u32 addr, UNUSED u16 val)
+void FASTCALL BiosRomMemoryWriteWord(UNUSED u32 addr, UNUSED u16 val)
 {
    // read-only
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void FASTCALL BiosRomMemoryWriteLong(UNUSED u32 addr, UNUSED u32 val)
+
+void FASTCALL BiosRomMemoryWriteLong(UNUSED u32 addr, UNUSED u32 val)
 {
    // read-only
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u8 FASTCALL BupRamMemoryReadByte(u32 addr)
+u8 FASTCALL BupRamMemoryReadByte(u32 addr)
 {
    return T1ReadByte(BupRam, addr & 0xFFFF);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u16 FASTCALL BupRamMemoryReadWord(USED_IF_DEBUG u32 addr)
+u16 FASTCALL BupRamMemoryReadWord(USED_IF_DEBUG u32 addr)
 {
    LOG("bup\t: BackupRam read word - %08X\n", addr);
    return 0;
@@ -329,7 +317,7 @@ static u16 FASTCALL BupRamMemoryReadWord(USED_IF_DEBUG u32 addr)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u32 FASTCALL BupRamMemoryReadLong(USED_IF_DEBUG u32 addr)
+u32 FASTCALL BupRamMemoryReadLong(USED_IF_DEBUG u32 addr)
 {
    LOG("bup\t: BackupRam read long - %08X\n", addr);
    return 0;
@@ -337,31 +325,31 @@ static u32 FASTCALL BupRamMemoryReadLong(USED_IF_DEBUG u32 addr)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void FASTCALL BupRamMemoryWriteByte(u32 addr, u8 val)
+void FASTCALL BupRamMemoryWriteByte(u32 addr, u8 val)
 {
    T1WriteByte(BupRam, (addr & 0xFFFF) | 0x1, val);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void FASTCALL BupRamMemoryWriteWord(USED_IF_DEBUG u32 addr, UNUSED u16 val)
+void FASTCALL BupRamMemoryWriteWord(USED_IF_DEBUG u32 addr, UNUSED u16 val)
 {
    LOG("bup\t: BackupRam write word - %08X\n", addr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void FASTCALL BupRamMemoryWriteLong(USED_IF_DEBUG u32 addr, UNUSED u32 val)
+void FASTCALL BupRamMemoryWriteLong(USED_IF_DEBUG u32 addr, UNUSED u32 val)
 {
    LOG("bup\t: BackupRam write long - %08X\n", addr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void FillMemoryArea(unsigned short start, unsigned short end,
-                           readbytefunc r8func, readwordfunc r16func,
-                           readlongfunc r32func, writebytefunc w8func,
-                           writewordfunc w16func, writelongfunc w32func)
+void FillMemoryArea(unsigned short start, unsigned short end,
+                    readbytefunc r8func, readwordfunc r16func,
+                    readlongfunc r32func, writebytefunc w8func,
+                    writewordfunc w16func, writelongfunc w32func)
 {
    int i;
 
@@ -977,19 +965,6 @@ int YabSaveState(const char *filename)
    FILE *fp;
    int offset;
    IOCheck_struct check;
-   u8 *buf;
-   int totalsize;
-   int outputwidth;
-   int outputheight;
-   int movieposition;
-
-   check.done = 0;
-   check.size = 0;
-
-   //use a second set of savestates for movies
-   filename = MakeMovieStateName(filename);
-   if (!filename)
-      return -1;
 
    if ((fp = fopen(filename, "wb")) == NULL)
       return -1;
@@ -1005,18 +980,12 @@ int YabSaveState(const char *filename)
 #endif
 
    // Write version(fix me)
-   i = 2;
+   i = 1;
    ywrite(&check, (void *)&i, sizeof(i), 1, fp);
 
    // Skip the next 4 bytes for now
    i = 0;
    ywrite(&check, (void *)&i, sizeof(i), 1, fp);
-
-   //write frame number
-   ywrite(&check, (void *)&framecounter, 4, 1, fp);
-
-   //this will be updated with the movie position later
-   ywrite(&check, (void *)&framecounter, 4, 1, fp);
 
    // Go through each area and write each state
    i += CartSaveState(fp);
@@ -1046,39 +1015,11 @@ int YabSaveState(const char *filename)
    ywrite(&check, (void *)&yabsys.CurSH2FreqType, sizeof(int), 1, fp);
    ywrite(&check, (void *)&yabsys.IsPal, sizeof(int), 1, fp);
 
-   VIDCore->GetGlSize(&outputwidth, &outputheight);
-
-   totalsize=outputwidth * outputheight * sizeof(u32);
-
-   if ((buf = (u8 *)malloc(totalsize)) == NULL)
-   {
-      return -2;
-   }
-
-   YuiSwapBuffers();
-   #ifdef USE_OPENGL
-   glPixelZoom(1,1);
-   glReadBuffer(GL_BACK);
-   glReadPixels(0, 0, outputwidth, outputheight, GL_RGBA, GL_UNSIGNED_BYTE, buf);
-   #endif
-   YuiSwapBuffers();
-
-   ywrite(&check, (void *)&outputwidth, sizeof(outputwidth), 1, fp);
-   ywrite(&check, (void *)&outputheight, sizeof(outputheight), 1, fp);
-
-   ywrite(&check, (void *)buf, totalsize, 1, fp);
-
-   movieposition=ftell(fp);
-   //write the movie to the end of the savestate
-   SaveMovieInState(fp, check);
-
    i += StateFinishHeader(fp, offset);
 
    // Go back and update size
    fseek(fp, 8, SEEK_SET);
    ywrite(&check, (void *)&i, sizeof(i), 1, fp);
-   fseek(fp, 16, SEEK_SET);
-   ywrite(&check, (void *)&movieposition, sizeof(movieposition), 1, fp);
 
    fclose(fp);
 
@@ -1092,24 +1033,11 @@ int YabLoadState(const char *filename)
    FILE *fp;
    char id[3];
    u8 endian;
-   int headerversion, version, size, chunksize, headersize;
+   int version, size, chunksize;
    IOCheck_struct check;
-   u8* buf;
-   int totalsize;
-   int outputwidth;
-   int outputheight;
-   int curroutputwidth;
-   int curroutputheight;
-   int movieposition;
-
-   filename = MakeMovieStateName(filename);
-   if (!filename)
-      return -1;
 
    if ((fp = fopen(filename, "rb")) == NULL)
       return -1;
-
-   headersize = 0xC;
 
    // Read signature
    yread(&check, (void *)id, 1, 3, fp);
@@ -1122,27 +1050,8 @@ int YabLoadState(const char *filename)
 
    // Read header
    yread(&check, (void *)&endian, 1, 1, fp);
-   yread(&check, (void *)&headerversion, 4, 1, fp);
+   yread(&check, (void *)&version, 4, 1, fp);
    yread(&check, (void *)&size, 4, 1, fp);
-   switch(headerversion)
-   {
-      case 1:
-         /* This is the "original" version of the format */
-         break;
-      case 2:
-         /* version 2 adds video recording */
-         yread(&check, (void *)&framecounter, 4, 1, fp);
-		 movieposition=ftell(fp);
-		 yread(&check, (void *)&movieposition, 4, 1, fp);
-         headersize = 0x14;
-         break;
-      default:
-         /* we're trying to open a save state using a future version
-          * of the YSS format, that won't work, sorry :) */
-         fclose(fp);
-         return -3;
-         break;
-   }
 
 #ifdef WORDS_BIGENDIAN
    if (endian == 1)
@@ -1158,13 +1067,12 @@ int YabLoadState(const char *filename)
 
    // Make sure size variable matches actual size minus header
    fseek(fp, 0, SEEK_END);
-
-   if (size != (ftell(fp) - headersize))
+   if (size != (ftell(fp) - 0xC))
    {
       fclose(fp);
       return -2;
    }
-   fseek(fp, headersize, SEEK_SET);
+   fseek(fp, 0xC, SEEK_SET);
 
    // Verify version here
 
@@ -1273,40 +1181,6 @@ int YabLoadState(const char *filename)
    yread(&check, (void *)&yabsys.CurSH2FreqType, sizeof(int), 1, fp);
    yread(&check, (void *)&yabsys.IsPal, sizeof(int), 1, fp);
 
-   if (headerversion > 1) {
-
-   yread(&check, (void *)&outputwidth, sizeof(outputwidth), 1, fp);
-   yread(&check, (void *)&outputheight, sizeof(outputheight), 1, fp);
-
-   totalsize=outputwidth * outputheight * sizeof(u32);
-
-   if ((buf = (u8 *)malloc(totalsize)) == NULL)
-   {
-      return -2;
-   }
-
-   yread(&check, (void *)buf, totalsize, 1, fp);
-
-   YuiSwapBuffers();
-
-   #ifdef USE_OPENGL
-   if(VIDCore->id == VIDCORE_SOFT)
-     glRasterPos2i(0, outputheight);
-   if(VIDCore->id == VIDCORE_OGL)
-	 glRasterPos2i(0, outputheight/2);
-   #endif
-
-   VIDCore->GetGlSize(&curroutputwidth, &curroutputheight);
-   #ifdef USE_OPENGL
-   glPixelZoom((float)curroutputwidth / (float)outputwidth, ((float)curroutputheight / (float)outputheight));
-   glDrawPixels(outputwidth, outputheight, GL_RGBA, GL_UNSIGNED_BYTE, buf);
-   #endif
-   YuiSwapBuffers();
-
-   fseek(fp, movieposition, SEEK_SET);
-   MovieReadState(fp, filename);
-   }
-   
    fclose(fp);
 
    ScspUnMuteAudio();
@@ -1341,7 +1215,7 @@ int YabLoadStateSlot(const char *dirpath, u8 slot)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static int MappedMemoryAddMatch(u32 addr, u32 val, int searchtype, result_struct *result, u32 *numresults)
+int MappedMemoryAddMatch(u32 addr, u32 val, int searchtype, result_struct *result, u32 *numresults)
 {
    result[numresults[0]].addr = addr;
    result[numresults[0]].val = val;

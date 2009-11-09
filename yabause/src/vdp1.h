@@ -59,7 +59,6 @@ typedef struct
    void FASTCALL (*Vdp2SetPriorityNBG3)(int);
    void FASTCALL (*Vdp2SetPriorityRBG0)(int);
    void (*OnScreenDebugMessage)(char *string, ...);
-   void (*GetGlSize)(int *width, int *height);
 } VideoInterface_struct;
 
 extern VideoInterface_struct *VIDCore;

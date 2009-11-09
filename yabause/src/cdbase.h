@@ -35,8 +35,8 @@ typedef struct
         int id;
         const char *Name;
         int (*Init)(const char *);
-        int (*DeInit)(void);
-        int (*GetStatus)(void);
+        int (*DeInit)();
+        int (*GetStatus)();
         s32 (*ReadTOC)(u32 *TOC);
         int (*ReadSectorFAD)(u32 FAD, void *buffer);
 } CDInterface;

@@ -317,7 +317,7 @@ static void yui_sh_init (YuiSh * sh2) {
 }
 
 
-static GtkWidget * yui_sh_new(YuiWindow * y, gboolean bMaster) {
+GtkWidget * yui_sh_new(YuiWindow * y, gboolean bMaster) {
   GtkWidget * dialog;
   GClosure *closureF7; //, *closureF8;
   GtkAccelGroup *accelGroup;
@@ -326,8 +326,12 @@ static GtkWidget * yui_sh_new(YuiWindow * y, gboolean bMaster) {
   yui = y;
 
   if (!( yui->state & YUI_IS_INIT )) {
-    yui_window_run(yui);
-    yui_window_pause(yui);
+    /* FIXME:  The first parameter seems to be ignored in these functions,
+     * so NULL is safe; it might be better to consider moving the "yui"
+     * argument first and calling g_signal_connect_swapped() to eliminate
+     * the unknown parameter.  --AC */
+    yui_window_run(NULL, yui);
+    yui_window_pause(NULL, yui);
   }
 
   if ( bMaster && yui_msh ) return GTK_WIDGET(yui_msh);
@@ -560,7 +564,7 @@ static void SH2UpdateCodeList( YuiSh *sh2, u32 addr) {
 static void yui_sh_step( GtkWidget* widget, YuiSh * sh2 ) {
 
   SH2Step(sh2->debugsh);
-  yui_window_invalidate( yui ); /* update all dialogs, including us */
+  yui_window_invalidate( widget, yui ); /* update all dialogs, including us */
 }
 
 static void yui_sh_editedReg( GtkCellRendererText *cellrenderertext,
@@ -583,7 +587,7 @@ static void yui_sh_editedReg( GtkCellRendererText *cellrenderertext,
     sh2setRegister( sh2, i, addr );
     gtk_list_store_set( GTK_LIST_STORE( sh2->regListStore ), &iter, 1, bptext, -1 );
   }
-  yui_window_invalidate( yui );
+  yui_window_invalidate( NULL, yui );
 }
 
 static void yui_sh_editedBp( GtkCellRendererText *cellrenderertext,
@@ -719,7 +723,7 @@ static void yui_sh_editedMbpFlags( GtkCellRendererText *cellrenderertext,
   SH2UpdateMemoryBreakpointList(sh2);
 }
 
-static void debugPauseLoop(void) { /* secondary gtk event loop for the "breakpoint pause" state */
+static void debugPauseLoop() { /* secondary gtk event loop for the "breakpoint pause" state */
 
   while ( !(yui->state & YUI_IS_RUNNING) )
     if ( gtk_main_iteration() ) return;
@@ -727,7 +731,7 @@ static void debugPauseLoop(void) { /* secondary gtk event loop for the "breakpoi
 
 static void SH2BreakpointHandler (SH2_struct *context, u32 addr) {
 
-  yui_window_pause(yui);
+  yui_window_pause(NULL, yui);
   {
     sh2regs_struct sh2regs;
     YuiSh* sh2 = YUI_SH(yui_sh_new( yui, context == MSH2 ));

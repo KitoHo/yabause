@@ -30,11 +30,11 @@
 
 // Contains the Dummy and ISO CD Interfaces
 
-static int DummyCDInit(const char *);
-static int DummyCDDeInit(void);
-static int DummyCDGetStatus(void);
-static s32 DummyCDReadTOC(u32 *);
-static int DummyCDReadSectorFAD(u32, void *);
+int DummyCDInit(const char *);
+int DummyCDDeInit();
+int DummyCDGetStatus();
+s32 DummyCDReadTOC(u32 *);
+int DummyCDReadSectorFAD(u32, void *);
 
 CDInterface DummyCD = {
 CDCORE_DUMMY,
@@ -46,11 +46,11 @@ DummyCDReadTOC,
 DummyCDReadSectorFAD
 };
 
-static int ISOCDInit(const char *);
-static int ISOCDDeInit(void);
-static int ISOCDGetStatus(void);
-static s32 ISOCDReadTOC(u32 *);
-static int ISOCDReadSectorFAD(u32, void *);
+int ISOCDInit(const char *);
+int ISOCDDeInit();
+int ISOCDGetStatus();
+s32 ISOCDReadTOC(u32 *);
+int ISOCDReadSectorFAD(u32, void *);
 
 CDInterface ISOCD = {
 CDCORE_ISO,
@@ -66,7 +66,7 @@ ISOCDReadSectorFAD
 // Dummy Interface
 //////////////////////////////////////////////////////////////////////////////
 
-static int DummyCDInit(UNUSED const char *cdrom_name)
+int DummyCDInit(UNUSED const char *cdrom_name)
 {
 	// Initialization function. cdrom_name can be whatever you want it to be.
 	// Obviously with some ports(e.g. the dreamcast port) you probably won't
@@ -76,7 +76,7 @@ static int DummyCDInit(UNUSED const char *cdrom_name)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static int DummyCDDeInit(void)
+int DummyCDDeInit()
 {
 	// Cleanup function. Enough said.
 	return 0;
@@ -84,7 +84,7 @@ static int DummyCDDeInit(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static int DummyCDGetStatus(void)
+int DummyCDGetStatus()
 {
 	// This function is called periodically to see what the status of the
 	// drive is.
@@ -104,7 +104,7 @@ static int DummyCDGetStatus(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static s32 DummyCDReadTOC(UNUSED u32 *TOC)
+s32 DummyCDReadTOC(UNUSED u32 *TOC)
 {
 	// The format of TOC is as follows:
 	// TOC[0] - TOC[98] are meant for tracks 1-99. Each entry has the following
@@ -144,7 +144,7 @@ static s32 DummyCDReadTOC(UNUSED u32 *TOC)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static int DummyCDReadSectorFAD(UNUSED u32 FAD, void * buffer)
+int DummyCDReadSectorFAD(UNUSED u32 FAD, void * buffer)
 {
 	// This function is supposed to read exactly 1 -RAW- 2352-byte sector at
 	// the specified FAD address to buffer. Should return true if successful,
@@ -182,7 +182,7 @@ static struct
 
 //////////////////////////////////////////////////////////////////////////////
 
-static int InitBinCue(const char *cuefilename)
+int InitBinCue(const char *cuefilename)
 {
    u32 size;
    char *tempbuffer, *tempbuffer2;
@@ -349,7 +349,7 @@ static int InitBinCue(const char *cuefilename)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static int ISOCDInit(const char * iso) {
+int ISOCDInit(const char * iso) {
    char header[6];
 
    memset(isoTOC, 0xFF, 0xCC * 2);
@@ -415,20 +415,20 @@ static int ISOCDInit(const char * iso) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-static int ISOCDDeInit(void) {
+int ISOCDDeInit() {
         fclose(isofile);
 	return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static int ISOCDGetStatus(void) {
+int ISOCDGetStatus() {
         return isofile != NULL ? 0 : 2;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static s32 ISOCDReadTOC(u32 * TOC) {
+s32 ISOCDReadTOC(u32 * TOC) {
    memcpy(TOC, isoTOC, 0xCC * 2);
 
    return (0xCC * 2);
@@ -436,7 +436,7 @@ static s32 ISOCDReadTOC(u32 * TOC) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-static int ISOCDReadSectorFAD(u32 FAD, void *buffer) {
+int ISOCDReadSectorFAD(u32 FAD, void *buffer) {
         int sector;
         int i;
 	

@@ -22,7 +22,6 @@
 #include "debug.h"
 #include "sh2core.h"
 #include "yabause.h"
-#include "coffelf.h"
 
 typedef struct
 {

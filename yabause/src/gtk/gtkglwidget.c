@@ -114,7 +114,7 @@ static gboolean yui_gl_resize(GtkWidget *w,GdkEventConfigure *event, gpointer da
 
 int beforehiding = 0;
 
-static gboolean gonna_hide(gpointer data) {
+gboolean gonna_hide(gpointer data) {
 	beforehiding--;
 
 	if (beforehiding == 0) {

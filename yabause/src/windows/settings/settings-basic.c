@@ -24,7 +24,6 @@
 #include "../../cs0.h"
 #include "../../cs2.h"
 #include "../resource.h"
-#include "../yabause.h"
 #include "settings.h"
 
 char biosfilename[MAX_PATH] = "\0";
@@ -41,8 +40,6 @@ int carttype;
 
 int num_cdroms=0;
 char drive_list[24];
-
-void StartGame();
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -694,8 +691,6 @@ LRESULT CALLBACK BasicSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
 
                if (cdromchanged && nocorechange == 0)
                {
-					StartGame();
-
 #ifndef USETHREADS
                   if (IsPathCdrom(cdrompath))
                      Cs2ChangeCDCore(CDCORE_SPTI, cdrompath);
@@ -706,7 +701,6 @@ LRESULT CALLBACK BasicSettingsDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
                   changecore |= 1;
                   while (corechanged == 0) { Sleep(0); }
 #endif
-				  YabauseReset();
                }
 
           		SetWindowLong(hDlg,	DWL_MSGRESULT, PSNRET_NOERROR);

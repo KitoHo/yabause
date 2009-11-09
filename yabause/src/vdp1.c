@@ -505,7 +505,7 @@ void FASTCALL Vdp1ReadCommand(vdp1cmd_struct *cmd, u32 addr) {
    cmd->CMDYC = T1ReadWord(Vdp1Ram, addr + 0x16);
    cmd->CMDXD = T1ReadWord(Vdp1Ram, addr + 0x18);
    cmd->CMDYD = T1ReadWord(Vdp1Ram, addr + 0x1A);
-   cmd->CMDGRDA = T1ReadWord(Vdp1Ram, addr + 0x1C);
+   cmd->CMDGRDA = T1ReadWord(Vdp1Ram, addr + 0x1B);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -543,7 +543,7 @@ int Vdp1LoadState(FILE *fp, UNUSED int version, int size)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u32 Vdp1DebugGetCommandNumberAddr(u32 number)
+u32 Vdp1DebugGetCommandNumberAddr(u32 number)
 {
    u32 addr = 0;
    u32 returnAddr = 0xFFFFFFFF;

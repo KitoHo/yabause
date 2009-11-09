@@ -123,7 +123,7 @@ YuiRangeItem mousepercores[] = {
 	{ 0, 0 }
 };
 
-static void hide_show_cart_path(YuiRange * instance, gpointer data) {
+void hide_show_cart_path(YuiRange * instance, gpointer data) {
 	gint i = yui_range_get_active(instance);
 
 	if (i == 8) {
@@ -133,7 +133,7 @@ static void hide_show_cart_path(YuiRange * instance, gpointer data) {
 	}
 }
 
-static void hide_show_netlink(YuiRange * instance, gpointer data) {
+void hide_show_netlink(YuiRange * instance, gpointer data) {
 	gint i = yui_range_get_active(instance);
 
 	if (i != 8) {
@@ -143,7 +143,7 @@ static void hide_show_netlink(YuiRange * instance, gpointer data) {
 	}
 }
 
-static void percore_changed(GtkWidget * widget, gpointer data) {
+void percore_changed(GtkWidget * widget, gpointer data) {
 	const char * core_s = percores[gtk_combo_box_get_active(GTK_COMBO_BOX(widget))].value;
 	GList * entrylist = data;
 	int core;
@@ -227,7 +227,7 @@ static void pertype_display_mouse(GtkWidget * box)
    gtk_widget_show_all(box);
 }
 
-static void pertype_changed(GtkWidget * widget, gpointer data) {
+void pertype_changed(GtkWidget * widget, gpointer data) {
 	GtkTreePath * path;
 	gchar * strpath;
 	int i;
@@ -263,10 +263,6 @@ static void pertype_changed(GtkWidget * widget, gpointer data) {
 		g_free(strpath);
 		gtk_tree_path_free(path);
 	}
-}
-
-static void frameskip_toggled(GtkWidget * widget, gpointer data) {
-	g_key_file_set_integer(keyfile, "General", "Frameskip", gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)));
 }
 
 GtkWidget* create_dialog1(void) {
@@ -322,15 +318,6 @@ GtkWidget* create_dialog1(void) {
 
   box = yui_page_add(YUI_PAGE(video_sound), _("Video Format"));
   gtk_container_add(GTK_CONTAINER(box), yui_range_new(keyfile, "General", "VideoFormat", vidformats));
-
-  box = yui_page_add(YUI_PAGE(video_sound), _("Frame Skip/Limiter"));
-  {
-    GtkWidget * frameskip = gtk_check_button_new_with_label("Enable frame skipping/limiting");
-    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(frameskip), g_key_file_get_integer(keyfile, "General", "Frameskip", NULL));
-    gtk_container_set_border_width(GTK_CONTAINER(frameskip), 10);
-    g_signal_connect(frameskip, "toggled", G_CALLBACK(frameskip_toggled), NULL);
-    gtk_container_add(GTK_CONTAINER(box), frameskip);
-  }
   
   gtk_notebook_append_page(GTK_NOTEBOOK(notebook1), video_sound, gtk_label_new (_("Video")));
   gtk_widget_show_all(video_sound);

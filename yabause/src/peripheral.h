@@ -50,7 +50,7 @@ typedef struct
    int (*Init)(void);
    void (*DeInit)(void);
    int (*HandleEvents)(void);
-   void (*PerSetButtonMapping)(void);
+   void (*PerSetButtonMapping)();
    u32 (*Scan)(void);
    int canScan;
    void (*Flush)(void);
@@ -92,7 +92,6 @@ void PerDeInit(void);
  */
 void * PerAddPeripheral(PortData_struct *port, int perid);
 int PerGetId(void * peripheral);
-void PerRemovePeripheral(PortData_struct *port, int removeoffset);
 void PerPortReset(void);
 /**
  * Iterate the list of peripherals connected to a port

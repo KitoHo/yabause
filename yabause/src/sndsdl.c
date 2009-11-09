@@ -31,16 +31,16 @@
 #include "sndsdl.h"
 #include "debug.h"
 
-static int SNDSDLInit(void);
-static void SNDSDLDeInit(void);
-static int SNDSDLReset(void);
-static int SNDSDLChangeVideoFormat(int vertfreq);
+int SNDSDLInit();
+void SNDSDLDeInit();
+int SNDSDLReset();
+int SNDSDLChangeVideoFormat(int vertfreq);
 static void sdlConvert32uto16s(s32 *srcL, s32 *srcR, s16 *dst, u32 len);
-static void SNDSDLUpdateAudio(u32 *leftchanbuffer, u32 *rightchanbuffer, u32 num_samples);
-static u32 SNDSDLGetAudioSpace(void);
-static void SNDSDLMuteAudio(void);
-static void SNDSDLUnMuteAudio(void);
-static void SNDSDLSetVolume(int volume);
+void SNDSDLUpdateAudio(u32 *leftchanbuffer, u32 *rightchanbuffer, u32 num_samples);
+u32 SNDSDLGetAudioSpace();
+void SNDSDLMuteAudio();
+void SNDSDLUnMuteAudio();
+void SNDSDLSetVolume(int volume);
 
 SoundInterface_struct SNDSDL = {
 SNDCORE_SDL,
@@ -68,7 +68,7 @@ static u8 soundvolume;
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void MixAudio(UNUSED void *userdata, Uint8 *stream, int len) {
+void MixAudio(UNUSED void *userdata, Uint8 *stream, int len) {
 	int i;
 	Uint8* soundbuf = (Uint8*)stereodata16;
 
@@ -84,7 +84,7 @@ static void MixAudio(UNUSED void *userdata, Uint8 *stream, int len) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-static int SNDSDLInit(void)
+int SNDSDLInit()
 {
    SDL_InitSubSystem(SDL_INIT_AUDIO);
 //   if (SDL_InitSubSystem(SDL_INIT_AUDIO) != 0);
@@ -130,7 +130,7 @@ static int SNDSDLInit(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void SNDSDLDeInit(void)
+void SNDSDLDeInit()
 {
    SDL_CloseAudio();
 
@@ -140,14 +140,14 @@ static void SNDSDLDeInit(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static int SNDSDLReset(void)
+int SNDSDLReset()
 {
    return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static int SNDSDLChangeVideoFormat(int vertfreq)
+int SNDSDLChangeVideoFormat(int vertfreq)
 {
    soundlen = audiofmt.freq / vertfreq;
    soundbufsize = soundlen * NUMSOUNDBLOCKS * 2 * 2;
@@ -187,7 +187,7 @@ static void sdlConvert32uto16s(s32 *srcL, s32 *srcR, s16 *dst, u32 len) {
    } 
 }
 
-static void SNDSDLUpdateAudio(u32 *leftchanbuffer, u32 *rightchanbuffer, u32 num_samples)
+void SNDSDLUpdateAudio(u32 *leftchanbuffer, u32 *rightchanbuffer, u32 num_samples)
 {
    u32 copy1size=0, copy2size=0;
    SDL_LockAudio();
@@ -216,7 +216,7 @@ static void SNDSDLUpdateAudio(u32 *leftchanbuffer, u32 *rightchanbuffer, u32 num
 
 //////////////////////////////////////////////////////////////////////////////
 
-static u32 SNDSDLGetAudioSpace(void)
+u32 SNDSDLGetAudioSpace()
 {
    u32 freespace=0;
 
@@ -230,21 +230,21 @@ static u32 SNDSDLGetAudioSpace(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void SNDSDLMuteAudio(void)
+void SNDSDLMuteAudio()
 {
    SDL_PauseAudio(1);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void SNDSDLUnMuteAudio(void)
+void SNDSDLUnMuteAudio()
 {
    SDL_PauseAudio(0);
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void SNDSDLSetVolume(int volume)
+void SNDSDLSetVolume(int volume)
 {
    soundvolume = ( (double)SDL_MIX_MAXVOLUME /(double)100 ) *volume;
 }

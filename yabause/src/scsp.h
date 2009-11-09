@@ -31,14 +31,14 @@ typedef struct
 {
    int id;
    const char *Name;
-   int (*Init)(void);
-   void (*DeInit)(void);
-   int (*Reset)(void);
+   int (*Init)();
+   void (*DeInit)();
+   int (*Reset)();
    int (*ChangeVideoFormat)(int vertfreq);
    void (*UpdateAudio)(u32 *leftchanbuffer, u32 *rightchanbuffer, u32 num_samples);
-   u32 (*GetAudioSpace)(void);
-   void (*MuteAudio)(void);
-   void (*UnMuteAudio)(void);
+   u32 (*GetAudioSpace)();
+   void (*MuteAudio)();
+   void (*UnMuteAudio)();
    void (*SetVolume)(int volume);
 } SoundInterface_struct;
 
@@ -95,8 +95,8 @@ void ScspSlotDebugStats(u8 slotnum, char *outstring);
 void ScspCommonControlRegisterDebugStats(char *outstring);
 int ScspSlotDebugSaveRegisters(u8 slotnum, const char *filename);
 int ScspSlotDebugAudioSaveWav(u8 slotnum, const char *filename);
-void ScspMuteAudio(void);
-void ScspUnMuteAudio(void);
+void ScspMuteAudio();
+void ScspUnMuteAudio();
 void ScspSetVolume(int volume);
 
 void FASTCALL scsp_w_b(u32, u8);
@@ -117,17 +117,15 @@ u8 scsp_midi_out_read(void);
 void scsp_update(s32 *bufL, s32 *bufR, u32 len);
 void scsp_update_timer(u32 len);
 
-u32 FASTCALL c68k_word_read(const u32 adr);
-
 u32 M68KDisasm(u32 addr, char *outstring);
-void M68KStep(void);
+void M68KStep();
 void M68KGetRegisters(m68kregs_struct *regs);
 void M68KSetRegisters(m68kregs_struct *regs);
 void M68KSetBreakpointCallBack(void (*func)(u32));
 int M68KAddCodeBreakpoint(u32 addr);
-void M68KSortCodeBreakpoints(void);
+void M68KSortCodeBreakpoints();
 int M68KDelCodeBreakpoint(u32 addr);
-m68kcodebreakpoint_struct *M68KGetBreakpointList(void);
-void M68KClearCodeBreakpoints(void);
+m68kcodebreakpoint_struct *M68KGetBreakpointList();
+void M68KClearCodeBreakpoints();
 
 #endif

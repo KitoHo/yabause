@@ -141,8 +141,8 @@ GtkWidget * yui_scudsp_new(YuiWindow * y) {
   yui_scudsp = YUI_SCUDSP(dialog);
 
   if (!( yui->state & YUI_IS_INIT )) {
-    yui_window_run(yui);
-    yui_window_pause(yui);
+    yui_window_run(dialog, yui);
+    yui_window_pause(dialog, yui);
   }
 
   ScuDspSetBreakpointCallBack(&yui_scudsp_breakpoint_handler);
@@ -324,7 +324,7 @@ static void yui_scudsp_update_codelist( YuiScudsp *scudsp, u32 addr) {
 static void yui_scudsp_step( GtkWidget* widget, YuiScudsp * scudsp ) {
 
   ScuDspStep();
-  yui_window_invalidate( yui ); /* update all dialogs, including us */
+  yui_window_invalidate( widget, yui ); /* update all dialogs, including us */
 }
 
 static void yui_scudsp_editedReg( GtkCellRendererText *cellrenderertext,
@@ -347,7 +347,7 @@ static void yui_scudsp_editedReg( GtkCellRendererText *cellrenderertext,
     scudspsetRegister( scudsp, i, addr );
     gtk_list_store_set( GTK_LIST_STORE( scudsp->regListStore ), &iter, 1, bptext, -1 );
   }
-  yui_window_invalidate( yui );
+  yui_window_invalidate( NULL, yui );
 }
 
 static void yui_scudsp_editedBp( GtkCellRendererText *cellrenderertext,
@@ -375,7 +375,7 @@ static void yui_scudsp_editedBp( GtkCellRendererText *cellrenderertext,
   gtk_list_store_set( GTK_LIST_STORE( scudsp->bpListStore ), &iter, 0, bptext, -1 );
 }
 
-static void debugPauseLoop(void) { /* secondary gtk event loop for the "breakpoint pause" state */
+static void debugPauseLoop() { /* secondary gtk event loop for the "breakpoint pause" state */
 
   while ( !(yui->state & YUI_IS_RUNNING) )
     if ( gtk_main_iteration() ) return;
@@ -383,7 +383,7 @@ static void debugPauseLoop(void) { /* secondary gtk event loop for the "breakpoi
 
 static void yui_scudsp_breakpoint_handler (u32 addr) {
 
-  yui_window_pause(yui);
+  yui_window_pause(NULL, yui);
   {
     scudspregs_struct scudspregs;
     YuiScudsp* scudsp = YUI_SCUDSP(yui_scudsp_new( yui ));

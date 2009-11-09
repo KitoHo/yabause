@@ -26,13 +26,10 @@
 #include "../yui.h"
 #include "settings/settings.h"
 #include "resource.h"
-#include "../movie.h"
 
 int PERDXInit(void);
 void PERDXDeInit(void);
 int PERDXHandleEvents(void);
-//void YuiCaptureVideo(void);
-int Check_Skip_Key();
 
 PerInterface_struct PERDIRECTX = {
 PERCORE_DIRECTX,
@@ -42,8 +39,8 @@ PERDXDeInit,
 PERDXHandleEvents
 };
 
-HWND YabWin;
-HINSTANCE y_hInstance;
+extern HWND YabWin;
+extern HINSTANCE y_hInstance;
 
 LPDIRECTINPUT8 lpDI8 = NULL;
 LPDIRECTINPUTDEVICE8 lpDIDevice[256]; // I hope that's enough
@@ -85,8 +82,8 @@ BOOL CALLBACK EnumPeripheralsCallback (LPCDIDEVICEINSTANCE lpddi, LPVOID pvRef)
        GET_DIDEVICE_TYPE(lpddi->dwDevType) == DI8DEVTYPE_JOYSTICK ||
        GET_DIDEVICE_TYPE(lpddi->dwDevType) == DI8DEVTYPE_KEYBOARD)
    {     
-      if (SUCCEEDED(IDirectInput8_CreateDevice(lpDI8, &lpddi->guidInstance, &lpDIDevice[numdevices],
-          NULL) ))
+      if (IDirectInput8_CreateDevice(lpDI8, &lpddi->guidInstance, &lpDIDevice[numdevices],
+          NULL) == DI_OK)
          numdevices++;
    }
 
@@ -128,8 +125,8 @@ int PERDXInit(void)
    memset(pad, 0, sizeof(pad));
    memset(paddevice, 0, sizeof(paddevice));
 
-   if (FAILED((ret = DirectInput8Create(GetModuleHandle(NULL), DIRECTINPUT_VERSION,
-       &IID_IDirectInput8, (LPVOID *)&lpDI8, NULL)) ))
+   if ((ret = DirectInput8Create(GetModuleHandle(NULL), DIRECTINPUT_VERSION,
+       &IID_IDirectInput8, (LPVOID *)&lpDI8, NULL)) != DI_OK)
    {
       sprintf(tempstr, "DirectInput8Create error: %s - %s", DXGetErrorString8(ret), DXGetErrorDescription8(ret));
       MessageBox (NULL, _16(tempstr), _16("Error"),  MB_OK | MB_ICONINFORMATION);
@@ -139,23 +136,23 @@ int PERDXInit(void)
    IDirectInput8_EnumDevices(lpDI8, DI8DEVCLASS_ALL, EnumPeripheralsCallback,
                       NULL, DIEDFL_ATTACHEDONLY);
 
-   if (FAILED((ret = IDirectInput8_CreateDevice(lpDI8, &GUID_SysKeyboard, &lpDIDevice[0],
-       NULL)) ))
+   if ((ret = IDirectInput8_CreateDevice(lpDI8, &GUID_SysKeyboard, &lpDIDevice[0],
+       NULL)) != DI_OK)
    {
       sprintf(tempstr, "IDirectInput8_CreateDevice error: %s - %s", DXGetErrorString8(ret), DXGetErrorDescription8(ret));
       MessageBox (NULL, _16(tempstr), _16("Error"),  MB_OK | MB_ICONINFORMATION);
       return -1;
    }
 
-   if (FAILED((ret = IDirectInputDevice8_SetDataFormat(lpDIDevice[0], &c_dfDIKeyboard)) ))
+   if ((ret = IDirectInputDevice8_SetDataFormat(lpDIDevice[0], &c_dfDIKeyboard)) != DI_OK)
    {
       sprintf(tempstr, "IDirectInputDevice8_SetDataFormat error: %s - %s", DXGetErrorString8(ret), DXGetErrorDescription8(ret));
       MessageBox (NULL, _16(tempstr), _16("Error"),  MB_OK | MB_ICONINFORMATION);
       return -1;
    }
 
-   if (FAILED((ret = IDirectInputDevice8_SetCooperativeLevel(lpDIDevice[0], YabWin,
-       DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY)) ))
+   if ((ret = IDirectInputDevice8_SetCooperativeLevel(lpDIDevice[0], YabWin,
+       DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY)) != DI_OK)
    {
       sprintf(tempstr, "IDirectInputDevice8_SetCooperativeLevel error: %s - %s", DXGetErrorString8(ret), DXGetErrorDescription8(ret));
       MessageBox (NULL, _16(tempstr), _16("Error"),  MB_OK | MB_ICONINFORMATION);
@@ -169,7 +166,7 @@ int PERDXInit(void)
    dipdw.dwData = 8; // should be enough
 
    // Setup Buffered input
-   if (FAILED((ret = IDirectInputDevice8_SetProperty(lpDIDevice[0], DIPROP_BUFFERSIZE, &dipdw.diph)) ))
+   if ((ret = IDirectInputDevice8_SetProperty(lpDIDevice[0], DIPROP_BUFFERSIZE, &dipdw.diph)) != DI_OK)
    {
       sprintf(tempstr, "IDirectInputDevice8_SetProperty error: %s - %s", DXGetErrorString8(ret), DXGetErrorDescription8(ret));
       MessageBox (NULL, _16(tempstr), _16("Error"),  MB_OK | MB_ICONINFORMATION);
@@ -321,8 +318,8 @@ void PERDXLoadDevices(char *inifilename)
             StringToGUID(tempstr, &guid);
 
             // Ok, now that we've got the GUID of the device, let's set it up
-            if (FAILED(IDirectInput8_CreateDevice(lpDI8, &guid, &lpDIDevice[padindex],
-               NULL) ))
+            if (IDirectInput8_CreateDevice(lpDI8, &guid, &lpDIDevice[padindex],
+               NULL) != DI_OK)
             {
                curdevice->lpDIDevice = NULL;
                curdevice->emulatetype = 0;
@@ -333,12 +330,12 @@ void PERDXLoadDevices(char *inifilename)
 
             didc.dwSize = sizeof(DIDEVCAPS);
 
-            if (FAILED(IDirectInputDevice8_GetCapabilities(lpDIDevice[padindex], &didc) ))
+            if (IDirectInputDevice8_GetCapabilities(lpDIDevice[padindex], &didc) != DI_OK)
                continue;
 
             if (GET_DIDEVICE_TYPE(didc.dwDevType) == DI8DEVTYPE_KEYBOARD)
             {
-               if (FAILED(IDirectInputDevice8_SetDataFormat(lpDIDevice[padindex], &c_dfDIKeyboard) ))
+               if (IDirectInputDevice8_SetDataFormat(lpDIDevice[padindex], &c_dfDIKeyboard) != DI_OK)
                   continue;
                curdevice->type = TYPE_KEYBOARD;
                coopflags |= DISCL_NOWINKEY;
@@ -346,13 +343,13 @@ void PERDXLoadDevices(char *inifilename)
             else if (GET_DIDEVICE_TYPE(didc.dwDevType) == DI8DEVTYPE_GAMEPAD ||
                GET_DIDEVICE_TYPE(didc.dwDevType) == DI8DEVTYPE_JOYSTICK)
             {
-               if (FAILED(IDirectInputDevice8_SetDataFormat(lpDIDevice[padindex], &c_dfDIJoystick2) ))
+               if (IDirectInputDevice8_SetDataFormat(lpDIDevice[padindex], &c_dfDIJoystick2) != DI_OK)
                   continue;
                curdevice->type = TYPE_JOYSTICK;
             }
             else if (GET_DIDEVICE_TYPE(didc.dwDevType) == DI8DEVTYPE_MOUSE)
             {
-               if (FAILED(IDirectInputDevice8_SetDataFormat(lpDIDevice[padindex], &c_dfDIMouse2) ))
+               if (IDirectInputDevice8_SetDataFormat(lpDIDevice[padindex], &c_dfDIMouse2) != DI_OK)
                   continue;
                curdevice->type = TYPE_MOUSE;
                coopflags = DISCL_FOREGROUND | DISCL_EXCLUSIVE;
@@ -369,7 +366,7 @@ void PERDXLoadDevices(char *inifilename)
             dipdw.dwData = 8; // should be enough
 
             // Setup Buffered input
-            if (FAILED(IDirectInputDevice8_SetProperty(lpDIDevice[padindex], DIPROP_BUFFERSIZE, &dipdw.diph)))
+            if (IDirectInputDevice8_SetProperty(lpDIDevice[padindex], DIPROP_BUFFERSIZE, &dipdw.diph) != DI_OK)
                continue;
 
             IDirectInputDevice8_Acquire(lpDIDevice[padindex]);
@@ -472,8 +469,8 @@ void PollKeys(void)
       size = 8;
 
       // Poll events
-      if (FAILED(IDirectInputDevice8_GetDeviceData(paddevice[i].lpDIDevice,
-          sizeof(DIDEVICEOBJECTDATA), didod, &size, 0)))
+      if (IDirectInputDevice8_GetDeviceData(paddevice[i].lpDIDevice,
+          sizeof(DIDEVICEOBJECTDATA), didod, &size, 0) != DI_OK)
       {
          if (hr == DIERR_INPUTLOST || hr == DIERR_NOTACQUIRED)
          {
@@ -647,10 +644,6 @@ int PERDXHandleEvents(void)
    if (YabauseExec() != 0)
       return -1;
 
-   Update_RAM_Search();
-   Update_RAM_Watch();
-   YuiCaptureVideo();
-
    return 0;
 }
 
@@ -704,8 +697,8 @@ void PERDXListDevices(HWND control, int emulatetype)
 {
    LPDIRECTINPUT8 lpDI8temp = NULL;
 
-   if (FAILED(DirectInput8Create(GetModuleHandle(NULL), DIRECTINPUT_VERSION,
-       &IID_IDirectInput8, (LPVOID *)&lpDI8temp, NULL)))
+   if (DirectInput8Create(GetModuleHandle(NULL), DIRECTINPUT_VERSION,
+       &IID_IDirectInput8, (LPVOID *)&lpDI8temp, NULL) != DI_OK)
       return;
 
    numguids = 0;
@@ -865,12 +858,12 @@ int PERDXInitControlConfig(HWND hWnd, u8 padnum, int *controlmap, const char *in
          }
       }
 
-      if (FAILED(DirectInput8Create(GetModuleHandle(NULL), DIRECTINPUT_VERSION,
-          &IID_IDirectInput8, (LPVOID *)&lpDI8temp, NULL)))
+      if (DirectInput8Create(GetModuleHandle(NULL), DIRECTINPUT_VERSION,
+          &IID_IDirectInput8, (LPVOID *)&lpDI8temp, NULL) != DI_OK)
          return -1;
 
-      if (FAILED(IDirectInput8_CreateDevice(lpDI8temp, &GUIDDevice[i], &lpDIDevicetemp,
-          NULL)))
+      if (IDirectInput8_CreateDevice(lpDI8temp, &GUIDDevice[i], &lpDIDevicetemp,
+          NULL) != DI_OK)
       {
          IDirectInput8_Release(lpDI8temp);
          return -1;
@@ -878,7 +871,7 @@ int PERDXInitControlConfig(HWND hWnd, u8 padnum, int *controlmap, const char *in
 
       didc.dwSize = sizeof(DIDEVCAPS);
 
-      if (FAILED(IDirectInputDevice8_GetCapabilities(lpDIDevicetemp, &didc)))
+      if (IDirectInputDevice8_GetCapabilities(lpDIDevicetemp, &didc) != DI_OK)
       {
          IDirectInputDevice8_Release(lpDIDevicetemp);       
          IDirectInput8_Release(lpDI8temp);
@@ -940,12 +933,12 @@ int PERDXFetchNextPress(HWND hWnd, u32 guidnum, char *buttonname)
    DIDEVCAPS didc;
    int buttonid=-1;
 
-   if (FAILED(DirectInput8Create(GetModuleHandle(NULL), DIRECTINPUT_VERSION,
-       &IID_IDirectInput8, (LPVOID *)&lpDI8temp, NULL)))
+   if (DirectInput8Create(GetModuleHandle(NULL), DIRECTINPUT_VERSION,
+       &IID_IDirectInput8, (LPVOID *)&lpDI8temp, NULL) != DI_OK)
       return -1;
 
-   if (FAILED(IDirectInput8_CreateDevice(lpDI8temp, &GUIDDevice[guidnum], &lpDIDevicetemp,
-       NULL)))
+   if (IDirectInput8_CreateDevice(lpDI8temp, &GUIDDevice[guidnum], &lpDIDevicetemp,
+       NULL) != DI_OK)
    {
       IDirectInput8_Release(lpDI8temp);
       return -1;
@@ -953,7 +946,7 @@ int PERDXFetchNextPress(HWND hWnd, u32 guidnum, char *buttonname)
 
    didc.dwSize = sizeof(DIDEVCAPS);
 
-   if (FAILED(IDirectInputDevice8_GetCapabilities(lpDIDevicetemp, &didc)))
+   if (IDirectInputDevice8_GetCapabilities(lpDIDevicetemp, &didc) != DI_OK)
    {
       IDirectInputDevice8_Release(lpDIDevicetemp);       
       IDirectInput8_Release(lpDI8temp);
@@ -962,7 +955,7 @@ int PERDXFetchNextPress(HWND hWnd, u32 guidnum, char *buttonname)
 
    if (GET_DIDEVICE_TYPE(didc.dwDevType) == DI8DEVTYPE_KEYBOARD)
    {
-      if (FAILED(IDirectInputDevice8_SetDataFormat(lpDIDevicetemp, &c_dfDIKeyboard)))
+      if (IDirectInputDevice8_SetDataFormat(lpDIDevicetemp, &c_dfDIKeyboard) != DI_OK)
       {
          IDirectInputDevice8_Release(lpDIDevicetemp);       
          IDirectInput8_Release(lpDI8temp);
@@ -972,7 +965,7 @@ int PERDXFetchNextPress(HWND hWnd, u32 guidnum, char *buttonname)
    else if (GET_DIDEVICE_TYPE(didc.dwDevType) == DI8DEVTYPE_GAMEPAD ||
            GET_DIDEVICE_TYPE(didc.dwDevType) == DI8DEVTYPE_JOYSTICK)
    {
-      if (FAILED(IDirectInputDevice8_SetDataFormat(lpDIDevicetemp, &c_dfDIJoystick)))
+      if (IDirectInputDevice8_SetDataFormat(lpDIDevicetemp, &c_dfDIJoystick) != DI_OK)
       {
          IDirectInputDevice8_Release(lpDIDevicetemp);       
          IDirectInput8_Release(lpDI8temp);
@@ -981,7 +974,7 @@ int PERDXFetchNextPress(HWND hWnd, u32 guidnum, char *buttonname)
    }
    else if (GET_DIDEVICE_TYPE(didc.dwDevType) == DI8DEVTYPE_MOUSE)
    {
-      if (FAILED(IDirectInputDevice8_SetDataFormat(lpDIDevicetemp, &c_dfDIMouse2)))
+      if (IDirectInputDevice8_SetDataFormat(lpDIDevicetemp, &c_dfDIMouse2) != DI_OK)
       {
          IDirectInputDevice8_Release(lpDIDevicetemp);       
          IDirectInput8_Release(lpDI8temp);
@@ -1110,8 +1103,8 @@ LRESULT CALLBACK ButtonConfigDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
       {
          lpDIDevicetemp = (LPDIRECTINPUTDEVICE8)lParam;
 
-         if (FAILED(IDirectInputDevice8_SetCooperativeLevel(lpDIDevicetemp, hDlg,
-              DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY)))
+         if (IDirectInputDevice8_SetCooperativeLevel(lpDIDevicetemp, hDlg,
+              DISCL_FOREGROUND | DISCL_NONEXCLUSIVE | DISCL_NOWINKEY) != DI_OK)
             return FALSE;
 
          dipdw.diph.dwSize = sizeof(DIPROPDWORD);
@@ -1121,7 +1114,7 @@ LRESULT CALLBACK ButtonConfigDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
          dipdw.dwData = 8; // should be enough
 
          // Setup Buffered input
-         if (FAILED((hr = IDirectInputDevice8_SetProperty(lpDIDevicetemp, DIPROP_BUFFERSIZE, &dipdw.diph))))
+         if ((hr = IDirectInputDevice8_SetProperty(lpDIDevicetemp, DIPROP_BUFFERSIZE, &dipdw.diph)) != DI_OK)
             return FALSE;
 
          if (!SetTimer(hDlg, 1, 100, NULL))
@@ -1167,8 +1160,8 @@ LRESULT CALLBACK ButtonConfigDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
             }
 
             // Poll events
-            if (FAILED(IDirectInputDevice8_GetDeviceData(lpDIDevicetemp,
-                sizeof(DIDEVICEOBJECTDATA), didod, &size, 0)))
+            if (IDirectInputDevice8_GetDeviceData(lpDIDevicetemp,
+                sizeof(DIDEVICEOBJECTDATA), didod, &size, 0) != DI_OK)
             {
                if (hr == DIERR_INPUTLOST || hr == DIERR_NOTACQUIRED)
                {
@@ -1180,7 +1173,7 @@ LRESULT CALLBACK ButtonConfigDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
 
             didc.dwSize = sizeof(DIDEVCAPS);
 
-            if (FAILED(IDirectInputDevice8_GetCapabilities(lpDIDevicetemp, &didc)))
+            if (IDirectInputDevice8_GetCapabilities(lpDIDevicetemp, &didc) != DI_OK)
                return TRUE;
 
             if (GET_DIDEVICE_TYPE(didc.dwDevType) == DI8DEVTYPE_KEYBOARD)

@@ -135,7 +135,7 @@ static void FASTCALL M68KC68KSetIRQ(s32 level) {
 	C68k_Set_IRQ(&C68K, level);
 }
 
-static void FASTCALL M68KC68KTouchMem(u32 address) {
+static void FASTCALL M68KC68KWriteNotify(u32 address, u32 size) {
 	/* nothing to do */
 }
 
@@ -176,7 +176,7 @@ M68K_struct M68KC68K = {
 	M68KC68KSetMSP,
 	M68KC68KSetFetch,
 	M68KC68KSetIRQ,
-	M68KC68KTouchMem,
+	M68KC68KWriteNotify,
 	M68KC68KSetReadB,
 	M68KC68KSetReadW,
 	M68KC68KSetWriteB,

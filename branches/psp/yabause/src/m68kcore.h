@@ -56,7 +56,7 @@ typedef struct {
 
 	void (*SetFetch)(u32 low_adr, u32 high_adr, pointer fetch_adr);
 	void FASTCALL (*SetIRQ)(s32 level);
-	void FASTCALL (*TouchMem)(u32 address);
+	void FASTCALL (*WriteNotify)(u32 address, u32 size);
 
 	void (*SetReadB)(M68K_READ *Func);
 	void (*SetReadW)(M68K_READ *Func);

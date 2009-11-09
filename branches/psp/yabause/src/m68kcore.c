@@ -118,7 +118,7 @@ static void M68KDummySetFetch(UNUSED u32 low_adr, UNUSED u32 high_adr, UNUSED po
 static void FASTCALL M68KDummySetIRQ(UNUSED s32 level) {
 }
 
-static void FASTCALL M68KDummyTouchMem(u32 address) {
+static void FASTCALL M68KDummyWriteNotify(u32 address, u32 size) {
 }
 
 static void M68KDummySetReadB(UNUSED M68K_READ *Func) {
@@ -154,7 +154,7 @@ M68K_struct M68KDummy = {
 	M68KDummySetMSP,
 	M68KDummySetFetch,
 	M68KDummySetIRQ,
-	M68KDummyTouchMem,
+	M68KDummyWriteNotify,
 	M68KDummySetReadB,
 	M68KDummySetReadW,
 	M68KDummySetWriteB,

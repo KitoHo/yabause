@@ -2785,7 +2785,7 @@ void FASTCALL SoundRamWriteByte(u32 addr, u8 val) {
       return;
 
    T2WriteByte(SoundRam, addr, val);
-   M68K->TouchMem(addr);
+   M68K->WriteNotify(addr, 1);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2813,7 +2813,7 @@ void FASTCALL SoundRamWriteWord(u32 addr, u16 val) {
       return;
 
    T2WriteWord(SoundRam, addr, val);
-   M68K->TouchMem(addr);
+   M68K->WriteNotify(addr, 2);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2842,8 +2842,7 @@ void FASTCALL SoundRamWriteLong(u32 addr, u32 val) {
       return;
 
    T2WriteLong(SoundRam, addr, val);
-   M68K->TouchMem(addr);
-   M68K->TouchMem(addr+2);
+   M68K->WriteNotify(addr, 4);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -3169,6 +3168,12 @@ void ScspExec() {
 
    }
 #endif
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void M68KWriteNotify(u32 address, u32 size) {
+   M68K->WriteNotify(address, size);
 }
 
 //////////////////////////////////////////////////////////////////////////////

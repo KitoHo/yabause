@@ -345,6 +345,7 @@ extern u8 *HighWram;
 extern u8 *LowWram;
 extern u8 *BiosRom;
 extern u8 *BupRam;
+extern u8 BupRamWritten;
 
 typedef void (FASTCALL *writebytefunc)(u32, u8);
 typedef void (FASTCALL *writewordfunc)(u32, u16);

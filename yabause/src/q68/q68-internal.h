@@ -50,16 +50,27 @@
 #define Q68_JIT_OPTIMIZE_FLAGS
 
 /**
+ * Q68_JIT_LOOSE_TIMING:  When defined, allows the dynamic translator to
+ * take some leeway in checking execution timing, such that instructions
+ * may continue to be executed even after the cycle limit has been reached.
+ * This allows the translated code to execute more quickly, but will
+ * slightly alter the timing of responses to external events such as
+ * interrupts.
+ */
+#define Q68_JIT_LOOSE_TIMING
+
+/**
  * Q68_DISABLE_ADDRESS_ERROR:  When defined, disables the generation of
  * address error exceptions for unaligned word/longword accesses.  The
  * behavior for such an access will depend on how the host system handles
- * unaligned accesses, and may include the emulator itself crashing.
+ * unaligned accesses, and may include the host program itself crashing.
  */
 // #define Q68_DISABLE_ADDRESS_ERROR
 
 /**
  * Q68_TRACE:  When defined, the execution of every instruction will be
- * traced to the file "q68.log" in the current directory.
+ * traced to the file "q68.log" in the current directory.  (On Linux, the
+ * trace will be written in compressed form to "q68.log.gz".)
  */
 // #define Q68_TRACE
 
@@ -149,6 +160,9 @@ struct Q68State_ {
 
     /* Current interrupt request level */
     unsigned int irq;
+
+    /* Number of clock cycles executed so far */
+    uint32_t cycles;
 
     /**** Environment settings ****/
 
@@ -286,17 +300,19 @@ extern Q68JitEntry *q68_jit_translate(Q68State *state, uint32_t address);
 extern Q68JitEntry *q68_jit_find(Q68State *state, uint32_t address);
 
 /**
- * q68_jit_run:  Run translated 68000 code for the given number of cycles.
+ * q68_jit_run:  Run translated 68000 code.
  *
  * [Parameters]
  *           state: Processor state block
- *          cycles: Number of clock cycles to execute
+ *     cycle_limit: Clock cycle limit on execution (code will stop when
+ *                     state->cycles >= cycles)
  *     address_ptr: Pointer to translated block to execute; will be cleared
  *                     to NULL on return if the end of the block was reached
  * [Return value]
- *     Number of clock cycles actually executed
+ *     None
  */
-extern int q68_jit_run(Q68State *state, int cycles, Q68JitEntry **entry_ptr);
+extern void q68_jit_run(Q68State *state, uint32_t cycle_limit,
+                        Q68JitEntry **entry_ptr);
 
 /**
  * q68_jit_clear:  Clear any translation beginning at the given address.

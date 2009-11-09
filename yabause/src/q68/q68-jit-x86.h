@@ -202,6 +202,11 @@ static inline void JIT_FLUSH_CACHE(void)
 GEN_EMIT(PROLOGUE)
 GEN_EMIT(EPILOGUE)
 
+#ifdef Q68_TRACE
+/* Trace the current instruction */
+GEN_EMIT(TRACE)
+#endif
+
 /* Add the specified number of cycles to the cycle counter */
 GEN_EMIT_1(ADD_CYCLES, int32_t, cycles)
 

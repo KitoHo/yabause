@@ -692,33 +692,31 @@ Q68JitEntry *q68_jit_find(Q68State *state, uint32_t address)
 /*-----------------------------------------------------------------------*/
 
 /**
- * q68_jit_run:  Run translated 68000 code for the given number of cycles.
+ * q68_jit_run:  Run translated 68000 code.
  *
  * [Parameters]
  *           state: Processor state block
- *          cycles: Number of clock cycles to execute
+ *     cycle_limit: Clock cycle limit on execution (code will stop when
+ *                     state->cycles >= cycles)
  *     address_ptr: Pointer to translated block to execute; will be cleared
  *                     to NULL on return if the end of the block was reached
  * [Return value]
- *     Number of clock cycles actually executed
+ *     None
  */
-int q68_jit_run(Q68State *state, int cycles, Q68JitEntry **entry_ptr)
+void q68_jit_run(Q68State *state, uint32_t cycle_limit,
+                 Q68JitEntry **entry_ptr)
 {
     Q68JitEntry *entry = *entry_ptr;
-#ifdef Q68_TRACE
-    cycles = 1;  // Force stopping after every instruction
-#endif
-    const int cycles_to_do = cycles;
-    int cycles_done = 0;
 
   again:
     entry->timestamp = state->jit_timestamp;
     state->jit_timestamp++;
     entry->running = 1;
-    cycles = JIT_CALL(state, cycles, &entry->exec_address);
+    int cycles = JIT_CALL(state, cycle_limit - state->cycles,
+                          &entry->exec_address);
     entry->running = 0;
     state->jit_abort = 0;
-    cycles_done += cycles & 0x3FFF;
+    state->cycles += cycles & 0x3FFF;
 
     if (UNLIKELY(entry->must_clear)) {
         clear_entry(state, entry);
@@ -735,7 +733,7 @@ int q68_jit_run(Q68State *state, int cycles, Q68JitEntry **entry_ptr)
                     entry->exec_address =
                         state->jit_callstack[top].return_native;
                     state->jit_callstack_top = top;
-                    if (cycles_done < cycles_to_do) {
+                    if (state->cycles < cycle_limit) {
                         goto again;
                     } else {
                         break;
@@ -759,7 +757,7 @@ int q68_jit_run(Q68State *state, int cycles, Q68JitEntry **entry_ptr)
      * exception pending, and there's already a translated block at the
      * next PC, jump right to it so we don't incur the extra overhead of
      * returning to the caller */
-    if (!entry && cycles_done < cycles_to_do && !state->exception) {
+    if (!entry && state->cycles < cycle_limit && !state->exception) {
         entry = q68_jit_find(state, state->PC);
         if (entry) {
             goto again;
@@ -767,7 +765,6 @@ int q68_jit_run(Q68State *state, int cycles, Q68JitEntry **entry_ptr)
     }
 
     *entry_ptr = entry;
-    return cycles_done;
 }
 
 /*-----------------------------------------------------------------------*/
@@ -979,6 +976,7 @@ static int translate_insn(Q68State *state, Q68JitEntry *entry)
     state->current_PC = jit_PC;
 
     /* Emit a cycle count check if appropriate */
+#ifdef Q68_JIT_LOOSE_TIMING
     if ((opcode & 0xFF00) == 0x6100  // Bcc
      || (opcode & 0xF0F8) == 0x50C8  // DBcc
      || (opcode & 0xFFF0) == 0x4E40  // TRAP
@@ -987,15 +985,20 @@ static int translate_insn(Q68State *state, Q68JitEntry *entry)
      ||  opcode           == 0x4E73  // RTE
      ||  opcode           == 0x4E75  // RTS
      ||  opcode           == 0x4E77  // RTR
-#ifdef Q68_M68K_TESTER  // Define when linking with m68k-tester
+# ifdef Q68_M68K_TESTER  // Define when linking with m68k-tester
      ||  opcode           == 0x7100  // m68k-tester abort opcode
-#endif
-#ifdef Q68_TRACE
-     || 1  // Always check
-#endif
+# endif
     ) {
+#endif
         JIT_EMIT_CHECK_CYCLES(current_entry);
+#ifdef Q68_JIT_LOOSE_TIMING
     }
+#endif
+
+    /* Add a trace call if we're tracing */
+#ifdef Q68_TRACE
+    JIT_EMIT_TRACE(current_entry);
+#endif
 
     /* Translate the instruction itself and update the 68000 PC */
     PC_updated = 0;

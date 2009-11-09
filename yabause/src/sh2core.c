@@ -149,23 +149,6 @@ void FASTCALL SH2Exec(SH2_struct *context, u32 cycles)
 {
    CurrentSH2 = context;
 
-   // Handle interrupts
-   if (context->NumberOfInterrupts != 0)
-   {
-      if (context->interrupts[context->NumberOfInterrupts-1].level > context->regs.SR.part.I)
-      {
-         context->regs.R[15] -= 4;
-         MappedMemoryWriteLong(context->regs.R[15], context->regs.SR.all);
-         context->regs.R[15] -= 4;
-         MappedMemoryWriteLong(context->regs.R[15], context->regs.PC);
-         context->regs.SR.part.I = context->interrupts[context->NumberOfInterrupts-1].level;
-         context->regs.PC = MappedMemoryReadLong(context->regs.VBR + (context->interrupts[context->NumberOfInterrupts-1].vector << 2));
-         context->NumberOfInterrupts--;
-         context->isIdle = 0;
-         context->isSleeping = 0;
-      }
-   }
-
    SH2Core->Exec(context, cycles);
 
    FRTExec(cycles);

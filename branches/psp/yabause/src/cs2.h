@@ -250,6 +250,9 @@ void FASTCALL 	Cs2WriteByte(u32, u8);
 void FASTCALL 	Cs2WriteWord(u32, u16);
 void FASTCALL 	Cs2WriteLong(u32, u32);
 
+void FASTCALL   Cs2RapidCopyT1(void *dest, u32 count);
+void FASTCALL   Cs2RapidCopyT2(void *dest, u32 count);
+
 void Cs2Exec(u32);
 void Cs2Execute(void);
 void Cs2Reset(void);

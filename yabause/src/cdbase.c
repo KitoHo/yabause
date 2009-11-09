@@ -68,9 +68,9 @@ ISOCDReadSectorFAD
 
 static int DummyCDInit(UNUSED const char *cdrom_name)
 {
-	// Initialization function. cdrom_name can be whatever you want it to be.
-	// Obviously with some ports(e.g. the dreamcast port) you probably won't
-	// even use it.
+	// Initialization function. cdrom_name can be whatever you want it to
+	// be. Obviously with some ports(e.g. the dreamcast port) you probably
+	// won't even use it.
 	return 0;
 }
 
@@ -96,8 +96,9 @@ static int DummyCDGetStatus(void)
 	// 3 - Tray open
 	//
 	// If you really don't want to bother too much with this function, just
-	// return status 0. Though it is kind of nice when the bios's cd player,
-	// etc. recognizes when you've ejected the tray and popped in another disc.
+	// return status 0. Though it is kind of nice when the bios's cd
+	// player, etc. recognizes when you've ejected the tray and popped in
+	// another disc.
 
 	return 0;
 }
@@ -107,8 +108,8 @@ static int DummyCDGetStatus(void)
 static s32 DummyCDReadTOC(UNUSED u32 *TOC)
 {
 	// The format of TOC is as follows:
-	// TOC[0] - TOC[98] are meant for tracks 1-99. Each entry has the following
-	// format:
+	// TOC[0] - TOC[98] are meant for tracks 1-99. Each entry has the
+	// following format:
 	// bits 0 - 23: track FAD address
 	// bits 24 - 27: track addr
 	// bits 28 - 31: track ctrl
@@ -118,7 +119,8 @@ static s32 DummyCDReadTOC(UNUSED u32 *TOC)
 	// TOC[99] - Point A0 information 
 	// Uses the following format:
 	// bits 0 - 7: PFRAME(should always be 0)
-	// bits 7 - 15: PSEC(Program area format: 0x00 - CDDA or CDROM, 0x10 - CDI, 0x20 - CDROM-XA)
+	// bits 7 - 15: PSEC(Program area format: 0x00 - CDDA or CDROM,
+	//                   0x10 - CDI, 0x20 - CDROM-XA)
 	// bits 16 - 23: PMIN(first track's number)
 	// bits 24 - 27: first track's addr
 	// bits 28 - 31: first track's ctrl
@@ -146,16 +148,17 @@ static s32 DummyCDReadTOC(UNUSED u32 *TOC)
 
 static int DummyCDReadSectorFAD(UNUSED u32 FAD, void * buffer)
 {
-	// This function is supposed to read exactly 1 -RAW- 2352-byte sector at
-	// the specified FAD address to buffer. Should return true if successful,
-	// false if there was an error.
+	// This function is supposed to read exactly 1 -RAW- 2352-byte sector
+	// at the specified FAD address to buffer. Should return true if
+	// successful, false if there was an error.
 	//
 	// Special Note: To convert from FAD to LBA/LSN, minus 150.
 	//
-	// The whole process needed to be changed since I need more control over
-	// sector detection, etc. Not to mention it means less work for the porter
-	// since they only have to implement raw sector reading as opposed to
-	// implementing mode 1, mode 2 form1/form2, -and- raw sector reading.
+	// The whole process needed to be changed since I need more control
+	// over sector detection, etc. Not to mention it means less work for
+	// the porter since they only have to implement raw sector reading as
+	// opposed to implementing mode 1, mode 2 form1/form2, -and- raw
+	// sector reading.
 
 	memset(buffer, 0, 2352);
 
@@ -453,8 +456,7 @@ static int ISOCDReadSectorFAD(u32 FAD, void *buffer) {
            }
         }
 	if (i == 100) {
-		// FIXME: Placeholder message; what's the actual error?  --AC
-		CDLOG("Warning: Sector not found");
+		CDLOG("Warning: Sector not found in track list");
 		return 0;
 	}
 

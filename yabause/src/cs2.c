@@ -433,6 +433,7 @@ int Cs2Init(int carttype, int coreid, const char *cdpath, const char *mpegpath, 
 
    if ((Cs2Area = (Cs2 *) malloc(sizeof(Cs2))) == NULL)
       return -1;
+   memset(Cs2Area, 0, sizeof(*Cs2Area));
 
    Cs2Area->carttype = carttype;
    Cs2Area->mpegpath = mpegpath;

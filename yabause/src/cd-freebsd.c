@@ -31,11 +31,11 @@
 #include "cdbase.h"
 #include "debug.h"
 
-int FreeBSDCDInit(const char *);
-int FreeBSDCDDeInit(void);
-long FreeBSDCDReadTOC(unsigned long *);
-int FreeBSDCDGetStatus(void);
-int FreeBSDCDReadSectorFAD(unsigned long, void *);
+static int FreeBSDCDInit(const char *);
+static int FreeBSDCDDeInit(void);
+static s32 FreeBSDCDReadTOC(u32 *);
+static int FreeBSDCDGetStatus(void);
+static int FreeBSDCDReadSectorFAD(u32, void *);
 
 CDInterface ArchCD = {
 	CDCORE_ARCH,
@@ -47,9 +47,9 @@ CDInterface ArchCD = {
 	FreeBSDCDReadSectorFAD
 };
 
-int hCDROM;
+static int hCDROM;
 
-int FreeBSDCDInit(const char * cdrom_name) {
+static int FreeBSDCDInit(const char * cdrom_name) {
 	int bsize = 2352;
 
 	if ((hCDROM = open(cdrom_name, O_RDONLY | O_NONBLOCK)) == -1) {
@@ -65,7 +65,7 @@ int FreeBSDCDInit(const char * cdrom_name) {
 	return 0;
 }
 
-int FreeBSDCDDeInit(void) {
+static int FreeBSDCDDeInit(void) {
 	if (hCDROM == -1) {
 		return -1;
 	}
@@ -77,7 +77,7 @@ int FreeBSDCDDeInit(void) {
 }
 
 
-long FreeBSDCDReadTOC(unsigned long * TOC)
+static s32 FreeBSDCDReadTOC(u32 * TOC)
 {
    int success;
    struct ioc_toc_header ctTOC;
@@ -139,7 +139,7 @@ long FreeBSDCDReadTOC(unsigned long * TOC)
    return 0;
 }
 
-int FreeBSDCDGetStatus(void) {
+static int FreeBSDCDGetStatus(void) {
 	// 0 - CD Present, disc spinning
 	// 1 - CD Present, disc not spinning
 	// 2 - CD not present
@@ -149,7 +149,7 @@ int FreeBSDCDGetStatus(void) {
 	return 0;
 }
 
-int FreeBSDCDReadSectorFAD(unsigned long FAD, void *buffer) {
+static int FreeBSDCDReadSectorFAD(u32 FAD, void *buffer) {
 	if (hCDROM != -1)
 	{
 		lseek(hCDROM, (FAD - 150) * 2352, SEEK_SET);

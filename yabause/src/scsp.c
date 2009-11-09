@@ -3093,7 +3093,7 @@ void ScspReceiveCDDA(const u8 *sector) {
 void ScspExec() {
 #ifdef WIN32
 # ifdef SCSP_FRAME_ACCURATE
-   s16 stereodata16[(44100 / 60) * 16];//11760
+   s16 stereodata16[(44100 / 60) * 16]; //11760
 # else
    s16 stereodata16[(44100 / 50)*2];
 # endif
@@ -3108,7 +3108,7 @@ void ScspExec() {
    if (ScspInternalVars->scsptiming1 >= 263)
    {
 #ifdef SCSP_FRAME_ACCURATE
-      s32 *bufL, * bufR;
+      s32 *bufL, *bufR;
 #endif
 
       ScspInternalVars->scsptiming1 -= 263;

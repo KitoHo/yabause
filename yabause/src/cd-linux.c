@@ -33,11 +33,11 @@
 #include "cdbase.h"
 #include "debug.h"
 
-int LinuxCDInit(const char *);
-int LinuxCDDeInit(void);
-s32 LinuxCDReadTOC(u32 *);
-int LinuxCDGetStatus(void);
-int LinuxCDReadSectorFAD(u32, void *);
+static int LinuxCDInit(const char *);
+static int LinuxCDDeInit(void);
+static s32 LinuxCDReadTOC(u32 *);
+static int LinuxCDGetStatus(void);
+static int LinuxCDReadSectorFAD(u32, void *);
 
 CDInterface ArchCD = {
 	CDCORE_ARCH,
@@ -49,9 +49,9 @@ CDInterface ArchCD = {
 	LinuxCDReadSectorFAD
 };
 
-int hCDROM;
+static int hCDROM;
 
-int LinuxCDInit(const char * cdrom_name) {
+static int LinuxCDInit(const char * cdrom_name) {
 	if ((hCDROM = open(cdrom_name, O_RDONLY | O_NONBLOCK)) == -1) {
 		return -1;
 	}
@@ -59,7 +59,7 @@ int LinuxCDInit(const char * cdrom_name) {
 	return 0;
 }
 
-int LinuxCDDeInit(void) {
+static int LinuxCDDeInit(void) {
 	if (hCDROM == -1) {
 		return -1;
 	}
@@ -71,7 +71,7 @@ int LinuxCDDeInit(void) {
 }
 
 
-s32 LinuxCDReadTOC(u32 * TOC)
+static s32 LinuxCDReadTOC(u32 * TOC)
 {
    struct cdrom_tochdr ctTOC;
    struct cdrom_tocentry ctTOCent;
@@ -132,7 +132,7 @@ s32 LinuxCDReadTOC(u32 * TOC)
    return 0;
 }
 
-int LinuxCDGetStatus(void) {
+static int LinuxCDGetStatus(void) {
 	// 0 - CD Present, disc spinning
 	// 1 - CD Present, disc not spinning
 	// 2 - CD not present
@@ -153,7 +153,7 @@ int LinuxCDGetStatus(void) {
 	return 2;
 }
 
-int LinuxCDReadSectorFAD(u32 FAD, void *buffer) {
+static int LinuxCDReadSectorFAD(u32 FAD, void *buffer) {
 	union {
 		struct cdrom_msf msf;
 		char bigbuf[2352];

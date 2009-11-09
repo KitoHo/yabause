@@ -31,7 +31,7 @@
 // Contains the Dummy and ISO CD Interfaces
 
 static int DummyCDInit(const char *);
-static int DummyCDDeInit(void);
+static void DummyCDDeInit(void);
 static int DummyCDGetStatus(void);
 static s32 DummyCDReadTOC(u32 *);
 static int DummyCDReadSectorFAD(u32, void *);
@@ -49,7 +49,7 @@ DummyCDReadAheadFAD,
 };
 
 static int ISOCDInit(const char *);
-static int ISOCDDeInit(void);
+static void ISOCDDeInit(void);
 static int ISOCDGetStatus(void);
 static s32 ISOCDReadTOC(u32 *);
 static int ISOCDReadSectorFAD(u32, void *);
@@ -80,10 +80,9 @@ static int DummyCDInit(UNUSED const char *cdrom_name)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static int DummyCDDeInit(void)
+static void DummyCDDeInit(void)
 {
 	// Cleanup function. Enough said.
-	return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -441,15 +440,17 @@ static int ISOCDInit(const char * iso) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-static int ISOCDDeInit(void) {
-        fclose(isofile);
-	return 0;
+static void ISOCDDeInit(void) {
+   if (isofile)
+   {
+      fclose(isofile);
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
 static int ISOCDGetStatus(void) {
-        return isofile != NULL ? 0 : 2;
+   return isofile != NULL ? 0 : 2;
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -39,8 +39,8 @@
 #include "cdbase.h"
 
 static int MacOSXCDInit(const char *);
-static int MacOSXCDDeInit();
-static int MacOSXCDGetStatus();
+static void MacOSXCDDeInit(void);
+static int MacOSXCDGetStatus(void);
 static s32 MacOSXCDReadTOC(u32 *);
 static int MacOSXCDReadSectorFAD(u32, void *);
 static void MacOSXCDReadAheadFAD(u32);
@@ -105,17 +105,15 @@ static int MacOSXCDInit(const char * useless_for_now)
 	return 0;
 }
 
-static int MacOSXCDDeInit() 
+static void MacOSXCDDeInit(void) 
 {
 	if (hCDROM != -1) 
 	{
 		close(hCDROM);
 	}
-	
-	return 0;
 }
 
-static CDTOC * GetTOCFromCDPath()
+static CDTOC * GetTOCFromCDPath(void)
 {
 	CFMutableDictionaryRef  classesToMatch;
 	io_iterator_t mediaIterator;

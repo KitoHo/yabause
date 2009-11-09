@@ -75,7 +75,7 @@ int SPTICDInit(const char *cdrom_name) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-int SPTICDDeInit() {
+void SPTICDDeInit() {
    if (thread_handle != INVALID_HANDLE_VALUE)                               
    {
       // Set the flag telling it to stop            
@@ -90,8 +90,6 @@ int SPTICDDeInit() {
    }   
 
    CloseHandle(hCDROM);
-
-   return 0;
 }
 
 //////////////////////////////////////////////////////////////////////////////

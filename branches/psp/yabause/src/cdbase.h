@@ -35,7 +35,7 @@ typedef struct
         int id;
         const char *Name;
         int (*Init)(const char *);
-        int (*DeInit)(void);
+        void (*DeInit)(void);
         int (*GetStatus)(void);
         s32 (*ReadTOC)(u32 *TOC);
         int (*ReadSectorFAD)(u32 FAD, void *buffer);

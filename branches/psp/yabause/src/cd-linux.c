@@ -34,7 +34,7 @@
 #include "debug.h"
 
 static int LinuxCDInit(const char *);
-static int LinuxCDDeInit(void);
+static void LinuxCDDeInit(void);
 static s32 LinuxCDReadTOC(u32 *);
 static int LinuxCDGetStatus(void);
 static int LinuxCDReadSectorFAD(u32, void *);
@@ -61,15 +61,12 @@ static int LinuxCDInit(const char * cdrom_name) {
 	return 0;
 }
 
-static int LinuxCDDeInit(void) {
-	if (hCDROM == -1) {
-		return -1;
+static void LinuxCDDeInit(void) {
+	if (hCDROM != -1) {
+		close(hCDROM);
 	}
-	close(hCDROM);
 
 	LOG("CDDeInit OK\n");
-
-	return 0;
 }
 
 

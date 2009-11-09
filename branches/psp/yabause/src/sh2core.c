@@ -72,8 +72,14 @@ int SH2Init(int coreid)
       }
    }
 
-   if (SH2Core)
-      SH2Core->Init();
+   if (SH2Core) {
+      if (SH2Core->Init() != 0) {
+         free(MSH2);
+         free(SSH2);
+         MSH2 = SSH2 = NULL;
+         return -1;
+      }
+   }
 
    return 0;
 }

@@ -32,7 +32,7 @@
 #define CDCORE_ASPI     3
 
 int SPTICDInit(const char *);
-int SPTICDDeInit();
+void SPTICDDeInit();
 int SPTICDGetStatus();
 s32 SPTICDReadTOC(u32 *);
 int SPTICDReadSectorFAD(u32, void *);
@@ -41,7 +41,7 @@ void SPTICDReadAheadFAD(u32);
 extern CDInterface ArchCD;
 
 int ASPICDInit(const char *);
-int ASPICDDeInit();
+void ASPICDDeInit();
 int ASPICDGetStatus();
 s32 ASPICDReadTOC(u32 *);
 int ASPICDReadSectorFAD(u32, void *);

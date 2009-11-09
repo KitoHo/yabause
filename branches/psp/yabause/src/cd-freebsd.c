@@ -32,7 +32,7 @@
 #include "debug.h"
 
 static int FreeBSDCDInit(const char *);
-static int FreeBSDCDDeInit(void);
+static void FreeBSDCDDeInit(void);
 static s32 FreeBSDCDReadTOC(u32 *);
 static int FreeBSDCDGetStatus(void);
 static int FreeBSDCDReadSectorFAD(u32, void *);
@@ -67,15 +67,12 @@ static int FreeBSDCDInit(const char * cdrom_name) {
 	return 0;
 }
 
-static int FreeBSDCDDeInit(void) {
-	if (hCDROM == -1) {
-		return -1;
+static void FreeBSDCDDeInit(void) {
+	if (hCDROM != -1) {
+		close(hCDROM);
 	}
-	close(hCDROM);
 
 	LOG("CDDeInit OK\n");
-
-	return 0;
 }
 
 

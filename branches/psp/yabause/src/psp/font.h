@@ -1,4 +1,4 @@
-/*  src/psp/psp-sound.h: PSP sound output module header
+/*  src/psp/font.h: Header for PSP menu font
     Copyright 2009 Andrew Church
 
     This file is part of Yabause.
@@ -18,56 +18,40 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
-#ifndef PSP_SOUND_H
-#define PSP_SOUND_H
-
-#include "../scsp.h"  // for SoundInterface_struct
+#ifndef PSP_FONT_H
+#define PSP_FONT_H
 
 /*************************************************************************/
 
-/* Module interface definition */
-extern SoundInterface_struct SNDPSP;
+/* Height of the font, in pixels */
 
-/* Unique module ID (must be different from any in scsp.h) */
-#define SNDCORE_PSP  0x5CE  // "SCE"
+#define FONT_HEIGHT  13
 
 /*-----------------------------------------------------------------------*/
 
 /**
- * psp_sound_pause:  Stop audio output.  Called when the system is being
- * suspended.
+ * font_printf:  Draw text to the screen at the given position and with the
+ * given color.  The string can contain printf()-style format specifiers.
+ *
+ * It is assumed that a display list has been started with sceGuStart()
+ * before calling this function.
  *
  * [Parameters]
- *     None
+ *       x, y: Upper-left coordinates of first character
+ *      align: Horizontal alignment (<0: left, 0: center, >0: right)
+ *      color: Text color (0xAABBGGRR)
+ *     format: Format string for text
+ *        ...: Arguments for format string
  * [Return value]
- *     None
+ *     X coordinate immediately following the last character printed
  */
-extern void psp_sound_pause(void);
-
-/**
- * psp_sound_unpause:  Resume audio output.  Called when the system is
- * resuming from a suspend.
- *
- * [Parameters]
- *     None
- * [Return value]
- *     None
- */
-extern void psp_sound_unpause(void);
-
-/**
- * psp_sound_exit:  Terminate all playback in preparation for exiting.
- *
- * [Parameters]
- *     None
- * [Return value]
- *     None
- */
-extern void psp_sound_exit(void);
+extern int font_printf(int x, int y, int align, uint32_t color,
+                       const char *format, ...)
+    __attribute__((format(printf,5,6)));
 
 /*************************************************************************/
 
-#endif  // PSP_SOUND_H
+#endif  // PSP_FONT_H
 
 /*
  * Local variables:

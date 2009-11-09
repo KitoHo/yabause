@@ -1,4 +1,4 @@
-/*  src/psp/psp-sound.h: PSP sound output module header
+/*  src/psp/init.h: PSP initialization routine header
     Copyright 2009 Andrew Church
 
     This file is part of Yabause.
@@ -18,56 +18,36 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
-#ifndef PSP_SOUND_H
-#define PSP_SOUND_H
-
-#include "../scsp.h"  // for SoundInterface_struct
+#ifndef PSP_INIT_H
+#define PSP_INIT_H
 
 /*************************************************************************/
 
-/* Module interface definition */
-extern SoundInterface_struct SNDPSP;
-
-/* Unique module ID (must be different from any in scsp.h) */
-#define SNDCORE_PSP  0x5CE  // "SCE"
-
-/*-----------------------------------------------------------------------*/
+/**
+ * init_psp:  Perform PSP-related initialization and command-line option
+ * parsing.  Aborts the program if an error occurs.
+ *
+ * [Parameters]
+ *     argc: Command line argument count
+ *     argv: Command line argument vector
+ * [Return value]
+ *     None
+ */
+extern void init_psp(int argc, char **argv);
 
 /**
- * psp_sound_pause:  Stop audio output.  Called when the system is being
- * suspended.
+ * init_yabause:  Initialize the emulator core.
  *
  * [Parameters]
  *     None
  * [Return value]
- *     None
+ *     Nonzero on success, zero on failure
  */
-extern void psp_sound_pause(void);
-
-/**
- * psp_sound_unpause:  Resume audio output.  Called when the system is
- * resuming from a suspend.
- *
- * [Parameters]
- *     None
- * [Return value]
- *     None
- */
-extern void psp_sound_unpause(void);
-
-/**
- * psp_sound_exit:  Terminate all playback in preparation for exiting.
- *
- * [Parameters]
- *     None
- * [Return value]
- *     None
- */
-extern void psp_sound_exit(void);
+extern int init_yabause(void);
 
 /*************************************************************************/
 
-#endif  // PSP_SOUND_H
+#endif  // PSP_INIT_H
 
 /*
  * Local variables:

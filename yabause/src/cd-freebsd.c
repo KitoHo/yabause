@@ -36,6 +36,7 @@ static int FreeBSDCDDeInit(void);
 static s32 FreeBSDCDReadTOC(u32 *);
 static int FreeBSDCDGetStatus(void);
 static int FreeBSDCDReadSectorFAD(u32, void *);
+static void FreeBSDCDReadAheadFAD(u32);
 
 CDInterface ArchCD = {
 	CDCORE_ARCH,
@@ -44,7 +45,8 @@ CDInterface ArchCD = {
 	FreeBSDCDDeInit,
 	FreeBSDCDGetStatus,
 	FreeBSDCDReadTOC,
-	FreeBSDCDReadSectorFAD
+	FreeBSDCDReadSectorFAD,
+	FreeBSDCDReadAheadFAD,
 };
 
 static int hCDROM;
@@ -159,4 +161,9 @@ static int FreeBSDCDReadSectorFAD(u32 FAD, void *buffer) {
 	}
 
 	return 0;
+}
+
+static void FreeBSDCDReadAheadFAD(UNUSED u32 FAD)
+{
+	// No-op
 }

@@ -60,6 +60,13 @@
 #define Q68_JIT_LOOSE_TIMING
 
 /**
+ * Q68_OPTIMIZE_IDLE:  When defined, optimizes certain idle loops to
+ * improve performance in JIT mode.  Enabling this option slightly alters
+ * execution timing.
+ */
+#define Q68_OPTIMIZE_IDLE
+
+/**
  * Q68_JIT_VERBOSE:  When defined, outputs some status messages considered
  * useful in debugging or optimizing the JIT core.
  */

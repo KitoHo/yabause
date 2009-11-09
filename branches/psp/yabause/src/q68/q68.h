@@ -210,19 +210,38 @@ extern int q68_run(Q68State *state, int cycles);
 extern const char *q68_disassemble(Q68State *state, uint32_t address,
                                    int *nwords_ret);
 
+/*----------------------------------*/
+
+/**
+ * q68_trace_init:  Initialize the tracing code.
+ *
+ * [Parameters]
+ *     state: Processor state block
+ * [Return value]
+ *     None
+ */
+extern void q68_trace_init(Q68State *state_);
+
+/**
+ * q68_trace_add_cycles:  Add the given number of cycles to the global
+ * accumulator.
+ *
+ * [Parameters]
+ *     cycles: Number of cycles to add
+ * [Return value]
+ *     None
+ */
+extern void q68_trace_add_cycles(int32_t cycles);
+
 /**
  * q68_trace:  Output a trace for the instruction at the current PC.
  *
  * [Parameters]
- *           state: Processor state block
- *              fp: File pointer (stdio) to which trace should be written
- *     cycles_done: Number of cycles processed so far during this call
- *     cycle_limit: Total number of cycles to be processed this call
+ *     None
  * [Return value]
  *     None
  */
-extern void q68_trace(Q68State *state, FILE *fp, int cycles_done,
-                      int cycle_limit);
+extern void q68_trace(void);
 
 /*************************************************************************/
 /*************************************************************************/

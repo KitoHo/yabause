@@ -120,7 +120,6 @@ void scsp_update_timer(u32 len);
 
 u32 FASTCALL c68k_word_read(const u32 adr);
 
-u32 M68KDisasm(u32 addr, char *outstring);
 void M68KStep(void);
 void M68KWriteNotify(u32 address, u32 size);
 void M68KGetRegisters(m68kregs_struct *regs);

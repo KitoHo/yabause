@@ -3047,7 +3047,7 @@ static s32 FASTCALL M68KExecBP(s32 cycles) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-void M68KStep() {
+void M68KStep(void) {
    M68K->Exec(1);
 }
 

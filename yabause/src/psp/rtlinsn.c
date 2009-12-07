@@ -213,6 +213,8 @@ static int make_alu_1op(RTLBlock *block, RTLInsn *insn, unsigned int dest,
 #endif
 
     insn->dest = dest;
+    // FIXME: why does GCC waste time with an ANDI temp,arg,0xFFFF for
+    // stores like this src1 (but not with dest)?
     insn->src1 = src1;
 
     RTLRegister * const destreg = &block->regs[dest];

@@ -34,11 +34,12 @@ typedef struct {
 	int id;
 	const char *Name;
 
-	void (*Init)(void);
+	int (*Init)(void);
 	void (*DeInit)(void);
 	void (*Reset)(void);
 
-	s32  FASTCALL (*Exec)(s32 cycle);
+	s32 FASTCALL (*Exec)(s32 cycle);
+        void (*Sync)(void);
 
 	u32 (*GetDReg)(u32 num);
 	u32 (*GetAReg)(u32 num);

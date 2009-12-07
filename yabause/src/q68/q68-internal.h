@@ -183,6 +183,14 @@ struct Q68State_ {
     Q68ReadFunc *readb_func, *readw_func;
     Q68WriteFunc *writeb_func, *writew_func;
 
+    /* Native memory allocation functions (for JIT) */
+    void *(*jit_malloc)(size_t size);
+    void *(*jit_realloc)(void *ptr, size_t size);
+    void (*jit_free)(void *ptr);
+
+    /* Native cache flushing function (for JIT) */
+    void (*jit_flush)(void);
+
     /**** JIT-related data ****/
 
     /* Currently executing JIT block (NULL = none) */

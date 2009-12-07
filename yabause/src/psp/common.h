@@ -101,13 +101,16 @@ extern char progpath[256];
  * code to change button assignments) */
 extern void *padbits;
 
+/* Flag indicating whether the ME is available for use */
+extern int me_available;
+
 /**************************************************************************/
 
 /* Convenience macros (not PSP-related, except DSTART/DEND) */
 
 /*----------------------------------*/
 
-/* Get length of an array */
+/* Get the length of an array */
 #define lenof(a)  (sizeof((a)) / sizeof((a)[0]))
 /* Bound a value between two limits (inclusive) */
 #define bound(x,low,high)  __extension__({  \

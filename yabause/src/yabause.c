@@ -464,6 +464,10 @@ int YabauseEmulate(void) {
 
       }  // if (yabsys.DecilineMode)
 
+      PROFILE_START("68K");
+      M68KSync();  // Wait for the previous iteration to finish
+      PROFILE_STOP("68K");
+
       PROFILE_START("SCU");
       ScuExec(sh2cycles / 2);
       PROFILE_STOP("SCU");
@@ -536,6 +540,8 @@ int YabauseEmulate(void) {
 
       PROFILE_STOP("Total Emulation");
    }
+
+   M68KSync();
    return 0;
 }
 

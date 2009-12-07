@@ -32,7 +32,7 @@
 
 static u8 *SoundDummy=NULL;
 
-static void M68KC68KInit(void) {
+static int M68KC68KInit(void) {
 	int i;
 
 	// Setup a 64k buffer filled with invalid 68k instructions to serve
@@ -44,6 +44,8 @@ static void M68KC68KInit(void) {
 
 	for (i = 0x10; i < 0x100; i++)
 		M68K->SetFetch(i << 16, (i << 16) + 0xFFFF, (pointer)SoundDummy);
+
+	return 0;
 }
 
 static void M68KC68KDeInit(void) {
@@ -77,6 +79,9 @@ static s32 FASTCALL M68KC68KExec(s32 cycle) {
 #else
 	return C68k_Exec(&C68K, cycle);
 #endif
+}
+
+static void M68KC68KSync(void) {
 }
 
 static u32 M68KC68KGetDReg(u32 num) {
@@ -162,6 +167,7 @@ M68K_struct M68KC68K = {
 	M68KC68KDeInit,
 	M68KC68KReset,
 	M68KC68KExec,
+	M68KC68KSync,
 	M68KC68KGetDReg,
 	M68KC68KGetAReg,
 	M68KC68KGetPC,

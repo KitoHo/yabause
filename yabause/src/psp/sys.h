@@ -39,6 +39,19 @@ extern const char *psp_strerror(const int32_t code);
 /*----------------------------------*/
 
 /**
+ * sys_load_module:  Load (and start) a PSP module.
+ *
+ * [Parameters]
+ *        module: Module pathname
+ *     partition: Memory partition (PSP_MEMORY_PARTITON_*)
+ * [Return value]
+ *     Module ID (nonnegative) on success, error code (negative) on failure
+ */
+extern SceUID sys_load_module(const char *module, int partition);
+
+/*----------------------------------*/
+
+/**
  * sys_start_thread:  Start a new thread, returning the created thread
  * handle.
  *

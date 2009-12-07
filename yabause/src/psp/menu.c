@@ -140,8 +140,8 @@ typedef enum FrameSkipMenuOption_ {
 
 typedef enum AdvancedMenuOption_ {
     OPT_ADVANCED_SH2_RECOMPILER = 0,
-    OPT_ADVANCED_SH2_INTERPRETER,
     OPT_ADVANCED_SH2_OPTIMIZE,
+    OPT_ADVANCED_USE_ME,
     OPT_ADVANCED_DECILINE_MODE,
     OPT_ADVANCED_AUDIO_SYNC,
     OPT_ADVANCED_CLOCK_SYNC,
@@ -206,6 +206,9 @@ static uint8_t cursor_timer;
 #define TEXT_COLOR_OK   0xFF55FF40  // Also used for "Reset the emulator"
 #define TEXT_COLOR_NG   0xFF5540FF  // Also used for warning text
 
+/* Text color for disabled menu options */
+#define TEXT_COLOR_DISABLED  0xFF807676
+
 /* Status line current text, text color, display time, and timer */
 static const char *status_text;
 static uint32_t status_color;
@@ -238,6 +241,9 @@ static void draw_menu(void);
 static const char *cur_option_confirm_text(void);
 static void draw_menu_option(int option, int x, int y, const char *format, ...)
     __attribute__((format(printf,4,5)));
+static void draw_disabled_menu_option(int option, int x, int y,
+                                      const char *format, ...)
+    __attribute__((format(printf,4,5)));
 
 /*************************************************************************/
 /************************** Interface functions **************************/
@@ -269,8 +275,6 @@ void menu_open(void)
     }
     draw_bgimage = 1;
     cursor_timer = 0;
-    status_text = "";
-    status_timer = 0;
 
     display_set_size(DISPLAY_WIDTH, DISPLAY_HEIGHT);
     gen_menu_bg();
@@ -358,6 +362,11 @@ void menu_close(void)
 
     free(bgimage_base);
     bgimage = bgimage_base = NULL;
+
+    /* Clear the status line so any current message doesn't get held over */
+
+    status_text = "";
+    status_timer = 0;
 }
 
 /*************************************************************************/
@@ -898,31 +907,20 @@ static void process_option_advanced(const uint32_t buttons)
     switch ((AdvancedMenuOption)cur_option) {
 
       case OPT_ADVANCED_SH2_RECOMPILER:
-        if ((buttons & PSP_CTRL_LTRIGGER) && (buttons & PSP_CTRL_RTRIGGER)
-         && config_get_module_sh2() != SH2CORE_PSP
-        ) {
-            if (!config_set_module_sh2(SH2CORE_PSP)) {
+        if ((buttons & PSP_CTRL_LTRIGGER) && (buttons & PSP_CTRL_RTRIGGER)) {
+            int new_module;
+            if (config_get_module_sh2() == SH2CORE_PSP) {
+                new_module = SH2CORE_INTERPRETER;
+            } else {
+                new_module = SH2CORE_PSP;
+            }
+            if (!config_set_module_sh2(new_module)) {
                 status_text = "Failed to change SH-2 core!";
                 status_color = TEXT_COLOR_NG;
                 status_timer = STATUS_DISPTIME;
             }
             SH2DeInit();
-            SH2Init(SH2CORE_PSP);
-            do_reset();
-        }
-        break;
-
-      case OPT_ADVANCED_SH2_INTERPRETER:
-        if ((buttons & PSP_CTRL_LTRIGGER) && (buttons & PSP_CTRL_RTRIGGER)
-         && config_get_module_sh2() != SH2CORE_INTERPRETER
-        ) {
-            if (!config_set_module_sh2(SH2CORE_INTERPRETER)) {
-                status_text = "Failed to change SH-2 core!";
-                status_color = TEXT_COLOR_NG;
-                status_timer = STATUS_DISPTIME;
-            }
-            SH2DeInit();
-            SH2Init(SH2CORE_INTERPRETER);
+            SH2Init(new_module);
             do_reset();
         }
         break;
@@ -931,6 +929,16 @@ static void process_option_advanced(const uint32_t buttons)
         cur_menu = MENU_OPTIMIZE;
         cur_option = 0;
         max_option = OPT_OPTIMIZE__MAX;
+        break;
+
+      case OPT_ADVANCED_USE_ME:
+        if (me_available) {
+            if (!config_set_use_me(!config_get_use_me())) {
+                status_text = "Failed to change option!";
+                status_color = TEXT_COLOR_NG;
+                status_timer = STATUS_DISPTIME;
+            }
+        }
         break;
 
       case OPT_ADVANCED_DECILINE_MODE:
@@ -1294,10 +1302,7 @@ static void draw_menu(void)
                         " containing the BIOS image, CD image,");
             y += line_height;
             font_printf(75, y, -1, TEXT_COLOR_INFO, "and backup data you"
-                        " want to use, or enable or disable");
-            y += line_height;
-            font_printf(75, y, -1, TEXT_COLOR_INFO, "automatic saving of"
-                        " backup RAM data.");
+                        " want to use.");
             y += line_height;
             break;
           case OPT_GENERAL_BUP_AUTOSAVE:
@@ -1519,7 +1524,7 @@ static void draw_menu(void)
             font_printf(75, y, -1, TEXT_COLOR_INFO, "This can make high"
                         "-resolution screens look clearer, but");
             y += line_height;
-            font_printf(75, y, -1, TEXT_COLOR_INFO, "will alsso slow down"
+            font_printf(75, y, -1, TEXT_COLOR_INFO, "will also slow down"
                         " the emulator.");
             y += line_height;
             break;
@@ -1615,17 +1620,22 @@ static void draw_menu(void)
                     "Configure advanced emulation options");
         y = menu_center_y - (6*line_height + line_height/2 + FONT_HEIGHT) / 2;
         draw_menu_option(OPT_ADVANCED_SH2_RECOMPILER, menu_left_edge, y,
-                         "(%c) Use SH-2 recompiler (fast)",
+                         "[%c] Use SH-2 recompiler",
                          config_get_module_sh2()==SH2CORE_PSP ? '*' : ' ');
-        y += line_height;
-        draw_menu_option(OPT_ADVANCED_SH2_INTERPRETER, menu_left_edge, y,
-                         "(%c) Use SH-2 interpreter (slow)",
-                         config_get_module_sh2()==SH2CORE_INTERPRETER
-                             ? '*' : ' ');
         y += line_height;
         draw_menu_option(OPT_ADVANCED_SH2_OPTIMIZE, menu_left_edge, y,
                          "    Select SH-2 optimizations...");
         y += line_height*3/2;
+        if (me_available) {
+            draw_menu_option(OPT_ADVANCED_USE_ME, menu_left_edge, y,
+                             "[%c] Use Media Engine for emulation",
+                             config_get_use_me() ? '*' : ' ');
+        } else {
+            draw_disabled_menu_option(OPT_ADVANCED_USE_ME, menu_left_edge, y,
+                                      "[%c] Use Media Engine for emulation",
+                                      config_get_use_me() ? '*' : ' ');
+        }
+        y += line_height;
         draw_menu_option(OPT_ADVANCED_DECILINE_MODE, menu_left_edge, y,
                          "[%c] Use more precise emulation timing",
                          config_get_deciline_mode() ? '*' : ' ');
@@ -1644,26 +1654,12 @@ static void draw_menu(void)
         y = menu_help_y;
         switch ((AdvancedMenuOption)cur_option) {
           case OPT_ADVANCED_SH2_RECOMPILER:
-            font_printf(75, y, -1, TEXT_COLOR_INFO, "The SH-2 recompiler"
-                        " is significantly faster overall,");
+            font_printf(75, y, -1, TEXT_COLOR_INFO, "Use the SH-2 recompiler"
+                        " instead of the much slower");
             y += line_height;
-            x = font_printf(75, y, -1, TEXT_COLOR_INFO, "but may"
-                        " occasionally \"stutter\".  ");
-            font_printf(x, y, -1, TEXT_COLOR_NG, "Changing SH-2 cores");
-            y += line_height;
-            font_printf(75, y, -1, TEXT_COLOR_NG, "will reset the emulator.");
-            y += line_height;
-            break;
-          case OPT_ADVANCED_SH2_INTERPRETER:
-            font_printf(75, y, -1, TEXT_COLOR_INFO, "The SH-2 interpreter"
-                        " is slower, but generally runs at");
-            y += line_height;
-            x = font_printf(75, y, -1, TEXT_COLOR_INFO, "a consistent"
-                        " speed.  ");
-            font_printf(x, y, -1, TEXT_COLOR_NG, "Changing SH-2 cores will"
-                        " reset");
-            y += line_height;
-            font_printf(75, y, -1, TEXT_COLOR_NG, "the emulator.");
+            x = font_printf(75, y, -1, TEXT_COLOR_INFO, "interpreter.  ");
+            font_printf(x, y, -1, TEXT_COLOR_NG, "Changing this option will"
+                        " reset the emulator.");
             y += line_height;
             break;
           case OPT_ADVANCED_SH2_OPTIMIZE:
@@ -1672,6 +1668,28 @@ static void draw_menu(void)
             y += line_height;
             font_printf(75, y, -1, TEXT_COLOR_INFO, "SH-2 recompiler.");
             y += line_height;
+            break;
+          case OPT_ADVANCED_USE_ME:
+            if (me_available) {
+                font_printf(75, y, -1, TEXT_COLOR_INFO, "Use the Media Engine"
+                            " CPU for emulation.  This option");
+                y += line_height;
+                x = font_printf(75, y, -1, TEXT_COLOR_INFO, "is ");
+                x = font_printf(x, y, -1, TEXT_COLOR_NG, "EXPERIMENTAL");
+                font_printf(x, y, -1, TEXT_COLOR_INFO, " and may slow things"
+                            " down; see the manual.");
+                y += line_height;
+                font_printf(75, y, -1, TEXT_COLOR_NG, "You must restart"
+                            " Yabause after changing this option.");
+                y += line_height;
+            } else {
+                font_printf(75, y, -1, TEXT_COLOR_NG, "The Media Engine access"
+                            " library (me.prx) was not found,");
+                y += line_height;
+                font_printf(75, y, -1, TEXT_COLOR_NG, "so the Media Engine"
+                            " cannot be used for emulation.");
+                y += line_height;
+            }
             break;
           case OPT_ADVANCED_DECILINE_MODE:
             font_printf(75, y, -1, TEXT_COLOR_INFO, "Increase the precision"
@@ -1857,7 +1875,7 @@ static const char *cur_option_confirm_text(void)
           case OPT_GENERAL_FILES:
             return "O: Enter submenu    X: Return to previous menu";
           case OPT_GENERAL_BUP_SAVE_NOW:
-            return "O: Save backup RAM    X: Return to previuos menu";
+            return "O: Save backup RAM    X: Return to previous menu";
           default:
             return "O: Toggle on/off    X: Return to previous menu";
         }
@@ -1889,8 +1907,7 @@ static const char *cur_option_confirm_text(void)
       case MENU_ADVANCED:
         switch ((AdvancedMenuOption)cur_option) {
           case OPT_ADVANCED_SH2_RECOMPILER:
-          case OPT_ADVANCED_SH2_INTERPRETER:
-            return "L+R+O: Select    X: Return to previous menu";
+            return "L+R+O: Toggle on/off    X: Return to previous menu";
           case OPT_ADVANCED_SH2_OPTIMIZE:
             return "O: Enter submenu    X: Return to previous menu";
           default:
@@ -1927,6 +1944,43 @@ static void draw_menu_option(int option, int x, int y, const char *format, ...)
     vsnprintf(buf, sizeof(buf), format, args);
     va_end(args);
     int x2 = font_printf(x, y, -1, TEXT_COLOR, "%s", buf);
+
+    if (cur_option == option) {
+        const float cursor_alpha =
+            (sinf((cursor_timer / (float)CURSOR_PERIOD) * (float)M_TWOPI) + 1)
+            / 2;
+        const uint32_t cursor_alpha_byte =
+            floorf((CURSOR_COLOR>>24 & 0xFF) * cursor_alpha + 0.5f);
+        display_fill_box(x-2, y-2, x2+1, (y+FONT_HEIGHT)+1,
+                         cursor_alpha_byte<<24 | (CURSOR_COLOR & 0x00FFFFFF));
+    }
+}
+
+/*----------------------------------*/
+
+/**
+ * draw_disabled_menu_option:  Draw a single disabled menu option.  If the
+ * option is currently selected, also draws the menu cursor.
+ *
+ * [Parameters]
+ *     option: Option ID (OPT_*)
+ *       x, y: Text position
+ *     format: Format string for option text
+ *        ...: Format arguments
+ * [Return value]
+ *     None
+ */
+static void draw_disabled_menu_option(int option, int x, int y,
+                                      const char *format, ...)
+{
+    PRECOND(format != NULL, return);
+
+    char buf[1000];
+    va_list args;
+    va_start(args, format);
+    vsnprintf(buf, sizeof(buf), format, args);
+    va_end(args);
+    int x2 = font_printf(x, y, -1, TEXT_COLOR_DISABLED, "%s", buf);
 
     if (cur_option == option) {
         const float cursor_alpha =

@@ -35,9 +35,14 @@
 #endif
 
 /*************************************************************************/
+/************************ PSP module information *************************/
+/*************************************************************************/
 
-/* PSP module information */
-PSP_MODULE_INFO("Yabause", 0, 0, 2);
+#define MODULE_FLAGS     0
+#define MODULE_VERSION   0
+#define MODULE_REVISION  9
+
+PSP_MODULE_INFO("Yabause", MODULE_FLAGS, MODULE_VERSION, MODULE_REVISION);
 const PSP_MAIN_THREAD_PRIORITY(THREADPRI_MAIN);
 const PSP_MAIN_THREAD_STACK_SIZE_KB(128);
 const PSP_MAIN_THREAD_ATTR(PSP_THREAD_ATTR_USER);
@@ -53,6 +58,9 @@ char progpath[256];
 /* Saturn control pad handle (set at initialization time, and used by menu
  * code to change button assignments) */
 void *padbits;
+
+/* Flag indicating whether the ME is available for use */
+int me_available;
 
 /*************************************************************************/
 /****************************** Local data *******************************/

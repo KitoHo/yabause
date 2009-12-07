@@ -1,4 +1,4 @@
-/*  src/psp/me.h: PSP Media Engine library interface
+/*  src/psp/me.h: PSP Media Engine access library header
     Copyright 2009 Andrew Church
 
     This file is part of Yabause.
@@ -30,6 +30,8 @@ enum {
     ME_ERROR_NOT_STARTED = 0x90000001,
     /* Media Engine is currently executing a function */
     ME_ERROR_BUSY = 0x90000002,
+    /* No Media Engine interrupt is pending */
+    ME_ERROR_NO_INTERRUPT = 0x90000003,
 };
 
 /*************************************************************************/
@@ -58,6 +60,8 @@ extern int meStart(void);
  *     None
  */
 extern void meStop(void);
+
+/*----------------------------------*/
 
 /**
  * meCall:  Begin executing the given function on the Media Engine.  The
@@ -97,57 +101,113 @@ extern int meWait(void);
 /**
  * meResult:  Return the result (return value) of the most recently
  * executed function.  The result is undefined if the Media Engine has not
- * been started or is not idle, or if the most recently executed function
- * did not return a result (i.e. had a return type of void).
+ * been started or is not idle, if the most recently executed function did
+ * not return a result (i.e. had a return type of void), or if the most
+ * recently executed function triggered an exception.
  *
  * [Parameters]
  *     None
  * [Return value]
- *     Result of the most recently executed function if the Media Engine
- *     is currently idle, otherwise undefined
+ *     Result of the most recently executed function
  */
 extern int meResult(void);
 
-/*-----------------------------------------------------------------------*/
+/*----------------------------------*/
 
 /**
- * meIcacheInvalidateAll:  Invalidate all entries in the Media Engine's
- * instruction cache.
+ * meException:  Return whether the most recently executed function
+ * triggered an exception.  The result is undefined if the Media Engine has
+ * not been started or is not idle.
  *
- * This routine may only be called from code executing on the Media Engine.
+ * [Parameters]
+ *     None
+ * [Return value]
+ *     Nonzero if the most recently executed function triggered an
+ *     exception, else zero
+ */
+extern int meException(void);
+
+/**
+ * meExceptionGetData:  Retrieve CPU status register values related to the
+ * most recent exception.  The values retrieved are undefined in any case
+ * where meException() returns zero or has an undefined return value.
+ *
+ * NULL can be passed for any unneeded register values.
+ *
+ * [Parameters]
+ *     BadVAddr_ret: Pointer to variable to receive BadVAddr register value
+ *       Status_ret: Pointer to variable to receive Status register value
+ *        Cause_ret: Pointer to variable to receive Cause register value
+ *          EPC_ret: Pointer to variable to receive EPC register value
+ *     ErrorEPC_ret: Pointer to variable to receive ErrorEPC register value
+ * [Return value]
+ *     None
+ */
+extern void meExceptionGetData(uint32_t *BadVAddr_ret, uint32_t *Status_ret,
+                               uint32_t *Cause_ret, uint32_t *EPC_ret,
+                               uint32_t *ErrorEPC_ret);
+
+/**
+ * meExceptionSetFatal:  Set whether an exception on the Media Engine
+ * should automatically trigger an exception on the main CPU.  If enabled,
+ * any call to mePoll() or meWait() when an exception is pending will cause
+ * an address error exception to be generated on the main CPU, with
+ * exception status information loaded into the following registers:
+ *     $t8 = Status
+ *     $t9 = Cause
+ *     $k0 = EPC or ErrorEPC (depending on the exception type)
+ *     $k1 = BadVAddr
+ *     $gp = Media Engine's $sp
+ *     $sp = main CPU's $sp (unchanged)
+ * and all other general-purpose registers copied from the Media Engine.
+ *
+ * Unlike other functions in this library, this function can be called even
+ * when the ME is not running, and it will always succeed.
+ *
+ * By default, exceptions are not fatal.
+ *
+ * [Parameters]
+ *     fatal: Nonzero to make exceptions fatal, zero to make them nonfatal
+ * [Return value]
+ *     None
+ */
+extern void meExceptionSetFatal(int fatal);
+
+/*----------------------------------*/
+
+/**
+ * meInterruptPoll:  Return whether an interrupt from the Media Engine is
+ * pending.  Any pending interrupt is _not_ cleared.
+ *
+ * [Parameters]
+ *     None
+ * [Return value]
+ *     Zero if an interrupt from the Media Engine is pending, otherwise an
+ *     error code (negative)
+ */
+extern int meInterruptPoll(void);
+
+/**
+ * meInterruptWait:  Wait for an interrupt from the Media Engine if none is
+ * already pending, then clear the interrupt and return.
+ *
+ * [Parameters]
+ *     None
+ * [Return value]
+ *     Zero if an interrupt was received from the Media Engine, otherwise
+ *     an error code (negative)
+ */
+extern int meInterruptWait(void);
+
+/**
+ * meInterruptClear:  Clear any pending Media Engine interrupt.
  *
  * [Parameters]
  *     None
  * [Return value]
  *     None
  */
-extern void meIcacheInvalidateAll(void);
-
-/**
- * meDcacheInvalidateAll:  Invalidate all entries in the Media Engine's
- * data cache.
- *
- * This routine may only be called from code executing on the Media Engine.
- *
- * [Parameters]
- *     None
- * [Return value]
- *     None
- */
-extern void meDcacheInvalidateAll(void);
-
-/**
- * meDcacheWritebackInvalidateAll:  Write back and then invalidate all
- * entries in the Media Engine's data cache.
- *
- * This routine may only be called from code executing on the Media Engine.
- *
- * [Parameters]
- *     None
- * [Return value]
- *     None
- */
-extern void meDcacheWritebackInvalidateAll(void);
+extern void meInterruptClear(void);
 
 /*************************************************************************/
 

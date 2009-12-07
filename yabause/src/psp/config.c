@@ -39,6 +39,7 @@ static char path_bup[256] = "backup.bin";
 
 /* General settings */
 static int start_in_emu = 0;
+static int use_me = 1;
 static int bup_autosave = 1;
 
 /* Button configuration */
@@ -199,6 +200,9 @@ void config_load(void)
         } else if (stricmp(name, "start_in_emu") == 0) {
             parse_int(PATH_INI, line, name, value, &start_in_emu);
 
+        } else if (stricmp(name, "use_me") == 0) {
+            parse_int(PATH_INI, line, name, value, &use_me);
+
         } else if (stricmp(name, "bup_autosave") == 0) {
             parse_int(PATH_INI, line, name, value, &bup_autosave);
 
@@ -314,6 +318,7 @@ int config_save(void)
      || fprintf(f, "path_cd=%s\n",              path_cd                ) < 0
      || fprintf(f, "path_bup=%s\n",             path_bup               ) < 0
      || fprintf(f, "start_in_emu=%d\n",         start_in_emu           ) < 0
+     || fprintf(f, "use_me=%d\n",               use_me                 ) < 0
      || fprintf(f, "bup_autosave=%d\n",         bup_autosave           ) < 0
      || fprintf(f, "button.A=%u\n",             button[CONFIG_BUTTON_A]) < 0
      || fprintf(f, "button.B=%u\n",             button[CONFIG_BUTTON_B]) < 0
@@ -380,6 +385,11 @@ const char *config_get_path_bup(void)
 int config_get_start_in_emu(void)
 {
     return start_in_emu;
+}
+
+int config_get_use_me(void)
+{
+    return use_me;
 }
 
 int config_get_bup_autosave(void)
@@ -519,6 +529,12 @@ int config_set_path_bup(const char *value)
 int config_set_start_in_emu(int value)
 {
     start_in_emu = value ? 1 : 0;
+    return 1;
+}
+
+int config_set_use_me(int value)
+{
+    use_me = value ? 1 : 0;
     return 1;
 }
 

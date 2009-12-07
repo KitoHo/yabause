@@ -191,6 +191,14 @@
 
 /*************************************************************************/
 
+/* For the PSP, we need to avoid local data here sharing a cache line with
+ * data in other files due to the lack of SC/ME cache coherency */
+#ifdef PSP
+static __attribute__((aligned(64),used)) int dummy_top;
+#endif
+
+/*----------------------------------*/
+
 /* Entry into which translated code is currently being stored (set by
  * q68_jit_translate(), used by opcode translation functions) */
 static Q68JitEntry *current_entry;
@@ -214,6 +222,12 @@ static struct {
     uint32_t m68k_target;   // Branch target (68000 address)
     uint32_t native_offset; // Offset of native branch instruction to update
 } unres_branches[Q68_JIT_UNRES_BRANCH_SIZE];
+
+/*----------------------------------*/
+
+#ifdef PSP  // As above
+static __attribute__((aligned(64),used)) int dummy_bottom;
+#endif
 
 /*-----------------------------------------------------------------------*/
 
@@ -311,7 +325,7 @@ static int op_EXG(Q68State *state, uint32_t opcode);
 
 /* Main table of instruction implemenation functions; table index is bits
  * 15-12 and 8-6 of the opcode (ABCD ...E FG.. .... -> 0ABC DEFG). */
-static OpcodeFunc *opcode_table[128] = {
+static OpcodeFunc * const opcode_table[128] = {
     op_imm, op_imm, op_imm, op_imm, op_bit, op_bit, op_bit, op_bit,  // 00
     opMOVE, opMOVE, opMOVE, opMOVE, opMOVE, opMOVE, opMOVE, opMOVE,  // 10
     opMOVE, opMOVE, opMOVE, opMOVE, opMOVE, opMOVE, opMOVE, opMOVE,  // 20
@@ -335,7 +349,7 @@ static OpcodeFunc *opcode_table[128] = {
 
 /* Subtable for instructions in the $4xxx (miscellaneous) group; table index
  * is bits 11-9 and 7-6 of the opcode (1000 ABC0 DE.. .... -> 000A BCDE). */
-static OpcodeFunc *opcode_4xxx_table[32] = {
+static OpcodeFunc * const opcode_4xxx_table[32] = {
     op4alu, op4alu, op4alu, opMVSR,  // 40xx
     op4alu, op4alu, op4alu, op_ill,  // 42xx
     op4alu, op4alu, op4alu, opMVSR,  // 44xx
@@ -348,7 +362,7 @@ static OpcodeFunc *opcode_4xxx_table[32] = {
 
 /* Sub-subtable for instructions in the $4E40-$4E7F range, used by opmisc();
  * index is bits 5-3 of the opcode. */
-static OpcodeFunc *opcode_4E4x_table[8] = {
+static OpcodeFunc * const opcode_4E4x_table[8] = {
     opTRAP, opTRAP, opLINK, opUNLK,
     opMUSP, opMUSP, op4E7x, op_ill,
 };
@@ -403,6 +417,12 @@ int q68_jit_init(Q68State *state)
     /* Make sure page table is clear (so writes before processor reset
      * don't trigger JIT clearing */
     memset(state->jit_pages, 0, sizeof(state->jit_pages));
+
+    /* Set default memory management functions */
+    state->jit_malloc  = malloc;
+    state->jit_realloc = realloc;
+    state->jit_free    = free;
+    state->jit_flush   = NULL;
 
 #ifdef Q68_DISABLE_ADDRESS_ERROR
     /* Hack to avoid compiler warnings about unused functions */
@@ -577,7 +597,7 @@ Q68JitEntry *q68_jit_translate(Q68State *state, uint32_t address)
 
     /* Initialize the new entry */
 
-    current_entry->native_code = malloc(Q68_JIT_BLOCK_EXPAND_SIZE);
+    current_entry->native_code = state->jit_malloc(Q68_JIT_BLOCK_EXPAND_SIZE);
     if (!current_entry->native_code) {
         DMSG("No memory for code at $%06X", address);
         current_entry = NULL;
@@ -589,6 +609,7 @@ Q68JitEntry *q68_jit_translate(Q68State *state, uint32_t address)
     }
     state->jit_hashchain[hashval] = current_entry;
     current_entry->prev = NULL;
+    current_entry->state = state;
     current_entry->m68k_start = address;
     current_entry->native_size = Q68_JIT_BLOCK_EXPAND_SIZE;
     current_entry->native_length = 0;
@@ -643,9 +664,8 @@ Q68JitEntry *q68_jit_translate(Q68State *state, uint32_t address)
     ) {
         JIT_PAGE_SET(state, index);
     }
-    JIT_FLUSH_CACHE();
-    void *newptr = realloc(current_entry->native_code,
-                           current_entry->native_length);
+    void *newptr = state->jit_realloc(current_entry->native_code,
+                                      current_entry->native_length);
     if (newptr) {
         current_entry->native_code = newptr;
         current_entry->native_size = current_entry->native_length;
@@ -657,6 +677,9 @@ Q68JitEntry *q68_jit_translate(Q68State *state, uint32_t address)
 
     Q68JitEntry *retval = current_entry;
     current_entry = NULL;
+    if (state->jit_flush) {
+        state->jit_flush();
+    }
     return retval;
 }
 
@@ -1057,7 +1080,7 @@ static void clear_entry(Q68State *state, Q68JitEntry *entry)
 
     /* Free the native code */
     state->jit_total_data -= entry->native_size;
-    free(entry->native_code);
+    state->jit_free(entry->native_code);
     entry->native_code = NULL;
 
     /* Clear the entry from the table and hash chain */
@@ -1122,7 +1145,7 @@ static void clear_oldest_entry(Q68State *state)
 static int expand_buffer(Q68JitEntry *entry)
 {
     const uint32_t newsize = entry->native_size + Q68_JIT_BLOCK_EXPAND_SIZE;
-    void *newptr = realloc(entry->native_code, newsize);
+    void *newptr = entry->state->jit_realloc(entry->native_code, newsize);
     if (!newptr) {
         DMSG("Out of memory");
         return 0;

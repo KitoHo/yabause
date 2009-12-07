@@ -140,7 +140,7 @@ static int op_EXG(Q68State *state, uint32_t opcode);
 
 /* Main table of instruction implemenation functions; table index is bits
  * 15-12 and 8-6 of the opcode (ABCD ...E FG.. .... -> 0ABC DEFG). */
-static OpcodeFunc *opcode_table[128] = {
+static OpcodeFunc * const opcode_table[128] = {
     op_imm, op_imm, op_imm, op_imm, op_bit, op_bit, op_bit, op_bit,  // 00
     opMOVE, opMOVE, opMOVE, opMOVE, opMOVE, opMOVE, opMOVE, opMOVE,  // 10
     opMOVE, opMOVE, opMOVE, opMOVE, opMOVE, opMOVE, opMOVE, opMOVE,  // 20
@@ -164,7 +164,7 @@ static OpcodeFunc *opcode_table[128] = {
 
 /* Subtable for instructions in the $4xxx (miscellaneous) group; table index
  * is bits 11-9 and 7-6 of the opcode (1000 ABC0 DE.. .... -> 000A BCDE). */
-static OpcodeFunc *opcode_4xxx_table[32] = {
+static OpcodeFunc * const opcode_4xxx_table[32] = {
     op4alu, op4alu, op4alu, opMVSR,  // 40xx
     op4alu, op4alu, op4alu, op_ill,  // 42xx
     op4alu, op4alu, op4alu, opMVSR,  // 44xx
@@ -177,7 +177,7 @@ static OpcodeFunc *opcode_4xxx_table[32] = {
 
 /* Sub-subtable for instructions in the $4E40-$4E7F range, used by opmisc();
  * index is bits 5-3 of the opcode. */
-static OpcodeFunc *opcode_4E4x_table[8] = {
+static OpcodeFunc * const opcode_4E4x_table[8] = {
     opTRAP, opTRAP, opLINK, opUNLK,
     opMUSP, opMUSP, op4E7x, op_ill,
 };

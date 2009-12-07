@@ -38,10 +38,13 @@
 #include "menu.h"
 #include "sys.h"
 #include "psp-cd.h"
+#include "psp-m68k.h"
 #include "psp-per.h"
 #include "psp-sh2.h"
 #include "psp-sound.h"
 #include "psp-video.h"
+
+#include "me.h"
 
 /*************************************************************************/
 /****************************** Local data *******************************/
@@ -50,13 +53,8 @@
 /* Interface lists */
 
 M68K_struct *M68KCoreList[] = {
-    &M68KDummy,
-#ifdef HAVE_C68K
-    &M68KC68K,
-#endif
-#ifdef HAVE_Q68
-    &M68KQ68,
-#endif
+    /* We only support the ME-enabled Q68 interface */
+    &M68KPSP,
     NULL
 };
 
@@ -141,6 +139,15 @@ void init_psp(int argc, char **argv)
 
     /* Initialize localtime() */
     localtime_init();
+
+    /* Load the ME access library (if possible) */
+    int res = sys_load_module("me.prx", PSP_MEMORY_PARTITION_KERNEL);
+    if (res < 0) {
+        DMSG("Failed to load me.prx: %s", psp_strerror(res));
+        me_available = 0;
+    } else {
+        me_available = 1;
+    }
 }
 
 /*************************************************************************/
@@ -163,7 +170,7 @@ int init_yabause(void)
 
     /* Set up general defaults */
     memset(&yinit, 0, sizeof(yinit));
-    yinit.m68kcoretype = M68KCORE_Q68;
+    yinit.m68kcoretype = M68KCORE_PSP;
     yinit.percoretype = PERCORE_PSP;
     yinit.sh2coretype = config_get_module_sh2();
     yinit.vidcoretype = config_get_module_video();

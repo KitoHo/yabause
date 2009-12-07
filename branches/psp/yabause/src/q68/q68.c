@@ -155,6 +155,36 @@ void q68_set_writew_func(Q68State *state, Q68WriteFunc func)
     state->writew_func = func;
 }
 
+/*-----------------------------------------------------------------------*/
+
+/**
+ * q68_set_jit_memory_funcs:  Set alternate memory management functions to
+ * be used for allocating native code blocks when dynamic translation is
+ * enabled.  If not set, the standard system malloc()/realloc()/free()
+ * functions are used and no cache flushing is performed.  This function
+ * has no effect if dynamic translation is not enabled.
+ *
+ * [Parameters]
+ *            state: Processor state block
+ *      malloc_func: Function for allocating a memory block
+ *     realloc_func: Function for adjusting the size of a memory block
+ *        free_func: Function for freeing a memory block
+ *       flush_func: Function for flushing the native CPU cache (NULL if none)
+ * [Return value]
+ *     None
+ */
+void q68_set_jit_memory_funcs(Q68State *state,
+                              void *(*malloc_func)(size_t size),
+                              void *(*realloc_func)(void *ptr, size_t size),
+                              void (*free_func)(void *ptr),
+                              void (*flush_func)(void))
+{
+    state->jit_malloc  = malloc_func;
+    state->jit_realloc = realloc_func;
+    state->jit_free    = free_func;
+    state->jit_flush   = flush_func;
+}
+
 /*************************************************************************/
 
 /**

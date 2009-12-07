@@ -51,11 +51,12 @@
 
 /* Interface function declarations (must come before interface definition) */
 
-static void m68kq68_init(void);
+static int m68kq68_init(void);
 static void m68kq68_deinit(void);
 static void m68kq68_reset(void);
 
 static FASTCALL s32 m68kq68_exec(s32 cycles);
+static void m68kq68_sync(void);
 
 static u32 m68kq68_get_dreg(u32 num);
 static u32 m68kq68_get_areg(u32 num);
@@ -103,6 +104,7 @@ M68K_struct M68KQ68 = {
     .Reset       = m68kq68_reset,
 
     .Exec        = m68kq68_exec,
+    .Sync        = m68kq68_sync,
 
     .GetDReg     = m68kq68_get_dreg,
     .GetAReg     = m68kq68_get_areg,
@@ -154,19 +156,20 @@ static M68K_WRITE *real_writeb, *real_writew;
  * [Parameters]
  *     None
  * [Return value]
- *     None
+ *     Zero on success, negative on failure
  */
-static void m68kq68_init(void)
+static int m68kq68_init(void)
 {
     if (!(state = q68_create())) {
-        /* FIXME: Need to be able to return failure */
-        return;
+        return -1;
     }
     q68_set_irq(state, 0);
     q68_set_readb_func(state, dummy_read);
     q68_set_readw_func(state, dummy_read);
     q68_set_writeb_func(state, dummy_write);
     q68_set_writew_func(state, dummy_write);
+
+    return 0;
 }
 
 /*-----------------------------------------------------------------------*/
@@ -251,6 +254,21 @@ static FASTCALL s32 m68kq68_exec(s32 cycles)
 #else  // !PROFILE_68K
     return q68_run(state, cycles);
 #endif
+}
+
+/*-----------------------------------------------------------------------*/
+
+/**
+ * m68kq68_sync:  Wait for background execution to finish.
+ *
+ * [Parameters]
+ *     None
+ * [Return value]
+ *     None
+ */
+static void m68kq68_sync(void)
+{
+    /* Nothing to do */
 }
 
 /*************************************************************************/

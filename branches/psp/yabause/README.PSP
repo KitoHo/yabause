@@ -3,8 +3,8 @@ PSP-Specific Yabause Documentation
 
 Important notice
 ----------------
-PSP support for Yabause is still in an experimental stage; please be aware
-that some things may not work well (or at all).
+PSP support for Yabause is experimental; please be aware that some things
+may not work well (or at all).
 
 Unlike Yabause 0.9.10, this version of Yabause now works on all PSPs,
 including the original PSP-1000 ("Phat").  However, some games may run
@@ -21,10 +21,11 @@ drag the "PSP" folder from the ZIP archive onto the "F:" drive icon in
 Windows Explorer.)
 
 The "PSP" directory contains a directory called "GAME", which in turn
-contains a directory called "YABAUSE".  Inside the "YABAUSE" directory is
-a single file named "EBOOT.PBP"--this is the Yabause program file which the
-PSP runs, like a Windows .EXE file.  You'll also need to copy your CD image
-and other data files to this directory on your Memory Stick (see below).
+contains a directory called "YABAUSE".  Inside the "YABAUSE" directory are
+two files named "EBOOT.PBP" and "ME.PRX"; these are the program files used
+by Yabause, like .EXE and .DLL files on Windows.  You'll also need to copy
+your CD image and other data files to this directory on your Memory Stick
+(see below).
 
 Once you've copied Yabause to your Memory Stick, skip to "How to use
 Yabause" below.
@@ -54,16 +55,7 @@ but if you get strange build errors related to libraries like SDL or
 OpenGL, try disabling the optional libraries with the options
 "--without-sdl" and "--without-opengl".
 
-The following options can be used when configuring for PSP:
-
-    --with-q68  (STRONGLY RECOMMENDED)
-        Enables the Q68 interpreter/translator for 68000 code.  Q68 is a
-        dynamic-translation-capable replacement for the C68K interpreter
-        included in Yabause, designed specifically for the PSP.
-
-    --without-c68k  (STRONGLY RECOMMENDED)
-        Disables the C68K interpreter for 68000 code.  If Q68 is used
-        instead, C68K can be disabled to save around 1.5MB of memory.
+The following additional options can be used when configuring for PSP:
 
     --enable-psp-debug
         Enables printing of debug messages to standard error.
@@ -71,20 +63,27 @@ The following options can be used when configuring for PSP:
     --enable-psp-profile
         Enables printing of profiling statistics to standard error.
         By default, statistics are output every 100 frames; edit
-        src/psp/psp-per.c to change this.  Note that profiling has a
+        src/psp/main.c to change this.  Note that profiling has a
         significant impact on emulation speed.
 
+    --with-psp-me-test
+        Builds an additional program, "me-test.prx", which tests the
+        functionality of the Media Engine access library included with
+        Yabause.  Only useful for debugging or extending the library.
+
 After the configure script completes, run "make" to build Yabause.  The
-build process will create an EBOOT.PBP file in the src/psp/ subdirectory;
-create a directory for Yabause under /PSP/GAME on your memory stick (e.g.
-/PSP/GAME/YABAUSE) and copy EBOOT.PBP there.
+build process will create the EBOOT.PBP and me.prx (note that the latter
+is lowercase) files in the src/psp/ subdirectory; create a directory for
+Yabause under /PSP/GAME on your memory stick (e.g. /PSP/GAME/YABAUSE) and
+copy the files there.
 
 
 How to use Yabause (PSP-specific notes)
 ---------------------------------------
 All files you intend to use with Yabause (BIOS images, CD images, backup
-RAM images) must be stored in the same directory as the EBOOT.PBP file
-mentioned above.  The default filenames used by Yabause are as follows:
+RAM images) must be stored in the same directory as the EBOOT.PBP and
+ME.PRX files mentioned above.  The default filenames used by Yabause are
+as follows:
 
     BIOS.BIN   -- BIOS image
     CD.ISO     -- CD image (can also be a *.CUE file)
@@ -150,8 +149,8 @@ The main menu contains six options:
           a short time when an autosave occurs.  Note that the emulator
           may pause for a fraction of a second while autosaving.
 
-          If you disable this option, be aware that backup RAM is _not_
-          saved to the Memory Stick when you quit Yabause; you need to
+          Be aware that backup RAM is _not_ saved to the Memory Stick
+          when you quit Yabause; if you disable this option,  you need to
           manually save it using the "Save backup RAM now" option when
           appropriate.
 
@@ -215,26 +214,25 @@ The main menu contains six options:
           will be displayed in the upper-left corner of the screen as
           "FPS: X.XX (Y.YY)".  The number "X.XX" is the average frame
           rate, calculated from the last few seconds of emulation, while
-          the number "Y.YY" is the instantaneous frame rate, i.e., the
+          the number "Y.YY" is the instantaneous frame rate--i.e., the
           reciprocal of the time it took to display the last frame.
 
    * "Configure advanced settings..."
 
      This opens a submenu with the following options:
 
-        * "Use SH-2 recompiler (fast)" / "Use SH-2 interpreter (slow)"
+        * "Use SH-2 recompiler"
 
-          These options allow you to choose between the default SH-2 core,
+          This option allows you to choose between the default SH-2 core,
           which recompiles Saturn SH-2 code into native MIPS code for the
           PSP, and the SH-2 interpreter built into Yabause.  The SH-2
-          interpreter is much slower, often an order of magnitude or more
-          slower, so there is generally no reason to use it unless you
-          suspect a bug in the recompiler.
+          interpreter is much slower, often by an order of magnitude or
+          more, so there is generally no reason to disable this option
+          unless you suspect a bug in the recompiler.
 
-          Note that changing the SH-2 core will reset the emulator.  As
-          with the "Reset emulator" option on the main menu, you must hold
-          L and R while selecting either of these options to avoid an
-          accidental reset.
+          Note that changing this option will reset the emulator.  As with
+          "Reset emulator" on the main menu, you must hold L and R while
+          changing this option to avoid an accidental reset.
 
         * "Select SH-2 optimizations..."
 
@@ -251,6 +249,20 @@ The main menu contains six options:
           memory, so the game may run slowly for a short time after exiting
           the menu as the emulator recompiles SH-2 code using the new
           options.
+
+        * "Use Media Engine for emulation"
+
+          Enables the use of the PSP's Media Engine CPU to handle part
+          of the emulation in parallel with the main CPU.  This can
+          provide a moderate boost to emulation speed; however, since
+          the Media Engine is not designed for this sort of parallel
+          processing, some games may actually run slower or even crash.
+          As such, this option is still considered experimental; use it
+          at your own risk.
+
+          This option only takes effect when Yabause is started, so if
+          you change it, make sure you select "Save options" in the main
+          menu and then quit and restart Yabause.
 
         * "Use more precise emulation timing"
 
@@ -332,8 +344,8 @@ A: C'est la vie.  The PSP is unfortunately just not powerful enough to
 
       * Under "Configure video options" / "Configure hardware rendering"
         settings", turn off "Enable rotated/distorted graphics".  A single
-        distorted background can take the equivalent of 2-3 full 60fps
-        frames to render on the PSP.
+        distorted background can take the equivalent of 2 to 3 frames at
+        60fps to render on the PSP.
 
       * Under "Configure video options" / "Configure frame-skip settings",
         set the frame-skip mode to manual and increase the number of frames
@@ -347,6 +359,11 @@ A: C'est la vie.  The PSP is unfortunately just not powerful enough to
       * Under "Configure advanced emulation options", if "Use more precise
         emulation timing" is disabled, try enabling it.  (This may cause
         the game to freeze or crash, however.)
+
+      * Try turning on the "Use Media Engine for emulation" option in the
+        "Configure advanced emulation options" menu, but note that this
+        option is experimental and may cause your game to run more slowly
+        or even crash.
 
 Q: "My game suddenly froze!"
 
@@ -384,6 +401,8 @@ different primary CPUs (SH-2 versus MIPS Allegrex), big-endian byte order
 texture-based graphics (PSP), and so on.  As such, Yabause must take a
 number of shortcuts to make games even somewhat playable.
 
+<<< SH-2 emulation >>>
+
 Emulation of the Saturn's two SH-2 CPUs in particular is problematic.
 These processors run at either 26 or 28 MHz, and they use a RISC-like
 instruction set in which most instructions execute in one clock cycle, so
@@ -397,9 +416,9 @@ so on) within at most 6 native clock cycles for full-speed emulation.  In
 fact, the demands of emulating the other Saturn hardware reduce this to
 something closer to 2-3 native clock cycles.
 
-(*) The PSP actually has a second CPU, the Media Engine, which is not
-    currently used by Yabause.  But even if the ME were put to use, the
-    general issues described here would still apply.
+(*) The PSP actually has a second CPU, the Media Engine, but limitations
+    of the PSP architecture make it unsuitable for use as a full-fledged
+    second processor.  See below for details.
 
 With these limitations, interpreted execution of SH-2 code is out of the
 question--merely looking up the instruction handler would exhaust the
@@ -485,3 +504,112 @@ hurdles to fast emulation.  For example:
 
 Patches to either speed up specific games or to improve the translation
 algorithm generally are of course welcome.
+
+<<< Use of the Media Engine >>>
+
+Aside from the two SH-2 cores, a third major consumer of CPU time is the
+MC68000 ("68k") CPU used in the SCSP, the Saturn's sound processor.
+While most games don't run particularly complex code on the 68k, it is
+nonetheless a proper CPU in its own right, and requires a fair amount of
+time to emulate.  Currently, the PSP port of Yabause has the ability to
+make use of the PSP's Media Engine CPU to process 68k instructions in
+parallel with the rest of the emulation, but this use of the Media
+Engine is a considerable departure from Sony's design and thus a risky
+endeavor.
+
+The primary difficulty with using the ME as a "second core" in the sense
+of the multi-core processors used in PCs is that of cache coherency.
+Unlike generic multiprocessor or multi-core systems, the PSP's two CPUs
+do not implement cache coherency; this means that neither CPU knows what
+the other CPU has in its cache, and one CPU may inadvertently clobber the
+other's changes, causing stores to memory to get lost.  As an example,
+consider these two simple loops, operating in parallel on a two-element
+array initialized to {1,1} that fits within a single cache line:
+
+        Core 1                       Core 2
+        ------                       ------
+        for (;;) {                   for (;;) {
+            array[0] += array[1];        array[1] += array[0];
+        }                            }
+
+This illustrates two problems caused by the lack of cache coherency:
+
+* On a cache-coherent (or single-core) system, the two array elements
+  will increase unpredictably as each loop sees the updated value stored
+  by the other loop.  On the PSP, however, both elements will increase
+  monotonically; once each CPU loads the cache line, it never sees any
+  stores performed by the other CPU, because accesses to the array always
+  hit the cache.
+
+* On a cache-coherent system, if the cache line is flushed to memory, it
+  will always contain the current values of both array elements.  On the
+  PSP, however, the array element _not_ updated by the flushing CPU will
+  be written with the same value it had when the cache line was loaded
+  by that CPU.  In particular, if the other CPU had already flushed the
+  cache line, that change will be clobbered--for example (here "SC" is
+  the main CPU and "ME" is the media engine):
+
+        Time    Operation     SC cache    ME cache    Memory    Desired
+        ----    ----------    --------    --------    ------    -------
+         T1     Initialize    {1,1}       {1,1}       {1,1}     {1,1}
+         T2     SC flush      {A,1}       {1,B}       {A,1}     {A,B}
+         T3     ME flush      {C,1}       {1,D}       {1,D}     {C,D}
+
+  Note that at no time after initialization are the contents of memory
+  correct, and in particular, the value "A" written by the SC is lost
+  when the ME flushes {1,D} from its cache, even though the ME loop
+  never actually modified that array element.
+
+In order for Yabause to have even a hope of stable operation, therefore,
+the use of both CPUs' caches must be carefully controlled to avoid data
+loss.  This problem is exacerbated by the (current) lack of a
+multithreaded design in the Yabause core, making it difficult to isolate
+individual parts of the emulation for independent execution.  Within
+these constraints, the 68k CPU emulation was seen as the best candidate
+for parallel execution, both because of its time consumption and because
+of its limited connection to other Saturn components (the 68k can only
+access sound RAM and SCSP hardware registers).
+
+The following steps are taken to avoid data corruption due to the lack of
+cache coherency:
+
+* All accesses to sound RAM from the main CPU are performed through
+  uncacheable memory (0x4nnnnnnn); only the ME is permitted to cache
+  sound RAM.  (Sound RAM is allocated on a cache-aligned address to
+  ensure that it is not polluted by cached accesses to nearby data.)
+
+* All write accesses to SCSP registers are performed by the main CPU.
+  When the 68k accesses an SCSP register, the access is sent via an
+  interrupt to a thread running on the main CPU.
+
+* _Read_ accesses to SCSP registers are (by default, changeable with a
+  #define) performed on the ME.  To avoid the ME seeing stale data in
+  memory, SCSP state is written out from the main CPU's cache whenever
+  an SCSP register is written, and certain registers (specifically CA,
+  MCIPD, and SCIPD) are written through the cache whenever they are
+  updated by means other than a write access.
+
+* The ME flushes its cache (writeback and invalidate) after each iteration
+  of the execute function, ensuring that data seen by each CPU is never
+  more than one iteration old.
+
+* All calls to the Q68 interpreter core other than initialization and
+  cleanup are performed on the ME.  (However, this does not completely
+  avoid the potential for cache inconsistencies, since malloc() as used
+  in Q68 initialization code does not return cache-aligned blocks.)
+
+* When dynamic translation is enabled, all dynamically-generated native
+  code is stored in ME-local EDRAM to avoid any possibility of cache line
+  pollution.  (This has the added benefit of faster execution, since the
+  ME does not need to contend with other system components for access to
+  main memory.)
+
+In addition, 68k execution is only allowed to occur while the main CPU is
+processing SH-2 emulation, to minimize the possibility of SCSP access
+interrupts occurring at inopportune times (such as while generating audio
+output).
+
+At present, use of the Media Engine does not show a significant benefit,
+and in fact hurts frame rate in some cases.  Further work in parallelizing
+Yabause (perhaps moving the entire SCSP emulation to the ME) might provide
+better performance.

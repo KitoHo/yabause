@@ -90,6 +90,21 @@
 #include "yabause.h"
 #include "scsp.h"
 
+
+#ifdef PSP
+# include "psp/common.h"
+
+/* Macro to write a variable's value through the cache to main memory */
+# define WRITE_THROUGH(var)  (*(u32 *)((u32)&(var) | 0x40000000) = (var))
+
+/* Macro to flush SCSP state so it can be read from the ME */
+# define FLUSH_SCSP()  sceKernelDcacheWritebackRange(&scsp, sizeof(scsp))
+
+#else  // !PSP
+# define WRITE_THROUGH(var)  /*nothing*/
+# define FLUSH_SCSP()  /*nothing*/
+#endif
+
 ////////////////////////////////////////////////////////////////
 
 #ifndef PI
@@ -358,6 +373,7 @@ static void scsp_main_interrupt(u32 id)
 //      if (id != 0x400) SCSPLOG("scsp main interrupt %.4X\n", id);
 
 	scsp.mcipd |= id;
+	WRITE_THROUGH(scsp.mcipd);
 
 	if (scsp.mcieb & id)
            scsp_trigger_main_interrupt(id);
@@ -370,6 +386,7 @@ static void scsp_sound_interrupt(u32 id)
 //      SCSPLOG("scsp sound interrupt %.4X\n", id);
 
 	scsp.scipd |= id;
+	WRITE_THROUGH(scsp.scipd);
 	
 	if (scsp.scieb & id)
            scsp_trigger_sound_interrupt(id);
@@ -1019,6 +1036,7 @@ static void scsp_set_b(u32 a, u8 d)
 
         case 0x08: // MSLC/CA
 		scsp.mslc = (d >> 3) & 0x1F;
+		scsp_update_ca();
 		return;
 
         case 0x12: // DMEAL(high byte)
@@ -1180,7 +1198,7 @@ static void scsp_set_w(u32 a, u16 d)
 
         case 0x04: // MSLC/CA
 		scsp.mslc = (d >> 11) & 0x1F;
-		scsp.ca = (d >> 7) & 0xF;
+		scsp_update_ca();
 		return;
 
         case 0x09: // DMEAL
@@ -1293,10 +1311,10 @@ static u8 scsp_get_b(u32 a)
 		return scsp_midi_out_read();
 
         case 0x08: // MSLC/CA(highest 3 bits)
-		return ((scsp.slot[scsp.mslc].fcnt >> (SCSP_FREQ_LB + 12)) & 0xE) >> 1;
+		return scsp.ca >> 8;
 
         case 0x09: // CA(lowest bit)
-		return ((scsp.slot[scsp.mslc].fcnt >> (SCSP_FREQ_LB + 12)) & 0x1) << 7;
+		return scsp.ca & 0xFF;
 
         case 0x1E: // SCIEB(high byte)
                 return (scsp.scieb >> 8);
@@ -1342,7 +1360,7 @@ static u16 scsp_get_w(u32 a)
 		return scsp_midi_out_read();
 
         case 0x04: // MSLC/CA
-                return ((scsp.slot[scsp.mslc].fcnt >> (SCSP_FREQ_LB + 12)) & 0xF) << 7;
+		return scsp.ca;
 
         case 0x0F: // SCIEB
                 return scsp.scieb;
@@ -2147,6 +2165,14 @@ void scsp_update(s32 *bufL, s32 *bufR, u32 len)
         }
 }
 
+void scsp_update_ca()
+{
+   scsp.ca = ((scsp.slot[scsp.mslc].fcnt >> (SCSP_FREQ_LB + 12)) & 0xF) << 7;
+#ifdef PSP
+   WRITE_THROUGH(scsp.ca);
+#endif
+}
+
 void scsp_update_timer(u32 len)
 {
    scsp.timacnt += len << (8 - scsp.timasd);
@@ -2319,6 +2345,7 @@ void FASTCALL scsp_w_b(u32 a, u8 d)
 	if (a < 0x400)
 	{
 		scsp_slot_set_b(a >> 5, a, d);
+		FLUSH_SCSP();
 		return;
 	}
 	else if (a < 0x600)
@@ -2326,6 +2353,7 @@ void FASTCALL scsp_w_b(u32 a, u8 d)
 		if (a < 0x440)
 		{
 			scsp_set_b(a, d);
+			FLUSH_SCSP();
 			return;
 		}
 	}
@@ -2337,6 +2365,7 @@ void FASTCALL scsp_w_b(u32 a, u8 d)
 	{
 		a &= 0x3ff;
 		scsp_dcr[a ^ 3] = d;
+		return;
 	}
 
         SCSPLOG("WARNING: scsp w_b to %08lx w/ %02x\n", a, d);
@@ -2356,6 +2385,7 @@ void FASTCALL scsp_w_w(u32 a, u16 d)
 	if (a < 0x400)
 	{
 		scsp_slot_set_w(a >> 5, a, d);
+		FLUSH_SCSP();
 		return;
 	}
 	else if (a < 0x600)
@@ -2363,6 +2393,7 @@ void FASTCALL scsp_w_w(u32 a, u16 d)
 		if (a < 0x440)
 		{
 			scsp_set_w(a, d);
+			FLUSH_SCSP();
 			return;
 		}
 	}
@@ -2395,6 +2426,7 @@ void FASTCALL scsp_w_d(u32 a, u32 d)
 	{
 		scsp_slot_set_w(a >> 5, a + 0, d >> 16);
 		scsp_slot_set_w(a >> 5, a + 2, d & 0xFFFF);
+		FLUSH_SCSP();
 		return;
 	}
 	else if (a < 0x600)
@@ -2403,6 +2435,7 @@ void FASTCALL scsp_w_d(u32 a, u32 d)
 		{
 			scsp_set_w(a + 0, d >> 16);
 			scsp_set_w(a + 2, d & 0xFFFF);
+			FLUSH_SCSP();
 			return;
 		}
 	}
@@ -2855,7 +2888,8 @@ int ScspInit(int coreid) {
    if ((ScspInternalVars = (ScspInternal *)calloc(1, sizeof(ScspInternal))) == NULL)
       return -1;
 
-   M68K->Init(); // not sure if I need the int callback or not
+   if (M68K->Init() != 0)
+      return -1;
 
    M68K->SetReadB((C68K_READ *)c68k_byte_read);
    M68K->SetReadW((C68K_READ *)c68k_word_read);
@@ -3053,6 +3087,13 @@ void M68KStep(void) {
 
 //////////////////////////////////////////////////////////////////////////////
 
+// Wait for background execution to finish (used on PSP)
+void M68KSync(void) {
+   M68K->Sync();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
 void ScspConvert32uto16s(s32 *srcL, s32 *srcR, s16 *dst, u32 len) {
    u32 i;
 
@@ -3166,6 +3207,8 @@ void ScspExec() {
 #endif
       }
    }  // if (scspframeaccurate)
+
+   scsp_update_ca();
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -255,7 +255,7 @@ static void DoDMA(u32 ReadAddress, unsigned int ReadAdd,
                counter += 4;
             }
          }
-         /* Inform the SH-2 core in case it was a write to main RAM */
+         // Inform the SH-2 core in case it was a write to main RAM.
          SH2WriteNotify(start, WriteAddress - start);
       }
 
@@ -271,7 +271,7 @@ static void DoDMA(u32 ReadAddress, unsigned int ReadAdd,
          // Writes don't skip any bytes, so use an optimized copy algorithm
          // if possible.
          const u8 *source_ptr = DMAMemoryPointer(ReadAddress);
-         u8 *dest_ptr    = DMAMemoryPointer(WriteAddress);
+         u8 *dest_ptr = DMAMemoryPointer(WriteAddress);
 # ifdef WORDS_BIGENDIAN
          if ((source_type & 0x30) && (dest_type & 0x30)) {
             // Source and destination are both directly accessible.

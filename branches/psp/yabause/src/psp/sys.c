@@ -75,6 +75,43 @@ const char *psp_strerror(const int32_t code)
 /*************************************************************************/
 
 /**
+ * sys_load_module:  Load (and start) a PSP module.
+ *
+ * [Parameters]
+ *        module: Module pathname
+ *     partition: Memory partition (PSP_MEMORY_PARTITON_*)
+ * [Return value]
+ *     Module ID (nonnegative) on success, error code (negative) on failure
+ */
+SceUID sys_load_module(const char *module, int partition)
+{
+    SceKernelLMOption lmopts;
+    memset(&lmopts, 0, sizeof(lmopts));
+    lmopts.size     = sizeof(lmopts);
+    lmopts.mpidtext = partition;
+    lmopts.mpiddata = partition;
+    lmopts.position = 0;
+    lmopts.access   = 1;
+
+    SceUID modid = sceKernelLoadModule(module, 0, &lmopts);
+    if (modid < 0) {
+        return modid;
+    }
+
+    int dummy;
+    int res = sceKernelStartModule(modid, strlen(module)+1, (char *)module,
+                                   &dummy, NULL);
+    if (res < 0) {
+        sceKernelUnloadModule(modid);
+        return res;
+    }
+
+    return modid;
+}
+
+/*************************************************************************/
+
+/**
  * sys_start_thread:  Start a new thread, returning the created thread
  * handle.
  *

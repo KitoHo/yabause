@@ -3491,7 +3491,7 @@ int Cs2SaveState(FILE * fp) {
 
    // This is mostly kludge, but it will have to do until I have time to rewrite it all
 
-   offset = StateWriteHeader(fp, "CS2 ", 1);
+   offset = StateWriteHeader(fp, "CS2 ", 2);
 
    // Write cart type
    ywrite(&check, (void *) &Cs2Area->carttype, 4, 1, fp);
@@ -3580,7 +3580,7 @@ int Cs2SaveState(FILE * fp) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-int Cs2LoadState(FILE * fp, UNUSED int version, int size) {
+int Cs2LoadState(FILE * fp, int version, int size) {
    int i, i2;
    IOCheck_struct check;
 
@@ -3618,7 +3618,8 @@ int Cs2LoadState(FILE * fp, UNUSED int version, int size) {
    yread(&check, (void *)&Cs2Area->isdiskchanged, 1, 1, fp);
    yread(&check, (void *)&Cs2Area->isbufferfull, 1, 1, fp);
    yread(&check, (void *)&Cs2Area->speed1x, 1, 1, fp);
-   yread(&check, (void *)&Cs2Area->isaudio, 1, 1, fp);
+   if (version > 1)
+      yread(&check, (void *)&Cs2Area->isaudio, 1, 1, fp);
    yread(&check, (void *)&Cs2Area->transfileinfo, 1, 12, fp);
    yread(&check, (void *)&Cs2Area->lastbuffer, 1, 1, fp);
    yread(&check, (void *)&Cs2Area->_command, 1, 1, fp);

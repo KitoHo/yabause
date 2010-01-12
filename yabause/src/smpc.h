@@ -71,12 +71,12 @@ typedef struct {
    u8 firstPeri;
    u8 regionid;
    u8 regionsetting;
-   u8 clocksync;
-   u32 basetime;  // Safe until early 2106.  After that you're on your own (:
    u8 SMEM[4];
    s32 timing;
    PortData_struct port1;
    PortData_struct port2;
+   u8 clocksync;
+   u32 basetime;  // Safe until early 2106.  After that you're on your own (:
 } SmpcInternal;
 
 extern SmpcInternal * SmpcInternalVars;

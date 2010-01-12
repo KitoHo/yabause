@@ -745,7 +745,7 @@ int SmpcSaveState(FILE *fp)
    int offset;
    IOCheck_struct check;
 
-   offset = StateWriteHeader(fp, "SMPC", 2);
+   offset = StateWriteHeader(fp, "SMPC", 3);
 
    // Write registers
    ywrite(&check, (void *)SmpcRegs->IREG, sizeof(u8), 7, fp);
@@ -771,6 +771,7 @@ int SmpcSaveState(FILE *fp)
 int SmpcLoadState(FILE *fp, int version, int size)
 {
    IOCheck_struct check;
+   int internalsizev2 = sizeof(SmpcInternal) - 8;
 
    // Read registers
    yread(&check, (void *)SmpcRegs->IREG, sizeof(u8), 7, fp);
@@ -788,13 +789,15 @@ int SmpcLoadState(FILE *fp, int version, int size)
    {
       // This handles the problem caused by the version not being incremented
       // when SmpcInternal was changed
-      if ((size - 48) == sizeof(SmpcInternal))
-         yread(&check, (void *)SmpcInternalVars, sizeof(SmpcInternal), 1, fp);
+      if ((size - 48) == internalsizev2)
+         yread(&check, (void *)SmpcInternalVars, internalsizev2, 1, fp);
       else if ((size - 48) == 24)
          yread(&check, (void *)SmpcInternalVars, 24, 1, fp);
       else
          fseek(fp, size - 48, SEEK_CUR);
    }
+   else if (version == 2)
+      yread(&check, (void *)SmpcInternalVars, internalsizev2, 1, fp);
    else
       yread(&check, (void *)SmpcInternalVars, sizeof(SmpcInternal), 1, fp);
 

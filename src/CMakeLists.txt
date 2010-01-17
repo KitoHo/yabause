@@ -1,7 +1,11 @@
 project(yabause)
 
-include(CheckCSourceCompiles)
+include(FindOpenGL)
+if (OPENGL_FOUND)
+	add_definitions(-DHAVE_LIBGL=1)
+endif(OPENGL_FOUND)
 
+include(CheckCSourceCompiles)
 check_c_source_compiles("
 #include <linux/cdrom.h>
 int main(int argc, char ** argv) { int i = CDSL_CURRENT; }
@@ -32,6 +36,10 @@ endif(YAB_WANT_C68K)
 add_definitions(-DVERSION=\"0.9.10\")
 
 add_library(yabause ${yabause_SOURCES})
+
+if(OPENGL_FOUND)
+	link_libraries(yabause ${OPENGL_gl_LIBRARY})
+endif(OPENGL_FOUND)
 
 if (YAB_WANT_C68K)
 	add_dependencies(yabause c68kinc)

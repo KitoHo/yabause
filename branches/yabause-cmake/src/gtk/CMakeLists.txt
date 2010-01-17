@@ -2,10 +2,22 @@ project(yabause)
 
 include(FindPkgConfig)
 
-pkg_check_modules(GTK REQUIRED gtk+-2.0)
-
-include_directories(${GTK_INCLUDE_DIRS})
-add_definitions(${GTK_CFLAGS})
+if (NOT OPENGL_FOUND)
+	pkg_check_modules(GTK REQUIRED gtk+-2.0)
+	set(PORT_INCLUDE_DIRS ${GTK_INCLUDE_DIRS})
+	set(PORT_CFLAGS ${GTK_CFLAGS})
+	set(PORT_LIBRARIES ${GTK_LIBRARIES})
+else (NOT OPENGL_FOUND)
+	pkg_check_modules(GTKGLEXT gtkglext-1.0)
+	if (NOT GTKGLEXT_FOUND)
+		message(FATAL_ERROR "Found OpenGL and Gtk+ but not libgtkglext.")
+	endif (NOT GTKGLEXT_FOUND)
+	set(PORT_INCLUDE_DIRS ${GTKGLEXT_INCLUDE_DIRS})
+	set(PORT_CFLAGS -DHAVE_LIBGTKGLEXT=1 ${GTKGLEXT_CFLAGS})
+	set(PORT_LIBRARIES ${GTKGLEXT_LIBRARIES})
+endif (NOT OPENGL_FOUND)
+include_directories(${PORT_INCLUDE_DIRS})
+add_definitions(${PORT_CFLAGS})
 
 set(yabause_gtk_SOURCES
 	gtk-compat.c
@@ -35,5 +47,5 @@ set(yabause_gtk_SOURCES
 link_directories(..)
 add_executable(yabause-gtk ${yabause_gtk_SOURCES})
 set_target_properties(yabause-gtk PROPERTIES OUTPUT_NAME yabause)
-target_link_libraries(yabause-gtk ${GTK_LIBRARIES})
+target_link_libraries(yabause-gtk ${PORT_LIBRARIES})
 target_link_libraries(yabause-gtk libyabause.a)

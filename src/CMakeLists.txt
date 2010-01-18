@@ -1,10 +1,5 @@
 project(yabause)
 
-include(FindOpenGL)
-if (OPENGL_FOUND)
-	add_definitions(-DHAVE_LIBGL=1)
-endif(OPENGL_FOUND)
-
 set(yabause_SOURCES
 	bios.c
 	cdbase.c cheat.c coffelf.c cs0.c cs1.c cs2.c
@@ -17,7 +12,14 @@ set(yabause_SOURCES
 	vdp1.c vdp2.c vdp2debug.c vidogl.c vidshared.c vidsoft.c
 	yabause.c ygl.c)
 
-include(CheckCSourceCompiles)
+# OpenGL
+option(YAB_WANT_OPENGL "use OpenGL for video output (most ports require it)" ON)
+if (YAB_WANT_OPENGL)
+	include(FindOpenGL)
+	if (OPENGL_FOUND)
+		add_definitions(-DHAVE_LIBGL=1)
+	endif(OPENGL_FOUND)
+endif (YAB_WANT_OPENGL)
 
 # SDL
 option(YAB_WANT_SDL "use SDL cores if available" ON)
@@ -39,6 +41,8 @@ if (YAB_WANT_OPENAL)
 		set(yabause_SOURCES ${yabause_SOURCES} sndal.c)
 	endif (OPENAL_FOUND)
 endif (YAB_WANT_OPENAL)
+
+include(CheckCSourceCompiles)
 
 # Linux
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")

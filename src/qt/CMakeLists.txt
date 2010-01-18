@@ -90,13 +90,14 @@ QT4_WRAP_CPP( yabause_qt_MOC_SOURCES ${yabause_qt_MOC_HEADERS} )
 
 add_executable( yabause-qt
 	${yabause_qt_RCC_RESOURCES}
-	#${yabause_qt_HEADERS}
-	#${yabause_qt_MOC_HEADERS}
+	${yabause_qt_HEADERS}
+	${yabause_qt_MOC_HEADERS}
 	${yabause_qt_SOURCES}
-	#${yabause_qt_UI_FORMS}
+	${yabause_qt_UI_FORMS}
 	${yabause_qt_MOC_SOURCES} )
 
 include_directories(
+	.
 	${CMAKE_CURRENT_BINARY_DIR}
 	${QT_INCLUDE_DIR}
 	${QT_QTCORE_INCLUDE_DIR}

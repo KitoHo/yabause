@@ -61,7 +61,7 @@ if (YAB_WANT_C68K)
 	set(yabause_SOURCES ${yabause_SOURCES} c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c m68kc68k.c)
 endif(YAB_WANT_C68K)
 
-add_definitions(-DPACKAGE=\"Yabause\")
+add_definitions(-DPACKAGE=\"yabause\")
 add_definitions(-DVERSION=\"0.9.10\")
 
 add_library(yabause ${yabause_SOURCES})

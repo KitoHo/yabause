@@ -13,11 +13,22 @@ set(yabause_SOURCES
 	m68kcore.c m68kd.c m68kq68.c memory.c movie.c
 	netlink.c
 	peripheral.c profile.c
-	scsp.c scu.c sh2core.c sh2d.c sh2idle.c sh2int.c sh2trace.c smpc.c sndal.c sndsdl.c
+	scsp.c scu.c sh2core.c sh2d.c sh2idle.c sh2int.c sh2trace.c smpc.c sndal.c
 	vdp1.c vdp2.c vdp2debug.c vidogl.c vidshared.c vidsoft.c
 	yabause.c ygl.c)
 
 include(CheckCSourceCompiles)
+
+# SDL
+option(YAB_WANT_SDL "use SDL cores if available" ON)
+if (YAB_WANT_SDL)
+	include(FindSDL)
+	if (SDL_FOUND)
+		add_definitions(-DHAVE_LIBSDL=1)
+		include_directories(${SDL_INCLUDE_DIR})
+		set(yabause_SOURCES ${yabause_SOURCES} persdljoy.c sndsdl.c)
+	endif (SDL_FOUND)
+endif (YAB_WANT_SDL)
 
 # Linux
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -29,7 +40,7 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
        		add_definitions(-DLINUX_CDROM_H_IS_BROKEN)
 	endif (NOT LINUX_CDROM_H_OK)
 
-	set(yabause_SOURCES ${yabause_SOURCES} cd-linux.c perlinuxjoy.c persdljoy.c)
+	set(yabause_SOURCES ${yabause_SOURCES} cd-linux.c perlinuxjoy.c)
 endif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 
 if (MSVC)
@@ -58,6 +69,10 @@ add_library(yabause ${yabause_SOURCES})
 if(OPENGL_FOUND)
 	link_libraries(yabause ${OPENGL_gl_LIBRARY})
 endif(OPENGL_FOUND)
+
+if(SDL_FOUND)
+	link_libraries(yabause ${SDL_LIBRARY})
+endif(SDL_FOUND)
 
 if (YAB_WANT_C68K)
 	add_dependencies(yabause c68kinc)

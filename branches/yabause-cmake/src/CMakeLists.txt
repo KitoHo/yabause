@@ -13,7 +13,7 @@ set(yabause_SOURCES
 	m68kcore.c m68kd.c m68kq68.c memory.c movie.c
 	netlink.c
 	peripheral.c profile.c
-	scsp.c scu.c sh2core.c sh2d.c sh2idle.c sh2int.c sh2trace.c smpc.c sndal.c
+	scsp.c scu.c sh2core.c sh2d.c sh2idle.c sh2int.c sh2trace.c smpc.c
 	vdp1.c vdp2.c vdp2debug.c vidogl.c vidshared.c vidsoft.c
 	yabause.c ygl.c)
 
@@ -29,6 +29,16 @@ if (YAB_WANT_SDL)
 		set(yabause_SOURCES ${yabause_SOURCES} persdljoy.c sndsdl.c)
 	endif (SDL_FOUND)
 endif (YAB_WANT_SDL)
+
+option(YAB_WANT_OPENAL "use OpenAL sound core if available" ON)
+if (YAB_WANT_OPENAL)
+	include(FindOpenAL)
+	if (OPENAL_FOUND)
+		add_definitions(-DHAVE_LIBAL=1)
+		include_directories(${OPENAL_INCLUDE_DIR})
+		set(yabause_SOURCES ${yabause_SOURCES} sndal.c)
+	endif (OPENAL_FOUND)
+endif (YAB_WANT_OPENAL)
 
 # Linux
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -73,6 +83,10 @@ endif(OPENGL_FOUND)
 if(SDL_FOUND)
 	link_libraries(yabause ${SDL_LIBRARY})
 endif(SDL_FOUND)
+
+if(OPENAL_FOUND)
+	link_libraries(yabause ${OPENAL_LIBRARY})
+endif(OPENAL_FOUND)
 
 if (YAB_WANT_C68K)
 	add_dependencies(yabause c68kinc)

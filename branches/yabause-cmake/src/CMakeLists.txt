@@ -6,25 +6,44 @@ if (OPENGL_FOUND)
 endif(OPENGL_FOUND)
 
 include(CheckCSourceCompiles)
-check_c_source_compiles("
-#include <linux/cdrom.h>
-int main(int argc, char ** argv) { int i = CDSL_CURRENT; }
-", LINUX_CDROM_H_OK)
-if(NOT LINUX_CDROM_H_OK)
-	add_definitions(-DLINUX_CDROM_H_IS_BROKEN)
-endif(NOT LINUX_CDROM_H_OK)
+
+# Linux
+if (UNIX and NOT APPLE and NOT CYGWIN) # This may need revising
+	check_c_source_compiles("
+	#include <linux/cdrom.h>
+	int main(int argc, char ** argv) { int i = CDSL_CURRENT; }
+	", LINUX_CDROM_H_OK)
+	if(NOT LINUX_CDROM_H_OK)
+		add_definitions(-DLINUX_CDROM_H_IS_BROKEN)
+	endif(NOT LINUX_CDROM_H_OK)
+endif(UNIX and NOT APPLE and NOT CYGWIN)
 
 set(yabause_SOURCES
 	bios.c
-	cdbase.c cd-linux.c cheat.c coffelf.c cs0.c cs1.c cs2.c
+	cdbase.c cheat.c coffelf.c cs0.c cs1.c cs2.c
 	debug.c
 	error.c
 	m68kcore.c m68kd.c m68kq68.c memory.c movie.c
 	netlink.c
-	peripheral.c perlinuxjoy.c persdljoy.c profile.c
+	peripheral.c profile.c
 	scsp.c scu.c sh2core.c sh2d.c sh2idle.c sh2int.c sh2trace.c smpc.c sndal.c sndsdl.c
 	vdp1.c vdp2.c vdp2debug.c vidogl.c vidshared.c vidsoft.c
 	yabause.c ygl.c)
+
+# Linux
+if (UNIX and NOT APPLE and NOT CYGWIN) # This may need revising
+	set(yabause_SOURCES ${yabause_SOURCES} cd-linux.c perlinuxjoy.c persdljoy.c)
+endif(UNIX and NOT APPLE and NOT CYGWIN)
+
+if (MSVC)
+	add_definitions(-DHAVE_C99_VARIADIC_MACROS)
+	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+	add_definitions(-DC68K_NO_JUMP_TABLE)
+endif (MSVC)
+
+if (WIN32)
+	set(yabause_SOURCES ${yabause_SOURCES} cd-windows.c)
+endif (WIN32)
 
 option(YAB_WANT_C68K "enable c68k compilation" ON)
 if (YAB_WANT_C68K)
@@ -45,4 +64,10 @@ if (YAB_WANT_C68K)
 	add_dependencies(yabause c68kinc)
 endif(YAB_WANT_C68K)
 
-subdirs(gtk)
+if (UNIX)
+	subdirs(gtk)
+endif(UNIX)
+
+if (WIN32)
+	subdirs(windows)
+endif(WIN32)

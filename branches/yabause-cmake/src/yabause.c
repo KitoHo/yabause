@@ -399,6 +399,8 @@ int YabauseEmulate(void) {
       yabsys.DecilineMode ? yabsys.DecilineStop : yabsys.DecilineStop * 10;
    unsigned int m68kcycles;       // Integral M68k cycles per call
    unsigned int m68kcenticycles;  // 1/100 M68k cycles per call
+   int oneframeexec = 0;
+   
    if (yabsys.IsPal)
    {
       /* 11.2896MHz / 50Hz / 262.5 lines / 10 calls/line = 86.01 cycles/call */
@@ -411,8 +413,6 @@ int YabauseEmulate(void) {
       m68kcycles = yabsys.DecilineMode ? 71 : 716;
       m68kcenticycles = yabsys.DecilineMode ? 68 : 80;
    }
-
-   int oneframeexec = 0;
 
    DoMovie();
 

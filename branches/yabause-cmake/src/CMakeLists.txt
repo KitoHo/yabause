@@ -7,16 +7,18 @@ endif(OPENGL_FOUND)
 
 include(CheckCSourceCompiles)
 
+set( unix_not_apple_not_cygwin "UNIX and NOT APPLE and NOT CYGWIN" )
+
 # Linux
-if (UNIX and NOT APPLE and NOT CYGWIN) # This may need revising
-	check_c_source_compiles("
-	#include <linux/cdrom.h>
-	int main(int argc, char ** argv) { int i = CDSL_CURRENT; }
-	", LINUX_CDROM_H_OK)
-	if(NOT LINUX_CDROM_H_OK)
+#if (unix_not_apple_not_cygwin) # This may need revising
+#	check_c_source_compiles("
+#	#include <linux/cdrom.h>
+#	int main(int argc, char ** argv) { int i = CDSL_CURRENT; }
+#	", LINUX_CDROM_H_OK)
+#	if(NOT LINUX_CDROM_H_OK)
 		add_definitions(-DLINUX_CDROM_H_IS_BROKEN)
-	endif(NOT LINUX_CDROM_H_OK)
-endif(UNIX and NOT APPLE and NOT CYGWIN)
+#	endif(NOT LINUX_CDROM_H_OK)
+#endif(unix_not_apple_not_cygwin)
 
 set(yabause_SOURCES
 	bios.c
@@ -31,9 +33,9 @@ set(yabause_SOURCES
 	yabause.c ygl.c)
 
 # Linux
-if (UNIX and NOT APPLE and NOT CYGWIN) # This may need revising
+if (unix_not_apple_not_cygwin) # This may need revising
 	set(yabause_SOURCES ${yabause_SOURCES} cd-linux.c perlinuxjoy.c persdljoy.c)
-endif(UNIX and NOT APPLE and NOT CYGWIN)
+endif(unix_not_apple_not_cygwin)
 
 if (MSVC)
 	add_definitions(-DHAVE_C99_VARIADIC_MACROS)
@@ -52,6 +54,7 @@ if (YAB_WANT_C68K)
 	set(yabause_SOURCES ${yabause_SOURCES} c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c m68kc68k.c)
 endif(YAB_WANT_C68K)
 
+add_definitions(-DPACKAGE=\"Yabause\")
 add_definitions(-DVERSION=\"0.9.10\")
 
 add_library(yabause ${yabause_SOURCES})
@@ -64,8 +67,14 @@ if (YAB_WANT_C68K)
 	add_dependencies(yabause c68kinc)
 endif(YAB_WANT_C68K)
 
+FIND_PACKAGE(Qt4)
+
 if (UNIX)
-	subdirs(gtk)
+	#if (QT4_INSTALLED)
+		subdirs(qt)
+	#else (QT4_INSTALLED)
+		#subdirs(gtk)
+	#endif (QT4_INSTALLED)
 endif(UNIX)
 
 if (WIN32)

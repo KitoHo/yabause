@@ -10,35 +10,13 @@ set( QT_DONT_USE_QTCORE TRUE )
 set( QT_DONT_USE_QTGUI TRUE )
 set( QT_USE_QTOPENGL TRUE )
 
-#QT_DONT_USE_QTCORE
-#QT_DONT_USE_QTGUI
-#QT_USE_QT3SUPPORT
-#QT_USE_QTASSISTANT
-#QT_USE_QAXCONTAINER
-#QT_USE_QAXSERVER
-#QT_USE_QTDESIGNER
-#QT_USE_QTMOTIF
-#QT_USE_QTMAIN
-#QT_USE_QTNETWORK
-#QT_USE_QTNSPLUGIN
-#QT_USE_QTOPENGL
-#QT_USE_QTSQL
-#QT_USE_QTXML
-#QT_USE_QTSVG
-#QT_USE_QTTEST
-#QT_USE_QTUITOOLS
-#QT_USE_QTDBUS
-#QT_USE_QTSCRIPT
-#QT_USE_QTASSISTANTCLIENT
-#QT_USE_QTHELP
-#QT_USE_QTWEBKIT
-#QT_USE_QTXMLPATTERNS
-#QT_USE_PHONON
-
+# dunno what it does exactly ... but seem required
 include( ${QT_USE_FILE} )
 
+# qt resources file
 set( yabause_qt_RESOURCES resources/resources.qrc )
 
+# qt forms
 set( yabause_qt_FORMS
 	ui/UIYabause.ui
 	ui/UISettings.ui
@@ -51,11 +29,13 @@ set( yabause_qt_FORMS
 	ui/UIPortManager.ui
 	ui/UIPadSetting.ui )
 
+# pure C headers
 set( yabause_qt_HEADERS
 	QtYabause.h
 	CommonDialogs.h
 	PerQt.h )
 
+# C headers needing moc
 set( yabause_qt_MOC_HEADERS
 	ui/UIYabause.h
 	ui/UISettings.h
@@ -71,6 +51,7 @@ set( yabause_qt_MOC_HEADERS
 	Settings.h
 	YabauseThread.h )
 
+# C sources
 set( yabause_qt_SOURCES
 	main.cpp
 	QtYabause.cpp
@@ -90,7 +71,7 @@ set( yabause_qt_SOURCES
 	Settings.cpp
 	YabauseThread.cpp )
 
-QT4_ADD_RESOURCES(yabause_qt_RCC_RESOURCES ${yabause_qt_RESOURCES})
+QT4_ADD_RESOURCES( yabause_qt_RCC_RESOURCES ${yabause_qt_RESOURCES} )
 QT4_WRAP_UI( yabause_qt_UI_FORMS ${yabause_qt_FORMS} )
 QT4_WRAP_CPP( yabause_qt_MOC_SOURCES ${yabause_qt_MOC_HEADERS} )
 
@@ -110,9 +91,8 @@ include_directories(
 	${QT_QTGUI_INCLUDE_DIR}
 	${QT_QTOPENGL_INCLUDE_DIR} )
 
-link_directories(..)
-
-set_target_properties(yabause-qt PROPERTIES OUTPUT_NAME yabause)
-target_link_libraries(yabause-qt ${PORT_LIBRARIES})
-target_link_libraries(yabause-qt ${QT_LIBRARIES})
-target_link_libraries(yabause-qt yabause)
+set_target_properties( yabause-qt PROPERTIES OUTPUT_NAME yabause-qt )
+link_directories( .. )
+target_link_libraries( yabause-qt ${PORT_LIBRARIES} )
+target_link_libraries( yabause-qt ${QT_LIBRARIES} )
+target_link_libraries( yabause-qt yabause )

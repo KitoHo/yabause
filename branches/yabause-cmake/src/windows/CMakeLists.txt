@@ -1,5 +1,9 @@
 project(yabause)
 
+if (NOT WIN32)
+	return()
+endif(NOT WIN32)
+
 #include(FindPkgConfig)
 
 #if (NOT OPENGL_FOUND)

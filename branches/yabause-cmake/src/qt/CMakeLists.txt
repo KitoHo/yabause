@@ -1,5 +1,11 @@
 project( yabause-qt )
 
+find_package(Qt4)
+
+if (NOT QT4_FOUND)
+	return()
+endif (NOT QT4_FOUND)
+
 set( QT_DONT_USE_QTCORE TRUE )
 set( QT_DONT_USE_QTGUI TRUE )
 set( QT_USE_QTOPENGL TRUE )

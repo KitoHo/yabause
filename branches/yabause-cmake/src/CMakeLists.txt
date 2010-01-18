@@ -5,21 +5,6 @@ if (OPENGL_FOUND)
 	add_definitions(-DHAVE_LIBGL=1)
 endif(OPENGL_FOUND)
 
-include(CheckCSourceCompiles)
-
-set( unix_not_apple_not_cygwin "UNIX and NOT APPLE and NOT CYGWIN" )
-
-# Linux
-#if (unix_not_apple_not_cygwin) # This may need revising
-#	check_c_source_compiles("
-#	#include <linux/cdrom.h>
-#	int main(int argc, char ** argv) { int i = CDSL_CURRENT; }
-#	", LINUX_CDROM_H_OK)
-#	if(NOT LINUX_CDROM_H_OK)
-		add_definitions(-DLINUX_CDROM_H_IS_BROKEN)
-#	endif(NOT LINUX_CDROM_H_OK)
-#endif(unix_not_apple_not_cygwin)
-
 set(yabause_SOURCES
 	bios.c
 	cdbase.c cheat.c coffelf.c cs0.c cs1.c cs2.c
@@ -32,10 +17,20 @@ set(yabause_SOURCES
 	vdp1.c vdp2.c vdp2debug.c vidogl.c vidshared.c vidsoft.c
 	yabause.c ygl.c)
 
+include(CheckCSourceCompiles)
+
 # Linux
-if (unix_not_apple_not_cygwin) # This may need revising
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+	check_c_source_compiles("
+		#include <linux/cdrom.h>
+		int main(int argc, char ** argv) { int i = CDSL_CURRENT; }
+	", LINUX_CDROM_H_OK)
+	if (NOT LINUX_CDROM_H_OK)
+       		add_definitions(-DLINUX_CDROM_H_IS_BROKEN)
+	endif (NOT LINUX_CDROM_H_OK)
+
 	set(yabause_SOURCES ${yabause_SOURCES} cd-linux.c perlinuxjoy.c persdljoy.c)
-endif(unix_not_apple_not_cygwin)
+endif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 
 if (MSVC)
 	add_definitions(-DHAVE_C99_VARIADIC_MACROS)
@@ -68,16 +63,4 @@ if (YAB_WANT_C68K)
 	add_dependencies(yabause c68kinc)
 endif(YAB_WANT_C68K)
 
-FIND_PACKAGE(Qt4)
-
-if (UNIX)
-	#if (QT4_INSTALLED)
-		subdirs(qt)
-	#else (QT4_INSTALLED)
-		#subdirs(gtk)
-	#endif (QT4_INSTALLED)
-endif(UNIX)
-
-if (WIN32)
-	subdirs(windows)
-endif(WIN32)
+subdirs(gtk qt windows)

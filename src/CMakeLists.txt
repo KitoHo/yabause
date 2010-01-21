@@ -32,6 +32,7 @@ if (YAB_WANT_SDL)
 	endif (SDL_FOUND)
 endif (YAB_WANT_SDL)
 
+# OpenAL
 option(YAB_WANT_OPENAL "use OpenAL sound core if available" ON)
 if (YAB_WANT_OPENAL)
 	include(FindOpenAL)
@@ -41,6 +42,19 @@ if (YAB_WANT_OPENAL)
 		set(yabause_SOURCES ${yabause_SOURCES} sndal.c)
 	endif (OPENAL_FOUND)
 endif (YAB_WANT_OPENAL)
+
+# mini18n
+find_path(MINI18N_INCLUDE_DIR mini18n.h)
+find_library(MINI18N_LIBRARY mini18n)
+if (NOT MINI18N_INCLUDE_DIR STREQUAL "MINI18N_INCLUDE_DIR-NOTFOUND" AND NOT MINI18N_LIBRARY STREQUAL "MINI18N_LIBRARY-NOTFOUND")
+	set(MINI18N_FOUND TRUE)
+	include_directories(${MINI18N_INCLUDE_DIR})
+	add_definitions(-DHAVE_LIBMINI18N=1)
+endif (NOT MINI18N_INCLUDE_DIR STREQUAL "MINI18N_INCLUDE_DIR-NOTFOUND" AND NOT MINI18N_LIBRARY STREQUAL "MINI18N_LIBRARY-NOTFOUND")
+
+if (UNIX AND MINI18N_FOUND)
+	add_definitions(-DYTSDIR=\"${CMAKE_INSTALL_PREFIX}/share/${PACKAGE}/yts\")
+endif (UNIX AND MINI18N_FOUND)
 
 include(CheckCSourceCompiles)
 
@@ -91,6 +105,10 @@ endif(SDL_FOUND)
 if(OPENAL_FOUND)
 	link_libraries(yabause ${OPENAL_LIBRARY})
 endif(OPENAL_FOUND)
+
+if(MINI18N_FOUND)
+	link_libraries(yabause ${MINI18N_LIBRARY})
+endif(MINI18N_FOUND)
 
 if (YAB_WANT_C68K)
 	add_dependencies(yabause c68kinc)

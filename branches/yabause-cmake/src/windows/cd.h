@@ -21,8 +21,8 @@
 #ifndef CD_HH
 #define CD_HH
 
-#include <ddk/ntddcdrm.h>
-#include <ddk/ntddscsi.h>
+#include <ntddcdrm.h>
+#include <ntddscsi.h>
 #ifdef HAVE_WNASPI32_H
 #include <wnaspi32.h>
 #endif

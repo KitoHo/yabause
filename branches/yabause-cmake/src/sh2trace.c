@@ -67,8 +67,6 @@ FASTCALL void sh2_trace_add_cycles(int32_t cycles)
 
 FASTCALL void sh2_trace_writeb(uint32_t address, uint32_t value)
 {
-    if (logfile) {
-        value &= 0xFF;
 #ifdef BINARY_LOG
         struct {
             uint16_t id;  // 1 = byte store
@@ -77,6 +75,10 @@ FASTCALL void sh2_trace_writeb(uint32_t address, uint32_t value)
             uint32_t value;
             uint32_t pad2;
         } buf;
+#endif
+    if (logfile) {
+        value &= 0xFF;
+#ifdef BINARY_LOG
         buf.id = 1;
         buf.pad1 = 0;
         buf.address = address;
@@ -94,8 +96,6 @@ FASTCALL void sh2_trace_writeb(uint32_t address, uint32_t value)
 
 FASTCALL void sh2_trace_writew(uint32_t address, uint32_t value)
 {
-    if (logfile) {
-        value &= 0xFFFF;
 #ifdef BINARY_LOG
         struct {
             uint16_t id;  // 2 = word store
@@ -104,6 +104,10 @@ FASTCALL void sh2_trace_writew(uint32_t address, uint32_t value)
             uint32_t value;
             uint32_t pad2;
         } buf;
+#endif
+    if (logfile) {
+        value &= 0xFFFF;
+#ifdef BINARY_LOG
         buf.id = 2;
         buf.pad1 = 0;
         buf.address = address;
@@ -149,8 +153,18 @@ FASTCALL void sh2_trace_writel(uint32_t address, uint32_t value)
 
 FASTCALL void sh2_trace(SH2_struct *state, uint32_t address)
 {
-    current_cycles = cycle_accum + state->cycles;
+    uint16_t opcode;
+#ifdef BINARY_LOG
+        struct {
+            uint16_t id;  // 1/2/4 = store; 0x80 = MSH2 insn; 0x81 = SSH2 insn
+            uint16_t opcode;
+            uint32_t regs[23];
+            uint64_t cycles;
+            uint32_t pad[2];
+        } buf;
+#endif
 
+    current_cycles = cycle_accum + state->cycles;
     if (current_cycles < trace_start) {
 
         /* Before first instruction: do nothing */
@@ -184,17 +198,9 @@ FASTCALL void sh2_trace(SH2_struct *state, uint32_t address)
             setvbuf(logfile, NULL, _IOFBF, 65536);
         }
 
-        uint16_t opcode = MappedMemoryReadWord(address);
+        opcode = MappedMemoryReadWord(address);
 
 #ifdef BINARY_LOG
-
-        struct {
-            uint16_t id;  // 1/2/4 = store; 0x80 = MSH2 insn; 0x81 = SSH2 insn
-            uint16_t opcode;
-            uint32_t regs[23];
-            uint64_t cycles;
-            uint32_t pad[2];
-        } buf;
         buf.id = state==SSH2 ? 0x81 : 0x80;
         buf.opcode = opcode;
         /* sh2int leaves the branch target in regs.PC during a delay slot,

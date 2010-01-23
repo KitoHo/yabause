@@ -1,29 +1,62 @@
-project(yabause)
+project(yabause-windows)
 
 if (NOT WIN32)
 	return()
 endif(NOT WIN32)
 
-#include(FindPkgConfig)
+if (MSVC)
+        # Find DirectX SDK
+        find_path(DirectX_INCLUDE_DIR dxerr9.h
+		  "$ENV{DXSDK_DIR}/Include")
+        if (NOT DirectX_INCLUDE_DIR)
+		find_path(DirectX_INCLUDE_DIR "dxerr.h"
+			  "$ENV{DXSDK_DIR}/Include")
+		if (DirectX_INCLUDE_DIR)
+			set(DXERRH_IS_BROKEN 1 CACHE INTERNAL "dxerr is broken")
+		        message(STATUS "blah")
+                endif (DirectX_INCLUDE_DIR)
+	endif(NOT DirectX_INCLUDE_DIR)
 
-#if (NOT OPENGL_FOUND)
-#	pkg_check_modules(GTK REQUIRED gtk+-2.0)
-#	set(PORT_INCLUDE_DIRS ${GTK_INCLUDE_DIRS})
-#	set(PORT_CFLAGS ${GTK_CFLAGS})
-#	set(PORT_LIBRARIES ${GTK_LIBRARIES})
-#else (NOT OPENGL_FOUND)
-#	pkg_check_modules(GTKGLEXT gtkglext-1.0)
-#	if (NOT GTKGLEXT_FOUND)
-#		message(FATAL_ERROR "Found OpenGL and Gtk+ but not libgtkglext.")
-#	endif (NOT GTKGLEXT_FOUND)
-#	set(PORT_INCLUDE_DIRS ${GTKGLEXT_INCLUDE_DIRS})
-#	set(PORT_CFLAGS -DHAVE_LIBGTKGLEXT=1 ${GTKGLEXT_CFLAGS})
-#	set(PORT_LIBRARIES ${GTKGLEXT_LIBRARIES})
-#endif (NOT OPENGL_FOUND)
-#include_directories(${PORT_INCLUDE_DIRS})
-#add_definitions(${PORT_CFLAGS})
+	find_path(DirectX_LIB_DIR d3d9.lib
+                  "$ENV{DXSDK_DIR}/Lib/x86")
+endif(MSVC)
 
+# Windows
+if (WIN32)
+        # DirectX
+        if (DirectX_INCLUDE_DIR AND DirectX_LIB_DIR)
+                include_directories(${DirectX_INCLUDE_DIR})
+		message(STATUS "Found DirectX SDK 9.0 or greater")
+        else (DirectX_INCLUDE_DIR AND DirectX_LIB_DIR)
+		message(FATAL_ERROR "Could not find DirectX SDK 9.0 or greater")
+        endif (DirectX_INCLUDE_DIR AND DirectX_LIB_DIR)
 
+	if (DXERRH_IS_BROKEN)
+		add_definitions(-DDXERRH_IS_BROKEN)
+		message(STATUS "Using work-around for dxerr.h")
+	endif(DXERRH_IS_BROKEN)
+endif (WIN32)
+
+set(yabause_windows_HEADERS
+	aviout.h
+	cd.h
+	cheats.h
+	custctl.h
+	disasm.h
+	dx.h
+	hexedit.h
+	hotkey.h
+	perdx.h
+	ramwatch.h
+	ram_search.h
+	resource.h
+	snddx.h
+	yuiwin.h
+	cpudebug/yuidebug.h
+	settings/settings.h)
+
+set(yabause_windows_RESOURCES
+	resource.rc)
 
 set(yabause_windows_SOURCES
 	aviout.c
@@ -31,6 +64,7 @@ set(yabause_windows_SOURCES
 	cheats.c
 	custctl.c
 	disasm.c
+	hexedit.c
 	hotkey.cpp
 	perdx.c
 	ramwatch.cpp
@@ -54,7 +88,13 @@ set(yabause_windows_SOURCES
 	settings/settings-video.c)
 
 link_directories(..)
-add_executable(yabause-windows ${yabause_windows_SOURCES})
+add_executable(yabause-windows WIN32 ${yabause_windows_SOURCES} ${yabause_windows_RESOURCES} ${yabause_windows_HEADERS})
 set_target_properties(yabause-windows PROPERTIES OUTPUT_NAME yabause)
 target_link_libraries(yabause-windows ${PORT_LIBRARIES})
-target_link_libraries(yabause-windows libyabause.a)
+target_link_libraries(yabause-windows yabause comctl32 dxguid dinput8 dsound vfw32)
+
+if (DXERRH_IS_BROKEN)
+	target_link_libraries(yabause-windows dxerr.lib)
+else(DXERRH_IS_BROKEN)
+	target_link_libraries(yabause-windows dxerr9.lib)
+endif(DXERRH_IS_BROKEN)

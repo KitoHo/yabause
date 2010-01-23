@@ -71,13 +71,42 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	set(yabause_SOURCES ${yabause_SOURCES} cd-linux.c perlinuxjoy.c)
 endif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 
+# Visual Studio
 if (MSVC)
-	add_definitions(-DHAVE_C99_VARIADIC_MACROS)
-	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-	add_definitions(-DC68K_NO_JUMP_TABLE)
+        # Find stdint.h
+        include(CheckIncludeFile)
+        check_include_file("stdint.h" STDINT_H_FOUND)
+
+        # Find DDK
+        if (EXISTS "$ENV{SYSTEMDRIVE}/WINDDK/3790.1830/")
+		set(DDK_DIR "$ENV{SYSTEMDRIVE}/WINDDK/3790.1830/")
+        elseif (EXISTS "$ENV{SYSTEMDRIVE}/WINDDK/6000/")
+		set(DDK_DIR "$ENV{SYSTEMDRIVE}/WINDDK/6000/")
+        elseif (EXISTS "$ENV{SYSTEMDRIVE}/WINDDK/7600.16385.0/")
+		set(DDK_DIR "$ENV{SYSTEMDRIVE}/WINDDK/7600.16385.0/")
+        endif (EXISTS "$ENV{SYSTEMDRIVE}/WINDDK/3790.1830/")
+
+	add_definitions(-DHAVE_C99_VARIADIC_MACROS -D_CRT_SECURE_NO_WARNINGS -DC68K_NO_JUMP_TABLE 
+			-D_UNICODE -DUNICODE)
 endif (MSVC)
 
+# Windows
 if (WIN32)
+        # Find ntddcdrm.h
+        find_path(ntddcdrm_INCLUDE_DIR ntddcdrm.h
+                  "${DDK_DIR}"
+                  "${DDK_DIR}/ddk"
+                  "${DDK_DIR}/inc"
+                  "${DDK_DIR}/inc/api"
+                  "${DDK_DIR}/inc/ddk")
+
+        if (ntddcdrm_INCLUDE_DIR)
+                include_directories(${ntddcdrm_INCLUDE_DIR})
+		message(STATUS "Found ntddcdrm.h: ${ntddcdrm_INCLUDE_DIR}")
+        else (ntddcdrm_INCLUDE_DIR)
+		message(FATAL_ERROR "Could not find ntddcdrm.h")
+        endif (ntddcdrm_INCLUDE_DIR)
+
 	set(yabause_SOURCES ${yabause_SOURCES} cd-windows.c)
 endif (WIN32)
 

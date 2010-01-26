@@ -18,6 +18,7 @@ if (YAB_WANT_OPENGL)
 	include(FindOpenGL)
 	if (OPENGL_FOUND)
 		add_definitions(-DHAVE_LIBGL=1)
+		set(YABAUSE_LIBRARIES ${YABAUSE_LIBRARIES} ${OPENGL_LIBRARY})
 	endif(OPENGL_FOUND)
 endif (YAB_WANT_OPENGL)
 
@@ -29,6 +30,7 @@ if (YAB_WANT_SDL)
 		add_definitions(-DHAVE_LIBSDL=1)
 		include_directories(${SDL_INCLUDE_DIR})
 		set(yabause_SOURCES ${yabause_SOURCES} persdljoy.c sndsdl.c)
+		set(YABAUSE_LIBRARIES ${YABAUSE_LIBRARIES} ${SDL_LIBRARY})
 	endif (SDL_FOUND)
 endif (YAB_WANT_SDL)
 
@@ -40,6 +42,7 @@ if (YAB_WANT_OPENAL)
 		add_definitions(-DHAVE_LIBAL=1)
 		include_directories(${OPENAL_INCLUDE_DIR})
 		set(yabause_SOURCES ${yabause_SOURCES} sndal.c)
+		set(YABAUSE_LIBRARIES ${YABAUSE_LIBRARIES} ${OPENAL_LIBRARY})
 	endif (OPENAL_FOUND)
 endif (YAB_WANT_OPENAL)
 
@@ -50,6 +53,7 @@ if (NOT MINI18N_INCLUDE_DIR STREQUAL "MINI18N_INCLUDE_DIR-NOTFOUND" AND NOT MINI
 	set(MINI18N_FOUND TRUE)
 	include_directories(${MINI18N_INCLUDE_DIR})
 	add_definitions(-DHAVE_LIBMINI18N=1)
+	set(YABAUSE_LIBRARIES ${YABAUSE_LIBRARIES} ${MINI18N_LIBRARY})
 endif (NOT MINI18N_INCLUDE_DIR STREQUAL "MINI18N_INCLUDE_DIR-NOTFOUND" AND NOT MINI18N_LIBRARY STREQUAL "MINI18N_LIBRARY-NOTFOUND")
 
 if (UNIX AND MINI18N_FOUND)
@@ -122,22 +126,6 @@ add_definitions(-DPACKAGE=\"yabause\")
 add_definitions(-DVERSION=\"0.9.10\")
 
 add_library(yabause ${yabause_SOURCES})
-
-if(OPENGL_FOUND)
-	link_libraries(yabause ${OPENGL_gl_LIBRARY})
-endif(OPENGL_FOUND)
-
-if(SDL_FOUND)
-	link_libraries(yabause ${SDL_LIBRARY})
-endif(SDL_FOUND)
-
-if(OPENAL_FOUND)
-	link_libraries(yabause ${OPENAL_LIBRARY})
-endif(OPENAL_FOUND)
-
-if(MINI18N_FOUND)
-	link_libraries(yabause ${MINI18N_LIBRARY})
-endif(MINI18N_FOUND)
 
 if (YAB_WANT_C68K)
 	add_dependencies(yabause c68kinc)

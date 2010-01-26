@@ -90,6 +90,7 @@ set(yabause_windows_SOURCES
 link_directories(..)
 add_executable(yabause-windows WIN32 ${yabause_windows_SOURCES} ${yabause_windows_RESOURCES} ${yabause_windows_HEADERS})
 set_target_properties(yabause-windows PROPERTIES OUTPUT_NAME yabause)
+target_link_libraries(yabause-windows ${YABAUSE_LIBRARIES})
 target_link_libraries(yabause-windows ${PORT_LIBRARIES})
 target_link_libraries(yabause-windows yabause comctl32 dxguid dinput8 dsound vfw32)
 

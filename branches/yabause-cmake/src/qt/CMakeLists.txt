@@ -93,6 +93,7 @@ include_directories(
 
 set_target_properties( yabause-qt PROPERTIES OUTPUT_NAME yabause-qt )
 link_directories( .. )
+target_link_libraries( yabause-qt ${YABAUSE_LIBRARIES} )
 target_link_libraries( yabause-qt ${PORT_LIBRARIES} )
 target_link_libraries( yabause-qt ${QT_LIBRARIES} )
 target_link_libraries( yabause-qt yabause )

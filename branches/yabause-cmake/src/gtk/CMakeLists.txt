@@ -52,5 +52,6 @@ set(yabause_gtk_SOURCES
 link_directories(..)
 add_executable(yabause-gtk ${yabause_gtk_SOURCES})
 set_target_properties(yabause-gtk PROPERTIES OUTPUT_NAME yabause)
+target_link_libraries(yabause-gtk ${YABAUSE_LIBRARIES})
 target_link_libraries(yabause-gtk ${PORT_LIBRARIES})
 target_link_libraries(yabause-gtk libyabause.a)

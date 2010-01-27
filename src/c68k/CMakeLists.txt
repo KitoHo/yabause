@@ -1,3 +1,7 @@
+project(gen68k)
+
+cmake_minimum_required(VERSION 2.6)
+
 set(gen68k_SOURCES c68kexec.c c68k.c gen68k.c)
 
 add_definitions(-DC68K_GEN)

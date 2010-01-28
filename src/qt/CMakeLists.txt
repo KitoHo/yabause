@@ -75,6 +75,9 @@ QT4_ADD_RESOURCES( yabause_qt_RCC_RESOURCES ${yabause_qt_RESOURCES} )
 QT4_WRAP_UI( yabause_qt_UI_FORMS ${yabause_qt_FORMS} )
 QT4_WRAP_CPP( yabause_qt_MOC_SOURCES ${yabause_qt_MOC_HEADERS} )
 
+set( yabause_qt_SOURCES ${yabause_qt_SOURCES} resources/icons/yabause.icns )
+set_source_files_properties( resources/icons/yabause.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources )
+
 add_executable( yabause-qt
 	${yabause_qt_RCC_RESOURCES}
 	${yabause_qt_HEADERS}
@@ -91,7 +94,19 @@ include_directories(
 	${QT_QTGUI_INCLUDE_DIR}
 	${QT_QTOPENGL_INCLUDE_DIR} )
 
-set_target_properties( yabause-qt PROPERTIES OUTPUT_NAME yabause-qt )
+# APPLE // not necessary mac os x, but i don't care ;)
+if (APPLE)
+	set_target_properties( yabause-qt PROPERTIES OUTPUT_NAME Yabause )
+	set_target_properties( yabause-qt PROPERTIES MACOSX_BUNDLE true )
+	set_target_properties( yabause-qt PROPERTIES MACOSX_BUNDLE_ICON_FILE yabause.icns )
+	set_target_properties( yabause-qt PROPERTIES MACOSX_BUNDLE_LONG_VERSION_STRING "${YAB_VERSION}" )
+	set_target_properties( yabause-qt PROPERTIES MACOSX_BUNDLE_BUNDLE_NAME Yabause )
+	set_target_properties( yabause-qt PROPERTIES MACOSX_BUNDLE_SHORT_VERSION_STRING "${YAB_VERSION}" )
+	set_target_properties( yabause-qt PROPERTIES MACOSX_BUNDLE_COPYRIGHT "(c) Yabause Team" )
+else (APPLE)
+	set_target_properties( yabause-qt PROPERTIES OUTPUT_NAME yabause-qt )
+endif (APPLE)
+
 link_directories( .. )
 target_link_libraries( yabause-qt ${YABAUSE_LIBRARIES} )
 target_link_libraries( yabause-qt ${PORT_LIBRARIES} )

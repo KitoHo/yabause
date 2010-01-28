@@ -75,6 +75,14 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	set(yabause_SOURCES ${yabause_SOURCES} cd-linux.c perlinuxjoy.c)
 endif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
 
+# APPLE // not necessary mac os x, but i don't care ;)
+if (APPLE)
+	FIND_LIBRARY(COREFOUNDATION_LIBRARY NAMES CoreFoundation )
+	FIND_LIBRARY(IOKIT_LIBRARY NAMES IOKit )
+	set(yabause_SOURCES ${yabause_SOURCES} macjoy.c permacjoy.c cd-macosx.c)
+	set(YABAUSE_LIBRARIES ${YABAUSE_LIBRARIES} ${COREFOUNDATION_LIBRARY} ${IOKIT_LIBRARY})
+endif (APPLE)
+
 # Visual Studio
 if (MSVC)
         # Find stdint.h
@@ -125,8 +133,9 @@ if (YAB_WANT_C68K)
 	set(yabause_SOURCES ${yabause_SOURCES} c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c m68kc68k.c)
 endif(YAB_WANT_C68K)
 
+set(YAB_VERSION 0.9.10)
 add_definitions(-DPACKAGE=\"yabause\")
-add_definitions(-DVERSION=\"0.9.10\")
+add_definitions(-DVERSION=\"${YAB_VERSION}\")
 
 add_library(yabause ${yabause_SOURCES})
 

@@ -147,4 +147,4 @@ if (YAB_WANT_C68K)
 	add_dependencies(yabause c68kinc)
 endif(YAB_WANT_C68K)
 
-subdirs(gtk qt windows)
+subdirs(gtk qt windows dreamcast)

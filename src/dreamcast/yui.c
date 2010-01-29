@@ -27,13 +27,13 @@
 #include <dc/maple/controller.h>
 #include <kos/fs.h>
 
-#include "yui.h"
-#include "peripheral.h"
-#include "cs0.h"
-#include "m68kcore.h"
-#include "m68kc68k.h"
-#include "dreamcast/perdc.h"
-#include "dreamcast/viddc.h"
+#include "../yui.h"
+#include "../peripheral.h"
+#include "../cs0.h"
+#include "../m68kcore.h"
+#include "../m68kc68k.h"
+#include "perdc.h"
+#include "viddc.h"
 
 SH2Interface_struct *SH2CoreList[] = {
 &SH2Interpreter,

@@ -124,9 +124,13 @@ endif (WIN32)
 
 option(YAB_WANT_C68K "enable c68k compilation" ON)
 if (YAB_WANT_C68K)
-	file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/c68k)
-	execute_process(COMMAND cmake ${CMAKE_CURRENT_SOURCE_DIR}/c68k WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/c68k)
-	add_custom_target(c68kinc COMMAND cmake --build ${CMAKE_CURRENT_BINARY_DIR}/c68k)
+	include(ExternalProject)
+	ExternalProject_Add(c68kinc
+		URL ${CMAKE_CURRENT_SOURCE_DIR}
+		CONFIGURE_COMMAND cmake <SOURCE_DIR>/c68k
+		INSTALL_COMMAND ""
+		BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/c68k
+	)
 
 	add_definitions(-DHAVE_C68K=1)
 	include_directories(${CMAKE_CURRENT_BINARY_DIR}/c68k)

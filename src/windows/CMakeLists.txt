@@ -19,6 +19,10 @@ if (MSVC)
 
 	find_path(DirectX_LIB_DIR d3d9.lib
                   "$ENV{DXSDK_DIR}/Lib/x86")
+else (MSVC)
+	add_definitions(-D_WIN32_IE=0x0500 -DUNICODE -D_UNICODE)
+	find_path(DirectX_INCLUDE_DIR dxerr9.h)
+	find_library(DirectX_LIB_DIR d3d9)
 endif(MSVC)
 
 # Windows
@@ -90,9 +94,7 @@ set(yabause_windows_SOURCES
 link_directories(..)
 add_executable(yabause-windows WIN32 ${yabause_windows_SOURCES} ${yabause_windows_RESOURCES} ${yabause_windows_HEADERS})
 set_target_properties(yabause-windows PROPERTIES OUTPUT_NAME yabause)
-target_link_libraries(yabause-windows ${YABAUSE_LIBRARIES})
-target_link_libraries(yabause-windows ${PORT_LIBRARIES})
-target_link_libraries(yabause-windows yabause comctl32 dxguid dinput8 dsound vfw32)
+target_link_libraries(yabause-windows yabause ${YABAUSE_LIBRARIES} ${PORT_LIBRARIES} comctl32 dxguid dinput8 dsound dxerr8 vfw32)
 
 if (DXERRH_IS_BROKEN)
 	target_link_libraries(yabause-windows dxerr.lib)

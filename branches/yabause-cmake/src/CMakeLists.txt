@@ -105,12 +105,17 @@ endif (MSVC)
 # Windows
 if (WIN32)
         # Find ntddcdrm.h
-        find_path(ntddcdrm_INCLUDE_DIR ntddcdrm.h
-                  "${DDK_DIR}"
-                  "${DDK_DIR}/ddk"
-                  "${DDK_DIR}/inc"
-                  "${DDK_DIR}/inc/api"
-                  "${DDK_DIR}/inc/ddk")
+	find_path(ntddcdrm_INCLUDE_DIR ddk/ntddcdrm.h)
+	if (ntddcdrm_INCLUDE_DIR)
+		set (ntddcdrm_INCLUDE_DIR "${ntddcdrm_INCLUDE_DIR}/ddk")
+	else (ntddcdrm_INCLUDE_DIR)
+        	find_path(ntddcdrm_INCLUDE_DIR ntddcdrm.h
+                	  "${DDK_DIR}"
+	                  "${DDK_DIR}/ddk"
+        	          "${DDK_DIR}/inc"
+                	  "${DDK_DIR}/inc/api"
+	                  "${DDK_DIR}/inc/ddk")
+	endif (ntddcdrm_INCLUDE_DIR)
 
         if (ntddcdrm_INCLUDE_DIR)
                 include_directories(${ntddcdrm_INCLUDE_DIR})

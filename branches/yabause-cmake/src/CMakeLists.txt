@@ -12,6 +12,13 @@ set(yabause_SOURCES
 	vdp1.c vdp2.c vdp2debug.c vidogl.c vidshared.c vidsoft.c
 	yabause.c ygl.c)
 
+# Bigendian
+include(TestBigEndian)
+test_big_endian(WORDS_BIGENDIAN)
+if (WORDS_BIGENDIAN)
+	add_definitions(-DWORDS_BIGENDIAN=1)
+endif (WORDS_BIGENDIAN)
+
 # OpenGL
 option(YAB_WANT_OPENGL "use OpenGL for video output (most ports require it)" ON)
 if (YAB_WANT_OPENGL)

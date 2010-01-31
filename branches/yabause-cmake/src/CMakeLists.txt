@@ -19,6 +19,16 @@ if (WORDS_BIGENDIAN)
 	add_definitions(-DWORDS_BIGENDIAN=1)
 endif (WORDS_BIGENDIAN)
 
+include(CheckCSourceCompiles)
+
+# variadic macros
+check_c_source_compiles("#define MACRO(...) puts(__VA_ARGS__)
+	int main(int argc, char ** argv) { MACRO(\"foo\"); }"
+	VARIADIC_MACROS_OK)
+if (VARIADIC_MACROS_OK)
+	add_definitions(-DHAVE_C99_VARIADIC_MACROS=1)
+endif (VARIADIC_MACROS_OK)
+
 # OpenGL
 option(YAB_WANT_OPENGL "use OpenGL for video output (most ports require it)" ON)
 if (YAB_WANT_OPENGL)
@@ -66,8 +76,6 @@ endif (NOT MINI18N_INCLUDE_DIR STREQUAL "MINI18N_INCLUDE_DIR-NOTFOUND" AND NOT M
 if (UNIX AND MINI18N_FOUND)
 	add_definitions(-DYTSDIR=\"${CMAKE_INSTALL_PREFIX}/share/${PACKAGE}/yts\")
 endif (UNIX AND MINI18N_FOUND)
-
-include(CheckCSourceCompiles)
 
 # Linux
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")

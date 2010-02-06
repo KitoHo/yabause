@@ -16,6 +16,20 @@ include( ${QT_USE_FILE} )
 # qt resources file
 set( yabause_qt_RESOURCES resources/resources.qrc )
 
+if ( WIN32 )
+	# Windows port libraries
+	set( yabause_qt_windows_LIBRARIES
+		vfw32 )
+
+	# Windows port sources
+	set( yabause_qt_windows_SOURCES
+		../windows/aviout.c )
+	
+	# resources
+	set ( yabause_qt_windows_RESOURCES
+		resources/icons/yabause.rc )
+endif ( WIN32 )
+
 # qt forms
 set( yabause_qt_FORMS
 	ui/UIYabause.ui
@@ -78,7 +92,9 @@ QT4_WRAP_CPP( yabause_qt_MOC_SOURCES ${yabause_qt_MOC_HEADERS} )
 set( yabause_qt_SOURCES ${yabause_qt_SOURCES} resources/icons/yabause.icns )
 set_source_files_properties( resources/icons/yabause.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources )
 
-add_executable( yabause-qt
+add_executable( yabause-qt WIN32
+	${yabause_qt_windows_SOURCES}
+	${yabause_qt_windows_RESOURCES}
 	${yabause_qt_RCC_RESOURCES}
 	${yabause_qt_HEADERS}
 	${yabause_qt_MOC_HEADERS}
@@ -104,11 +120,12 @@ if (APPLE)
 	set_target_properties( yabause-qt PROPERTIES MACOSX_BUNDLE_SHORT_VERSION_STRING "${YAB_VERSION}" )
 	set_target_properties( yabause-qt PROPERTIES MACOSX_BUNDLE_COPYRIGHT "(c) Yabause Team" )
 else (APPLE)
-	set_target_properties( yabause-qt PROPERTIES OUTPUT_NAME yabause-qt )
+	set_target_properties( yabause-qt PROPERTIES OUTPUT_NAME yabause )
 endif (APPLE)
 
 link_directories( .. )
+target_link_libraries( yabause-qt yabause )
 target_link_libraries( yabause-qt ${YABAUSE_LIBRARIES} )
 target_link_libraries( yabause-qt ${PORT_LIBRARIES} )
+target_link_libraries( yabause-qt ${yabause_qt_windows_LIBRARIES} )
 target_link_libraries( yabause-qt ${QT_LIBRARIES} )
-target_link_libraries( yabause-qt yabause )

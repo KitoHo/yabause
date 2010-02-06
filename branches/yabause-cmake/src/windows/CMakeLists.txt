@@ -4,6 +4,10 @@ if (NOT WIN32)
 	return()
 endif(NOT WIN32)
 
+if ( NOT ntddcdrm_INCLUDE_DIR )
+	return()
+endif ( NOT ntddcdrm_INCLUDE_DIR )
+
 if (MSVC)
         # Find DirectX SDK
         find_path(DirectX_INCLUDE_DIR dxerr9.h

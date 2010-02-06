@@ -117,7 +117,7 @@ if (MSVC)
 			-D_UNICODE -DUNICODE)
 endif (MSVC)
 
-# Windows
+# Windows ddk
 if (WIN32)
         # Find ntddcdrm.h
 	find_path(ntddcdrm_INCLUDE_DIR ddk/ntddcdrm.h)
@@ -136,15 +136,34 @@ if (WIN32)
                 include_directories(${ntddcdrm_INCLUDE_DIR})
 		message(STATUS "Found ntddcdrm.h: ${ntddcdrm_INCLUDE_DIR}")
         else (ntddcdrm_INCLUDE_DIR)
-		message(FATAL_ERROR "Could not find ntddcdrm.h")
+		message(STATUS "Could not find ntddcdrm.h")
         endif (ntddcdrm_INCLUDE_DIR)
 
 	set(yabause_SOURCES ${yabause_SOURCES} cd-windows.c)
 endif (WIN32)
 
+# MinGW ddk
+if ( WIN32 AND MINGW )
+	# Find ntddcdrm.h
+	include(CheckIncludeFile)
+	check_include_file("ddk/ntddcdrm.h" NTDDCDRM_H_FOUND)
+	
+	if ( NOT NTDDCDRM_H_FOUND )
+		message(STATUS "Could not find ddk/ntddcdrm.h")
+	endif ( NOT NTDDCDRM_H_FOUND )
+	
+	set(yabause_SOURCES ${yabause_SOURCES} cd-windows.c)
+endif ( WIN32 AND MINGW )
+
 # c68k
 option(YAB_WANT_C68K "enable c68k compilation" ON)
 if (YAB_WANT_C68K)
+	if ( CMAKE_GENERATOR )
+		set( C68K_GENERATOR "-G \"${CMAKE_GENERATOR}\"" )
+	endif ( CMAKE_GENERATOR )
+	# from pasnox: we should use C68K_GENERATOR as cmake parameters but that failed the build process, dunno why :/
+	# the current method is not 100% good, as if user does not set generator  this will cause cmake to failed
+	# because -G parameters does not have a valid generator
 	include(ExternalProject)
 	ExternalProject_Add(c68kinc
 		DOWNLOAD_COMMAND ""

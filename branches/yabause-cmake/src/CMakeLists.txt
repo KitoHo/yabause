@@ -159,16 +159,16 @@ endif ( WIN32 AND MINGW )
 option(YAB_WANT_C68K "enable c68k compilation" ON)
 if (YAB_WANT_C68K)
 	if ( CMAKE_GENERATOR )
-		set( C68K_GENERATOR "-G \"${CMAKE_GENERATOR}\"" )
-	endif ( CMAKE_GENERATOR )
-	# from pasnox: we should use C68K_GENERATOR as cmake parameters but that failed the build process, dunno why :/
-	# the current method is not 100% good, as if user does not set generator  this will cause cmake to failed
-	# because -G parameters does not have a valid generator
+		set( C68K_GENERATOR ${CMAKE_GENERATOR} )
+	else ()
+		set(C68K_GENERATOR "")
+	endif ()
+
 	include(ExternalProject)
 	ExternalProject_Add(c68kinc
 		DOWNLOAD_COMMAND ""
 		SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/c68k
-		CONFIGURE_COMMAND cmake -G ${CMAKE_GENERATOR} <SOURCE_DIR>
+		CONFIGURE_COMMAND cmake -G "${C68K_GENERATOR}" <SOURCE_DIR>
 		INSTALL_COMMAND ""
 		BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/c68k
 	)

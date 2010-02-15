@@ -17,7 +17,6 @@ if (MSVC)
 			  "$ENV{DXSDK_DIR}/Include")
 		if (DirectX_INCLUDE_DIR)
 			set(DXERRH_IS_BROKEN 1 CACHE INTERNAL "dxerr is broken")
-		        message(STATUS "blah")
                 endif (DirectX_INCLUDE_DIR)
 	endif(NOT DirectX_INCLUDE_DIR)
 
@@ -29,21 +28,32 @@ else (MSVC)
 	find_library(DirectX_LIB_DIR d3d9)
 endif(MSVC)
 
-# Windows
-if (WIN32)
-        # DirectX
+if (MSVC)
         if (DirectX_INCLUDE_DIR AND DirectX_LIB_DIR)
+        	set(DIRECTX_FOUND "found")
                 include_directories(${DirectX_INCLUDE_DIR})
-		message(STATUS "Found DirectX SDK 9.0 or greater")
-        else (DirectX_INCLUDE_DIR AND DirectX_LIB_DIR)
-		message(FATAL_ERROR "Could not find DirectX SDK 9.0 or greater")
         endif (DirectX_INCLUDE_DIR AND DirectX_LIB_DIR)
+endif(MSVC)
 
-	if (DXERRH_IS_BROKEN)
-		add_definitions(-DDXERRH_IS_BROKEN)
-		message(STATUS "Using work-around for dxerr.h")
-	endif(DXERRH_IS_BROKEN)
-endif (WIN32)
+if (MINGW)
+#	include(CheckIncludeFile)
+#	check_include_file("dxerr9.h" DIRECTX_FOUND)
+        	set(DIRECTX_FOUND "found")
+
+	add_definitions(-D_WIN32_IE=0x0500 -D_UNICODE -DUNICODE)
+endif(MINGW)
+
+# DirectX
+if (DIRECTX_FOUND)
+	message(STATUS "Found DirectX SDK 9.0 or greater")
+else (DIRECTX_FOUND)
+	message(FATAL_ERROR "Could not find DirectX SDK 9.0 or greater")
+endif (DIRECTX_FOUND)
+
+if (DXERRH_IS_BROKEN)
+	add_definitions(-DDXERRH_IS_BROKEN)
+	message(STATUS "Using work-around for dxerr.h")
+endif(DXERRH_IS_BROKEN)
 
 set(yabause_windows_HEADERS
 	aviout.h
@@ -101,7 +111,11 @@ set_target_properties(yabause-windows PROPERTIES OUTPUT_NAME yabause)
 target_link_libraries(yabause-windows yabause ${YABAUSE_LIBRARIES} ${PORT_LIBRARIES} comctl32 dxguid dinput8 dsound dxerr8 vfw32)
 
 if (DXERRH_IS_BROKEN)
-	target_link_libraries(yabause-windows dxerr.lib)
+	target_link_libraries(yabause-windows dxerr)
 else(DXERRH_IS_BROKEN)
-	target_link_libraries(yabause-windows dxerr9.lib)
+	if (MINGW)
+		target_link_libraries(yabause-windows dxerr8)
+	else (MINGW)
+		target_link_libraries(yabause-windows dxerr9)
+	endif(MINGW)
 endif(DXERRH_IS_BROKEN)

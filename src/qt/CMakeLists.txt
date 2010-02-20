@@ -1,5 +1,7 @@
 project( yabause-qt )
 
+yab_port_start()
+
 find_package(Qt4)
 
 if (NOT QT4_FOUND)
@@ -112,15 +114,12 @@ include_directories(
 
 # APPLE // not necessary mac os x, but i don't care ;)
 if (APPLE)
-	set_target_properties( yabause-qt PROPERTIES OUTPUT_NAME Yabause )
 	set_target_properties( yabause-qt PROPERTIES MACOSX_BUNDLE true )
 	set_target_properties( yabause-qt PROPERTIES MACOSX_BUNDLE_ICON_FILE yabause.icns )
 	set_target_properties( yabause-qt PROPERTIES MACOSX_BUNDLE_LONG_VERSION_STRING "${YAB_VERSION}" )
 	set_target_properties( yabause-qt PROPERTIES MACOSX_BUNDLE_BUNDLE_NAME Yabause )
 	set_target_properties( yabause-qt PROPERTIES MACOSX_BUNDLE_SHORT_VERSION_STRING "${YAB_VERSION}" )
 	set_target_properties( yabause-qt PROPERTIES MACOSX_BUNDLE_COPYRIGHT "(c) Yabause Team" )
-else (APPLE)
-	set_target_properties( yabause-qt PROPERTIES OUTPUT_NAME yabause )
 endif (APPLE)
 
 link_directories( .. )
@@ -129,3 +128,6 @@ target_link_libraries( yabause-qt ${YABAUSE_LIBRARIES} )
 target_link_libraries( yabause-qt ${PORT_LIBRARIES} )
 target_link_libraries( yabause-qt ${yabause_qt_windows_LIBRARIES} )
 target_link_libraries( yabause-qt ${QT_LIBRARIES} )
+
+yab_port_success(yabause-qt)
+configure_file(yabause.desktop.in ${YAB_PORT_NAME}.desktop)

@@ -1,5 +1,7 @@
 project(yabause-gtk)
 
+yab_port_start()
+
 find_package(GTK2 2.10 COMPONENTS gtk)
 
 if (NOT GTK2_FOUND)
@@ -50,5 +52,7 @@ set(yabause_gtk_SOURCES
 
 link_directories(..)
 add_executable(yabause-gtk ${yabause_gtk_SOURCES})
-set_target_properties(yabause-gtk PROPERTIES OUTPUT_NAME yabause)
 target_link_libraries(yabause-gtk libyabause.a ${YABAUSE_LIBRARIES} ${PORT_LIBRARIES})
+
+yab_port_success(yabause-gtk)
+configure_file(yabause.desktop.in ${YAB_PORT_NAME}.desktop)

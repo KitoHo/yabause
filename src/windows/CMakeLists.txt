@@ -1,5 +1,7 @@
 project(yabause-windows)
 
+yab_port_start()
+
 if (NOT WIN32)
 	return()
 endif(NOT WIN32)
@@ -107,7 +109,6 @@ set(yabause_windows_SOURCES
 
 link_directories(..)
 add_executable(yabause-windows WIN32 ${yabause_windows_SOURCES} ${yabause_windows_RESOURCES} ${yabause_windows_HEADERS})
-set_target_properties(yabause-windows PROPERTIES OUTPUT_NAME yabause)
 target_link_libraries(yabause-windows yabause ${YABAUSE_LIBRARIES} ${PORT_LIBRARIES} comctl32 dxguid dinput8 dsound dxerr8 vfw32)
 
 if (DXERRH_IS_BROKEN)
@@ -119,3 +120,5 @@ else(DXERRH_IS_BROKEN)
 		target_link_libraries(yabause-windows dxerr9)
 	endif(MINGW)
 endif(DXERRH_IS_BROKEN)
+
+yab_port_success(yabause-windows)

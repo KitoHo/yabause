@@ -96,8 +96,10 @@ typedef struct {
    u32 addr;
    int disptoggle;
 
-   u16 localX;
-   u16 localY;
+   //local coordinates can be negative
+   //Fishing Koushien uses them
+   s16 localX;
+   s16 localY;
 
    u16 systemclipX1;
    u16 systemclipY1;

@@ -28,7 +28,7 @@
 typedef struct
 {
    int vertices[8];
-   int cellw, cellh;
+   int cellw, cellw_bits, cellh, cellh_bits;
    int flipfunction;
    int priority;
 
@@ -154,6 +154,7 @@ typedef struct
    fixed32 dY;
    int screenover;
    int msb;
+   int linecolordata;
 } vdp2rotationparameterfp_struct;
 
 typedef struct
@@ -166,6 +167,7 @@ typedef struct
 #define toint(v) ((v) >> FP_SIZE)
 #define touint(v) ((u16)((v) >> FP_SIZE))
 #define tofloat(v) ((float)(v) / (float)(1 << FP_SIZE))
+/*
 #ifdef _MSC_VER
 //sometimes A LOT of time gets spent in _allmul. this is pointless. here is a way faster way to do it
 //this doesnt work as well as it could due to the emitting of code which stuffs
@@ -181,7 +183,7 @@ INLINE fixed32 __fastcall mulfixed(const fixed32 a, const fixed32 b)
 #define mulfixed(a,b) ((fixed32)((s64)(a) * (s64)(b) >> FP_SIZE))
 #endif
 #define divfixed(a,b) (((s64)(a) << FP_SIZE) / (b))
-
+*/
 void FASTCALL Vdp2NBG0PlaneAddr(vdp2draw_struct *info, int i);
 void FASTCALL Vdp2NBG1PlaneAddr(vdp2draw_struct *info, int i);
 void FASTCALL Vdp2NBG2PlaneAddr(vdp2draw_struct *info, int i);
@@ -330,17 +332,17 @@ static INLINE void ReadBitmapSize(vdp2draw_struct *info, u16 bm, int mask)
 {
    switch(bm & mask)
    {
-      case 0: info->cellw = 512;
-              info->cellh = 256;
+      case 0: info->cellw = 512; info->cellw_bits = 9;
+              info->cellh = 256; info->cellh_bits = 8;
               break;
-      case 1: info->cellw = 512;
-              info->cellh = 512;
+      case 1: info->cellw = 512; info->cellw_bits = 9;
+              info->cellh = 512; info->cellh_bits = 9;
               break;
-      case 2: info->cellw = 1024;
-              info->cellh = 256;
+      case 2: info->cellw = 1024; info->cellw_bits = 10;
+              info->cellh = 256; info->cellh_bits = 8;
               break;
-      case 3: info->cellw = 1024;
-              info->cellh = 512;
+      case 3: info->cellw = 1024; info->cellw_bits = 10;
+              info->cellh = 512; info->cellh_bits = 9;
               break;
    }
 }
@@ -399,6 +401,7 @@ static INLINE void ReadPatternData(vdp2draw_struct *info, u16 pnc, int chctlwh)
    info->pagewh = 64>>info->patternwh_bits;
    info->pagewh_bits = 6-info->patternwh_bits;
    info->cellw = info->cellh = 8;
+   info->cellw_bits = info->cellh_bits = 3;
    info->supplementdata = pnc & 0x3FF;
    info->auxmode = (pnc & 0x4000) >> 14;
 }
@@ -434,6 +437,7 @@ static INLINE void ReadLineScrollData(vdp2draw_struct *info, u16 mask, u32 tbl)
 
 //////////////////////////////////////////////////////////////////////////////
 
+//this function must fill all values before returning, at least with blank initializing values (are these necessary?)
 static INLINE void ReadWindowData(int wctl, clipping_struct *clip)
 {
    if (wctl & 0x2)
@@ -455,6 +459,9 @@ static INLINE void ReadWindowData(int wctl, clipping_struct *clip)
 	if (wctl & 0x20)
 	{
 		// fix me
+
+		clip[0].xstart = clip[0].ystart = clip[0].xend = clip[0].yend = 0;
+		clip[1].xstart = clip[1].ystart = clip[1].xend = clip[1].yend = 0;
 	}
 }
 
@@ -587,6 +594,7 @@ static INLINE void Vdp2ReadCoefficientFP(vdp2rotationparameterfp_struct *paramet
 
          if (parameter->coefdatasize == 2)
          {
+			 
             i = T1ReadWord(Vdp2Ram, addr);
             parameter->msb = (i >> 15) & 0x1;
             parameter->Xp = (signed) ((i & 0x7FFF) | (i & 0x4000 ? 0xFFFFC000 : 0x00000000)) * 16384;

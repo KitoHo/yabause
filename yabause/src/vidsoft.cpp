@@ -19,6 +19,24 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
+#ifdef _MSC_VER
+#undef mulfixed
+//sometimes A LOT of time gets spent in _allmul. this is pointless. here is a way faster way to do it
+//this doesnt work as well as it could due to the emitting of code which stuffs
+//values into temps and then right back into eax and edx. but it is still way faster
+//INLINE fixed32 __fastcall mulfixed(const fixed32 a, const fixed32 b)
+//{
+//	__asm mov eax, a;
+//	__asm mov edx, b;
+//	__asm imul edx;
+//	__asm shrd eax, edx, 16;
+//}
+//here is a better way to do it, which might even be roughly portable 
+#include <intrin.h>
+#define mulfixed(a,b) (fixed32)(__ll_rshift(__emul((a),(b)),16))
+#endif
+
+extern "C" {
 #include "vidsoft.h"
 #include "vidshared.h"
 #include "debug.h"
@@ -37,7 +55,223 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <limits.h>
+
+/////////////////------------------
+/////////////////------------------
+/////////////////------------------
+/////////////////------------------
+/////////////////------------------
+/////////////////------------------
+/////////////////------------------
+//#undef INLINE
+//#define INLINE
+/////////////////------------------
+/////////////////------------------
+/////////////////------------------
+/////////////////------------------
+/////////////////------------------
+/////////////////------------------
+/////////////////------------------
 }
+
+
+class Task
+{
+public:
+	Task();
+	~Task();
+	
+	typedef void * (*TWork)(void *);
+
+	//execute some work
+	void execute(const TWork &work, void* param);
+
+	//wait for the work to complete
+	void* finish();
+
+	class Impl;
+	Impl *impl;
+
+};
+
+#ifdef _WIN32
+
+#include <windows.h>
+
+class Task::Impl {
+public:
+	Impl();
+	~Impl();
+
+	//the only real configuration option: affects the wake-up overhead for the thread
+	//by determining whether it spinlocks or waits for a signal
+	bool spinlock;
+
+	//execute some work
+	void execute(const TWork &work, void* param);
+
+	//wait for the work to complete
+	void* finish();
+
+	static DWORD __stdcall s_taskProc(void *ptr);
+	void taskProc();
+	void init();
+
+	//the work function that shall be executed
+	TWork work;
+	void* param;
+
+	HANDLE incomingWork, workDone, hThread;
+	volatile bool bIncomingWork, bWorkDone, bKill;
+};
+
+static void* killTask(void* task)
+{
+	((Task::Impl*)task)->bKill = true;
+	return 0;
+}
+
+Task::Impl::~Impl()
+{
+	execute(killTask,this);
+	finish();
+
+	CloseHandle(incomingWork);
+	CloseHandle(workDone);
+	CloseHandle(hThread);
+}
+
+Task::Impl::Impl()
+	: work(NULL)
+	, bIncomingWork(false)
+	, bWorkDone(true)
+	, spinlock(false)
+	, bKill(false)
+{
+	incomingWork = CreateEvent(NULL,FALSE,FALSE,NULL);
+	workDone = CreateEvent(NULL,FALSE,FALSE,NULL);
+	hThread = CreateThread(NULL,0,Task::Impl::s_taskProc,(void*)this, 0, NULL);
+}
+
+DWORD __stdcall Task::Impl::s_taskProc(void *ptr)
+{
+	//just past the buck to the instance method
+	((Task::Impl*)ptr)->taskProc();
+	return 0;
+}
+
+void Task::Impl::taskProc()
+{
+	for(;;) {
+		if(bKill) break;
+		
+		//wait for a chunk of work
+		if(spinlock) while(!bIncomingWork) Sleep(0); 
+		else WaitForSingleObject(incomingWork,INFINITE); 
+		
+		bIncomingWork = false; 
+		//execute the work
+		param = work(param);
+		//signal completion
+		if(!spinlock) SetEvent(workDone); 
+		bWorkDone = true;
+	}
+}
+
+void Task::Impl::execute(const TWork &work, void* param) 
+{
+	//setup the work
+	this->work = work;
+	this->param = param;
+	bWorkDone = false;
+	//signal it to start
+	if(!spinlock) SetEvent(incomingWork); 
+	bIncomingWork = true;
+}
+
+void* Task::Impl::finish()
+{
+	//just wait for the work to be done
+	if(spinlock) while(!bWorkDone) Sleep(0);
+	else WaitForSingleObject(workDone,INFINITE); 
+	return param;
+}
+
+Task::Task() : impl(new Task::Impl()) {}
+Task::~Task() { delete impl; }
+void Task::execute(const TWork &work, void* param) { impl->execute(work,param); }
+void* Task::finish() { return impl->finish(); }
+
+
+#endif
+
+Task layerTasks[8];
+
+//#ifdef _MSC_VER
+//#define ENABLE_SSE2
+//#endif
+//
+//#ifdef _MSC_VER
+//#include <xmmintrin.h>
+//#include <emmintrin.h>
+//#endif
+//
+////these functions are an unreliable, inaccurate floor.
+////it should only be used for positive numbers
+////this isnt as fast as it could be if we used a visual c++ intrinsic, but those appear not to be universally available
+//FORCEINLINE u32 u32floor(float f)
+//{
+//#ifdef _MSC_VER
+//	return (u32)_mm_cvtt_ss2si(_mm_set_ss(f));
+//#else
+//	return (u32)f;
+//#endif
+//}
+//FORCEINLINE u32 u32floor(double d)
+//{
+//#ifdef _MSC_VER
+//	return (u32)_mm_cvttsd_si32(_mm_set_sd(d));
+//#else
+//	return (u32)d;
+//#endif
+//}
+//
+////same as above but works for negative values too.
+////be sure that the results are the same thing as floorf!
+//FORCEINLINE s32 s32floor(float f)
+//{
+//#ifdef _MSC_VER
+//	return _mm_cvtss_si32( _mm_add_ss(_mm_set_ss(-0.5f),_mm_add_ss(_mm_set_ss(f), _mm_set_ss(f))) ) >> 1;
+//#else
+//	return (s32)floorf(f);
+//#endif
+//}
+
+//fairly standard for loop macros
+#define MACRODO1(TRICK,TODO) { const int X = TRICK; TODO; }
+#define MACRODO2(X,TODO)   { MACRODO1((X),TODO)   MACRODO1(((X)+1),TODO) }
+#define MACRODO4(X,TODO)   { MACRODO2((X),TODO)   MACRODO2(((X)+2),TODO) }
+#define MACRODO8(X,TODO)   { MACRODO4((X),TODO)   MACRODO4(((X)+4),TODO) }
+#define MACRODO16(X,TODO)  { MACRODO8((X),TODO)   MACRODO8(((X)+8),TODO) }
+#define MACRODO32(X,TODO)  { MACRODO16((X),TODO)  MACRODO16(((X)+16),TODO) }
+#define MACRODO64(X,TODO)  { MACRODO32((X),TODO)  MACRODO32(((X)+32),TODO) }
+#define MACRODO128(X,TODO) { MACRODO64((X),TODO)  MACRODO64(((X)+64),TODO) }
+#define MACRODO256(X,TODO) { MACRODO128((X),TODO) MACRODO128(((X)+128),TODO) }
+
+//this one lets you loop any number of times (as long as N<256)
+#define MACRODO_N(N,TODO) {\
+	if((N)&0x100) MACRODO256(0,TODO); \
+	if((N)&0x080) MACRODO128((N)&(0x100),TODO); \
+	if((N)&0x040) MACRODO64((N)&(0x100|0x080),TODO); \
+	if((N)&0x020) MACRODO32((N)&(0x100|0x080|0x040),TODO); \
+	if((N)&0x010) MACRODO16((N)&(0x100|0x080|0x040|0x020),TODO); \
+	if((N)&0x008) MACRODO8((N)&(0x100|0x080|0x040|0x020|0x010),TODO); \
+	if((N)&0x004) MACRODO4((N)&(0x100|0x080|0x040|0x020|0x010|0x008),TODO); \
+	if((N)&0x002) MACRODO2((N)&(0x100|0x080|0x040|0x020|0x010|0x008|0x004),TODO); \
+	if((N)&0x001) MACRODO1((N)&(0x100|0x080|0x040|0x020|0x010|0x008|0x004|0x002),TODO); \
+}
+
+
 #if defined WORDS_BIGENDIAN
 INLINE u32 COLSAT2YAB16(int priority,u32 temp)            { return (priority | (temp & 0x7C00) << 1 | (temp & 0x3E0) << 14 | (temp & 0x1F) << 27); }
 INLINE u32 COLSAT2YAB32(int priority,u32 temp)            { return (((temp & 0xFF) << 24) | ((temp & 0xFF00) << 8) | ((temp & 0xFF0000) >> 8) | priority); }
@@ -58,6 +292,7 @@ INLINE u32 COLSATSTRIPPRIORITY(u32 pixel) { return (0xFF000000 | pixel); }
                                 (COLOR_ADDb((l >> 16) & 0xFF, b) << 8) | \
                                 ((l >> 24) & 0xFF)
 #else
+//removing this was speedup from 19->20
 #define COLOR_ADD(l,r,g,b)	COLOR_ADDb((l & 0xFF), r) | \
                                 (COLOR_ADDb((l >> 8) & 0xFF, g) << 8) | \
                                 (COLOR_ADDb((l >> 16) & 0xFF, b) << 16) | \
@@ -168,7 +403,9 @@ static int outputwidth;
 static int outputheight;
 #endif
 static int resxratio;
+static int resxratio_shift;
 static int resyratio;
+static int resyratio_shift;
 
 static char message[512];
 static int msglength;
@@ -193,6 +430,7 @@ static INLINE void vdp2putpixel32(s32 x, s32 y, u32 color, int priority)
 {
    vdp2framebuffer[(y * vdp2width) + x] = COLSAT2YAB32(priority, color);
 }
+
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -278,7 +516,8 @@ static INLINE void Vdp2PatternAddr(vdp2draw_struct *info)
          info->charaddr = tmp2 & 0x7FFF;
          info->flipfunction = (tmp1 & 0xC000) >> 14;
          info->paladdr = (tmp1 & 0x7F) << 4;
-         info->specialfunction = (tmp1 & 0x2000) >> 13;
+		 //this should include the special priority and color calc bits
+		 info->specialfunction = (tmp1 & 0x3000) >> 12;
          break;
       }
    }
@@ -287,12 +526,13 @@ static INLINE void Vdp2PatternAddr(vdp2draw_struct *info)
       info->charaddr &= 0x3FFF;
 
    info->charaddr *= 0x20; // selon Runik
-   if (info->specialprimode == 1) {
-      info->priority = (info->priority & 0xE) | (info->specialfunction & 1);
-   }
+   //TODO this looks like a hack to me
+//   if (info->specialprimode == 1) {
+//      info->priority = (info->priority & 0xE) | (info->specialfunction & 1);
+//   }
 }
 
-static INLINE int Vdp2FetchPixel(vdp2draw_struct *info, int x, int y, u32 *color);
+
 //////////////////////////////////////////////////////////////////////////////
 
 static INLINE int TestWindow(int wctl, int enablemask, int inoutmask, clipping_struct *clip, int x, int y)
@@ -301,6 +541,9 @@ static INLINE int TestWindow(int wctl, int enablemask, int inoutmask, clipping_s
    {
       if (wctl & inoutmask)
       {
+		  //it looks like madou monogatari intro uses invalid windows to disable layers
+		  //or does it? 
+
          // Draw inside of window
          if (x < clip->xstart || x > clip->xend ||
              y < clip->ystart || y > clip->yend)
@@ -308,6 +551,7 @@ static INLINE int TestWindow(int wctl, int enablemask, int inoutmask, clipping_s
       }
       else
       {
+
          // Draw outside of window
          if (x >= clip->xstart && x <= clip->xend &&
              y >= clip->ystart && y <= clip->yend)
@@ -482,37 +726,53 @@ static INLINE void SetupScreenVars(vdp2draw_struct *info, screeninfo_struct *sin
 
 //////////////////////////////////////////////////////////////////////////////
 
-enum LayerNames{
-	_NULL,NBG0,NBG1,NBG2,NBG3,SPRITE,RBG0
+enum LayerNames {
+	_NULL=0,NBG0=1,NBG1=2,NBG2=3,NBG3=4,SPRITE=5,RBG0=6,BACK=7
 };
 
 struct pixeldata {
-	int pixel;
-	LayerNames layer;
-	int priority;
-	bool transparent;
-	bool colorCalcWindow;
-	int colorCount;
-	bool isSpriteColorCalc;
-	int spriteColorCalcRatio;
-	bool isNormalShadow;
-	bool isMSBShadow;
+	//whew! these barely pack in!!!!
+	//if you add more data things will slow down.
+	//but we could pack priority and layer if we had to (it is better for these to be unpacked though)
+
+	u32 pixel;
+	u32 originalDot;//i have to check the pre-color lookup, conversion etc data for per pixel priority and color calc, i guess we should do the conversion to 32 bit later
+	
+	u8 priority;
+	u8 layer;
+	
+	u8 colorCount:3;
+	u8 spriteColorCalcRatio:5;
+	
+	u8 specialFunction:3;
+	u8 transparent:1;
+	u8 colorCalcWindow:1;
+	u8 isSpriteColorCalc:1;
+	u8 isNormalShadow:1;
+	u8 isMSBShadow:1;
+
+	void init() {
+		if(sizeof(pixeldata)==8) *((u64*)this)=0;
+		else {
+			pixel = 0;
+			originalDot = 0;
+
+			priority = 0;
+			layer = _NULL;
+
+			colorCount = 0;
+			spriteColorCalcRatio = 0;
+
+			specialFunction = 0;
+			transparent = TRUE;
+			colorCalcWindow = FALSE;
+			isSpriteColorCalc = FALSE;
+			isNormalShadow = FALSE;
+			isMSBShadow = FALSE;
+		}
+	}
 };
 
-pixeldata initPixelData() {
-	pixeldata p;
-	p.pixel = 0;
-	p.layer = _NULL;
-	p.priority = 0;
-	p.transparent = true;
-	p.colorCalcWindow = false;
-	p.colorCount = 0;
-	p.isSpriteColorCalc = false;
-	p.spriteColorCalcRatio = 0;
-	p.isNormalShadow = false;
-	p.isMSBShadow = false;
-	return p;
-}
 
 pixeldata rbg0buf[704*512];
 pixeldata nbg0buf[704*512];
@@ -522,13 +782,17 @@ pixeldata nbg3buf[704*512];
 pixeldata backbuf[704*512];
 pixeldata spritebuf[704*512];
 
-extern "C" void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, LayerNames layer, int width, int height)
+template<int RESXRATIO, LayerNames layer>
+void __Vdp2DrawScroll(vdp2draw_struct *info)
 {
    int i, j;
    int x, y;
    screeninfo_struct sinfo;
    int scrollx, scrolly;
    int *mosaic_y, *mosaic_x;
+
+   const int width = vdp2width/RESXRATIO;
+   const int height = vdp2height;
 
    SetupScreenVars(info, &sinfo);
 
@@ -552,6 +816,9 @@ extern "C" void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, LayerNames layer,
 		mosaic_y = (int*)&mosaic_table[info->mosaicymask-1];
 	}
 
+   int scrollincrement;
+
+   int pixaddr=0;
 	for (j = 0; j < height; j++)
 	{
 		int Y;
@@ -576,7 +843,7 @@ extern "C" void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, LayerNames layer,
 				y = info->y + info->coordincy*mosaic_y[j];
 			if (info->islinescroll & 0x4)
 			{
-				info->coordincx = (T1ReadLong(Vdp2Ram, info->linescrolltbl) & 0x7FF00) / (float)65536.0;
+				info->coordincx = (T1ReadLong(Vdp2Ram, info->linescrolltbl) & 0x7FF00) / 65536.0f;
 				info->linescrolltbl += 4;
          }
       }
@@ -603,50 +870,73 @@ extern "C" void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, LayerNames layer,
          u32 color;
 
          //x = info->x+((int)(info->coordincx*(float)((info->mosaicxmask > 1) ? (i / info->mosaicxmask * info->mosaicxmask) : i)));
-		 x = info->x + mosaic_x[i/resxratio]*info->coordincx;
-         x &= sinfo.xmask;
-		 
-         if (linescrollx) {
-            x += linescrollx;
-				x &= 0x3FF;
-			}
+		 x = info->x + (mosaic_x[i]*info->coordincx);
+		 x &= sinfo.xmask;
 
-			// Fetch Pixel, if it isn't transparent, continue
-			if (!info->isbitmap)
-			{
-				// Tile
-            y=Y;
-            Vdp2MapCalcXY(info, &x, &y, &sinfo);
-         }
+		 if (linescrollx) {
+			 x += linescrollx;
+			 x &= 0x3FF;
+		 }
 
-			pixeldata p = initPixelData();
+		 // Fetch Pixel, if it isn't transparent, continue
+		 if (!info->isbitmap)
+		 {
+			 // Tile
+			 y=Y;
+			 Vdp2MapCalcXY(info, &x, &y, &sinfo);
+		 }
 
-         if (!Vdp2FetchPixel(info, x, y, &color))
-         {
-			 p.transparent = true;
-         }
-		 else
-			 p.transparent = false;
-		 
+		 pixeldata p;
+		 p.init();
+
+		 p.transparent = !Vdp2FetchPixel(info, x, y, &color, &p.originalDot);
 		 p.pixel = color;
+		 p.specialFunction = info->specialfunction;
 		 p.layer = layer;
-		 
-		 if(layer == NBG0)
-			 nbg0buf[(j * vdp2width)+i] = p;
-		 if(layer == NBG1)
-			 nbg1buf[(j * vdp2width)+i] = p;
-		 if(layer == NBG2)
-			 nbg2buf[(j * vdp2width)+i] = p;
-		 if(layer == NBG3)
-			 nbg3buf[(j * vdp2width)+i] = p;
-      }
-   }    
+
+		 for(int q=0;q<RESXRATIO;q++)
+		 {
+			 if(layer == NBG0) nbg0buf[pixaddr++] = p;
+			 if(layer == NBG1) nbg1buf[pixaddr++] = p;
+			 if(layer == NBG2) nbg2buf[pixaddr++] = p;
+			 if(layer == NBG3) nbg3buf[pixaddr++] = p;
+		 }
+	 } //i<width loop
+   } //j<height loop
 }
-static void Vdp2DrawNBG0(void);
-static void Vdp2DrawNBG1(void);
-static void Vdp2DrawNBG2(void);
-static void Vdp2DrawNBG3(void);
-static void Vdp2DrawRBG0(void);
+
+
+template<int RESXRATIO>
+void FASTCALL _Vdp2DrawScroll(vdp2draw_struct *info, LayerNames layer)
+{
+	switch(layer) {
+		case NBG0: __Vdp2DrawScroll<RESXRATIO,NBG0>(info); break;
+		case NBG1: __Vdp2DrawScroll<RESXRATIO,NBG1>(info); break;
+		case NBG2: __Vdp2DrawScroll<RESXRATIO,NBG2>(info); break;
+		case NBG3: __Vdp2DrawScroll<RESXRATIO,NBG3>(info); break;
+	}
+}
+
+extern "C" void FASTCALL VidSoftVdp2DrawScroll(vdp2draw_struct *info, LayerNames layer)
+{
+	if(resxratio==1)
+		_Vdp2DrawScroll<1>(info,layer);
+	else _Vdp2DrawScroll<2>(info,layer);
+}
+
+
+//TODO ------------- vdp2 debugging is broken
+extern "C" void FASTCALL Vdp2DrawScroll(vdp2draw_struct *info, LayerNames layer, int width, int height)
+{
+	VidSoftVdp2DrawScroll(info,layer);
+}
+
+
+static bool Vdp2DrawNBG0(void);
+static bool Vdp2DrawNBG1(void);
+static bool Vdp2DrawNBG2(void);
+static bool Vdp2DrawNBG3(void);
+static bool Vdp2DrawRBG0(void);
 
 u32 ColorCalc(u32 toppixel, u32 bottompixel, u32 alpha);
 
@@ -749,16 +1039,16 @@ bool isSpriteNormalShadow(int pixel) {
 	return false;
 }
 
-
-void Vdp2DrawSprites(){
-	int i, i2;
+template<int RESXRATIO>
+bool Vdp2DrawSprites() {
+	int i, i2, pixaddr;
 	u16 pixel;
 	u8 prioritytable[8];
 	u32 vdp1coloroffset;
 	int colormode = Vdp2Regs->SPCTL & 0x20;
 
 	if (!Vdp1Regs->disptoggle)
-		return;
+		return false;
 
 	int colorCalculationRatio[8];
 
@@ -784,17 +1074,20 @@ void Vdp2DrawSprites(){
 	vdp1coloroffset = (Vdp2Regs->CRAOFB & 0x70) << 4;
 	vdp1spritetype = Vdp2Regs->SPCTL & 0xF;
 
-	for (i2 = 0; i2 < vdp2height; i2++)
+	int width = vdp2width / RESXRATIO;
+
+	for (i2 = 0, pixaddr = 0; i2 < vdp2height; i2++)
 	{
-		for (i = 0; i < vdp2width; i++)
+		for (i = 0; i < width; i++)
 		{
-			pixeldata p = initPixelData();
+			pixeldata p;
+			p.init();
 			p.layer = SPRITE;
 			if (vdp1pixelsize == 2)
 			{
 				// 16-bit pixel size
 				//16 bit pixels will be drawn at 2x width, and sometimes 2x height
-				pixel = ((u16 *)vdp1frontframebuffer)[(i2/resyratio * vdp1width) + i/2];
+				pixel = ((u16 *)vdp1frontframebuffer)[((i2>>resyratio_shift) * vdp1width) + i];
 
 				if (pixel == 0)
 					p.transparent = true;
@@ -835,10 +1128,22 @@ void Vdp2DrawSprites(){
 						
 					p.pixel = Vdp2ColorRamGetColor(vdp1coloroffset + pixel);
 					//strange crash in taromaru "fix", TODO figure out the actual issue
-					if(priorityRegisterNumber>7)priorityRegisterNumber=7;
-					p.priority = prioritytable[priorityRegisterNumber];
+					if(priorityRegisterNumber>7)
+					{
+						p.priority = 0; 
+					//	printf("priority out of bounds, fix this");
+					}
+					else
+						p.priority = prioritytable[priorityRegisterNumber];
 					p.isSpriteColorCalc = isSpriteColorCalc(prioritytable, priorityRegisterNumber, msb);
-					p.spriteColorCalcRatio = colorCalculationRatio[colorcalc];
+					//ok, if you open a game, then open winter heat it will crash here.
+					if(colorcalc>7  || colorcalc == 0xcccccccc)
+					{
+						p.spriteColorCalcRatio=0; 
+					//	printf("color calc out of bounds, fix this");
+					}
+					else
+						p.spriteColorCalcRatio = colorCalculationRatio[colorcalc];
 					p.isNormalShadow = isSpriteNormalShadow(pixel);
 					}
 					
@@ -858,16 +1163,57 @@ void Vdp2DrawSprites(){
 				p.priority = prioritytable[0];
 				
 			}
-			spritebuf[(i2 * vdp2width)+i] = p;
+
+			for(int q=0;q<RESXRATIO;q++)
+				 spritebuf[pixaddr++] = p;
 		}
 	}
-}
-	
-void readLayerInfo(pixeldata first, int &wctl, int &colorCalculationEnable, int &alpha, int &specialColorCalculationMode, int &colorOffsetMask, int i, int j);
 
-bool doTest(int wctl, clipping_struct clip[], int i, int j) {
+	return true;
+}
+struct ColorOffsetData {
+	int red;
+	int green;
+	int blue;
+};
+struct LayerInfo
+{
+	//try to make sure this is packed into a convenient size
+	int wctl, alpha, specialColorCalculationMode, colorOffsetMask, lineColorScreenInserts, gradationCalculation, bitmapSpecialColorCalculation, bitmapSpecialPriorityFunction, specialPriorityFunction;
+	pixeldata* buf;
+	u8 specialFunctionCodeB, colorCalculationEnable;
+	u8 pad[2];
+	ColorOffsetData colorOffset;
+};
+LayerInfo layerInfoCache[7];
+int shadowEnabledCache[7];
+u8 colorCountCache[7];
+INLINE const LayerInfo* readLayerInfo(const pixeldata &first);
+
+//need to look up format of the pixel
+INLINE u8 getColorCount(LayerNames layer) {
+	u8 colorCount = 0;
+	if(layer == NBG0) colorCount = (Vdp2Regs->CHCTLA & 0x70) >> 4;
+	if(layer == NBG1) colorCount = (Vdp2Regs->CHCTLA & 0x1800) >> 12;
+	if(layer == NBG2) colorCount = (Vdp2Regs->CHCTLB & 0x1);
+	if(layer == NBG3) colorCount = (Vdp2Regs->CHCTLB & (1 << 5)) >> 5;
+	if(layer == RBG0) colorCount = (Vdp2Regs->CHCTLB & 0x7000) >> 12;
+	return colorCount;
+}
+
+INLINE bool doTest(const int wctl, clipping_struct clip[], int i, int j) {
+
+	//if sprite window is enabled in the wctl register but not
+	//in spctl we do nothing
+	//sexy parodius requires this to show transparent sprites
+	//in the level briefing screens and intro
+	if((wctl & (1 << 5)) && !(Vdp2Regs->SPCTL & (1 << 4))) {
+		return false;
+	}
+
 	//if both windows are enabled and AND is enabled
-	if((wctl & 0x2) && (wctl & 0x8) && (wctl & 0x80) == 0x80) {
+	//if((wctl & 0x2) && (wctl & 0x8) && (wctl & 0x80) == 0x80) {
+	if((wctl & 0x8A) == 0x8A) {
 		// test AND window logic
 		if(!TestWindow(wctl, 0x2, 0x1, &clip[0], i, j) && !TestWindow(wctl, 0x8, 0x4, &clip[1], i, j)) {
 			return true;
@@ -883,24 +1229,53 @@ bool doTest(int wctl, clipping_struct clip[], int i, int j) {
 	return false;
 }
 
-bool testWindow(pixeldata &p, int i, int j) {
+//static INLINE void VidSoftReadWindowData(int wctl, clipping_struct *clip)
+//{
+//   if (wctl & 0x2)
+//   {
+//      clip[0].xstart = Vdp2Regs->WPSX0; 
+//      clip[0].ystart = Vdp2Regs->WPSY0;
+//      clip[0].xend = Vdp2Regs->WPEX0; 
+//      clip[0].yend = Vdp2Regs->WPEY0;
+//   }
+//
+//	else if (wctl & 0x8)
+//	{
+//		clip[1].xstart = Vdp2Regs->WPSX1;
+//		clip[1].ystart = Vdp2Regs->WPSY1;
+//		clip[1].xend = Vdp2Regs->WPEX1;
+//		clip[1].yend = Vdp2Regs->WPEY1;
+//	}
+//
+//	else if (wctl & 0x20)
+//	{
+//		// fix me
+//
+//		clip[0].xstart = clip[0].ystart = clip[0].xend = clip[0].yend = 0;
+//		clip[1].xstart = clip[1].ystart = clip[1].xend = clip[1].yend = 0;
+//	}
+//}
 
-	int wctl,colorCalculationEnable,alpha,specialColorCalculationMode,colorOffsetMask;
+template<LayerNames LAYER>
+INLINE bool testWindow(pixeldata &p, int i, int j) {
+
+
 	int islinewindow = false;
 
-	p.colorCalcWindow = false;
+	p.colorCalcWindow = FALSE;
 
 	u32 linewnd0addr, linewnd1addr;
 	clipping_struct clip[2];
-	clip[0].xstart = clip[0].ystart = clip[0].xend = clip[0].yend = 0;
-	clip[1].xstart = clip[1].ystart = clip[1].xend = clip[1].yend = 0;
+
 
 	linewnd0addr = linewnd1addr = 0;
 
-	readLayerInfo(p, wctl, colorCalculationEnable, alpha, specialColorCalculationMode, colorOffsetMask,i,j);
+	const LayerInfo* layerInfo = readLayerInfo(p);
+
+	int wctl = layerInfo->wctl;
 
 	//this just reads the coordinates for the two regular rectangular windows
-	ReadWindowData(wctl, clip);
+	ReadWindowData(layerInfo->wctl, clip);
 
 	ReadLineWindowData(&islinewindow, wctl, &linewnd0addr, &linewnd1addr);
 	// if line window is enabled, adjust clipping values
@@ -912,14 +1287,16 @@ bool testWindow(pixeldata &p, int i, int j) {
 	//now that we have checked for regular window and made it here
 	//if either window is being used for color calc window
 	//no idea if any games use color calc line or sprite window
-	if(Vdp2Regs->WCTLD & (1 << 9) || Vdp2Regs->WCTLD & (1 << 10)) {
+
+	//winter heat has rotation parameter window enabled, not sure if it's used
+	if(Vdp2Regs->WCTLD & (1 << 9) || Vdp2Regs->WCTLD & (1 << 11)) {
 
 		wctl = Vdp2Regs->WCTLD >> 8;
 
 		ReadWindowData(wctl, clip);
 
 		if(doTest(wctl, clip, i, j)) {
-			p.colorCalcWindow = true;
+			p.colorCalcWindow = TRUE;
 			return false;
 		}
 	}
@@ -927,15 +1304,9 @@ bool testWindow(pixeldata &p, int i, int j) {
 	return false;
 }
 
-struct ColorOffsetData {
-	int red;
-	int green;
-	int blue;
-};
+ColorOffsetData readColorOffset(int offset){
 
-ColorOffsetData colorOffset;
-
-void readColorOffset(int offset){
+	ColorOffsetData colorOffset;
 
 	if (Vdp2Regs->CLOFSL & offset)
 	{
@@ -967,342 +1338,174 @@ void readColorOffset(int offset){
 		if (Vdp2Regs->COAB & 0x100)
 			colorOffset.blue |= 0xFFFFFF00;
 	}
+
+	return colorOffset;
 }
 
-void readLayerInfo(pixeldata first, int &wctl, int &colorCalculationEnable, int &alpha, int &specialColorCalculationMode, int &colorOffsetMask, int i, int j) {
+INLINE void readLayerInfoByLayer(LayerNames layer, LayerInfo& info)
+{
+	info.colorCalculationEnable = FALSE;
 
-	colorCalculationEnable = false;
+	switch(layer) {
+	case NBG0:
+		info.wctl = Vdp2Regs->WCTLA;
+		info.colorCalculationEnable = Vdp2Regs->CCCTL & 0x1;
+		info.alpha = Vdp2Regs->CCRNA & 0x1f;
+		info.specialColorCalculationMode = Vdp2Regs->SFCCMD & 0x3;
+		info.colorOffset = readColorOffset(1);
+		info.colorOffsetMask = 1;
+		info.lineColorScreenInserts = Vdp2Regs->LNCLEN & (1 << 0);
+		info.gradationCalculation = ((Vdp2Regs->CCCTL & 0x7000) >> 12) == 2;
+		info.buf = &nbg0buf[0];
+		info.specialFunctionCodeB = (Vdp2Regs->SFSEL & (1 << 0));
+		info.bitmapSpecialPriorityFunction = Vdp2Regs->BMPNA & (1 << 5);
+		info.bitmapSpecialColorCalculation = Vdp2Regs->BMPNA & (1 << 4);
+		info.specialPriorityFunction = Vdp2Regs->SFPRMD & 0x3;
+		break;
+	case NBG1:
+		info.wctl = Vdp2Regs->WCTLA >> 8;
+		info.colorCalculationEnable = Vdp2Regs->CCCTL & 0x2;
+		info.alpha = Vdp2Regs->CCRNA >> 8;
+		info.specialColorCalculationMode = (Vdp2Regs->SFCCMD >> 2) & 0x3;
+		info.colorOffset = readColorOffset(2);
+		info.colorOffsetMask = 2;
+		info.lineColorScreenInserts = Vdp2Regs->LNCLEN & (1 << 1);
+		info.gradationCalculation = ((Vdp2Regs->CCCTL & 0x7000) >> 12) == 4;
+		info.buf = &nbg1buf[0];
+		info.specialFunctionCodeB = (Vdp2Regs->SFSEL & (1 << 1));
+		info.bitmapSpecialPriorityFunction = (Vdp2Regs->BMPNA >> 8) & (1 << 5);
+		info.bitmapSpecialColorCalculation = (Vdp2Regs->BMPNA >> 8) & (1 << 4);
+		info.specialPriorityFunction = (Vdp2Regs->SFPRMD >> 2) & 0x3;
+		break;
+	case NBG2:
+		info.wctl = Vdp2Regs->WCTLB;
+		info.colorCalculationEnable = Vdp2Regs->CCCTL & 0x4;
+		info.alpha = Vdp2Regs->CCRNB & 0x1f;
+		info.specialColorCalculationMode = (Vdp2Regs->SFCCMD >> 4) & 0x3;
+		info.colorOffset = readColorOffset(4);
+		info.colorOffsetMask = 4;
+		info.lineColorScreenInserts = Vdp2Regs->LNCLEN & (1 << 2);
+		info.gradationCalculation = ((Vdp2Regs->CCCTL & 0x7000) >> 12) == 5;
+		info.buf = &nbg2buf[0];
+		info.specialFunctionCodeB = (Vdp2Regs->SFSEL & (1 << 2));
+		//this layer cannot use these
+		info.bitmapSpecialPriorityFunction = 0;
+		info.bitmapSpecialColorCalculation = 0;
+		info.specialPriorityFunction = (Vdp2Regs->SFPRMD >> 4) & 0x3;
+		break;
+	case NBG3:
+		info.wctl = Vdp2Regs->WCTLB >> 8;
+		info.colorCalculationEnable = Vdp2Regs->CCCTL & 0x8;
+		info.alpha = Vdp2Regs->CCRNB >> 8;
+		info.specialColorCalculationMode = (Vdp2Regs->SFCCMD >> 6) & 0x3;
+		info.colorOffset = readColorOffset(8);
+		info.colorOffsetMask = 8;
+		info.lineColorScreenInserts = Vdp2Regs->LNCLEN & (1 << 3);
+		info.gradationCalculation = ((Vdp2Regs->CCCTL & 0x7000) >> 12) == 6;
+		info.buf = &nbg3buf[0];
+		info.specialFunctionCodeB = (Vdp2Regs->SFSEL & (1 << 3));
+		//this layer cannot use these
+		info.bitmapSpecialPriorityFunction = 0;
+		info.bitmapSpecialColorCalculation = 0;
+		info.specialPriorityFunction = (Vdp2Regs->SFPRMD >> 6) & 0x3;
+		break;
+	case RBG0:
+		info.wctl = Vdp2Regs->WCTLC & 0x1f;
+		info.colorCalculationEnable = Vdp2Regs->CCCTL & 0x10;
+		info.alpha = Vdp2Regs->CCRR & 0x1f;
+		info.specialColorCalculationMode = (Vdp2Regs->SFCCMD >> 8) & 0x3;
+		info.colorOffset = readColorOffset(0x10);
+		info.colorOffsetMask = 0x10;
+		info.lineColorScreenInserts = Vdp2Regs->LNCLEN & (1 << 4);
+		info.gradationCalculation = ((Vdp2Regs->CCCTL & 0x7000) >> 12) == 1;
+		info.buf = &rbg0buf[0];
+		info.specialFunctionCodeB = (Vdp2Regs->SFSEL & (1 << 4));
+		info.bitmapSpecialPriorityFunction = Vdp2Regs->BMPNB & (1 << 5);
+		info.bitmapSpecialColorCalculation = Vdp2Regs->BMPNB & (1 << 4);
+		info.specialPriorityFunction = (Vdp2Regs->SFPRMD >> 8) & 0x3;
+		break;
+	}
 
-	if(first.layer == NBG0) {
-		wctl = Vdp2Regs->WCTLA;
-		colorCalculationEnable = Vdp2Regs->CCCTL & 0x1;
-		alpha = Vdp2Regs->CCRNA & 0x1f;
-		specialColorCalculationMode = Vdp2Regs->SFCCMD & 0x3;
-		colorOffsetMask = 1;
-	}
-	if(first.layer == NBG1) {
-		wctl = Vdp2Regs->WCTLA >> 8;
-		colorCalculationEnable = Vdp2Regs->CCCTL & 0x2;
-		alpha = Vdp2Regs->CCRNA >> 8;
-		specialColorCalculationMode = (Vdp2Regs->SFCCMD >> 2) & 0x3;
-		colorOffsetMask = 2;
-	}
-	if(first.layer == NBG2) {
-		wctl = Vdp2Regs->WCTLB;
-		colorCalculationEnable = Vdp2Regs->CCCTL & 0x4;
-		alpha = Vdp2Regs->CCRNB & 0x1f;
-		specialColorCalculationMode = (Vdp2Regs->SFCCMD >> 4) & 0x3;
-		colorOffsetMask = 4;
-	}
-	if(first.layer == NBG3) {
-		wctl = Vdp2Regs->WCTLB >> 8;
-		colorCalculationEnable = Vdp2Regs->CCCTL & 0x8;
-		alpha = Vdp2Regs->CCRNB >> 8;
-		specialColorCalculationMode = (Vdp2Regs->SFCCMD >> 6) & 0x3;
-		colorOffsetMask = 8;
-	}
-
-	if(first.layer == RBG0) {
-		wctl = Vdp2Regs->WCTLC & 0x1f;
-		colorCalculationEnable = Vdp2Regs->CCCTL & 0x10;
-		alpha = Vdp2Regs->CCRR & 0x1f;
-		colorOffsetMask = 0x10;
-	}
-
-	if(first.layer == SPRITE) {
-		wctl = Vdp2Regs->WCTLC >> 8;
-		colorCalculationEnable = first.isSpriteColorCalc;
-		alpha = first.spriteColorCalcRatio;
-		colorOffsetMask = 0x40;
-	}
-
-	readColorOffset(colorOffsetMask);
+	readColorOffset(info.colorOffsetMask);
 }
 
-pixeldata pixelstack[0x7];
+LayerInfo cacheSpriteLayerInfo;
 
-void getColorCount(pixeldata &p) {
-	//need to look up format of the pixel
-	if(p.layer == NBG0)
-		p.colorCount = (Vdp2Regs->CHCTLA & 0x70) >> 4;
-	if(p.layer == NBG1)
-		p.colorCount = (Vdp2Regs->CHCTLA & 0x1800) >> 12;
-	if(p.layer == NBG2)
-		p.colorCount = (Vdp2Regs->CHCTLB & 0x1);
-	if(p.layer == NBG3)
-		p.colorCount = (Vdp2Regs->CHCTLB & (1 << 5)) >> 5;
-	if(p.layer == RBG0)
-		p.colorCount = (Vdp2Regs->CHCTLB & 0x7000) >> 12;
+static void updateCacheSpriteLayerInfo()
+{
+	cacheSpriteLayerInfo.colorOffsetMask = 0x40;
+	cacheSpriteLayerInfo.lineColorScreenInserts = Vdp2Regs->LNCLEN & (1 << 5);
+	cacheSpriteLayerInfo.gradationCalculation = ((Vdp2Regs->CCCTL & 0x7000) >> 12) == 0;
+	cacheSpriteLayerInfo.buf = &spritebuf[0];
+	cacheSpriteLayerInfo.colorOffset = readColorOffset(0x40);
+	cacheSpriteLayerInfo.wctl = Vdp2Regs->WCTLC >> 8;
+//	readColorOffset(cacheSpriteLayerInfo.colorOffsetMask);
 }
 
-void composite(pixeldata pixelstack[], int i, int j){
-
-	int wctl;
-	int colorCalculationEnable = 0;
-	int alpha = 0;
-	int specialColorCalculationMode = 0;
-	int colorOffsetMask = 0;
-
-	pixeldata first = pixelstack[0];
-	pixeldata second = pixelstack[1];
-	pixeldata third = pixelstack[2];
-
-	readLayerInfo(first, wctl, colorCalculationEnable, alpha, specialColorCalculationMode, colorOffsetMask, i, j);
-
-	//extended color calculation is enabled
-	if(Vdp2Regs->CCCTL & (1 << 10)) {
-
-		//we have to know the bit depth of the pixels to be blended
-		getColorCount(second);
-		getColorCount(third);
-
-		//blend the second and third pixels
-		//and write the result over the second
-
-		//color ram mode 0
-		if(((Vdp2Regs->RAMCTL & 0x3000) >> 12) == 0) {
-			printf("mode 0 extended color calc");
-			//line color screen does not insert
-			if(!(Vdp2Regs->CCCTL & (1 << 5))) {
-
-				//2nd and 3rd images can be palette or rbg format
-				int a;
-				int enabled;
-
-				//got to check if the second pixel has color calc enabled
-				readLayerInfo(second, a, enabled, a, a, a, i, j);
-
-				if(enabled) {
-					//2:2:0
-					second.pixel = ColorCalc(second.pixel,third.pixel,15);
-				}
-				else {
-					//2nd pixel is 100% visible
-				}
-			}
-			//line color screen inserts
-			else {
-				printf("mode 0 extended color calc + lcl");
-			}
-		}
-
-		//color ram mode 1 or 2
-		else {
-			//line color screen does not insert
-			if(!(Vdp2Regs->CCCTL & (1 << 5))) {
-
-				//3rd image is palette format
-				if(third.colorCount < 3) {
-					//the second layer pixel is 100% visible
-				}
-				//3rd image is rgb format
-				if(third.colorCount >= 3) {
-					int a;
-					int enabled;
-
-					//got to check if the second pixel has color calc enabled
-					readLayerInfo(second, a, enabled, a, a, a, i, j);
-
-					if(enabled) {
-						//2:2:0
-						second.pixel = ColorCalc(second.pixel,third.pixel,15);
-					}
-					else {
-						//2nd pixel is 100% visible
-					}
-				}
-			}
-			//line color screen inserts
-			else {
-				printf("mode 1 or 2 extended + lcl");
-			}
-		}
-	}
-	//if we are selecting color calc by the second screen side
-	//parodius penguin boss uses this
-	if(Vdp2Regs->CCCTL & (1 << 9)) {
-
-		colorCalculationEnable = false;
-		if(second.layer == NBG0 && (Vdp2Regs->CCCTL & 0x1)) {
-			alpha = Vdp2Regs->CCRNA & 0x1f;
-			colorCalculationEnable = true;
-		}
-		if(second.layer == NBG1 && (Vdp2Regs->CCCTL & 0x2)) {
-			alpha = Vdp2Regs->CCRNA >> 8;
-			colorCalculationEnable = true;
-		}
-		if(second.layer == NBG2 && (Vdp2Regs->CCCTL & 0x4)) {
-			alpha = Vdp2Regs->CCRNB & 0x1f;
-			colorCalculationEnable = true;
-		}
-		if(second.layer == NBG3 && (Vdp2Regs->CCCTL & 0x8)) {
-			alpha = Vdp2Regs->CCRNB >> 8;
-			colorCalculationEnable = true;
-		}
-		if(second.layer == RBG0 && (Vdp2Regs->CCCTL & 0x10)) {
-			colorCalculationEnable = true;
-			alpha = Vdp2Regs->CCRR & 0x1f;
-		}
-		if(second.layer == SPRITE && (Vdp2Regs->CCCTL & ( 1 << 6))) {
-			colorCalculationEnable = true;
-			alpha = second.spriteColorCalcRatio;
-		}
-	}
-
-	if(specialColorCalculationMode==1){
-		printf("a");
-	}
-	if(specialColorCalculationMode==2){
-		printf("b");
-	}
-	//activated based on the msb of the color data
-	//in the case of radiant silvergun portraits it is looked up
-	//and the value is actually from color ram transferred to first.pixel
-	if(specialColorCalculationMode == 3) {
-		if(first.pixel &(0x8000 << 9))//i'm not really sure pixel data gets stored like this internally but this is ok for now i guess
-			colorCalculationEnable = 1;
-		else
-			colorCalculationEnable = 0;
-	}
-	///////////////////////////////////////////////////////////////////
-	//temporary line color screen testing////////////////////
-	int lineColor;
-	int scrAddr;
-	bool lineColorScreen = (Vdp2Regs->CCCTL & (1 << 5));
-
-      if (Vdp2Regs->VRSIZE & 0x8000)	  
-         scrAddr = ((Vdp2Regs->LCTA.all & 0x7FFFFUL) * 2);
-      else
-         scrAddr = ((Vdp2Regs->LCTA.all & 0x7FFFFUL) * 2);
-
-	lineColor = T1ReadWord(Vdp2Ram, scrAddr);
-	
-
-	if(lineColorScreen && !first.colorCalcWindow) {
-		alpha = Vdp2Regs->CCRLB & 0x1f;
-		first.pixel = ColorCalc(lineColor, first.pixel, alpha);
-	}
-	/////////////////////////////////////////////////////////////////
-	/////////////////////////////////////////////////////////////////
-	else if(colorCalculationEnable && !first.colorCalcWindow)
-		first.pixel = ColorCalc(first.pixel, second.pixel, alpha);
-	else
-		first.pixel = COLSAT2YAB32(0, first.pixel);
-
-	//is color offset enabled?
-	if (Vdp2Regs->CLOFEN & colorOffsetMask)// && first.layer == SPRITE
-		first.pixel = COLOR_ADD(first.pixel,colorOffset.red,colorOffset.green,colorOffset.blue);
-		bool shadowEnabled = false;
-
-		//we need to check if the layer underneath has shadow enabled
-		if(second.layer == NBG0)
-			shadowEnabled = Vdp2Regs->SDCTL & (1 << 0);
-		if(second.layer == NBG1)
-			shadowEnabled = Vdp2Regs->SDCTL & (1 << 1);
-		if(second.layer == NBG2)
-			shadowEnabled = Vdp2Regs->SDCTL & (1 << 2);
-		if(second.layer == NBG3)
-			shadowEnabled = Vdp2Regs->SDCTL & (1 << 3);
-		if(second.layer == RBG0)
-			shadowEnabled = Vdp2Regs->SDCTL & (1 << 4);
-
-	//shadow is processed after color calculation and color offset functions
-	//normal shadow is displayed regardless of bit 8 SDCTL
-	//puyo tsuu uses msb shadow in menu
-	//normal shadow is always enabled, so games should not be using the reserved color value unless they want a shadow
-	if(first.layer == SPRITE && first.isNormalShadow) {
-
-		if(shadowEnabled)
-			first.pixel = Shadow(second.pixel,80);
-	}
-	else if(first.layer == SPRITE && first.isMSBShadow) {
-
-		//puyo tsuu has issues
-		//it is not shading correctly
-
-		//MSB shadow and the value of the sprite is greater than 0x8000, we shade the sprite instead of the background
-		//sexy parodius corn boss
-		if(first.pixel > 0x8000)
-			first.pixel = Shadow(first.pixel,80);//&& (Vdp2Regs->SDCTL & (1 << 8)
-		else //if (shadowEnabled)
-			//this isn't right, taromaru looks correct if you use third.pixel, 20
-			//can it skip over a layer and do a shadow?
-			//second happens to be that layer of transparent mist,
-			//so perhaps it skips color calculated layers?
-			first.pixel = Shadow(second.pixel,80);
-	}
-
-	vdp2framebuffer[(j*vdp2width)+i] = first.pixel;
-
-
-	// dst[(j*vdp2width)+i] = nbg0buf[(j*vdp2width)+i].pixel;
-	// dst[(j*vdp2width)+i] = spritebuf[(j*vdp2width)+i].pixel;
-	// dst[(j*vdp2width)+i] = first.pixel;
+INLINE const LayerInfo* readLayerInfo(const pixeldata &first)
+{
+	if(first.layer == SPRITE)
+	{
+		cacheSpriteLayerInfo.colorCalculationEnable = first.isSpriteColorCalc;
+		cacheSpriteLayerInfo.alpha = first.spriteColorCalcRatio;
+		//cacheSpriteLayerInfo.colorOffsetMask = 0x40;
+		//cacheSpriteLayerInfo.lineColorScreenInserts = Vdp2Regs->LNCLEN & (1 << 5);
+		//cacheSpriteLayerInfo.gradationCalculation = ((Vdp2Regs->CCCTL & 0x7000) >> 12) == 0;
+		//cacheSpriteLayerInfo.buf = &spritebuf[0];
+		//readColorOffset(cacheSpriteLayerInfo.colorOffsetMask);
+		return &cacheSpriteLayerInfo;
+	} 
+	else return &layerInfoCache[first.layer];
 }
 
-int pixelindex;
+bool isSpecialFunctionCode(int SFCODEAorB, int pixel) {
 
-void layerStuff(pixeldata buf[], int i, int j, pixeldata arr[]) {
-
-	pixeldata p = initPixelData();
-//	p.pixel = INT_MAX;
-	p = buf[(j*vdp2width)+i];
-
-	if(testWindow(p, i, j))
-		return;
-	if(p.layer == _NULL)
-		return;
-	if(!p.transparent)
-		arr[pixelindex++] = p;
-}
-static void Vdp2DrawBackScreen(void);
-
-void VIDSoftVdp2DrawScreens(){
-
-	memset(spritebuf,0,sizeof(spritebuf));
-	memset(rbg0buf,0,sizeof(rbg0buf));
-	memset(nbg0buf,0,sizeof(nbg0buf));
-	memset(nbg1buf,0,sizeof(nbg1buf));
-	memset(nbg2buf,0,sizeof(nbg2buf));
-	memset(nbg3buf,0,sizeof(nbg3buf));
-
-	Vdp2DrawSprites();
-	Vdp2DrawRBG0();
-	Vdp2DrawNBG0();
-	Vdp2DrawNBG1();
-	Vdp2DrawNBG2();
-	Vdp2DrawNBG3();
-	Vdp2DrawBackScreen();
-
-
-	for (int j = 0; j < vdp2height; j++) {
-		for (int i = 0; i < vdp2width; i++) {
-			memset(pixelstack,0,sizeof(pixelstack));
-			pixelindex = 0;
-			for (int priority = 7; priority > 0; priority--) {
-
-				if(spritebuf[(j*vdp2width)+i].priority == priority)
-					layerStuff(spritebuf, i, j, pixelstack);
-
-				if (rbg0priority == priority)
-					layerStuff(rbg0buf, i, j, pixelstack);
-				if (nbg0priority == priority)
-					layerStuff(nbg0buf, i, j, pixelstack);
-				if (nbg1priority == priority)
-					layerStuff(nbg1buf, i, j, pixelstack);
-				if (nbg2priority == priority)
-					layerStuff(nbg2buf, i, j, pixelstack);
-				if (nbg3priority == priority)
-					layerStuff(nbg3buf, i, j, pixelstack);
-
-			}
-			pixelstack[pixelindex] = backbuf[(j*vdp2width)+i];
-			composite(pixelstack, i, j);	
-		}
+	//this might not be safe since a dev somewhere
+	//may have set two of these bits to 1
+	switch(SFCODEAorB) {
+	case 1:
+		if(pixel == 0 || pixel == 1)
+			return true;
+		break;
+	case 2:
+		if(pixel == 2 || pixel == 3)
+			return true;
+		break;
+	case 4:
+		if(pixel == 4 || pixel == 5)
+			return true;
+		break;
+	case 8:
+		if(pixel == 6 || pixel == 7)
+			return true;
+		break;
+	case 0x10:
+		if(pixel == 8 || pixel == 9)
+			return true;
+		break;
+	case 0x20:
+		if(pixel == 0xA || pixel == 0xB)
+			return true;
+		break;
+	case 0x40:
+		if(pixel == 0xC || pixel == 0xD)
+			return true;
+		break;
+	case 0x80:
+		if(pixel == 0xE || pixel == 0xF)
+			return true;
+		break;
+	default:
+		return false;
 	}
+	return false;
 }
 
-static INLINE u32 FASTCALL Vdp2ColorRamGetColor(u32 addr)
+//---------------------------------
+//access to color ram is cached through a table 
+//setup once per frame based on Vdp2Internal.ColorMode
+//
+static INLINE u32 FASTCALL _Vdp2ColorRamGetColor(u32 addr)
 {
    switch(Vdp2Internal.ColorMode)
    {
@@ -1312,14 +1515,14 @@ static INLINE u32 FASTCALL Vdp2ColorRamGetColor(u32 addr)
          addr <<= 1;
          tmp = T2ReadWord(Vdp2ColorRam, addr & 0xFFF);
 
-         return (((tmp & 0x1F) << 3) | ((tmp & 0x03E0) << 6) | ((tmp & 0x7C00) << 9));
+         return (((tmp & 0x1F) << 3) | ((tmp & 0x03E0) << 6) | ((tmp & 0xFC00) << 9));//changed to FC to preserve the msb for per pixel color calc in waku puyo dungeon
       }
       case 1:
       {
          u32 tmp;
          addr <<= 1;
          tmp = T2ReadWord(Vdp2ColorRam, addr & 0xFFF);
-         return (((tmp & 0x1F) << 3) | ((tmp & 0x03E0) << 6) | ((tmp & 0xFC00) << 9));//changed to FC to preserve the msb for per pixel color calc
+         return (((tmp & 0x1F) << 3) | ((tmp & 0x03E0) << 6) | ((tmp & 0xFC00) << 9));//changed to FC to preserve the msb for per pixel color calc in radiant silvergun
       }
       case 2:
       {
@@ -1332,57 +1535,764 @@ static INLINE u32 FASTCALL Vdp2ColorRamGetColor(u32 addr)
    return 0;
 }
 
+u32 cacheColorTable[0xFFF];
 
-static INLINE int Vdp2FetchPixel(vdp2draw_struct *info, int x, int y, u32 *color)
+static void updateCacheColorTable()
+{
+	for(u32 i=0;i<0xFFF;i++)
+		cacheColorTable[i] = _Vdp2ColorRamGetColor(i);
+}
+
+static INLINE u32 Vdp2ColorRamGetColor (u32 addr)
+{
+	return cacheColorTable[addr&0xFFF];
+}
+
+//-----------------------------
+
+enum specialModes {SCREEN = 0, CHARACTER = 1, DOT = 2, MSB = 3};
+
+void composite(pixeldata pixelstack[], int i, int j, int pixaddr){
+
+	int colorCalculationEnable = FALSE;
+	int alpha = 0;
+	int specialColorCalculationMode = 0;
+
+	pixeldata &first = pixelstack[0];
+	pixeldata &second = pixelstack[1];
+	pixeldata &third = pixelstack[2];
+
+	const LayerInfo* layerInfo = readLayerInfo(first);
+
+	//TODO color calculation window is broken as well as some other color calc regressions
+	colorCalculationEnable = layerInfo->colorCalculationEnable;
+	alpha = layerInfo->alpha;
+	specialColorCalculationMode = layerInfo->specialColorCalculationMode;
+
+	//gradation calculation
+	//see the sega blur demo
+	if(Vdp2Regs->CCCTL & (1 << 15) && layerInfo->gradationCalculation) {
+
+		pixeldata left2 = layerInfo->buf[((pixaddr-2) > 0)?(pixaddr-2):0];
+		pixeldata left1 = layerInfo->buf[((pixaddr-1) > 0)?(pixaddr-1):0];
+		pixeldata disp = layerInfo->buf[pixaddr];
+		pixeldata intermediate;
+		intermediate.pixel = ColorCalc(left2.pixel,left1.pixel,7);
+		disp.pixel = ColorCalc(disp.pixel,intermediate.pixel,15);
+		vdp2framebuffer[pixaddr] = disp.pixel;
+		return;
+	}
+	//extended color calculation is enabled
+	//i haven't found any line color insertion test cases so don't expect those to work
+	else if(Vdp2Regs->CCCTL & (1 << 10)) {
+
+		//we have to know the bit depth of the pixels to be blended
+		second.colorCount = colorCountCache[second.layer];
+		third.colorCount = colorCountCache[third.layer];
+
+		const LayerInfo *secondLayerInfo = readLayerInfo(second);
+		const LayerInfo *thirdLayerInfo = readLayerInfo(third);
+
+		//blend the second and third pixels
+		//and write the result over the second
+
+		//color ram mode 0
+		if(((Vdp2Regs->RAMCTL & 0x3000) >> 12) == 0) {
+			// printf("mode 0 extended color calc");
+
+			//line color screen does not insert
+			//if(!(Vdp2Regs->CCCTL & (1 << 5))) {
+			//i think this must be the check
+			if(!secondLayerInfo->lineColorScreenInserts) {
+
+
+				//2nd and 3rd images can be palette or rbg format
+				int a;
+				int enabled;
+
+				//got to check if the second pixel has color calc enabled
+				// const LayerInfo *secondLayerInfo = readLayerInfo(second); //, a, enabled, a, a, a, i, j);
+
+				if(secondLayerInfo->colorCalculationEnable) {
+					//madou monogatari intro with angel activates this mode
+					//2:2:0
+					second.pixel = ColorCalc(second.pixel,third.pixel,15);
+				}
+				else {
+					//2nd pixel is 100% visible
+				}
+			}
+			//line color screen inserts
+			else {
+				//i get the impression line color screen enable must be on for the given layer
+				//LNCLEN
+
+
+
+				// if() {
+				// printf("yay");
+				// }
+
+				//sonic R enables this
+
+				// printf("mode 0 extended color calc + lcl");
+				//for the sake of clarity let's move the slots around
+				//like described in the manual
+
+				pixeldata lineColorPixel;//TODO
+
+				pixeldata fourth = third;
+				pixeldata third = second;
+				// if(third.layer == NBG0)
+				// lineColorPixel.pixel = 0xffff;
+				// else
+				lineColorPixel.pixel = 0;
+
+				int lineColorScreenAddress = ((Vdp2Regs->LCTA.all & 0x7FFFFUL) * 2);
+				//sonic r title screen is fetching 0x0.
+				//is this the correct way to look it up?
+				lineColorPixel.pixel = T1ReadWord(Vdp2Ram, lineColorScreenAddress);
+				// int lineColorPixelAlpha = Vdp2Regs->CCRLB & 0x1f;
+				second = lineColorPixel;
+
+				// const LayerInfo *secondLayerInfo = readLayerInfo(second);
+
+				//uhh wait secondLayerInfo in this case is useless
+				//since the second layer is the line color screen
+
+				//so if the line color screen has color calc disabled
+				if(!(Vdp2Regs->CCCTL & (1 << 5))) {//secondLayerInfo->colorCalculationEnable
+
+					//second layer is 100% visible
+					//which means we use the line color screen 100%?
+				}
+				else {
+
+					//
+
+					if(!thirdLayerInfo->colorCalculationEnable) {
+						//2:2:0
+						// printf("ccc");
+
+						ColorCalc(second.pixel,third.pixel,15);
+					}
+					else {
+						//sonic r uses this mode in races
+
+						// printf("cccccc");
+						//the manual says 2:1:0 but that doesn't make any sense
+						//so i'm going to go with 2:1:1 until demonstrated otherwise
+						ColorCalc(third.pixel,fourth.pixel,7);
+						ColorCalc(second.pixel,third.pixel,15);
+					}
+				}
+			}
+		}
+
+		//color ram mode 1 or 2
+		else {
+			//line color screen does not insert
+			// if(!(Vdp2Regs->CCCTL & (1 << 5))) {
+			if(!secondLayerInfo->lineColorScreenInserts) {
+
+				//3rd image is palette format
+				if(third.colorCount < 3) {
+					//the second layer pixel is 100% visible
+				}
+				//3rd image is rgb format
+				if(third.colorCount >= 3) {
+					int a;
+					int enabled;
+
+					//got to check if the second pixel has color calc enabled
+					// const LayerInfo* secondLayerInfo = readLayerInfo(second); //, a, enabled, a, a, a, i, j);
+
+					if(secondLayerInfo->colorCalculationEnable) {
+						//2:2:0
+						second.pixel = ColorCalc(second.pixel,third.pixel,15);
+					}
+					else {
+						//2nd pixel is 100% visible
+					}
+				}
+			}
+			//line color screen inserts
+			else {
+				printf("mode 1 or 2 extended + lcl");
+				//the line color screen is treated as the second image
+				//moving the 2nd and third pixels into 3rd and fourth slots
+				//for the sake of clarity let's move the slots around
+				//like described in the manual
+
+				pixeldata lineColorPixel;//TODO
+
+				pixeldata fourth = third;
+				pixeldata third = second;
+				second = lineColorPixel;
+
+				//third image is palette format
+				if(third.colorCount < 3) {
+					//2nd image is 100% visible
+				}
+				//third image is rgb format
+				if(third.colorCount >= 3) {
+
+					if(fourth.colorCount < 3) {
+
+						// const LayerInfo* secondLayerInfo = readLayerInfo(second);
+
+						if(!secondLayerInfo->colorCalculationEnable) {
+							//2nd image is 100% visible
+						}
+						else {
+							//2:2:0
+							second.pixel = ColorCalc(second.pixel,third.pixel,15);
+						}
+					}
+
+					//if both layers are rgb
+					if(fourth.colorCount >= 3) {
+
+						// const LayerInfo* secondLayerInfo = readLayerInfo(second);
+
+						if(!secondLayerInfo->colorCalculationEnable) {
+							//2nd layer is 100% visible
+						}
+						else {
+							// const LayerInfo* thirdLayerInfo = readLayerInfo(third);
+
+							if(!thirdLayerInfo->colorCalculationEnable) {
+								//2:2:0
+								second.pixel = ColorCalc(second.pixel,third.pixel,15);
+							}
+							//3rd image color calc enabled
+							else {
+								//2:1:1
+								third.pixel = ColorCalc(third.pixel,fourth.pixel,7);
+								second.pixel = ColorCalc(second.pixel,third.pixel,15);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	//if we are selecting color calc by the second screen side
+	//parodius penguin boss uses this
+	if(Vdp2Regs->CCCTL & (1 << 9)) {
+
+		//i thought having color calc disabled on the second layer
+		//would disable color calc but this is apparently not the case
+		//see winter heat title screen
+
+		//also it is wrong to check if the second layer has cc enabled,
+		//see the title screen of sega ages memorial volume 2
+
+		if(second.layer == NBG0)
+			alpha = Vdp2Regs->CCRNA & 0x1f;
+
+		if(second.layer == NBG1)
+			alpha = Vdp2Regs->CCRNA >> 8;
+
+		if(second.layer == NBG2)
+			alpha = Vdp2Regs->CCRNB & 0x1f;
+
+		if(second.layer == NBG3)
+			alpha = Vdp2Regs->CCRNB >> 8;
+
+		if(second.layer == RBG0)
+			alpha = Vdp2Regs->CCRR & 0x1f;
+
+		if(second.layer == SPRITE)
+			alpha = second.spriteColorCalcRatio;
+
+		if(second.layer == BACK)
+			alpha = Vdp2Regs->CCRLB >> 8;
+	}
+
+	if(specialColorCalculationMode==1){
+		//legend of oasis uses this mode with a bitmap scroll screen
+		//so we need to check the bit map palette number register
+		//well... it apparently isn't actually using this
+		//it is using special color calculation mode 2
+
+		// int bitmapSpecialPriority = 0;
+		// int bitmapSpecialColorCalculation = 0;
+
+		if(first.specialFunction || layerInfo->bitmapSpecialColorCalculation)
+			colorCalculationEnable = true;
+
+		else
+			colorCalculationEnable = false;
+		//legend of oasis is going to blend the back screen into the front unless i fix this
+		// if(bitmapSpecialColorCalculation)
+		// colorCalculationEnable = true;
+		// if(first.specialFunction) {
+		// printf("a");
+		// }
+
+	}
+	//puzzle bobble 3 uses this to make a semi transparent layer behind the playing area
+	//the special function cc bit in pattern name data must be enabled in tile mode
+	if(specialColorCalculationMode==2){
+
+		//pattern name data color calc bit must be set for this to work in tile mode
+		//it should be noted i'm not actually checking the just the cc bit at the moment,
+		//but both cc and special priority since they are stored in .specialFunction
+
+		//check the special function of it is a tiled layer, and the bitmap palette number register special color calculation bit if it is a bitmap
+		//there should probably be a guard against tiled layers accidentally tripping bitmapped and vice versa
+		//legend of oasis uses bitmap mode 2 for the HUD
+		if(first.specialFunction || layerInfo->bitmapSpecialColorCalculation) {
+
+			//layerInfo->patternNameDataColorCalculation
+			//pattern name data size
+			//if it's one word we use the supplement register
+			//TODO get all that supplement data working
+			// if(Vdp2Regs->PNCN0 & (1 << 15))
+			// printf("one word");
+			// if(Vdp2Regs->PNCN1 & (1 << 15))
+			// printf("one word");
+			// if(Vdp2Regs->PNCN2 & (1 << 15))
+			// printf("one word");
+			// if(Vdp2Regs->PNCN3 & (1 << 15))
+			// printf("one word");
+			//otherwise we need to interpret the partern
+
+			//it's always the lower 4 bits
+			//i may need to use the original format pixels,
+			//not the 32 bit ones in the buffers
+			int temppixel = first.originalDot & 0xF;//first.pixel & 0xF;//(first.pixel >> 3) & 0xF;//
+
+			//see which function code we are using, A or B
+			//and then check to see if the lower 4 bits match the designated code or not
+			if(!layerInfo->specialFunctionCodeB) {
+				//special function code A
+				if(isSpecialFunctionCode(Vdp2Regs->SFCODE & 0xFF,temppixel))
+					colorCalculationEnable = true;
+				else
+					colorCalculationEnable = false;
+			}
+			else {
+				//special function code B
+				if(isSpecialFunctionCode((Vdp2Regs->SFCODE & 0xFF00)>> 8,temppixel)) {
+					colorCalculationEnable = true;
+				}
+				else
+					colorCalculationEnable = false;
+			}
+		}
+		else
+			colorCalculationEnable = false;
+	}
+
+	//activated based on the msb of the color data
+	//in the case of radiant silvergun portraits it is looked up
+	//and the value is actually from color ram transferred to first.pixel
+	if(specialColorCalculationMode == 3) {
+		if(first.pixel &(0x8000 << 9))//i'm not really sure pixel data gets stored like this internally but this is ok for now i guess
+			colorCalculationEnable = 1;
+		else
+			colorCalculationEnable = 0;
+	}
+
+	///////////////////////////////////////////////////////////////////
+	//temporary line color screen testing////////////////////
+
+	int scrAddr = ((Vdp2Regs->LCTA.all & 0x7FFFFUL) * 2);
+	int lineColoraddress = T1ReadWord(Vdp2Ram, scrAddr);
+	int linecolor = Vdp2ColorRamGetColor(lineColoraddress);
+
+	if((Vdp2Regs->CCCTL & (1 << 5)) && !first.colorCalcWindow && layerInfo->lineColorScreenInserts) {
+		if(first.layer == SPRITE) {
+			if(first.isSpriteColorCalc) {
+				alpha = Vdp2Regs->CCRLB & 0x1f;
+				first.pixel = ColorCalc(linecolor, first.pixel, alpha);
+			}
+		}
+		else {
+			//winter heat uses line color screen when it shouldn't, should figure out why
+			// alpha = Vdp2Regs->CCRLB & 0x1f;
+			// first.pixel = ColorCalc(linecolor, first.pixel, alpha);
+		}
+	}
+
+	/////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////
+	//we also have to check and make sure the rbg is not using line color screen data for panzer dragoon
+	else if(colorCalculationEnable && !first.colorCalcWindow && !(first.layer == RBG0 && (Vdp2Regs->KTCTL & (1 << 4))))
+		first.pixel = ColorCalc(first.pixel, second.pixel, alpha);
+	else
+		first.pixel = COLSAT2YAB32(0, first.pixel);
+
+	//is color offset enabled?
+	if (Vdp2Regs->CLOFEN & layerInfo->colorOffsetMask)// && first.layer == SPRITE
+		//this seems potentially wrong to pair first.pixel with layerinfo-> if the layers got moved around before reaching here
+		first.pixel = COLOR_ADD(first.pixel,layerInfo->colorOffset.red,layerInfo->colorOffset.green,layerInfo->colorOffset.blue);
+
+	//we need to check if the layer underneath has shadow enabled
+	int shadowEnabled = shadowEnabledCache[second.layer];
+
+	//ok: if the normal or msb shadow has the highest priority
+	//the sprite becomes transparent and cuts the brightness in half apparently
+
+	//shadow is processed after color calculation and color offset functions
+	//normal shadow is displayed regardless of bit 8 SDCTL
+	//puyo tsuu uses msb shadow in menu
+	//normal shadow is always enabled, so games should not be using the reserved color value unless they want a shadow
+	if(first.layer == SPRITE && first.isNormalShadow)
+	{
+		if(shadowEnabled)
+			first.pixel = Shadow(second.pixel,80);
+		//if the shadow isn't enabled for the layer underneath
+		//it must be made transparent (not visible), otherwise you get junk pixels on the screen
+		//see guardian force title screen, where it disables shadow for rgb0 while casting a shadow on another layer
+		else
+			first.pixel = second.pixel;
+	}
+	//msb is only used when the sprite priority is highest apparently
+	else if(first.layer == SPRITE && first.isMSBShadow) {
+
+		//puyo tsuu has issues
+		//it is not shading correctly
+
+		//MSB shadow and the value of the sprite is greater than 0x8000, we shade the sprite instead of the background
+		//sexy parodius corn boss
+		if(first.pixel > 0x8000)
+			first.pixel = Shadow(first.pixel,80);//&& (Vdp2Regs->SDCTL & (1 << 8)
+		else//if (shadowEnabled)
+			//this isn't right, taromaru looks correct if you use third.pixel, 20
+			//can it skip over a layer and do a shadow?
+			//second happens to be that layer of transparent mist,
+			//so perhaps it skips color calculated layers?
+			first.pixel = Shadow(second.pixel,80);
+	}
+
+	vdp2framebuffer[pixaddr] = first.pixel;
+
+	// vdp2framebuffer[pixaddr] = spritebuf[(j*vdp2width)+i].pixel;
+	// dst[(j*vdp2width)+i] = nbg0buf[(j*vdp2width)+i].pixel;
+	// dst[(j*vdp2width)+i] = spritebuf[(j*vdp2width)+i].pixel;
+	// dst[(j*vdp2width)+i] = first.pixel;
+}
+
+int pixelindex;
+pixeldata blankPixel; 
+
+static void Vdp2DrawBackScreen(void);
+
+//fastcall was used poorly, thats why it was slow.
+//but now the FASTCALL macro is gimped in this codebase so I have to make a new one
+#ifdef _MSC_VER
+#define MSC_SAFE_FASTCALL __fastcall
+#else
+#define MSC_SAFE_FASTCALL
+#endif
+
+typedef void (MSC_SAFE_FASTCALL * TLayerRender)(pixeldata pixelstack[], int &pixelindex, int i, int j, int pixaddr);
+
+void MSC_SAFE_FASTCALL NullLayerRenderer(pixeldata pixelstack[], int &pixelindex, int i, int j, int pixaddr) {}
+
+TLayerRender test;
+
+template<LayerNames LAYER>
+void MSC_SAFE_FASTCALL BGLayerRender(pixeldata pixelstack[], int &pixelindex, int i, int j, int pixaddr) {
+
+	//_NULL=0,NBG0=1,NBG1=2,NBG2=3,NBG3=4,SPRITE=5,RBG0=6
+	static pixeldata* const layers[] = {0,nbg0buf,nbg1buf,nbg2buf,nbg3buf,spritebuf,rbg0buf};
+
+	pixeldata* const buf = layers[LAYER];
+
+	pixeldata &p = buf[pixaddr];
+
+	//is this necessary? its hard to understand
+	if(p.layer == _NULL) return; 
+
+	if(!p.transparent)
+	{
+		if(testWindow<LAYER>(p, i, j))
+			return;
+		pixelstack[pixelindex++] = p;
+	}
+}
+
+INLINE void doSpecialPriority(LayerInfo &layer, int &lsbmask, int pixaddr, int lsbvalue){
+	//per screen
+	if(layer.specialPriorityFunction == 0) {
+	}
+	//per tile
+	else if(layer.specialPriorityFunction == 1) {
+		lsbmask |= (layer.buf[pixaddr].specialFunction&0x2)?lsbvalue:0;
+	}
+	//per pixel
+	else if(layer.specialPriorityFunction == 2) {
+		///////////////////////////////////////////
+		int temppixel = layer.buf[pixaddr].originalDot & 0xF;
+
+		//see which function code we are using, A or B
+		//and then check to see if the lower 4 bits match the designated code or not
+		if(!layer.specialFunctionCodeB) {
+			//special function code A
+			if(isSpecialFunctionCode(Vdp2Regs->SFCODE & 0xFF,temppixel))
+				lsbmask |= 1;
+		}
+		else {
+			//special function code B
+			if(isSpecialFunctionCode((Vdp2Regs->SFCODE & 0xFF00)>> 8,temppixel))
+				lsbmask |= 1;
+		}
+		////////////////////////////////////////////////
+	}
+}
+
+bool en_sprites, en_rbg0,en_nbg0,en_nbg1,en_nbg2,en_nbg3;
+static void* renderSprites(void*) { 
+	//whether to double the sprite layer size depends on vdp1 as well as vdp2
+	//in the burning rangers title screen you have low x res vdp1 and high x res vdp2
+	if(resxratio==1 && vdp1pixelsize == 1) en_sprites = Vdp2DrawSprites<1>();
+	else en_sprites = Vdp2DrawSprites<2>();
+	return 0;
+}
+static void* renderRBG0(void*) { en_rbg0 = Vdp2DrawRBG0(); return 0; }
+static void* renderNBG0(void*) { en_nbg0 = Vdp2DrawNBG0(); return 0;  }
+static void* renderNBG1(void*) { en_nbg1 = Vdp2DrawNBG1(); return 0;  }
+static void* renderNBG2(void*) { en_nbg2 = Vdp2DrawNBG2(); return 0;  }
+static void* renderNBG3(void*) { en_nbg3 = Vdp2DrawNBG3(); return 0;  }
+static void* renderBackScreen(void*) { Vdp2DrawBackScreen(); return 0;  }
+
+TLayerRender tasks[32][8][8];
+struct CompositeTodo
+{
+	int ystart, yend;
+};
+static void* doComposite(void* arg) {
+	int pixelindex;
+	pixeldata pixelstack[0x7];
+	const CompositeTodo* const todo = (CompositeTodo* const)arg;
+	const int yend = todo->yend;
+	const int ystart = todo->ystart;
+	int pixaddr = ystart * vdp2width;
+	for (int j = ystart; j < yend; j++) {
+		for (int i = 0; i < vdp2width; i++,pixaddr++) {
+
+			int lsbmask = 0;
+
+			doSpecialPriority(layerInfoCache[RBG0], lsbmask, pixaddr, 1);
+			doSpecialPriority(layerInfoCache[NBG0], lsbmask, pixaddr, 2);
+			doSpecialPriority(layerInfoCache[NBG1], lsbmask, pixaddr, 4);
+			doSpecialPriority(layerInfoCache[NBG2], lsbmask, pixaddr, 8);
+			doSpecialPriority(layerInfoCache[NBG3], lsbmask, pixaddr, 16);
+
+	//		lsbmask |= (nbg0buf[pixaddr].specialFunction&0x2)?2:0;
+	//		lsbmask |= (nbg1buf[pixaddr].specialFunction&0x2)?4:0;
+	//		lsbmask |= (nbg2buf[pixaddr].specialFunction&0x2)?8:0;
+	//		lsbmask |= (nbg3buf[pixaddr].specialFunction&0x2)?16:0;
+
+
+			//for(int k=0;k<7;k++) pixelstack[k]=&blankPixel;
+			pixelstack[1] = blankPixel; pixelstack[2] = blankPixel; 
+			pixelindex = 0;
+
+			TLayerRender* todo = &tasks[lsbmask][spritebuf[pixaddr].priority][0];
+			todo[0](pixelstack,pixelindex,i,j,pixaddr);
+			todo[1](pixelstack,pixelindex,i,j,pixaddr);
+			todo[2](pixelstack,pixelindex,i,j,pixaddr);
+			todo[3](pixelstack,pixelindex,i,j,pixaddr);
+			todo[4](pixelstack,pixelindex,i,j,pixaddr);
+			todo[5](pixelstack,pixelindex,i,j,pixaddr);
+			todo[6](pixelstack,pixelindex,i,j,pixaddr);
+
+			pixelstack[pixelindex] = backbuf[pixaddr];
+			composite(pixelstack, i, j, pixaddr);	
+		}
+	}
+
+	return 0;
+}
+
+
+//enter here
+void VIDSoftVdp2DrawScreens(){
+
+	//buffers are now cleared in the individual layer renderers
+
+	//note - 
+	//i have no proof whether it is faster to use a pixelstack of pointers or individual pixels
+	//the difference is between 32bits and 64bits.
+
+	//en_sprites = false;
+
+	//bool en_rbg0 = Vdp2DrawRBG0();
+	//bool en_nbg0 = Vdp2DrawNBG0();
+	//bool en_nbg1 = Vdp2DrawNBG1();
+	//bool en_nbg2 = Vdp2DrawNBG2();
+	//bool en_nbg3 = Vdp2DrawNBG3();
+
+	//renderRBG0(0);
+
+	en_rbg0 = en_nbg0 = en_nbg1 = en_nbg2 = en_nbg3 = false;
+	layerTasks[0].execute(renderSprites,0);
+	layerTasks[1].execute(renderRBG0,0);
+	layerTasks[2].execute(renderNBG0,0);
+	layerTasks[3].execute(renderNBG1,0);
+	layerTasks[4].execute(renderNBG2,0);
+	layerTasks[5].execute(renderNBG3,0);
+	layerTasks[6].execute(renderBackScreen,0);
+
+	for(int i=0;i<7;i++)
+		layerTasks[i].finish();
+	
+
+
+	blankPixel.init();
+
+	updateCacheSpriteLayerInfo();
+	updateCacheColorTable();
+
+	readLayerInfoByLayer(NBG0, layerInfoCache[NBG0]);
+	readLayerInfoByLayer(NBG1, layerInfoCache[NBG1]);
+	readLayerInfoByLayer(NBG2, layerInfoCache[NBG2]);
+	readLayerInfoByLayer(NBG3, layerInfoCache[NBG3]);
+	readLayerInfoByLayer(RBG0, layerInfoCache[RBG0]);
+#if 0
+	printf("--------\n", Vdp2Regs->CCRNA);
+	printf("CTL %x\n", Vdp2Regs->CCCTL);
+	printf("A %x\n", Vdp2Regs->CCRNA);
+	printf("B %x\n", Vdp2Regs->CCRNB);
+	printf("R %x\n", Vdp2Regs->CCRR);
+	printf("LB %x\n", Vdp2Regs->CCRLB);
+#endif
+//	printf("--------\n", Vdp2Regs->RPTA);
+//	printf("CTL %x\n", Vdp2Regs->RPMD);
+//	printf("A %x\n", Vdp2Regs->CCRNA);
+//	printf("B %x\n", Vdp2Regs->CCRNB);
+//	printf("R %x\n", Vdp2Regs->CCRR);
+//	printf("LB %x\n", Vdp2Regs->CCRLB);
+
+	for(int i=0;i<7;i++) {
+		shadowEnabledCache[i] = 0;
+		if(i == NBG0) shadowEnabledCache[i] = Vdp2Regs->SDCTL & (1 << 0);
+		if(i == NBG1) shadowEnabledCache[i] = Vdp2Regs->SDCTL & (1 << 1);
+		if(i == NBG2) shadowEnabledCache[i] = Vdp2Regs->SDCTL & (1 << 2);
+		if(i == NBG3) shadowEnabledCache[i] = Vdp2Regs->SDCTL & (1 << 3);
+		if(i == RBG0) shadowEnabledCache[i] = Vdp2Regs->SDCTL & (1 << 4);
+
+		colorCountCache[i] = getColorCount((LayerNames)i);
+	}
+
+	for(int lsbmask=0;lsbmask<32;lsbmask++)
+	{
+		int toggle_rbg0 = (lsbmask)&1;
+		int toggle_nbg0 = (lsbmask>>1)&1;
+		int toggle_nbg1 = (lsbmask>>2)&1;
+		int toggle_nbg2 = (lsbmask>>3)&1;
+		int toggle_nbg3 = (lsbmask>>4)&1;
+
+		int _rbg0priority = rbg0priority^toggle_rbg0;
+		int _nbg0priority = nbg0priority^toggle_nbg0;
+		int _nbg1priority = nbg1priority^toggle_nbg1;
+		int _nbg2priority = nbg2priority^toggle_nbg2;
+		int _nbg3priority = nbg3priority^toggle_nbg3;
+
+		for(int sprpriority = 7; sprpriority >= 0; sprpriority--)
+		{
+			int ctr=0;
+			//layers with 0 priority must not be drawn,
+			//the intro of madou monogatari relies on this
+			for(int priority = 7; priority > 0; priority--)
+			{
+				if(en_sprites && priority==sprpriority) tasks[lsbmask][sprpriority][ctr++] = BGLayerRender<SPRITE>;
+				if(en_rbg0 && _rbg0priority == priority) tasks[lsbmask][sprpriority][ctr++] = BGLayerRender<RBG0>;
+				if(en_nbg0 && _nbg0priority == priority) tasks[lsbmask][sprpriority][ctr++] = BGLayerRender<NBG0>;
+				if(en_nbg1 && _nbg1priority == priority) tasks[lsbmask][sprpriority][ctr++] = BGLayerRender<NBG1>;
+				if(en_nbg2 && _nbg2priority == priority) tasks[lsbmask][sprpriority][ctr++] = BGLayerRender<NBG2>;
+				if(en_nbg3 && _nbg3priority == priority) tasks[lsbmask][sprpriority][ctr++] = BGLayerRender<NBG3>;
+			}
+			for(int i=ctr;i<8;i++)
+				tasks[lsbmask][sprpriority][i] = NullLayerRenderer;
+		}
+	}
+
+	//CompositeTodo todo[3];
+	//todo[0].ystart = 0; todo[0].yend = vdp2height/3;
+	//todo[1].ystart = todo[0].yend; todo[1].yend = 2*vdp2height/3;
+	//todo[2].ystart = todo[1].yend; todo[2].yend = vdp2height;
+
+	//layerTasks[0].execute(doComposite,&todo[0]);
+	//layerTasks[1].execute(doComposite,&todo[1]);
+	//layerTasks[2].execute(doComposite,&todo[2]);
+
+	//for(int i=0;i<3;i++)
+	//	layerTasks[i].finish();
+
+	CompositeTodo todo[4];
+	todo[0].ystart = 0; todo[0].yend = vdp2height/4;
+	todo[1].ystart = todo[0].yend; todo[1].yend = 2*vdp2height/4;
+	todo[2].ystart = todo[1].yend; todo[2].yend = 3*vdp2height/4;
+	todo[3].ystart = todo[2].yend; todo[3].yend = vdp2height;
+
+	layerTasks[0].execute(doComposite,&todo[0]);
+	layerTasks[1].execute(doComposite,&todo[1]);
+	layerTasks[2].execute(doComposite,&todo[2]);
+	layerTasks[3].execute(doComposite,&todo[3]);
+
+	for(int i=0;i<4;i++)
+		layerTasks[i].finish();
+
+}
+
+static INLINE u32 Vdp2FetchPixel(vdp2draw_struct *info, int x, int y, u32 *color, u32* originalDot)
 {
    u32 dot;
 
    switch(info->colornumber)
    {
       case 0: // 4 BPP
-         dot = T1ReadByte(Vdp2Ram, ((info->charaddr + ((y * info->cellw) + x) / 2) & 0x7FFFF));
+         dot = T1ReadByte(Vdp2Ram, ((info->charaddr + ((y << info->cellw_bits) + x) / 2) & 0x7FFFF));
          if (!(x & 0x1)) dot >>= 4;
          if (!(dot & 0xF) && info->transparencyenable) return 0;
          else
          {
+			 *originalDot = dot;
             *color = Vdp2ColorRamGetColor(info->coloroffset + (info->paladdr | (dot & 0xF)));
-
-            return 1;
+            return TRUE;
          }
       case 1: // 8 BPP
-         dot = T1ReadByte(Vdp2Ram, ((info->charaddr + (y * info->cellw) + x) & 0x7FFFF));
+         dot = T1ReadByte(Vdp2Ram, ((info->charaddr + (y << info->cellw_bits) + x) & 0x7FFFF));
          if (!(dot & 0xFF) && info->transparencyenable) return 0;
          else
          {
             *color = Vdp2ColorRamGetColor(info->coloroffset + (info->paladdr | (dot & 0xFF)));
-            return 1;
+			*originalDot = dot;
+            return TRUE;
          }
       case 2: // 16 BPP(palette)
-         dot = T1ReadWord(Vdp2Ram, ((info->charaddr + ((y * info->cellw) + x) * 2) & 0x7FFFF));
+         dot = T1ReadWord(Vdp2Ram, ((info->charaddr + ((y << info->cellw_bits) + x) * 2) & 0x7FFFF));
          if ((dot == 0) && info->transparencyenable) return 0;
          else
          {
+			 *originalDot = dot;
             *color = Vdp2ColorRamGetColor(info->coloroffset + dot);
-            return 1;
+            return TRUE;
          }
       case 3: // 16 BPP(RGB)      
-         dot = T1ReadWord(Vdp2Ram, ((info->charaddr + ((y * info->cellw) + x) * 2) & 0x7FFFF));
+         dot = T1ReadWord(Vdp2Ram, ((info->charaddr + ((y << info->cellw_bits) + x) * 2) & 0x7FFFF));
          if (!(dot & 0x8000) && info->transparencyenable) return 0;
          else
          {
             *color = COLSAT2YAB16(0, dot);
-            return 1;
+            return TRUE;
          }
       case 4: // 32 BPP
-         dot = T1ReadLong(Vdp2Ram, ((info->charaddr + ((y * info->cellw) + x) * 4) & 0x7FFFF));
+         dot = T1ReadLong(Vdp2Ram, ((info->charaddr + ((y << info->cellw_bits) + x) * 4) & 0x7FFFF));
          if (!(dot & 0x80000000) && info->transparencyenable) return 0;
          else
          {
             *color = COLSAT2YAB32(0, dot);
-            return 1;
+            return TRUE;
          }
       default:
-         return 0;
+         return FALSE;
    }
 }
 
@@ -1403,13 +2313,84 @@ void SetupRotationInfo(vdp2draw_struct *info, vdp2rotationparameterfp_struct *p)
 }
 
 //////////////////////////////////////////////////////////////////////////////
+u32 alphablend(u32 toppixel, u32 bottompixel, u32 alpha);
+INLINE pixeldata rotationDrawLoop(fixed32 _cx, fixed32 _cy, bool& aborted, vdp2rotationparameterfp_struct *p, int i, int j, fixed32 xmul, fixed32 ymul, fixed32 C, fixed32 F, screeninfo_struct *sinfo, vdp2draw_struct *info){
+	u32 color;
 
-static void FASTCALL Vdp2DrawRotationFP(vdp2draw_struct *info, vdp2rotationparameterfp_struct *parameter)
+	int x = GenerateRotatedXPosFP(p, i, xmul, ymul, C) & sinfo->xmask;
+	int y = GenerateRotatedYPosFP(p, i, xmul, ymul, F) & sinfo->ymask;
+
+	// Convert coordinates into graphics
+	if (!info->isbitmap)
+	{
+		// Tile
+		Vdp2MapCalcXY(info, &x, &y, sinfo);
+	}
+
+	pixeldata pix;
+	pix.init();
+
+	//Fetchpixel
+	pix.transparent=!Vdp2FetchPixel(info,x,y,&color,&pix.originalDot);
+
+	//makes no sense
+	//if(p->msb)
+	//	pix.transparent=true;
+	//else if ((Vdp2Regs->RPMD & 0x3) == 2)
+	//	pix.transparent=false;
+
+	if(!aborted)
+	{
+		if(p->msb)
+		{
+			if ((Vdp2Regs->RPMD & 0x3) == 2) {
+				aborted = true;
+				return pix;
+			}
+			else
+				pix.transparent=true;
+		} 
+		else if ((Vdp2Regs->RPMD & 0x3) == 2)
+			pix.transparent=false;
+	}
+	//if there's line color data in the coefficient
+	//and the line color screen inserts rbg0
+	//not sure how this interacts in other modes,
+	//current implementation based on panzer dragoon
+	if(p->coefenab && p->linecolordata && (Vdp2Regs->LNCLEN & (1 << 4))) {
+		
+		int scrAddr = ((Vdp2Regs->LCTA.all & 0x7FFFFUL) * 2);
+		int linecoloraddress = T1ReadWord(Vdp2Ram, scrAddr);
+
+		linecoloraddress &= 0x780;//get upper 4 bits
+
+		linecoloraddress = linecoloraddress | p->linecolordata;
+
+		//now we have the color ram address we have to look up the color
+		int linecolor = Vdp2ColorRamGetColor(linecoloraddress);
+
+		//and blend it
+		color = ColorCalc(linecolor,color,15);
+	}
+
+	pix.pixel=color;
+
+	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	//couldnt this have come from NBG0?
+	pix.layer=RBG0;
+	//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+	return pix;
+}
+
+template<int RESXRATIO>
+static void FASTCALL Vdp2DrawRotationFP(vdp2draw_struct *info, vdp2rotationparameterfp_struct *parameter, vdp2draw_struct *infoB, vdp2rotationparameterfp_struct *parameterB)
 {
-	int i, j;
+	int i, j, pixaddr;
 	int x, y;
-	screeninfo_struct sinfo;
+	screeninfo_struct sinfo, sinfoB;
 	vdp2rotationparameterfp_struct *p=&parameter[info->rotatenum];
+	vdp2rotationparameterfp_struct *pB=&parameterB[infoB->rotatenum];
 	int doubley = 1;
 
 	if(((Vdp2Regs->TVMD >> 6) & 0x3) == 3)
@@ -1417,6 +2398,8 @@ static void FASTCALL Vdp2DrawRotationFP(vdp2draw_struct *info, vdp2rotationparam
 
 
 	SetupRotationInfo(info, parameter);
+	if((Vdp2Regs->RPMD & 0x3) == 2)
+		SetupRotationInfo(infoB, parameterB);
 
 	if (!p->coefenab)
 	{
@@ -1429,14 +2412,15 @@ static void FASTCALL Vdp2DrawRotationFP(vdp2draw_struct *info, vdp2rotationparam
 
 		SetupScreenVars(info, &sinfo);
 
-		for (j = 0; j < vdp2height; j++)
+		int basewidth = vdp2width/RESXRATIO;
+		for (j = 0, pixaddr=0; j < vdp2height; j++)
 		{
-			for (i = 0; i < vdp2width; i++)
+			for (i = 0; i < basewidth; i++)
 			{
 				u32 color;
 
-				x = GenerateRotatedXPosFP(p, i/2, xmul, ymul, C) & sinfo.xmask;
-				y = GenerateRotatedYPosFP(p, i/2, xmul, ymul, F) & sinfo.ymask;
+				x = GenerateRotatedXPosFP(p, i, xmul, ymul, C) & sinfo.xmask;
+				y = GenerateRotatedYPosFP(p, i, xmul, ymul, F) & sinfo.ymask;
 				xmul += p->deltaXst;
 
 				// Convert coordinates into graphics
@@ -1445,19 +2429,17 @@ static void FASTCALL Vdp2DrawRotationFP(vdp2draw_struct *info, vdp2rotationparam
 					// Tile
 					Vdp2MapCalcXY(info, &x, &y, &sinfo);
 				}
-				pixeldata pix = initPixelData();
-				// Fetch pixel
-				if (!Vdp2FetchPixel(info, x, y, &color))
-				{
-					pix.transparent = true;
+				
+				for(int q=0;q<RESXRATIO;q++) {
+					pixeldata &pix = rbg0buf[pixaddr++];
+					pix.init();
+
+					// Fetch pixel
+					pix.transparent = !Vdp2FetchPixel(info, x, y, &color, &pix.originalDot);
+
+					pix.pixel = color;
+					pix.layer = RBG0;
 				}
-				else
-					pix.transparent = false;
-
-				pix.pixel = color;
-				pix.layer = RBG0;
-
-				rbg0buf[(j * vdp2width)+i] = pix;
 			}
 			ymul += p->deltaYst;
 		}
@@ -1467,72 +2449,78 @@ static void FASTCALL Vdp2DrawRotationFP(vdp2draw_struct *info, vdp2rotationparam
 	else
 	{
 		fixed32 xmul, ymul, C, F;
+		fixed32 xmulB, ymulB, CB, FB;
+		fixed32 xmul_save, xmulB_save;
 		fixed32 coefx, coefy;
+		fixed32 coefxB, coefyB;
 
 		GenerateRotatedVarFP(p, &xmul, &ymul, &C, &F);
+		if((Vdp2Regs->RPMD & 0x3) == 2)
+			GenerateRotatedVarFP(pB, &xmulB, &ymulB, &CB, &FB);
 
 		// Rotation using Coefficient Tables(now this stuff just gets wacky. It
 		// has to be done in software, no exceptions)
 		CalculateRotationValuesFP(p);
+		if((Vdp2Regs->RPMD & 0x3) == 2)
+			CalculateRotationValuesFP(pB);
 
 		SetupScreenVars(info, &sinfo);
-		coefx = coefy = 0;
+		if((Vdp2Regs->RPMD & 0x3) == 2)
+			SetupScreenVars(infoB, &sinfoB);
+		coefy = 0;
+		coefyB = 0;
+		int basewidth = vdp2width/2;
 
-		for (j = 0; j < vdp2height; j++)
-		{
-			if (p->deltaKAx == 0)
-			{
-				Vdp2ReadCoefficientFP(p,
-					p->coeftbladdr +
-					touint(coefy) *
-					p->coefdatasize);
-			}
+		xmul_save = xmul;
+		if((Vdp2Regs->RPMD & 0x3) == 2)
+			xmulB_save = xmulB;
 
-			for (i = 0; i < vdp2width; i++)
-			{
-				u32 color;
+		bool do_coef_a_x = (p->coefenab && p->deltaKAx != 0);
+		bool do_coef_a_y = (p->coefenab && p->deltaKAx == 0);
+		bool do_coef_b_x =false;
+		bool do_coef_b_y = false;
+		if((Vdp2Regs->RPMD & 0x3) == 2) {
+			do_coef_b_x= (pB->coefenab && pB->deltaKAx != 0);
+			do_coef_b_y = (pB->coefenab && pB->deltaKAx == 0);
+		}
 
-				if (p->deltaKAx != 0)
-				{
-					Vdp2ReadCoefficientFP(p,
-						p->coeftbladdr +
-						toint(coefy + coefx) *
-						p->coefdatasize);
-					coefx += p->deltaKAx;
-				}
-				pixeldata pix = initPixelData();
-				if (p->msb)
-				{
-					pix.transparent = true;
-				}
+		for (int j = 0, pixaddr = 0; j < vdp2height; j++) {
 
-				x = GenerateRotatedXPosFP(p, i/2, xmul, ymul, C) & sinfo.xmask;
-				y = GenerateRotatedYPosFP(p, i/2, xmul, ymul, F) & sinfo.ymask;
+			coefx = coefxB = 0;
+			xmul = xmul_save;
+			if((Vdp2Regs->RPMD & 0x3) == 2)
+				xmulB = xmulB_save;
+
+			//if (do_coef_a_y) Vdp2ReadCoefficientFP(p,p->coeftbladdr + toint(coefy) * p->coefdatasize);
+			if (do_coef_b_y) Vdp2ReadCoefficientFP(pB,pB->coeftbladdr + toint(coefyB) * pB->coefdatasize);
+
+			for (int i = 0; i < basewidth; i++) {
+				//if (do_coef_a_x)
+				Vdp2ReadCoefficientFP(p,p->coeftbladdr + toint((p->deltaKAx*i)+(p->deltaKAst*j)) * p->coefdatasize);
+				if (do_coef_b_x) Vdp2ReadCoefficientFP(pB,pB->coeftbladdr + toint(coefyB+coefxB) * pB->coefdatasize);
+
+				bool aborted = false;
+				pixeldata pix = rotationDrawLoop(coefx, coefy, aborted, p, i, j, xmul, ymul, C, F, &sinfo, info);
+				if(aborted)
+					pix = rotationDrawLoop(coefxB, coefyB, aborted, pB, i, j, xmulB, ymulB, CB, FB, &sinfoB, infoB);
+
+				for(int q=0;q<2;q++)
+					rbg0buf[pixaddr++] = pix;
+
 				xmul += p->deltaXst;
-
-				// Convert coordinates into graphics
-				if (!info->isbitmap)
-				{
-					// Tile
-					Vdp2MapCalcXY(info, &x, &y, &sinfo);
-				}
-
-				// Fetch pixel
-				if (!Vdp2FetchPixel(info, x, y, &color))
-				{
-					pix.transparent = true;
-				}
-				else
-					pix.transparent = false;
-
-
-				pix.pixel = color;
-				pix.layer = RBG0;
-				rbg0buf[(j * vdp2width)+i] = pix;
+				if((Vdp2Regs->RPMD & 0x3) == 2)
+					xmulB += pB->deltaXst;
+				coefx += p->deltaKAx;
+				if((Vdp2Regs->RPMD & 0x3) == 2)
+					coefxB += pB->deltaKAx;
 			}
+
 			ymul += p->deltaYst;
-			coefx = 0;
+			if((Vdp2Regs->RPMD & 0x3) == 2)
+				ymulB += pB->deltaYst;
 			coefy += p->deltaKAst;
+			if((Vdp2Regs->RPMD & 0x3) == 2)
+				coefyB += pB->deltaKAst;
 		}
 		return;
 	}
@@ -1542,9 +2530,11 @@ static void FASTCALL Vdp2DrawRotationFP(vdp2draw_struct *info, vdp2rotationparam
 
 static void Vdp2DrawBackScreen(void)
 {
-   int i;
-	pixeldata p = initPixelData();
+   int i, pixaddr;
+	pixeldata p;
+	p.init();
 	p.pixel = 0;
+	p.layer = BACK;
    // Only draw black if TVMD's DISP and BDCLMD bits are cleared
    if ((Vdp2Regs->TVMD & 0x8000) == 0 && (Vdp2Regs->TVMD & 0x100) == 0)
    {
@@ -1566,15 +2556,15 @@ static void Vdp2DrawBackScreen(void)
       if (Vdp2Regs->BKTAU & 0x8000)
       {
          // Per Line
-         for (i = 0; i < vdp2height; i++)
+         for (i = 0, pixaddr=0; i < vdp2height; i++)
          {
             dot = T1ReadWord(Vdp2Ram, scrAddr);
             scrAddr += 2;
 
 			p.pixel = COLSAT2YAB16(0, dot);
 
-			for (int x = 0; x < vdp2width; x++)
-				backbuf[(i * vdp2width) + x] = p;
+			for (int x = 0; x < vdp2width; x++, pixaddr++)
+				backbuf[pixaddr] = p;
          }
       }
       else
@@ -1584,7 +2574,8 @@ static void Vdp2DrawBackScreen(void)
 
 		 p.pixel =  COLSAT2YAB16(0, dot);
 
-		 for (i = 0; i < (vdp2width * vdp2height); i++) {
+		 const int todo = vdp2width * vdp2height;
+		 for (i = 0; i < todo; i++) {
 			 backbuf[i] = p;
 			}
       }
@@ -1593,7 +2584,7 @@ static void Vdp2DrawBackScreen(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void Vdp2DrawNBG0(void)
+static bool Vdp2DrawNBG0(void)
 {
    vdp2draw_struct info;
    vdp2rotationparameterfp_struct parameter[2];
@@ -1664,7 +2655,7 @@ static void Vdp2DrawNBG0(void)
    }
    else
       // Not enabled
-      return;
+      return false;
 
    info.transparencyenable = !(Vdp2Regs->BGON & 0x100);
    info.specialprimode = Vdp2Regs->SFPRMD & 0x3;
@@ -1678,7 +2669,9 @@ static void Vdp2DrawNBG0(void)
    info.priority = nbg0priority;
 
    if (!(info.enable & Vdp2External.disptoggle))
-      return;
+      return false;
+
+   //memset(nbg0buf,0,sizeof(nbg0buf));
 
    ReadMosaicData(&info, 0x1);
    ReadLineScrollData(&info, Vdp2Regs->SCRCTL & 0xFF, Vdp2Regs->LSTA0.all);
@@ -1703,13 +2696,18 @@ static void Vdp2DrawNBG0(void)
    else
    {
       // RBG1 draw
-      Vdp2DrawRotationFP(&info, parameter);
+	   if(resxratio==1)
+			Vdp2DrawRotationFP<1>(&info, parameter, &info, parameter);
+	   else
+		   Vdp2DrawRotationFP<2>(&info, parameter, &info, parameter);
    }
+
+   return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void Vdp2DrawNBG1(void)
+static bool Vdp2DrawNBG1(void)
 {
    vdp2draw_struct info;
 
@@ -1754,7 +2752,9 @@ static void Vdp2DrawNBG1(void)
    info.PlaneAddr = (void FASTCALL (*)(void *, int))&Vdp2NBG1PlaneAddr;
 
    if (!(info.enable & Vdp2External.disptoggle))
-      return;
+      return false;
+
+   //memset(nbg1buf,0,sizeof(nbg1buf));
 
    ReadMosaicData(&info, 0x2);
    ReadLineScrollData(&info, Vdp2Regs->SCRCTL >> 8, Vdp2Regs->LSTA1.all);
@@ -1776,12 +2776,14 @@ static void Vdp2DrawNBG1(void)
       info.isverticalscroll = 0;
    info.wctl = Vdp2Regs->WCTLA >> 8;
 
-   Vdp2DrawScroll(&info, NBG1, vdp2width, vdp2height);
+   VidSoftVdp2DrawScroll(&info, NBG1);
+
+   return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void Vdp2DrawNBG2(void)
+static bool Vdp2DrawNBG2(void)
 {
    vdp2draw_struct info;
 
@@ -1807,7 +2809,9 @@ static void Vdp2DrawNBG2(void)
    info.PlaneAddr = (void FASTCALL (*)(void *, int))&Vdp2NBG2PlaneAddr;
 
    if (!(info.enable & Vdp2External.disptoggle))
-      return;
+      return false;
+
+   //memset(nbg2buf,0,sizeof(nbg2buf));
 
    ReadMosaicData(&info, 0x4);
    info.islinescroll = 0;
@@ -1816,11 +2820,13 @@ static void Vdp2DrawNBG2(void)
    info.isbitmap = 0;
 
    Vdp2DrawScroll(&info, NBG2, vdp2width, vdp2height);
+
+    return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void Vdp2DrawNBG3(void)
+static bool Vdp2DrawNBG3(void)
 {
    vdp2draw_struct info;
 
@@ -1847,7 +2853,9 @@ static void Vdp2DrawNBG3(void)
    info.PlaneAddr = (void FASTCALL (*)(void *, int))&Vdp2NBG3PlaneAddr;
 
    if (!(info.enable & Vdp2External.disptoggle))
-      return;
+      return false;
+
+   //memset(nbg3buf,0,sizeof(nbg3buf));
 
    ReadMosaicData(&info, 0x8);
    info.islinescroll = 0;
@@ -1856,49 +2864,19 @@ static void Vdp2DrawNBG3(void)
    info.isbitmap = 0;
 
    Vdp2DrawScroll(&info, NBG3, vdp2width, vdp2height);
+
+   return true;
 }
 
-//////////////////////////////////////////////////////////////////////////////
-
-static void Vdp2DrawRBG0(void)
-{
-   vdp2draw_struct info;
-   vdp2rotationparameterfp_struct parameter[2];
+void generateRotationInfo(vdp2draw_struct &info, vdp2rotationparameterfp_struct parameter[]) {
 
    info.enable = Vdp2Regs->BGON & 0x10;
    info.priority = rbg0priority;
-   if (!(info.enable & Vdp2External.disptoggle))
-      return;
+
    info.transparencyenable = !(Vdp2Regs->BGON & 0x1000);
    info.specialprimode = (Vdp2Regs->SFPRMD >> 8) & 0x3;
 
    info.colornumber = (Vdp2Regs->CHCTLB & 0x7000) >> 12;
-
-   // Figure out which Rotation Parameter we're using
-   switch (Vdp2Regs->RPMD & 0x3)
-   {
-      case 0:
-         // Parameter A
-         info.rotatenum = 0;
-         info.rotatemode = 0;
-         info.PlaneAddr = (void FASTCALL (*)(void *, int))&Vdp2ParameterAPlaneAddr;
-         break;
-      case 1:
-         // Parameter B
-         info.rotatenum = 1;
-         info.rotatemode = 0;
-         info.PlaneAddr = (void FASTCALL (*)(void *, int))&Vdp2ParameterBPlaneAddr;
-         break;
-      case 2:
-         // Parameter A+B switched via coefficients
-      case 3:
-         // Parameter A+B switched via rotation parameter window
-      default:
-         info.rotatenum = 0;
-         info.rotatemode = 1 + (Vdp2Regs->RPMD & 0x1);
-         info.PlaneAddr = (void FASTCALL (*)(void *, int))&Vdp2ParameterAPlaneAddr;
-         break;
-   }
 
    Vdp2ReadRotationTableFP(info.rotatenum, &parameter[info.rotatenum]);
 
@@ -1944,8 +2922,61 @@ static void Vdp2DrawRBG0(void)
    info.islinescroll = 0;
    info.isverticalscroll = 0;
    info.wctl = Vdp2Regs->WCTLC;
+}
 
-   Vdp2DrawRotationFP(&info, parameter);
+//////////////////////////////////////////////////////////////////////////////
+
+static bool Vdp2DrawRBG0(void)
+{
+   vdp2draw_struct infoA, infoB;
+   vdp2rotationparameterfp_struct parameterA[2];
+   vdp2rotationparameterfp_struct parameterB[2];
+
+   if (!((Vdp2Regs->BGON & 0x10) & Vdp2External.disptoggle))
+      return false;
+
+   // Figure out which Rotation Parameter we're using
+   switch (Vdp2Regs->RPMD & 0x3)
+   {
+      case 0:
+         // Parameter A
+         infoA.rotatenum = 0;
+         infoA.rotatemode = 0;
+         infoA.PlaneAddr = (void FASTCALL (*)(void *, int))&Vdp2ParameterAPlaneAddr;
+         break;
+      case 1:
+         // Parameter B
+         infoA.rotatenum = 1;
+         infoA.rotatemode = 0;
+         infoA.PlaneAddr = (void FASTCALL (*)(void *, int))&Vdp2ParameterBPlaneAddr;
+         break;
+      case 2:
+         // Parameter A+B switched via coefficients
+		  //we are going to do A as normal and switch to B when necessary
+         infoA.rotatenum = 0;
+         infoA.rotatemode = 0;
+         infoA.PlaneAddr = (void FASTCALL (*)(void *, int))&Vdp2ParameterAPlaneAddr;
+
+         infoB.rotatenum = 1;
+         infoB.rotatemode = 0;
+         infoB.PlaneAddr = (void FASTCALL (*)(void *, int))&Vdp2ParameterBPlaneAddr;
+
+		 generateRotationInfo(infoB, parameterB);
+		  break;
+      case 3:
+         // Parameter A+B switched via rotation parameter window
+      default:
+         infoA.rotatenum = 0;
+         infoA.rotatemode = 1 + (Vdp2Regs->RPMD & 0x1);
+         infoA.PlaneAddr = (void FASTCALL (*)(void *, int))&Vdp2ParameterAPlaneAddr;
+         break;
+   }
+
+   generateRotationInfo(infoA, parameterA);
+
+   Vdp2DrawRotationFP<2>(&infoA, parameterA, &infoB, parameterB);
+
+   return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2293,6 +3324,10 @@ int getpixel(int linenumber, int currentlineindex) {
 		case 0x5://16bpp bank
 			endcode = 0x7fff;
 			currentPixel = Vdp1ReadPattern64k( characterAddress + (linenumber*characterWidth*2), currentlineindex );
+			//sonic xtreme demonstrates this vdp1 quirk
+			//and uses rgb values 0x1525, 0xA0, and 0x2800 as transparent pixels
+			if(currentPixel > 0 && currentPixel <= 0x7ffe)
+				currentPixel = 0;
 			if(isTextured && endcodesEnabled && currentPixel == endcode)
 				return 1;
 			currentPixelIsVisible = 0xffff;
@@ -2314,6 +3349,8 @@ int gouraudAdjust( int color, int tableValue )
 
 	return color;
 }
+
+
 
 void putpixel(int x, int y) {
 
@@ -2360,7 +3397,7 @@ void putpixel(int x, int y) {
 		switch( cmd.CMDPMOD & 0x7 )//we want bits 0,1,2
 		{
 		case 0:	// replace
-			if (!((currentPixel == 0) && !SPD)) 
+			if (!((currentPixel == 0) && !SPD))
 				*(iPix) = currentPixel;
 			break;
 		case 1: // shadow, TODO
@@ -2855,6 +3892,7 @@ void VIDSoftVdp1ScaledSpriteDraw(){
 	switch ((cmd.CMDCTRL >> 8) & 0xF)
 	{
 	case 0x0: // Only two coordinates
+	//TODO you can set 1-5, and it will display
 	default:
 		x1 = ((int)cmd.CMDXC) - x0 + Vdp1Regs->localX + 1;
 		y1 = ((int)cmd.CMDYC) - y0 + Vdp1Regs->localY + 1;
@@ -2877,6 +3915,19 @@ void VIDSoftVdp1ScaledSpriteDraw(){
 		x1++;
 		y1++;
 		break;
+	////////////////////////////////
+	//you can set 8, and it will still display
+	//this is an invalid setting though
+	//this matches my hardware tests
+	case 0x8:
+		x1 = ((int)cmd.CMDXA);
+		y1 = ((int)cmd.CMDYB);
+		y0 = y0 - y1/2;
+		x0 = 0 + Vdp1Regs->localX;
+		x1++;
+		y1++;
+		break;
+	///////////////////////////////
 	case 0x9: // Center-left
 		x1 = ((int)cmd.CMDXB);
 		y1 = ((int)cmd.CMDYB);
@@ -3172,6 +4223,11 @@ u32 alphablend(u32 toppixel, u32 bottompixel, u32 alpha)
       17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
    };
 
+   if(alpha > 31) {
+	   alpha = 0;
+	//   printf("alpha out of bounds, fix me");
+   }
+
    // separate color components for top and second pixel
    r = (toppixel & 0xFF) * topratio[alpha] >> 5;
    g = ((toppixel >> 8) & 0xFF) * topratio[alpha] >> 5;
@@ -3320,6 +4376,8 @@ void VIDSoftVdp2SetResolution(u16 TVMD)
          break;
    }
 
+   resxratio_shift = resxratio-1;
+
    // Vertical Resolution
    switch ((TVMD >> 4) & 0x3)
    {
@@ -3347,6 +4405,8 @@ void VIDSoftVdp2SetResolution(u16 TVMD)
       case 0: // Non-interlace
       default: break;
    }
+
+   resyratio_shift = resyratio-1;
 }
 
 //////////////////////////////////////////////////////////////////////////////

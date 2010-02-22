@@ -243,6 +243,7 @@
 				WholeProgramOptimization="false"
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;_WINDOWS;HAVE_C99_VARIADIC_MACROS;C68K_NO_JUMP_TABLE"
 				RuntimeLibrary="0"
+				EnableEnhancedInstructionSet="2"
 				UsePrecompiledHeader="0"
 				ProgramDataBaseFileName="$(IntDir)\68klib.pdb"
 				WarningLevel="3"

@@ -56,3 +56,8 @@ target_link_libraries(yabause-gtk libyabause.a ${YABAUSE_LIBRARIES} ${PORT_LIBRA
 
 yab_port_success(yabause-gtk)
 configure_file(yabause.desktop.in ${YAB_PORT_NAME}.desktop)
+
+install(TARGETS yabause-gtk DESTINATION "bin")
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${YAB_PORT_NAME}.desktop DESTINATION "share/applications")
+install(FILES "doc/yabause.1" DESTINATION "share/man/man1" RENAME "${YAB_PORT_NAME}.1")
+install(FILES "yabause.png" DESTINATION "share/pixmaps")

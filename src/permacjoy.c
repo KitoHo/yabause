@@ -91,6 +91,8 @@ int PERMacJoyInit(void) {
     }
 
     initted = 1;
+
+    return 0;
 }
 
 void PERMacJoyDeInit(void)  {

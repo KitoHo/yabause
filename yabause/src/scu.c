@@ -222,15 +222,26 @@ static void DoDMA(u32 ReadAddress, unsigned int ReadAdd,
             }
          } else {
             u32 counter = 0;
-            while (counter < TransferSize) {
-               MappedMemoryWriteWord(WriteAddress,
-                                     MappedMemoryReadWord(ReadAddress));
-               WriteAddress += WriteAdd;
-               MappedMemoryWriteWord(WriteAddress,
-                                     MappedMemoryReadWord(ReadAddress+2));
-               WriteAddress += WriteAdd;
-               counter += 4;
-            }
+            if (ReadAddress & 2) {  // Avoid misaligned access
+               while (counter < TransferSize) {
+                  MappedMemoryWriteWord(WriteAddress,
+                                        MappedMemoryReadWord(ReadAddress));
+                  WriteAddress += WriteAdd;
+                  MappedMemoryWriteWord(WriteAddress,
+                                        MappedMemoryReadWord(ReadAddress+2));
+                  WriteAddress += WriteAdd;
+                  counter += 4;
+               }
+            } else {
+               while (counter < TransferSize) {
+                  u32 val = MappedMemoryReadLong(ReadAddress);
+                  MappedMemoryWriteWord(WriteAddress, (u16)(val >> 16));
+                  WriteAddress += WriteAdd;
+                  MappedMemoryWriteWord(WriteAddress, (u16)val);
+                  WriteAddress += WriteAdd;
+                  counter += 4;
+               }
+	    }
          }
       }
       else {
@@ -261,7 +272,7 @@ static void DoDMA(u32 ReadAddress, unsigned int ReadAdd,
 
    }
 
-   else {
+   else {  // ReadAdd != 0 (therefore must be 4)
       // DMA copy
 
 #ifdef OPTIMIZED_DMA

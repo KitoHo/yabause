@@ -203,7 +203,7 @@ else (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	add_definitions(-DUNKNOWN_ARCH=1)
 endif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
-set(YAB_VERSION 0.9.10)
+set(YAB_VERSION "${YAB_VERSION_MAJOR}.${YAB_VERSION_MINOR}.${YAB_VERSION_PATCH}")
 add_definitions(-DPACKAGE=\"yabause\")
 add_definitions(-DVERSION=\"${YAB_VERSION}\")
 

@@ -1,5 +1,5 @@
 /*  src/psp/sh2-internal.h: SH-2 emulator internal definitions/declarations
-    Copyright 2009 Andrew Church
+    Copyright 2009-2010 Andrew Church
 
     This file is part of Yabause.
 
@@ -42,6 +42,15 @@
 #define LOG2_SIZEOF_PTR  (sizeof(void *) == 8 ? 3 : 2)
 
 /*============ General options ============*/
+
+/**
+ * INTERRUPT_STACK_SIZE:  Sets the maximum number of interrupts that can
+ * be stacked.  Any interrupts occurring when the stack is full will be
+ * lost.
+ */
+#ifndef INTERRUPT_STACK_SIZE
+# define INTERRUPT_STACK_SIZE 50
+#endif
 
 /**
  * ENABLE_JIT:  When defined, enables the use of dynamic recompilation.
@@ -497,13 +506,6 @@
 #endif
 
 /**
- * OPTIMIZE_HAND_TUNED_CASES:  When defined, translates specific known
- * blocks of code into hand-tuned RTL instruction streams.  See the
- * relevant code in sh2-optimize.c for details.
- */
-#define OPTIMIZE_HAND_TUNED_CASES
-
-/**
  * JIT_OPTIMIZE_FLAGS:  Specifies the optimizations that should be
  * performed on the generated RTL code.  See RTLOPT_* in sh2-rtl.h for
  * details on the available flags.
@@ -516,7 +518,8 @@
 
 /**
  * TRACE:  When defined, all instructions and all store operations are
- * traced using the interface in ../sh2trace.h.
+ * traced using the functions passed to sh2_trace_insn_callback() and
+ * sh2_trace_store[bwl]_callback().
  */
 // #define TRACE
 
@@ -685,7 +688,6 @@
 # undef OPTIMIZE_BRANCH_THREAD
 # undef OPTIMIZE_BRANCH_SELECT
 # undef OPTIMIZE_LOOP_TO_JSR
-# undef OPTIMIZE_HAND_TUNED_CASES
 #endif
 
 #ifdef TRACE_STEALTH
@@ -702,22 +704,6 @@
 #endif
 
 /*************************************************************************/
-/*************************** Common constants ****************************/
-/*************************************************************************/
-
-/* SR register bits */
-
-#define SR_T    0x001
-#define SR_S    0x002
-#define SR_Q    0x100
-#define SR_M    0x200
-
-#define SR_T_SHIFT  0
-#define SR_S_SHIFT  1
-#define SR_Q_SHIFT  8
-#define SR_M_SHIFT  9
-
-/*************************************************************************/
 /************** Internal-use data and function declarations **************/
 /*************************************************************************/
 
@@ -726,14 +712,28 @@
 /* Bitmask indicating which optional optimizations are enabled */
 extern uint32_t optimization_flags;
 
+/* Callback function for manual/special-case optimization */
+extern SH2OptimizeCallback *manual_optimization_callback;
+
+/* Callback function for native CPU cache flushing */
+extern SH2CacheFlushCallback *cache_flush_callback;
+
 /* Callback function for invalid instructions */
 extern SH2InvalidOpcodeCallback *invalid_opcode_callback;
 
+/* Callback functions for tracing */
+extern SH2TraceInsnCallback *trace_insn_callback;
+extern SH2TraceAccessCallback *trace_storeb_callback;
+extern SH2TraceAccessCallback *trace_storew_callback;
+extern SH2TraceAccessCallback *trace_storel_callback;
+
+#ifdef ENABLE_JIT
 /* Page tables (exported for use in sh2-optimize.c) */
 extern uint8_t *direct_pages[0x2000];
 extern uint8_t *fetch_pages[0x2000];
 extern uint8_t *byte_direct_pages[0x2000];
 extern uint8_t *direct_jit_pages[0x2000];
+#endif
 
 /******** sh2-interpret.c ********/
 
@@ -746,7 +746,7 @@ extern uint8_t *direct_jit_pages[0x2000];
  * [Return value]
  *     None
  */
-extern void interpret_insn(SH2_struct *state);
+extern void interpret_insn(SH2State *state);
 
 
 /******** sh2-opcodeinfo.c ********/
@@ -944,26 +944,6 @@ extern unsigned int can_optimize_variable_shift(
     const uint8_t **cycles_ret);
 
 #endif  // OPTIMIZE_VARIABLE_SHIFTS
-
-#ifdef OPTIMIZE_HAND_TUNED_CASES
-
-/**
- * optimize_by_hand:  Attempt to translate code starting at the given
- * address into a hand-tuned RTL instruction stream.
- *
- * [Parameters]
- *       state: SH-2 processor state block
- *     address: Starting address of block
- *       fetch: Opcode fetch pointer corresponding to address
- *         rtl: RTLBlock into which to store translated code, if successful
- * [Return value]
- *     Length of block in 16-bit words (nonzero) if successfully translated,
- *     zero on error or if there is no suitable hand-tuned translation
- */
-extern unsigned int optimize_by_hand(SH2_struct *state, uint32_t address,
-                                     const uint16_t *fetch, RTLBlock *rtl);
-
-#endif  // OPTIMIZE_HAND_TUNED_CASES
 
 /*************************************************************************/
 /*************************************************************************/

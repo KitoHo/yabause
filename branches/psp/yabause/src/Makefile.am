@@ -1,4 +1,5 @@
 EXTRA_DIST = Makefile.dc Makefile.mng logo.bmp logo.png Makefile.wii logo.svg
+
 if COMPILE_C68K
 SUBDIRS = c68k . $(YUI_SUBDIR)
 else
@@ -25,6 +26,7 @@ endif
 if YUI_IS_WINDOWS
 YUI_SUBDIR=windows
 endif
+
 noinst_LIBRARIES = libyabause.a
 libyabause_a_SOURCES = \
         bios.c bios.h cdbase.c cdbase.h cheat.c cheat.h coffelf.c coffelf.h \
@@ -35,9 +37,16 @@ libyabause_a_SOURCES = \
 	persdljoy.c persdljoy.h profile.c profile.h \
 	scu.c scu.h sh2core.c sh2core.h sh2d.c sh2d.h \
 	sh2idle.c sh2idle.h sh2int.c sh2int.h sh2trace.c sh2trace.h \
-	smpc.c smpc.h scsp.c scsp.h sndal.c sndal.h sndsdl.c sndsdl.h vdp1.c vdp1.h \
-        vdp2.c vdp2.h vdp2debug.c vdp2debug.h vidogl.c vidogl.h vidshared.c vidshared.h vidsoft.c vidsoft.h \
+	smpc.c smpc.h sndal.c sndal.h snddummy.c sndsdl.c sndsdl.h sndwav.c \
+	vdp1.c vdp1.h vdp2.c vdp2.h vdp2debug.c vdp2debug.h \
+	vidogl.c vidogl.h vidshared.c vidshared.h vidsoft.c vidsoft.h \
 	yabause.c yabause.h ygl.h ygl.c yui.h
+
+if USE_SCSP2
+libyabause_a_SOURCES += scsp2.c scsp2.h
+else
+libyabause_a_SOURCES += scsp.c scsp.h
+endif
 
 if COMPILE_C68K
 libyabause_a_SOURCES += c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c m68kc68k.c m68kc68k.h

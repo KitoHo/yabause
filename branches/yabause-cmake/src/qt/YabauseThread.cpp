@@ -20,6 +20,7 @@
 */
 #include "YabauseThread.h"
 #include "Settings.h"
+#include "VolatileSettings.h"
 #include "ui/UIPortManager.h"
 #include "ui/UIYabause.h"
 
@@ -46,6 +47,9 @@ void YabauseThread::startEmulation()
 	mPause = true;
 	reloadSettings();
 	initEmulation();
+
+	if (QtYabause::volatileSettings()->value("autostart").toBool())
+		runEmulation();
 }
 
 void YabauseThread::stopEmulation()
@@ -74,6 +78,9 @@ bool YabauseThread::runEmulation()
 	mPause = false;
 	mTimerId = startTimer( 0 );
 	ScspUnMuteAudio();
+
+	emit run();
+
 	return true;
 }
 
@@ -83,6 +90,8 @@ void YabauseThread::pauseEmulation()
 	mRunning = true;
 	killTimer( mTimerId );
 	ScspMuteAudio();
+
+	emit pause();
 }
 
 bool YabauseThread::resetEmulation( bool fullreset )

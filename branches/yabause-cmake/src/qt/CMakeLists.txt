@@ -49,7 +49,9 @@ set( yabause_qt_FORMS
 set( yabause_qt_HEADERS
 	QtYabause.h
 	CommonDialogs.h
-	PerQt.h )
+	PerQt.h
+	VolatileSettings.h
+	Arguments.h )
 
 # C headers needing moc
 set( yabause_qt_MOC_HEADERS
@@ -85,7 +87,9 @@ set( yabause_qt_SOURCES
 	ui/UIPadSetting.cpp
 	YabauseGL.cpp
 	Settings.cpp
-	YabauseThread.cpp )
+	VolatileSettings.cpp
+	YabauseThread.cpp
+	Arguments.cpp )
 
 QT4_ADD_RESOURCES( yabause_qt_RCC_RESOURCES ${yabause_qt_RESOURCES} )
 QT4_WRAP_UI( yabause_qt_UI_FORMS ${yabause_qt_FORMS} )

@@ -60,41 +60,52 @@
 #define SCSP_RAM_SIZE           0x80000
 #define SCSP_RAM_MASK           (SCSP_RAM_SIZE - 1)
 
-// MIDI flags
-#define SCSP_MIDI_IN_EMP        0x01
-#define SCSP_MIDI_IN_FUL        0x02
-#define SCSP_MIDI_IN_OVF        0x04
-#define SCSP_MIDI_OUT_EMP       0x08
-#define SCSP_MIDI_OUT_FUL       0x10
-
 // Envelope phases
 #define SCSP_ENV_RELEASE        0
 #define SCSP_ENV_SUSTAIN        1
 #define SCSP_ENV_DECAY          2
 #define SCSP_ENV_ATTACK         3
 
-// Bit sizes of fixed-point counters
-#define SCSP_FREQ_LOW_BITS      10      // Fractional part of frequency counter
-#define SCSP_ENV_HIGH_BITS      10      // Integer part of envelope counter
-#define SCSP_ENV_LOW_BITS       10      // Fractional part of envelope counter
-#define SCSP_LFO_HIGH_BITS      10      // Integer part of LFO counter
-#define SCSP_LFO_LOW_BITS       10      // Fractional part of LFO counter
+// LFO waveform types (equal to ALFOWS/PLFOWS values)
+#define SCSP_LFO_SAWTOOTH       0
+#define SCSP_LFO_SQUARE         1
+#define SCSP_LFO_TRIANGLE       2
+#define SCSP_LFO_NOISE          3
 
-// Lookup table sizes
-#define SCSP_ENV_LEN            (1 << SCSP_ENV_HIGH_BITS)  // Envelope table length
-#define SCSP_ENV_MASK           (SCSP_ENV_LEN - 1)         // Envelope table mask
-#define SCSP_LFO_LEN            (1 << SCSP_LFO_HIGH_BITS)  // LFO table length
-#define SCSP_LFO_MASK           (SCSP_LFO_LEN - 1)         // LFO table mask
+// Bit sizes of fixed-point counters
+
+// Fractional part of frequency counter (determines accuracy of audio
+// playback frequency)
+#define SCSP_FREQ_LOW_BITS      10
+// Integer part of envelope counter (determines resolution of attack/decay
+// envelope); also used to define envelope value range
+#define SCSP_ENV_HIGH_BITS      10
+// Fractional part of envelope counter (determines accuracy of envelope timing)
+#define SCSP_ENV_LOW_BITS       10
+// Integer part of LFO counter (determines resolution of LFO waveform);
+// also used to define LFO value range
+#define SCSP_LFO_HIGH_BITS      10
+// Fractional part of LFO counter (determines accuracy of LFO frequency)
+#define SCSP_LFO_LOW_BITS       10
+// Fractional part of TL attenuation lookup table (determines resolution of
+// per-voice volume control)
+#define SCSP_TL_BITS            10
+
+// Envelope/waveform table data sizes and corresponding masks
+#define SCSP_ENV_LEN            (1 << SCSP_ENV_HIGH_BITS)
+#define SCSP_ENV_MASK           (SCSP_ENV_LEN - 1)
+#define SCSP_LFO_LEN            (1 << SCSP_LFO_HIGH_BITS)
+#define SCSP_LFO_MASK           (SCSP_LFO_LEN - 1)
 
 // Envelope attack/decay points (counter values)
-#define SCSP_ENV_AS             0                                    // Attack start
-#define SCSP_ENV_DS             (SCSP_ENV_LEN << SCSP_ENV_LOW_BITS)  // Decay start
-#define SCSP_ENV_AE             (SCSP_ENV_DS - 1)                    // Attack end
-#define SCSP_ENV_DE             (((2 * SCSP_ENV_LEN) << SCSP_ENV_LOW_BITS) - 1)  // Decay end
+#define SCSP_ENV_ATTACK_START   0
+#define SCSP_ENV_DECAY_START    (SCSP_ENV_LEN << SCSP_ENV_LOW_BITS)
+#define SCSP_ENV_ATTACK_END     (SCSP_ENV_DECAY_START - 1)
+#define SCSP_ENV_DECAY_END      (((2 * SCSP_ENV_LEN) << SCSP_ENV_LOW_BITS) - 1)
 
-// Envelope attack/decay rates
-#define SCSP_ATTACK_RATE        ((u32) (8 * 44100))
-#define SCSP_DECAY_RATE         ((u32) (12 * SCSP_ATTACK_RATE))
+// Envelope attack/decay base times
+#define SCSP_ATTACK_TIME        ((u32) (8 * SCSP_OUTPUT_FREQ))
+#define SCSP_DECAY_TIME         ((u32) (12 * SCSP_ATTACK_TIME))
 
 // Interrupt bit numbers
 #define SCSP_INTERRUPT_MIDI_IN  3       // Data available in MIDI input buffer
@@ -186,48 +197,40 @@ typedef struct SlotState_struct
    ////////////
    // Internal state
 
-   const void *buf;     // Sample buffer
+   // Audio generation routine (selected based on slot parameters)
+   void (*audiogen)(struct SlotState_struct *slot, u32 len);
 
-   u32  fcnt;           // Frequency (playback) counter
-   u32  finc;           // Frequency counter increment
-   u8   fsft;           // Octave shift amount
-   u32  lsa_shifted;    // lsa << SCSP_FREQ_LOW_BITS (for storing in fcnt)
-   u32  lea_shifted;    // lea << SCSP_FREQ_LOW_BITS (for comparing with fcnt)
+   const void *buf;     // Pointer to sample data in sound RAM
 
-   u32  ecurp;          // Current envelope phase (attack/decay/...)
-   s32  ecnt;           // Envelope counter
-   s32  einc;           // Envelope counter increment for current phase
-   s32  einca;          // Envelope counter increment for attack phase
-   s32  eincd;          // Envelope counter increment for decay phase
-   s32  eincs;          // Envelope counter increment for sustain phase
-   s32  eincr;          // Envelope counter increment for release phase
-   s32  ecmp;           // Envelope compare value
-   s32  slcmp;          // Compare value corresponding to SL
+   u32  addr_counter;   // Address (playback) counter
+   u32  addr_step;      // Address counter increment
+   u8   octave_shift;   // Octave shift amount (0..15)
+   u32  lsa_shifted;    // lsa << SCSP_FREQ_LOW_BITS (for addr_counter)
+   u32  lea_shifted;    // lea << SCSP_FREQ_LOW_BITS (for addr_counter)
 
-   u32  lfocnt;         // LFO counter
-   s32  lfoinc;         // LFO increment
+   u32  env_phase;      // Current envelope phase (attack/decay/...)
+   s32  env_counter;    // Envelope counter
+   s32  env_step;       // Envelope counter increment for current phase
+   s32  env_target;     // Envelope target value for advancing to next phase
+   s32  env_step_a;     // Envelope counter increment for attack phase
+   s32  env_step_d;     // Envelope counter increment for decay phase
+   s32  env_step_s;     // Envelope counter increment for sustain phase
+   s32  env_step_r;     // Envelope counter increment for release phase
+   u8   krs_shift;      // Shift count corresponding to KRS
+   s32  sl_target;      // Compare value corresponding to SL
+   s32  tl_mult;        // Envelope volume multiplier corresponding to TL
 
-   s32  *arp;           // Attack rate table pointer
-   s32  *drp;           // Decay rate table pointer
-   s32  *srp;           // Sustain rate table pointer
-   s32  *rrp;           // Release rate table pointer
+   u32  lfo_counter;    // LFO counter (fixed point index into LFO waveforms)
+   s32  lfo_step;       // LFO counter increment, or -1 if in reset mode
+   s32  *lfo_fm_wave;   // LFO frequency modulation waveform pointer
+   s32  *lfo_am_wave;   // LFO amplitude modulation waveform pointer
+   s8   lfo_fm_shift;   // LFO frequency modulation strength, -1 if disabled
+   s8   lfo_am_shift;   // LFO amplitude modulation strength, -1 if disabled
 
-   s32  *lfofmw;        // LFO frequency modulation waveform pointer
-   s32  *lfoemw;        // LFO envelope modulation waveform pointer
-   u8   lfofms;         // LFO frequency modulation sensitivity (shift count)
-   u8   lfoems;         // LFO envelope modulation sensitivity (shift count)
+   u8   outshift_l;     // Output shift for left channel (down to 16 bits)
+   u8   outshift_r;     // Output shift for right channel (down to 16 bits)
 
-   u8   disll;          // Direct sound level (left)
-   u8   dislr;          // Direct sound level (right)
-   u8   efsll;          // Effect sound level (left)
-   u8   efslr;          // Effect sound level (right)
-
-   s32  tl_mult;        // Multiplier for TL
-   u8   krs_shift;      // Shift count for KRS
    u8   imxl_shift;     // Shift count for IMXL
-
-   u8   keyx;           // FIXME/SCSP1: unused field from scsp.c
-   u32  finct;          // FIXME/SCSP1: no longer used from scsp.c
 
 } SlotState;
 
@@ -336,8 +339,6 @@ typedef struct ScspState_struct {
    u8   midi_out_buf[4];// MIDI out buffer
    u8   midi_in_cnt;    // MIDI in data count
    u8   midi_out_cnt;   // MIDI out data count
-   u8   midflag;        // FIXME/SCSP1: no longer used from scsp.c
-   u8   midflag2;       // FIXME/SCSP1: unused field from scsp.c
 
 } ScspState;
 
@@ -373,11 +374,10 @@ static u32 scsp_sound_bufsize;    // scsp_sound_len * scsp_sound_bufs
 static u32 scsp_sound_genpos;     // Offset of next sample to generate
 static u32 scsp_sound_left;       // Samples not yet sent to host driver
 
-// Parameters for audio data generation (these are file-scope to minimize
+// Parameters for audio data generation (these are file-scope to reduce
 // parameter passing overhead)
 static s32 *scsp_bufL;            // Base pointer for left channel
 static s32 *scsp_bufR;            // Base pointer for right channel
-static u32 scsp_buf_len;          // Samples to generate
 
 // CDDA input buffer (2 sectors' worth)
 static union {
@@ -398,25 +398,22 @@ static int m68k_in_breakpoint;
 //-------------------------------------------------------------------------
 // Lookup tables
 
-static s32 scsp_env_table[SCSP_ENV_LEN * 2];    // Envelope curve table (attack & decay)
+// Attack/decay envelope lookup table
+static s32 scsp_env_table[SCSP_ENV_LEN*2];
 
-static s32 scsp_lfo_sawt_e[SCSP_LFO_LEN];       // lfo sawtooth waveform for enveloppe
-static s32 scsp_lfo_squa_e[SCSP_LFO_LEN];       // lfo square waveform for enveloppe
-static s32 scsp_lfo_tri_e[SCSP_LFO_LEN];        // lfo triangle waveform for enveloppe
-static s32 scsp_lfo_noi_e[SCSP_LFO_LEN];        // lfo noise waveform for enveloppe
+// LFO waveforms for amplitude modulation
+static s32 scsp_lfo_wave_amp[4][SCSP_LFO_LEN];
+// LFO waveforms for frequency modulation
+static s32 scsp_lfo_wave_freq[4][SCSP_LFO_LEN];
+// LFO counter step values for each LFOF index
+static s32 scsp_lfo_step[32];
 
-static s32 scsp_lfo_sawt_f[SCSP_LFO_LEN];       // lfo sawtooth waveform for frequency
-static s32 scsp_lfo_squa_f[SCSP_LFO_LEN];       // lfo square waveform for frequency
-static s32 scsp_lfo_tri_f[SCSP_LFO_LEN];        // lfo triangle waveform for frequency
-static s32 scsp_lfo_noi_f[SCSP_LFO_LEN];        // lfo noise waveform frequency
+// Envelope increments for each attack/decay rate (AR, DR, etc.)
+static s32 scsp_attack_rate[62+16];
+static s32 scsp_decay_rate[62+16];
 
-static s32 scsp_attack_rate[0x40 + 0x20];       // enveloppe step for attack
-static s32 scsp_decay_rate[0x40 + 0x20];        // enveloppe step for decay
-static s32 scsp_null_rate[0x20];                // null enveloppe step
-
-static s32 scsp_lfo_step[32];                   // directly give the lfo counter step
-
-static s32 scsp_tl_table[256];                  // table of values for total level attentuation
+// Table of volume multipliers for TL (total level) register
+static s32 scsp_tl_table[256];
 
 //-------------------------------------------------------------------------
 // Local function declarations
@@ -424,7 +421,7 @@ static s32 scsp_tl_table[256];                  // table of values for total lev
 static void ScspUpdateTimer(u32 samples, u16 *timer_ptr, u8 timer_scale,
                             int interrupt);
 static void ScspGenerateAudio(s32 *bufL, s32 *bufR, u32 samples);
-static void ScspGenerateAudioForSlot(SlotState *slot);
+static void ScspGenerateAudioForSlot(SlotState *slot, u32 samples);
 static void ScspGenerateAudioForCDDA(s32 *bufL, s32 *bufR, u32 samples);
 
 static u8 FASTCALL ScspReadByteDirect(u32 address);
@@ -435,6 +432,7 @@ static void ScspDoKeyOnOff(void);
 static void ScspKeyOn(SlotState *slot);
 static void ScspKeyOff(SlotState *slot);
 static void ScspUpdateSlotAddress(SlotState *slot);
+static void ScspUpdateSlotFunc(SlotState *slot);
 static u16 ScspMidiIn(void);
 static void ScspMidiOut(u8 data);
 static void ScspDoDMA(void);
@@ -446,718 +444,187 @@ static void ScspClearInterrupts(u16 mask, int target);
 static s32 FASTCALL M68KExecBP(s32 cycles);
 
 ///////////////////////////////////////////////////////////////////////////
-// FIXME: these slot update functions are copied directly from scsp1 for
-// the moment (except for identifier changes and the fact that scsp_buf_pos
-// the now local), until we clean them up
+// Single-slot audio generation routines and corresponding table.  The
+// table is indexed by:
+//    scsp_audiogen_func_table[F][A][S][L][R]
+//                             ^  ^  ^  ^  ^-- Right channel on/off (on = 1)
+//                             |  |  |  `-- Left channel on/off (on = 1)
+//                             |  |  `-- Sample size 16/8 bit (16 bit = 1)
+//                             |  `-- Amplitude modulation on/off (on = 1)
+//                             `-- Frequency modulation on/off (on = 1)
 ///////////////////////////////////////////////////////////////////////////
 
+// For convenience, we use a single, parameterized macro to define every
+// function, with 0 or 1 in each of the F/A/S/L/R parameters; the compiler
+// will optimize out the disabled branches.
+
+// A couple of handy sub-macros:
+#define ADDRESS      (slot->addr_counter >> SCSP_FREQ_LOW_BITS)
 #ifdef WORDS_BIGENDIAN
-#define SCSP_GET_OUT_8B \
-   out = (s32) ((s8 *)slot->buf)[(slot->fcnt >> SCSP_FREQ_LOW_BITS)];
+#define ADDRESS_8BIT (ADDRESS)
 #else
-#define SCSP_GET_OUT_8B \
-   out = (s32) ((s8 *)slot->buf)[(slot->fcnt >> SCSP_FREQ_LOW_BITS) ^ 1];
+#define ADDRESS_8BIT (ADDRESS ^ 1)
 #endif
+#define ENV_POS      (slot->env_counter >> SCSP_ENV_LOW_BITS)
+#define LFO_POS      ((slot->lfo_counter >> SCSP_LFO_LOW_BITS) & SCSP_LFO_MASK)
 
-#define SCSP_GET_OUT_16B        \
-                out = (s32) ((s16 *)slot->buf)[slot->fcnt >> SCSP_FREQ_LOW_BITS];
-
-#define SCSP_GET_ENV            \
-                env = scsp_env_table[slot->ecnt >> SCSP_ENV_LOW_BITS] * slot->tl_mult / 1024;
-
-#define SCSP_GET_ENV_LFO        \
-                env = (scsp_env_table[slot->ecnt >> SCSP_ENV_LOW_BITS] * slot->tl_mult / 1024) - (slot->lfoemw[(slot->lfocnt >> SCSP_LFO_LOW_BITS) & SCSP_LFO_MASK] >> slot->lfoems);
-
-#define SCSP_OUT_8B_L		\
-		if ((out) && (env > 0))							\
-		{										\
-			out *= env;								\
-			scsp_bufL[scsp_buf_pos] += out >> (slot->disll - 8);	\
-		}
-
-#define SCSP_OUT_8B_R		\
-		if ((out) && (env > 0))							\
-		{										\
-			out *= env;								\
-			scsp_bufR[scsp_buf_pos] += out >> (slot->dislr - 8);	\
-		}
-
-#define SCSP_OUT_8B_LR		\
-		if ((out) && (env > 0))							\
-		{										\
-			out *= env;								\
-			scsp_bufL[scsp_buf_pos] += out >> (slot->disll - 8);	\
-			scsp_bufR[scsp_buf_pos] += out >> (slot->dislr - 8);	\
-		}
-
-#define SCSP_OUT_16B_L		\
-		if ((out) && (env > 0))						\
-		{									\
-			out *= env;							\
-			scsp_bufL[scsp_buf_pos] += out >> slot->disll;	\
-		}
-
-#define SCSP_OUT_16B_R		\
-		if ((out) && (env > 0))						\
-		{									\
-			out *= env;							\
-			scsp_bufR[scsp_buf_pos] += out >> slot->dislr;	\
-		}
-
-#define SCSP_OUT_16B_LR		\
-		if ((out) && (env > 0))						\
-		{									\
-			out *= env;							\
-			scsp_bufL[scsp_buf_pos] += out >> slot->disll;	\
-			scsp_bufR[scsp_buf_pos] += out >> slot->dislr;	\
-		}
-
-#define SCSP_UPDATE_PHASE	\
-		if ((slot->fcnt += slot->finc) > slot->lea_shifted)		\
-		{									\
-			if (slot->lpctl) slot->fcnt = slot->lsa_shifted;		\
-			else								\
-			{								\
-				slot->ecnt = SCSP_ENV_DE;			\
-				return;						\
-			}								\
-		}
-
-#define SCSP_UPDATE_PHASE_LFO	\
-                slot->fcnt += ((slot->lfofmw[(slot->lfocnt >> SCSP_LFO_LOW_BITS) & SCSP_LFO_MASK] << (slot->lfofms-7)) >> (slot->fsft+1));       \
-		if ((slot->fcnt += slot->finc) > slot->lea_shifted)		\
-		{									\
-			if (slot->lpctl) slot->fcnt = slot->lsa_shifted;		\
-			else								\
-			{								\
-				slot->ecnt = SCSP_ENV_DE;			\
-				return;						\
-			}								\
-		}
-
-#define SCSP_UPDATE_ENV		\
-		if ((slot->ecnt += slot->einc) >= slot->ecmp)	\
-		{								\
-			switch (slot->ecurp) \
-			{ \
-				case SCSP_ENV_ATTACK: \
-					slot->ecnt = SCSP_ENV_DS; \
-					slot->einc = slot->eincd; \
-					slot->ecmp = slot->slcmp; \
-					slot->ecurp = SCSP_ENV_DECAY; \
-					break; \
-				case SCSP_ENV_DECAY: \
-					slot->ecnt = slot->slcmp; \
-					slot->einc = slot->eincs; \
-					slot->ecmp = SCSP_ENV_DE; \
-					slot->ecurp = SCSP_ENV_SUSTAIN; \
-					break; \
-				default: \
-					slot->ecnt = SCSP_ENV_DE; \
-					slot->einc = 0; \
-					slot->ecmp = SCSP_ENV_DE + 1; \
-					return; \
-			} \
-		}
-
-#define SCSP_UPDATE_LFO		\
-                slot->lfocnt += slot->lfoinc;
-
-////////////////////////////////////////////////////////////////
-
-static void scsp_slot_update_null(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-        s32 env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-                SCSP_GET_ENV
-
-		SCSP_UPDATE_PHASE
-                SCSP_UPDATE_ENV
-	}
+#define DEFINE_AUDIOGEN(tag,F,A,S,L,R)                                      \
+static void FASTCALL audiogen_##tag(SlotState *slot, u32 len)               \
+{                                                                           \
+   u32 pos;                                                                 \
+   for (pos = 0; pos < len; pos++)                                          \
+   {                                                                        \
+      if (L || R)  /* Don't bother with calculations if it's all silent */  \
+      {                                                                     \
+         /* Compute envelope/TL multiplier for waveform data */             \
+         s32 env = scsp_env_table[ENV_POS] * slot->tl_mult >> SCSP_TL_BITS; \
+         if (A)                                                             \
+            env -= slot->lfo_am_wave[LFO_POS] >> slot->lfo_am_shift;        \
+                                                                            \
+         /* Apply envelope / channel volume to waveform data and output */  \
+         if (env > 0)                                                       \
+         {                                                                  \
+            s32 out;                                                        \
+            if (S)                                                          \
+               out = (s32) ((const s16 *)slot->buf)[ADDRESS];               \
+            else                                                            \
+               out = (s32) ((const s8 *)slot->buf)[ADDRESS_8BIT] << 8;      \
+            out *= env;                                                     \
+            if (L)                                                          \
+               scsp_bufL[pos] += out >> slot->outshift_l;                   \
+            if (R)                                                          \
+               scsp_bufR[pos] += out >> slot->outshift_r;                   \
+         }                                                                  \
+      }                                                                     \
+                                                                            \
+      /* Update address counter, exiting if we reach the end of the data */ \
+      if (F)                                                                \
+      {                                                                     \
+         /* FIXME: need to handle the case where LFO data range != 1<<FREQ_LOW_BITS */ \
+         slot->addr_counter += slot->lfo_fm_wave[LFO_POS]                   \
+                               << slot->lfo_fm_shift                        \
+                               >> slot->octave_shift;                       \
+      }                                                                     \
+      slot->addr_counter += slot->addr_step;                                \
+      if (slot->addr_counter > slot->lea_shifted)                           \
+      {                                                                     \
+         /* FIXME/SCSP1: reverse/alternating loops not implemented */       \
+         if (slot->lpctl)                                                   \
+         {                                                                  \
+            /* FIXME/SCSP1: should do modulo rather than simply reset */    \
+            slot->addr_counter = slot->lsa_shifted;                         \
+         }                                                                  \
+         else                                                               \
+         {                                                                  \
+            slot->env_counter = SCSP_ENV_DECAY_END;                         \
+            return;                                                         \
+         }                                                                  \
+      }                                                                     \
+                                                                            \
+      /* Update envelope counter, advancing the envelope phase as needed */ \
+      slot->env_counter += slot->env_step;                                  \
+      if (slot->env_counter >= slot->env_target)                            \
+      {                                                                     \
+         switch (slot->env_phase)                                           \
+         {                                                                  \
+            case SCSP_ENV_ATTACK:                                           \
+               slot->env_counter = SCSP_ENV_DECAY_START;                    \
+               slot->env_step = slot->env_step_d;                           \
+               slot->env_target = slot->sl_target;                          \
+               slot->env_phase = SCSP_ENV_DECAY;                            \
+               break;                                                       \
+            case SCSP_ENV_DECAY:                                            \
+               slot->env_counter = slot->sl_target;                         \
+               slot->env_step = slot->env_step_s;                           \
+               slot->env_target = SCSP_ENV_DECAY_END;                       \
+               slot->env_phase = SCSP_ENV_SUSTAIN;                          \
+               break;                                                       \
+            default:                                                        \
+               slot->env_counter = SCSP_ENV_DECAY_END;                      \
+               slot->env_step = 0;                                          \
+               slot->env_target = SCSP_ENV_DECAY_END + 1;                   \
+               return;                                                      \
+         }                                                                  \
+      }                                                                     \
+                                                                            \
+      /* Update the LFO counter if either LFO waveform is in use */         \
+      /* FIXME/SCSP1: should update whenever LFORE == 0 */                  \
+      if ((F || A) && (L || R))                                             \
+         slot->lfo_counter += slot->lfo_step;                               \
+   }                                                                        \
 }
 
-////////////////////////////////////////////////////////////////
-// Normal 8 bits
+//-------------------------------------------------------------------------
 
-static void scsp_slot_update_8B_L(SlotState *slot)
+// Define the actual audio generation functions.  For simplicity, we name
+// each function using the state of its parameter flags, with uppercase for
+// an enabled flag and lowercase for a disabled flag.  We also use the null
+// output function for all cases where L and R are zero, to avoid
+// unnecessary code bloat.
+
+DEFINE_AUDIOGEN(null,  0,0,0,0,0)
+
+DEFINE_AUDIOGEN(faslR, 0,0,0,0,1)
+DEFINE_AUDIOGEN(fasLr, 0,0,0,1,0)
+DEFINE_AUDIOGEN(fasLR, 0,0,0,1,1)
+DEFINE_AUDIOGEN(faSlR, 0,0,1,0,1)
+DEFINE_AUDIOGEN(faSLr, 0,0,1,1,0)
+DEFINE_AUDIOGEN(faSLR, 0,0,1,1,1)
+
+DEFINE_AUDIOGEN(fAslR, 0,1,0,0,1)
+DEFINE_AUDIOGEN(fAsLr, 0,1,0,1,0)
+DEFINE_AUDIOGEN(fAsLR, 0,1,0,1,1)
+DEFINE_AUDIOGEN(fASlR, 0,1,1,0,1)
+DEFINE_AUDIOGEN(fASLr, 0,1,1,1,0)
+DEFINE_AUDIOGEN(fASLR, 0,1,1,1,1)
+
+DEFINE_AUDIOGEN(FaslR, 1,0,0,0,1)
+DEFINE_AUDIOGEN(FasLr, 1,0,0,1,0)
+DEFINE_AUDIOGEN(FasLR, 1,0,0,1,1)
+DEFINE_AUDIOGEN(FaSlR, 1,0,1,0,1)
+DEFINE_AUDIOGEN(FaSLr, 1,0,1,1,0)
+DEFINE_AUDIOGEN(FaSLR, 1,0,1,1,1)
+
+DEFINE_AUDIOGEN(FAslR, 1,1,0,0,1)
+DEFINE_AUDIOGEN(FAsLr, 1,1,0,1,0)
+DEFINE_AUDIOGEN(FAsLR, 1,1,0,1,1)
+DEFINE_AUDIOGEN(FASlR, 1,1,1,0,1)
+DEFINE_AUDIOGEN(FASLr, 1,1,1,1,0)
+DEFINE_AUDIOGEN(FASLR, 1,1,1,1,1)
+
+// We don't need these anymore, so get rid of them
+#undef ADDRESS
+#undef ADDRESS_8BIT
+#undef ENV_POS
+#undef LFO_POS
+#undef DEFINE_AUDIOGEN
+
+//-------------------------------------------------------------------------
+
+// Define the function lookup table.
+
+static void FASTCALL (*scsp_audiogen_func_table[2][2][2][2][2])(SlotState *slot, u32 len) =
 {
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		// env = [0..0x3FF] - slot->tl
-                SCSP_GET_OUT_8B
-		SCSP_GET_ENV
-
-		// don't waste time if no sound...
-		SCSP_OUT_8B_L
-
-		// calculate new frequency (phase) counter and enveloppe counter
-		SCSP_UPDATE_PHASE
-		SCSP_UPDATE_ENV
-	}
-}
-
-static void scsp_slot_update_8B_R(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_8B
-		SCSP_GET_ENV
-
-		SCSP_OUT_8B_R
-
-		SCSP_UPDATE_PHASE
-		SCSP_UPDATE_ENV
-	}
-}
-
-static void scsp_slot_update_8B_LR(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-                SCSP_GET_OUT_8B
-		SCSP_GET_ENV
-
-		SCSP_OUT_8B_LR
-
-		SCSP_UPDATE_PHASE
-		SCSP_UPDATE_ENV
-	}
-}
-
-////////////////////////////////////////////////////////////////
-// Enveloppe LFO modulation 8 bits
-
-static void scsp_slot_update_E_8B_L(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_8B
-		SCSP_GET_ENV_LFO
-
-		SCSP_OUT_8B_L
-
-		SCSP_UPDATE_PHASE
-		SCSP_UPDATE_ENV
-		SCSP_UPDATE_LFO
-	}
-}
-
-static void scsp_slot_update_E_8B_R(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_8B
-		SCSP_GET_ENV_LFO
-
-		SCSP_OUT_8B_R
-
-		SCSP_UPDATE_PHASE
-		SCSP_UPDATE_ENV
-		SCSP_UPDATE_LFO
-	}
-}
-
-static void scsp_slot_update_E_8B_LR(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_8B
-		SCSP_GET_ENV_LFO
-
-		SCSP_OUT_8B_LR
-
-		SCSP_UPDATE_PHASE
-		SCSP_UPDATE_ENV
-		SCSP_UPDATE_LFO
-	}
-}
-
-////////////////////////////////////////////////////////////////
-// Frequency LFO modulation 8 bits
-
-static void scsp_slot_update_F_8B_L(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_8B
-		SCSP_GET_ENV
-
-		SCSP_OUT_8B_L
-
-		SCSP_UPDATE_PHASE_LFO
-		SCSP_UPDATE_ENV
-		SCSP_UPDATE_LFO
-	}
-}
-
-static void scsp_slot_update_F_8B_R(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_8B
-		SCSP_GET_ENV
-
-		SCSP_OUT_8B_R
-
-		SCSP_UPDATE_PHASE_LFO
-		SCSP_UPDATE_ENV
-		SCSP_UPDATE_LFO
-	}
-}
-
-static void scsp_slot_update_F_8B_LR(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_8B
-		SCSP_GET_ENV
-
-		SCSP_OUT_8B_LR
-
-		SCSP_UPDATE_PHASE_LFO
-		SCSP_UPDATE_ENV
-		SCSP_UPDATE_LFO
-	}
-}
-
-////////////////////////////////////////////////////////////////
-// Enveloppe & Frequency LFO modulation 8 bits
-
-static void scsp_slot_update_F_E_8B_L(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_8B
-		SCSP_GET_ENV_LFO
-
-		SCSP_OUT_8B_L
-
-		SCSP_UPDATE_PHASE_LFO
-		SCSP_UPDATE_ENV
-		SCSP_UPDATE_LFO
-	}
-}
-
-static void scsp_slot_update_F_E_8B_R(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_8B
-		SCSP_GET_ENV_LFO
-
-		SCSP_OUT_8B_R
-
-		SCSP_UPDATE_PHASE_LFO
-		SCSP_UPDATE_ENV
-		SCSP_UPDATE_LFO
-	}
-}
-
-static void scsp_slot_update_F_E_8B_LR(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_8B
-		SCSP_GET_ENV_LFO
-
-		SCSP_OUT_8B_LR
-
-		SCSP_UPDATE_PHASE_LFO
-		SCSP_UPDATE_ENV
-		SCSP_UPDATE_LFO
-	}
-}
-
-////////////////////////////////////////////////////////////////
-// Normal 16 bits
-
-static void scsp_slot_update_16B_L(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_16B
-		SCSP_GET_ENV
-
-		SCSP_OUT_16B_L
-
-		SCSP_UPDATE_PHASE
-		SCSP_UPDATE_ENV
-	}
-}
-
-static void scsp_slot_update_16B_R(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_16B
-		SCSP_GET_ENV
-
-		SCSP_OUT_16B_R
-
-		SCSP_UPDATE_PHASE
-		SCSP_UPDATE_ENV
-	}
-}
-
-static void scsp_slot_update_16B_LR(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_16B
-		SCSP_GET_ENV
-
-		SCSP_OUT_16B_LR
-
-		SCSP_UPDATE_PHASE
-		SCSP_UPDATE_ENV
-	}
-}
-
-////////////////////////////////////////////////////////////////
-// Enveloppe LFO modulation 16 bits
-
-static void scsp_slot_update_E_16B_L(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_16B
-		SCSP_GET_ENV_LFO
-
-		SCSP_OUT_16B_L
-
-		SCSP_UPDATE_PHASE
-		SCSP_UPDATE_ENV
-		SCSP_UPDATE_LFO
-	}
-}
-
-static void scsp_slot_update_E_16B_R(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_16B
-		SCSP_GET_ENV_LFO
-
-		SCSP_OUT_16B_R
-
-                SCSP_UPDATE_PHASE
-		SCSP_UPDATE_ENV
-		SCSP_UPDATE_LFO
-	}
-}
-
-static void scsp_slot_update_E_16B_LR(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_16B
-		SCSP_GET_ENV_LFO
-
-		SCSP_OUT_16B_LR
-
-		SCSP_UPDATE_PHASE
-		SCSP_UPDATE_ENV
-		SCSP_UPDATE_LFO
-	}
-}
-
-////////////////////////////////////////////////////////////////
-// Frequency LFO modulation 16 bits
-
-static void scsp_slot_update_F_16B_L(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_16B
-		SCSP_GET_ENV
-
-		SCSP_OUT_16B_L
-
-		SCSP_UPDATE_PHASE_LFO
-		SCSP_UPDATE_ENV
-		SCSP_UPDATE_LFO
-	}
-}
-
-static void scsp_slot_update_F_16B_R(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_16B
-		SCSP_GET_ENV
-
-		SCSP_OUT_16B_R
-
-		SCSP_UPDATE_PHASE_LFO
-		SCSP_UPDATE_ENV
-		SCSP_UPDATE_LFO
-	}
-}
-
-static void scsp_slot_update_F_16B_LR(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_16B
-		SCSP_GET_ENV
-
-		SCSP_OUT_16B_LR
-
-		SCSP_UPDATE_PHASE_LFO
-		SCSP_UPDATE_ENV
-		SCSP_UPDATE_LFO
-	}
-}
-
-////////////////////////////////////////////////////////////////
-// Enveloppe & Frequency LFO modulation 16 bits
-
-static void scsp_slot_update_F_E_16B_L(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_16B
-		SCSP_GET_ENV_LFO
-
-		SCSP_OUT_16B_L
-
-		SCSP_UPDATE_PHASE_LFO
-		SCSP_UPDATE_ENV
-		SCSP_UPDATE_LFO
-	}
-}
-
-static void scsp_slot_update_F_E_16B_R(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_16B
-		SCSP_GET_ENV_LFO
-
-		SCSP_OUT_16B_R
-
-		SCSP_UPDATE_PHASE_LFO
-		SCSP_UPDATE_ENV
-		SCSP_UPDATE_LFO
-	}
-}
-
-static void scsp_slot_update_F_E_16B_LR(SlotState *slot)
-{
-	u32 scsp_buf_pos = 0;
-	s32 out, env;
-
-	for(; scsp_buf_pos < scsp_buf_len; scsp_buf_pos++)
-	{
-		SCSP_GET_OUT_16B
-		SCSP_GET_ENV_LFO
-
-		SCSP_OUT_16B_LR
-
-		SCSP_UPDATE_PHASE_LFO
-		SCSP_UPDATE_ENV
-		SCSP_UPDATE_LFO
-	}
-}
-
-static void (*scsp_slot_update_p[2][2][2][2][2])(SlotState *slot) =
-{
-	// NO FMS
-	{	// NO EMS
-		{	// 8 BITS
-			{	// NO LEFT
-				{	// NO RIGHT
-					scsp_slot_update_null,
-					// RIGHT
-					scsp_slot_update_8B_R
-				},
-				// LEFT
-				{	// NO RIGHT
-					scsp_slot_update_8B_L,
-					// RIGHT
-					scsp_slot_update_8B_LR
-				},
-			},
-			// 16 BITS
-			{	// NO LEFT
-				{	// NO RIGHT
-					scsp_slot_update_null,
-					// RIGHT
-					scsp_slot_update_16B_R
-				},
-				// LEFT
-				{	// NO RIGHT
-					scsp_slot_update_16B_L,
-					// RIGHT
-					scsp_slot_update_16B_LR
-				},
-			}
-		},
-		// EMS
-		{	// 8 BITS
-			{	// NO LEFT
-				{	// NO RIGHT
-					scsp_slot_update_null,
-					// RIGHT
-					scsp_slot_update_E_8B_R
-				},
-				// LEFT
-				{	// NO RIGHT
-					scsp_slot_update_E_8B_L,
-					// RIGHT
-					scsp_slot_update_E_8B_LR
-				},
-			},
-			// 16 BITS
-			{	// NO LEFT
-				{	// NO RIGHT
-					scsp_slot_update_null,
-					// RIGHT
-					scsp_slot_update_E_16B_R
-				},
-				// LEFT
-				{	// NO RIGHT
-					scsp_slot_update_E_16B_L,
-					// RIGHT
-					scsp_slot_update_E_16B_LR
-				},
-			}
-		}
-	},
-	// FMS
-	{	// NO EMS
-		{	// 8 BITS
-			{	// NO LEFT
-				{	// NO RIGHT
-					scsp_slot_update_null,
-					// RIGHT
-					scsp_slot_update_F_8B_R
-				},
-				// LEFT
-				{	// NO RIGHT
-					scsp_slot_update_F_8B_L,
-					// RIGHT
-					scsp_slot_update_F_8B_LR
-				},
-			},
-			// 16 BITS
-			{	// NO LEFT
-				{	// NO RIGHT
-					scsp_slot_update_null,
-					// RIGHT
-					scsp_slot_update_F_16B_R
-				},
-				// LEFT
-				{	// NO RIGHT
-					scsp_slot_update_F_16B_L,
-					// RIGHT
-					scsp_slot_update_F_16B_LR
-				},
-			}
-		},
-		// EMS
-		{	// 8 BITS
-			{	// NO LEFT
-				{	// NO RIGHT
-					scsp_slot_update_null,
-					// RIGHT
-					scsp_slot_update_F_E_8B_R
-				},
-				// LEFT
-				{	// NO RIGHT
-					scsp_slot_update_F_E_8B_L,
-					// RIGHT
-					scsp_slot_update_F_E_8B_LR
-				},
-			},
-			// 16 BITS
-			{	// NO LEFT
-				{	// NO RIGHT
-					scsp_slot_update_null,
-					// RIGHT
-					scsp_slot_update_F_E_16B_R
-				},
-				// LEFT
-				{	// NO RIGHT
-					scsp_slot_update_F_E_16B_L,
-					// RIGHT
-					scsp_slot_update_F_E_16B_LR
-				},
-			}
-		}
-	}
+   {  // F==0
+      {  // A==0
+         {{audiogen_null, audiogen_faslR}, {audiogen_fasLr, audiogen_fasLR}},
+         {{audiogen_null, audiogen_faSlR}, {audiogen_faSLr, audiogen_faSLR}}
+      },
+      {  // A==1
+         {{audiogen_null, audiogen_fAslR}, {audiogen_fAsLr, audiogen_fAsLR}},
+         {{audiogen_null, audiogen_fASlR}, {audiogen_fASLr, audiogen_fASLR}}
+      }
+   },
+   {  // F==1
+      {  // A==0
+         {{audiogen_null, audiogen_FaslR}, {audiogen_FasLr, audiogen_FasLR}},
+         {{audiogen_null, audiogen_FaSlR}, {audiogen_FaSLr, audiogen_FaSLR}}
+      },
+      {  // A==1
+         {{audiogen_null, audiogen_FAslR}, {audiogen_FAsLr, audiogen_FAsLR}},
+         {{audiogen_null, audiogen_FASlR}, {audiogen_FASLr, audiogen_FASLR}}
+      }
+   }
 };
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1181,40 +648,66 @@ int ScspInit(int coreid, void (*interrupt_handler)(void))
    for (i = 0; i < SCSP_ENV_LEN; i++)
    {
       // Attack Curve (x^4 ?)
-      x = pow(((double) (SCSP_ENV_MASK - i) / (double) (SCSP_ENV_LEN)), 4);
+      x = pow(((double) (SCSP_ENV_MASK - i) / SCSP_ENV_LEN), 4);
       x *= (double) SCSP_ENV_LEN;
-      scsp_env_table[i] = SCSP_ENV_MASK - (s32) x;
+      scsp_env_table[i] = SCSP_ENV_MASK - (s32) floor(x);
 
       // Decay curve (x = linear)
-      x = pow(((double) (i) / (double) (SCSP_ENV_LEN)), 1);
-      x *= (double) SCSP_ENV_LEN;
-      scsp_env_table[i + SCSP_ENV_LEN] = SCSP_ENV_MASK - (s32) x;
+      scsp_env_table[i + SCSP_ENV_LEN] = SCSP_ENV_MASK - i;
    }
 
    for (i = 0, j = 0; i < 32; i++)
    {
+      double lfo_frequency, lfo_step;
+      // Frequency divider follows the pattern 1,2,3,4, 6,8,10,12, 16,...
       j += 1 << (i >> 2);
-      // lfo freq
-      x = 172.3 / (double) (j);
-      // converting lfo freq in lfo step
-      scsp_lfo_step[31 - i] = round(x * ((double) (SCSP_LFO_LEN) / (double) (SCSP_OUTPUT_FREQ)) * (double) (1 << SCSP_LFO_LOW_BITS));
+      // Base LFO frequency is 44100/256 or ~172.3 Hz
+      lfo_frequency = (44100.0 / 256.0) / j;
+      // Calculate LFO address step per output sample; we use a literal
+      // 44100 above but OUTPUT_FREQ here in case anyone wants to try
+      // upsampling the audio output someday
+      lfo_step = (lfo_frequency / SCSP_OUTPUT_FREQ) * SCSP_LFO_LEN;
+      scsp_lfo_step[31 - i] = round(lfo_step * (1 << SCSP_LFO_LOW_BITS));
    }
 
    for (i = 0; i < SCSP_LFO_LEN; i++)
    {
-      scsp_lfo_sawt_e[i] = SCSP_LFO_MASK - i;
-      if (i < (SCSP_LFO_LEN / 2)) scsp_lfo_squa_e[i] = SCSP_LFO_MASK;
-      else scsp_lfo_squa_e[i] = 0;
-      if (i < (SCSP_LFO_LEN / 2)) scsp_lfo_tri_e[i] = SCSP_LFO_MASK - (i * 2);
-      else scsp_lfo_tri_e[i] = (i - (SCSP_LFO_LEN / 2)) * 2;
-      scsp_lfo_noi_e[i] = rand() & SCSP_LFO_MASK;
+      // Amplitude modulation uses unsigned values which are subtracted
+      // from the base envelope value
+      // FIXME/SCSP1: these waveforms are all inverted (they should start
+      // at zero, not maximum)
+      scsp_lfo_wave_amp[SCSP_LFO_SAWTOOTH][i] = SCSP_LFO_MASK - i;
+      if (i < SCSP_LFO_LEN / 2)
+         scsp_lfo_wave_amp[SCSP_LFO_SQUARE][i] = SCSP_LFO_MASK;
+      else
+         scsp_lfo_wave_amp[SCSP_LFO_SQUARE][i] = 0;
+      if (i < SCSP_LFO_LEN / 2)
+         scsp_lfo_wave_amp[SCSP_LFO_TRIANGLE][i] = SCSP_LFO_MASK - i*2;
+      else
+         scsp_lfo_wave_amp[SCSP_LFO_TRIANGLE][i] = (i - SCSP_LFO_LEN/2) * 2;
+      scsp_lfo_wave_amp[SCSP_LFO_NOISE][i] = rand() & SCSP_LFO_MASK;
+      // FIXME/SCSP1: note that the noise generator output should be
+      // independent of LFORE/LFOF
 
-      scsp_lfo_sawt_f[(i + 512) & SCSP_LFO_MASK] = i - (SCSP_LFO_LEN / 2);
-      if (i < (SCSP_LFO_LEN / 2)) scsp_lfo_squa_f[i] = SCSP_LFO_MASK - (SCSP_LFO_LEN / 2) - 128;
-      else scsp_lfo_squa_f[i] = 0 - (SCSP_LFO_LEN / 2) + 128;
-      if (i < (SCSP_LFO_LEN / 2)) scsp_lfo_tri_f[(i + 768) & SCSP_LFO_MASK] = (i * 2) - (SCSP_LFO_LEN / 2);
-      else scsp_lfo_tri_f[(i + 768) & SCSP_LFO_MASK] = (SCSP_LFO_MASK - ((i - (SCSP_LFO_LEN / 2)) * 2)) - (SCSP_LFO_LEN / 2) + 1;
-      scsp_lfo_noi_f[i] = scsp_lfo_noi_e[i] - (SCSP_LFO_LEN / 2);
+      // Frequency modulation uses signed values which are added to the
+      // address counter
+      if (i < SCSP_LFO_LEN / 2)
+         scsp_lfo_wave_freq[SCSP_LFO_SAWTOOTH][i] = i;
+      else
+         scsp_lfo_wave_freq[SCSP_LFO_SAWTOOTH][i] = i - SCSP_LFO_LEN;
+      // FIXME/SCSP1: this is wrong, the -128/+128 are bogus
+      if (i < SCSP_LFO_LEN / 2)
+         scsp_lfo_wave_freq[SCSP_LFO_SQUARE][i] = SCSP_LFO_MASK - SCSP_LFO_LEN/2 - 128;
+      else
+         scsp_lfo_wave_freq[SCSP_LFO_SQUARE][i] = 0 - SCSP_LFO_LEN/2 + 128;
+      if (i < SCSP_LFO_LEN / 4)
+         scsp_lfo_wave_freq[SCSP_LFO_TRIANGLE][i] = i*2;
+      else if (i < SCSP_LFO_LEN * 3 / 4)
+         // FIXME/SCSP1: this is wrong, should be MASK not LEN
+         scsp_lfo_wave_freq[SCSP_LFO_TRIANGLE][i] = SCSP_LFO_LEN - i*2;
+      else
+         scsp_lfo_wave_freq[SCSP_LFO_TRIANGLE][i] = i*2 - SCSP_LFO_LEN*2;
+      scsp_lfo_wave_freq[SCSP_LFO_NOISE][i] = scsp_lfo_wave_amp[SCSP_LFO_NOISE][i] - SCSP_LFO_LEN/2;
    }
 
    for (i = 0; i < 4; i++)
@@ -1222,40 +715,31 @@ int ScspInit(int coreid, void (*interrupt_handler)(void))
       scsp_attack_rate[i] = 0;
       scsp_decay_rate[i] = 0;
    }
-
    for (i = 0; i < 60; i++)
    {
-      x = 1.0 + ((i & 3) * 0.25);      // bits 0-1 : x1.00, x1.25, x1.50, x1.75
-      x *= (double) (1 << ((i >> 2))); // bits 2-5 : shift bits (x2^0 - x2^15)
-      x *= (double) (SCSP_ENV_LEN << SCSP_ENV_LOW_BITS); // adjust for table scsp_env_table
+      x = 1.0 + ((i & 3) * 0.25);  // Bits 0-1: x1.00, x1.25, x1.50, x1.75
+      x *= 1 << (i >> 2);          // Bits 2-5: shift bits (x2^0 - x2^15)
+      x *= SCSP_ENV_LEN << SCSP_ENV_LOW_BITS; // Adjust for envelope table size
 
-      scsp_attack_rate[i + 4] = round(x / (double) SCSP_ATTACK_RATE);
-      scsp_decay_rate[i + 4] = round(x / (double) SCSP_DECAY_RATE);
-
-      if (scsp_attack_rate[i + 4] == 0) scsp_attack_rate[i + 4] = 1;
-      if (scsp_decay_rate[i + 4] == 0) scsp_decay_rate[i + 4] = 1;
+      scsp_attack_rate[i + 4] = round(x / SCSP_ATTACK_TIME);
+      if (scsp_attack_rate[i + 4] == 0)
+         scsp_attack_rate[i + 4] = 1;
+      scsp_decay_rate[i + 4] = round(x / SCSP_DECAY_TIME);
+      if (scsp_decay_rate[i + 4] == 0)
+         scsp_decay_rate[i + 4] = 1;
    }
-
-   scsp_attack_rate[63] = SCSP_ENV_AE;
+   scsp_attack_rate[63] = SCSP_ENV_ATTACK_END;
    scsp_decay_rate[61] = scsp_decay_rate[60];
    scsp_decay_rate[62] = scsp_decay_rate[60];
    scsp_decay_rate[63] = scsp_decay_rate[60];
-
-   for (i = 64; i < 96; i++)
+   for (i = 64; i < 78; i++)
    {
       scsp_attack_rate[i] = scsp_attack_rate[63];
       scsp_decay_rate[i] = scsp_decay_rate[63];
-      scsp_null_rate[i - 64] = 0;
-   }
-
-   for (i = 0; i < 96; i++)
-   {
-      SCSPLOG("attack rate[%d] = %.8X -> %.8X\n", i, scsp_attack_rate[i], scsp_attack_rate[i] >> SCSP_ENV_LOW_BITS);
-      SCSPLOG("decay rate[%d] = %.8X -> %.8X\n", i, scsp_decay_rate[i], scsp_decay_rate[i] >> SCSP_ENV_LOW_BITS);
    }
 
    for (i = 0; i < 256; i++)
-      scsp_tl_table[i] = round(pow(10, ((double)i * -0.3762) / 20) * 1024.0);
+      scsp_tl_table[i] = round(pow(2.0, -(i/16.0)) * (1 << SCSP_TL_BITS));
 
    // Initialize the SCSP state
 
@@ -1361,11 +845,10 @@ void ScspReset(void)
    for (slotnum = 0; slotnum < 32; slotnum++)
    {
       memset(&scsp.slot[slotnum], 0, sizeof(scsp.slot[slotnum]));
-      scsp.slot[slotnum].ecnt = SCSP_ENV_DE;  // Slot off
-      scsp.slot[slotnum].disll = 31;          // Direct sound level off
-      scsp.slot[slotnum].dislr = 31;
-      scsp.slot[slotnum].efsll = 31;          // Effect sound level off
-      scsp.slot[slotnum].efslr = 31;
+      scsp.slot[slotnum].env_counter = SCSP_ENV_DECAY_END;  // Slot off
+      scsp.slot[slotnum].outshift_l = 31;                   // Output off
+      scsp.slot[slotnum].outshift_r = 31;
+      scsp.slot[slotnum].audiogen = audiogen_null;
    }
 
    scsp.sound_ram_mask = 0x3FFFF;
@@ -1630,9 +1113,8 @@ static void ScspGenerateAudio(s32 *bufL, s32 *bufR, u32 samples)
 
    scsp_bufL = bufL;
    scsp_bufR = bufR;
-   scsp_buf_len = samples;
    for (slotnum = 0; slotnum < 32; slotnum++) {
-      ScspGenerateAudioForSlot(&scsp.slot[slotnum]);
+      ScspGenerateAudioForSlot(&scsp.slot[slotnum], samples);
    }
 
    if (cdda_out_left > 0) {
@@ -1643,28 +1125,27 @@ static void ScspGenerateAudio(s32 *bufL, s32 *bufR, u32 samples)
 //----------------------------------//
 
 // ScspGenerateAudioForSlot:  Generate audio samples and update counters for
-// a single slot.  scsp_bufL, scsp_bufR, and scsp_buf_len are assumed to be
-// set properly.
+// a single slot.  scsp_bufL and scsp_bufR are assumed to be set properly.
 
-static void ScspGenerateAudioForSlot(SlotState *slot)
+static void ScspGenerateAudioForSlot(SlotState *slot, u32 samples)
 {
-   if (slot->ecnt >= SCSP_ENV_DE)  // I.e., no sound is currently playing
-      return;
+   if (slot->env_counter >= SCSP_ENV_DECAY_END)
+      return;  // No sound is currently playing
 
    if (slot->ssctl)
    {
-      // Update the address counter (fcnt), since some games read it via
-      // the CA register even if the data itself isn't played
+      // Update the address counter, since some games read it via the CA
+      // register even if the data itself isn't played
       u32 pos;
-      for (pos = 0; pos < scsp_buf_len; pos++)
+      for (pos = 0; pos < samples; pos++)
       {
-         if ((slot->fcnt += slot->finc) > slot->lea_shifted)
+         if ((slot->addr_counter += slot->addr_step) > slot->lea_shifted)
          {
             if (slot->lpctl)
-               slot->fcnt = slot->lsa_shifted;
+               slot->addr_counter = slot->lsa_shifted;
             else
             {
-               slot->ecnt = SCSP_ENV_DE;
+               slot->env_counter = SCSP_ENV_DECAY_END;
                break;
             }
          }
@@ -1674,21 +1155,7 @@ static void ScspGenerateAudioForSlot(SlotState *slot)
       return;
    }
 
-   // Extract the left and right volumes (shift count); if the direct sound
-   // output is muted, we assume the data is being passed through the DSP
-   // (which we don't currently implement) and take the effect output level
-   // instead
-   // FIXME/SCSP1: we shouldn't stomp on the DI registers, but we do for now
-   // because scsp1 did (and it's a convenient way to avoid passing more
-   // parameters around)
-   if (slot->disll == 31 && slot->dislr == 31)
-   {
-      slot->disll = slot->efsll;
-      slot->dislr = slot->efslr;
-   }
-
-   // Actually generate the audio
-   scsp_slot_update_p[(slot->lfofms == 31)?0:1][(slot->lfoems == 31)?0:1][(slot->pcm8b == 0)?1:0][(slot->disll == 31)?0:1][(slot->dislr == 31)?0:1](slot);
+   (*slot->audiogen)(slot, samples);
 }
 
 //----------------------------------//
@@ -1932,28 +1399,28 @@ int SoundSaveState(FILE *fp)
    for (i = 0; i < 32; i++)
    {
       ywrite(&check, (void *)&scsp.slot[i].key, 1, 1, fp);
-      ywrite(&check, (void *)&scsp.slot[i].fcnt, 4, 1, fp);
-      ywrite(&check, (void *)&scsp.slot[i].ecnt, 4, 1, fp);
-      ywrite(&check, (void *)&scsp.slot[i].einc, 4, 1, fp);
-      ywrite(&check, (void *)&scsp.slot[i].ecmp, 4, 1, fp);
-      ywrite(&check, (void *)&scsp.slot[i].ecurp, 4, 1, fp);
+      ywrite(&check, (void *)&scsp.slot[i].addr_counter, 4, 1, fp);
+      ywrite(&check, (void *)&scsp.slot[i].env_counter, 4, 1, fp);
+      ywrite(&check, (void *)&scsp.slot[i].env_step, 4, 1, fp);
+      ywrite(&check, (void *)&scsp.slot[i].env_target, 4, 1, fp);
+      ywrite(&check, (void *)&scsp.slot[i].env_phase, 4, 1, fp);
 
       // Was enxt in scsp1; we don't use it, so just derive the proper
-      // value from ecurp
-      if (scsp.slot[i].ecurp == SCSP_ENV_RELEASE)
+      // value from env_phase
+      if (scsp.slot[i].env_phase == SCSP_ENV_RELEASE)
          temp8 = 1;
-      else if (scsp.slot[i].ecurp == SCSP_ENV_SUSTAIN)
+      else if (scsp.slot[i].env_phase == SCSP_ENV_SUSTAIN)
          temp8 = 2;
-      else if (scsp.slot[i].ecurp == SCSP_ENV_DECAY)
+      else if (scsp.slot[i].env_phase == SCSP_ENV_DECAY)
          temp8 = 3;
-      else if (scsp.slot[i].ecurp == SCSP_ENV_ATTACK)
+      else if (scsp.slot[i].env_phase == SCSP_ENV_ATTACK)
          temp8 = 4;
       else  // impossible, but avoid "undefined value" warnings
          temp8 = 0;
       ywrite(&check, (void *)&temp8, 1, 1, fp);
 
-      ywrite(&check, (void *)&scsp.slot[i].lfocnt, 4, 1, fp);
-      ywrite(&check, (void *)&scsp.slot[i].lfoinc, 4, 1, fp);
+      ywrite(&check, (void *)&scsp.slot[i].lfo_counter, 4, 1, fp);
+      ywrite(&check, (void *)&scsp.slot[i].lfo_step, 4, 1, fp);
    }
 
    // Write main internal variables
@@ -2057,7 +1524,11 @@ int SoundLoadState(FILE *fp, int version, int size)
    {
       for (i2 = 0; i2 < 0x18; i2 += 2)
          ScspWriteWordDirect(i<<5 | i2, scsp.regcache[(i<<5 | i2) >> 1]);
+      // These are also called during writes, so they're not technically
+      // necessary, but call them again anyway just to ensure everything's
+      // up to date
       ScspUpdateSlotAddress(&scsp.slot[i]);
+      ScspUpdateSlotFunc(&scsp.slot[i]);
    }
 
    if (version > 1)
@@ -2066,17 +1537,17 @@ int SoundLoadState(FILE *fp, int version, int size)
       for (i = 0; i < 32; i++)
       {
          yread(&check, (void *)&scsp.slot[i].key, 1, 1, fp);
-         yread(&check, (void *)&scsp.slot[i].fcnt, 4, 1, fp);
-         yread(&check, (void *)&scsp.slot[i].ecnt, 4, 1, fp);
-         yread(&check, (void *)&scsp.slot[i].einc, 4, 1, fp);
-         yread(&check, (void *)&scsp.slot[i].ecmp, 4, 1, fp);
-         yread(&check, (void *)&scsp.slot[i].ecurp, 4, 1, fp);
+         yread(&check, (void *)&scsp.slot[i].addr_counter, 4, 1, fp);
+         yread(&check, (void *)&scsp.slot[i].env_counter, 4, 1, fp);
+         yread(&check, (void *)&scsp.slot[i].env_step, 4, 1, fp);
+         yread(&check, (void *)&scsp.slot[i].env_target, 4, 1, fp);
+         yread(&check, (void *)&scsp.slot[i].env_phase, 4, 1, fp);
 
          // Was enxt in scsp1; we don't use it, so just read and ignore
          yread(&check, (void *)&temp8, 1, 1, fp);
 
-         yread(&check, (void *)&scsp.slot[i].lfocnt, 4, 1, fp);
-         yread(&check, (void *)&scsp.slot[i].lfoinc, 4, 1, fp);
+         yread(&check, (void *)&scsp.slot[i].lfo_counter, 4, 1, fp);
+         yread(&check, (void *)&scsp.slot[i].lfo_step, 4, 1, fp);
       }
 
       // Read main internal variables
@@ -2527,11 +1998,11 @@ int ScspSlotDebugAudioSaveWav(u8 slotnum, const char *filename)
    memcpy(&slot, &scsp.slot[slotnum], sizeof(slot));
 
    // Clear out the phase counter, etc.
-   slot.fcnt = 0;
-   slot.ecnt = SCSP_ENV_AS;
-   slot.einc = slot.einca;
-   slot.ecmp = SCSP_ENV_AE;
-   slot.ecurp = SCSP_ENV_ATTACK;
+   slot.addr_counter = 0;
+   slot.env_counter = SCSP_ENV_ATTACK_START;
+   slot.env_step = slot.env_step_a;
+   slot.env_target = SCSP_ENV_ATTACK_END;
+   slot.env_phase = SCSP_ENV_ATTACK;
 
    // Mix the audio, and then write it to the file
    for(;;)
@@ -2569,9 +2040,8 @@ static u32 ScspSlotDebugAudio(SlotState *slot, s32 *workbuf, s16 *buf, u32 len)
    bufR = workbuf+len;
    scsp_bufL = bufL;
    scsp_bufR = bufR;
-   scsp_buf_len = len;
 
-   if (slot->ecnt >= SCSP_ENV_DE)
+   if (slot->env_counter >= SCSP_ENV_DECAY_END)
       return 0;  // Not playing
 
    if (slot->ssctl)
@@ -2579,7 +2049,7 @@ static u32 ScspSlotDebugAudio(SlotState *slot, s32 *workbuf, s16 *buf, u32 len)
 
    memset(bufL, 0, sizeof(u32) * len);
    memset(bufR, 0, sizeof(u32) * len);
-   ScspGenerateAudioForSlot(slot);
+   ScspGenerateAudioForSlot(slot, len);
    ScspConvert32uto16s(bufL, bufR, buf, len);
    return len;
 }
@@ -2638,8 +2108,8 @@ static u16 FASTCALL ScspReadWordDirect(u32 address)
          return ScspMidiIn();
       case 0x408:  // MSLC/CA
          return scsp.mslc   << 11
-              | ((scsp.slot[scsp.mslc].fcnt >> (SCSP_FREQ_LOW_BITS + 12))
-                 & 0xF)     <<  7;
+              | ((scsp.slot[scsp.mslc].addr_counter
+                  >> (SCSP_FREQ_LOW_BITS + 12)) & 0xF) <<  7;
       default:
          return scsp.regcache[address >> 1];
    }
@@ -2840,23 +2310,27 @@ if(address>=0x412&&address<0x41E)SCSPLOG("write(%03X,%04X)\n",address,data);
                slot->lpctl  = (data >>  5) & 0x3;
                slot->pcm8b  = (data >>  4) & 0x1;
                slot->sa     =((data >>  0) & 0xF) << 16 | (slot->sa & 0xFFFF);
-               if (slot->ecnt < SCSP_ENV_DE)
+
+               ScspUpdateSlotFunc(slot);
+               if (slot->env_counter < SCSP_ENV_DECAY_END)
                   ScspUpdateSlotAddress(slot);
+
                if (data & (1<<12))
                   ScspDoKeyOnOff();
+
                data &= 0x0FFF;  // Don't save KYONEX
                break;
 
             case 0x02:
                slot->sa     = (slot->sa & 0xF0000) | data;
-               if (slot->ecnt < SCSP_ENV_DE)
+               if (slot->env_counter < SCSP_ENV_DECAY_END)
                   ScspUpdateSlotAddress(slot);
                break;
 
             case 0x04:
                slot->lsa    = data;
                // FIXME/SCSP1: disabled because scsp1 didn't do it
-               //if (slot->ecnt < SCSP_ENV_DE)
+               //if (slot->env_counter < SCSP_ENV_DECAY_END)
                //   ScspUpdateSlotAddress(slot);
                // FIXME/SCSP1: the next line can be dropped if the above is
                // uncommented
@@ -2866,10 +2340,11 @@ if(address>=0x412&&address<0x41E)SCSPLOG("write(%03X,%04X)\n",address,data);
             case 0x06:
                slot->lea    = data;
                // FIXME/SCSP1: disabled because scsp1 didn't do it
-               //if (slot->ecnt < SCSP_ENV_DE)
+               //if (slot->env_counter < SCSP_ENV_DECAY_END)
                //   ScspUpdateSlotAddress(slot);
                // FIXME/SCSP1: the next line can be dropped if the above is
                // uncommented
+               // FIXME/SCSP1: this should actually be ((lea+1)<<BITS) - 1
                slot->lea_shifted = slot->lea << SCSP_FREQ_LOW_BITS;
                break;
 
@@ -2880,22 +2355,33 @@ if(address>=0x412&&address<0x41E)SCSPLOG("write(%03X,%04X)\n",address,data);
                slot->ar     = (data >>  0) & 0x1F;
 
                if (slot->sr)
-                  slot->srp = &scsp_decay_rate[slot->sr << 1];
+               {
+                  const s32 *rate_table = &scsp_decay_rate[slot->sr << 1];
+                  // FIXME/SCSP1: doesn't this need to be 15 instead of 14?
+                  // (also below)
+                  slot->env_step_s = rate_table[(14 - slot->octave_shift)
+                                                >> slot->krs_shift];
+               }
                else
-                  slot->srp = &scsp_null_rate[0];
-               slot->eincs = slot->srp[(14 - slot->fsft) >> slot->krs_shift];
+                  slot->env_step_s = 0;
 
                if (slot->dr)
-                  slot->drp = &scsp_decay_rate[slot->dr << 1];
+               {
+                  const s32 *rate_table = &scsp_decay_rate[slot->dr << 1];
+                  slot->env_step_d = rate_table[(14 - slot->octave_shift)
+                                                >> slot->krs_shift];
+               }
                else
-                  slot->drp = &scsp_null_rate[0];
-               slot->eincd = slot->drp[(14 - slot->fsft) >> slot->krs_shift];
+                  slot->env_step_d = 0;
 
                if (slot->ar)
-                  slot->arp = &scsp_attack_rate[slot->ar << 1];
+               {
+                  const s32 *rate_table = &scsp_attack_rate[slot->ar << 1];
+                  slot->env_step_a = rate_table[(14 - slot->octave_shift)
+                                                >> slot->krs_shift];
+               }
                else
-                  slot->arp = &scsp_null_rate[0];
-               slot->einca = slot->arp[(14 - slot->fsft) >> slot->krs_shift];
+                  slot->env_step_a = 0;
 
                break;
 
@@ -2910,14 +2396,19 @@ if(address>=0x412&&address<0x41E)SCSPLOG("write(%03X,%04X)\n",address,data);
                   slot->krs_shift = 4;
                else
                   slot->krs_shift = slot->krs >> 2;
+               // FIXME/SCSP1: should update ar/dr/sr lookups here
 
-               slot->slcmp = (slot->sl << (5 + SCSP_ENV_LOW_BITS)) + SCSP_ENV_DS;
+               slot->sl_target = (slot->sl << (5 + SCSP_ENV_LOW_BITS))
+                                 + SCSP_ENV_DECAY_START;
 
                if (slot->rr)
-                  slot->rrp = &scsp_decay_rate[slot->rr << 1];
+               {
+                  const s32 *rate_table = &scsp_decay_rate[slot->rr << 1];
+                  slot->env_step_r = rate_table[(14 - slot->octave_shift)
+                                                >> slot->krs_shift];
+               }
                else
-                  slot->rrp = &scsp_null_rate[0];
-               slot->eincr = slot->rrp[(14 - slot->fsft) >> slot->krs_shift];
+                  slot->env_step_r = 0;
 
                break;
 
@@ -2941,12 +2432,13 @@ if(address>=0x412&&address<0x41E)SCSPLOG("write(%03X,%04X)\n",address,data);
                data &= 0x7BFF;
                slot->oct    = (data >> 11) & 0xF;
                slot->fns    = (data >>  0) & 0x3FF;
+               // FIXME/SCSP1: should update ar/dr/sr/rr lookups here
 
                if (slot->oct & 8)
-                  slot->fsft = 23 - slot->oct;
+                  slot->octave_shift = 23 - slot->oct;
                else
-                  slot->fsft = 7 - slot->oct;
-               slot->finc = ((0x400 + slot->fns) << 7) >> slot->fsft;
+                  slot->octave_shift = 7 - slot->oct;
+               slot->addr_step = ((0x400 + slot->fns) << 7) >> slot->octave_shift;
 
                break;
 
@@ -2960,56 +2452,28 @@ if(address>=0x412&&address<0x41E)SCSPLOG("write(%03X,%04X)\n",address,data);
 
                if (slot->lfore)
                {
-                  slot->lfoinc = -1;
+                  slot->lfo_step = -1;
                }
                else
                {
                   // FIXME/SCSP1: would be simpler to clear this in the LFORE branch
-                  if (slot->lfoinc == -1)
-                     slot->lfocnt = 0;
+                  if (slot->lfo_step == -1)
+                     slot->lfo_counter = 0;
                }
 
-               slot->lfoinc = scsp_lfo_step[slot->lfof];
+               slot->lfo_step = scsp_lfo_step[slot->lfof];
+               slot->lfo_fm_wave = scsp_lfo_wave_freq[slot->plfows];
                if (slot->plfos)
-                  slot->lfofms = slot->plfos + 7;
+                  slot->lfo_fm_shift = slot->plfos - 1;
                else
-                  slot->lfofms = 31;
+                  slot->lfo_fm_shift = -1;
+               slot->lfo_am_wave = scsp_lfo_wave_amp[slot->alfows];
                if (slot->alfos)
-                  slot->lfoems = 11 - slot->alfos;
+                  slot->lfo_am_shift = 11 - slot->alfos;
                else
-                  slot->lfoems = 31;
+                  slot->lfo_am_shift = -1;
 
-               switch (slot->plfows)
-               {
-                  case 0:
-                     slot->lfofmw = scsp_lfo_sawt_f;
-                     break;
-                  case 1:
-                     slot->lfofmw = scsp_lfo_squa_f;
-                     break;
-                  case 2:
-                     slot->lfofmw = scsp_lfo_tri_f;
-                     break;
-                  case 3:
-                     slot->lfofmw = scsp_lfo_noi_f;
-                     break;
-               }
-
-               switch (slot->alfows)
-               {
-                  case 0:
-                     slot->lfoemw = scsp_lfo_sawt_e;
-                     break;
-                  case 1:
-                     slot->lfoemw = scsp_lfo_squa_e;
-                     break;
-                  case 2:
-                     slot->lfoemw = scsp_lfo_tri_e;
-                     break;
-                  case 3:
-                     slot->lfoemw = scsp_lfo_noi_e;
-                     break;
-               }
+               ScspUpdateSlotFunc(slot);
 
                break;
 
@@ -3031,47 +2495,57 @@ if(address>=0x412&&address<0x41E)SCSPLOG("write(%03X,%04X)\n",address,data);
                slot->efsdl  = (data >>  5) & 0x7;
                slot->efpan  = (data >>  0) & 0x1F;
 
+               // Compute the output shift counts for the left and right
+               // channels.  If the direct sound output is muted, we assume
+               // the data is being passed through the DSP (which we don't
+               // currently implement) and take the effect output level
+               // instead.  Note that we lose 1 bit of resolution from the
+               // panning parameter because we adjust the output level by
+               // shifting (powers of two), while DIPAN/EFPAN have a
+               // resolution of sqrt(2).
+
                if (slot->disdl)
                {
-                  slot->dislr = slot->disll = (7 - slot->disdl) + SCSP_ENV_HIGH_BITS;
+                  slot->outshift_l = slot->outshift_r = (7 - slot->disdl)
+                                                        + SCSP_ENV_HIGH_BITS;
                   if (slot->dipan & 0x10)  // Pan left
                   {
                      if (slot->dipan == 0x1F)
-                        slot->dislr = 31;
+                        slot->outshift_r = 31;
                      else
-                        slot->dislr += (slot->dipan >> 1) & 7;
+                        slot->outshift_r += (slot->dipan >> 1) & 7;
                   }
                   else  // Pan right
                   {
                      if (slot->dipan == 0xF)
-                        slot->disll = 31;
+                        slot->outshift_l = 31;
                      else
-                        slot->disll += (slot->dipan >> 1) & 7;
+                        slot->outshift_l += (slot->dipan >> 1) & 7;
                   }
                }
-               else
-                  slot->disll = slot->dislr = 31;  // Muted
-
-               if (slot->efsdl)
+               else if (slot->efsdl)
                {
-                  slot->efslr = slot->efsll = (7 - slot->efsdl) + SCSP_ENV_HIGH_BITS;
+                  slot->outshift_l = slot->outshift_r = (7 - slot->efsdl)
+                                                        + SCSP_ENV_HIGH_BITS;
                   if (slot->efpan & 0x10)  // Pan left
                   {
                      if (slot->efpan == 0x1F)
-                        slot->efslr = 31;
+                        slot->outshift_r = 31;
                      else
-                        slot->efslr += (slot->efpan >> 1) & 7;
+                        slot->outshift_r += (slot->efpan >> 1) & 7;
                   }
                   else  // Pan right
                   {
                      if (slot->efpan == 0xF)
-                        slot->efsll = 31;
+                        slot->outshift_l = 31;
                      else
-                        slot->efsll += (slot->efpan >> 1) & 7;
+                        slot->outshift_l += (slot->efpan >> 1) & 7;
                   }
                }
                else
-                  slot->efsll = slot->efslr = 31;  // Muted
+                  slot->outshift_l = slot->outshift_r = 31;  // Muted
+
+               ScspUpdateSlotFunc(slot);
 
                break;
 
@@ -3249,16 +2723,16 @@ static void ScspDoKeyOnOff(void)
 
 static void ScspKeyOn(SlotState *slot)
 {
-   if (slot->ecurp != SCSP_ENV_RELEASE)
+   if (slot->env_phase != SCSP_ENV_RELEASE)
       return;  // Can't key a sound that's already playing
 
    ScspUpdateSlotAddress(slot);
 
-   slot->fcnt = 0;                 // Start at beginning of sample
-   slot->ecurp = SCSP_ENV_ATTACK;  // Begin attack phase
-   slot->ecnt = SCSP_ENV_AS;       // Reset envelope (FIXME: should start at current if old sound is still decaying?)
-   slot->einc = slot->einca;       // Load precomputed attack step value
-   slot->ecmp = SCSP_ENV_AE;       // Target ecnt value for advancing phase
+   slot->addr_counter = 0;
+   slot->env_phase = SCSP_ENV_ATTACK;
+   slot->env_counter = SCSP_ENV_ATTACK_START;  // FIXME: should this start at the current value if the old sound is still decaying?
+   slot->env_step = slot->env_step_a;
+   slot->env_target = SCSP_ENV_ATTACK_END;
 }
 
 //----------------------------------//
@@ -3267,16 +2741,16 @@ static void ScspKeyOn(SlotState *slot)
 
 static void ScspKeyOff(SlotState *slot)
 {
-   if (slot->ecurp == SCSP_ENV_RELEASE)
+   if (slot->env_phase == SCSP_ENV_RELEASE)
       return;  // Can't release a sound that's already released
 
    // If we still are in attack phase at release time, convert attack to decay
-   if (slot->ecurp == SCSP_ENV_ATTACK)
-      slot->ecnt = SCSP_ENV_DE - slot->ecnt;
+   if (slot->env_phase == SCSP_ENV_ATTACK)
+      slot->env_counter = SCSP_ENV_DECAY_END - slot->env_counter;
 
-   slot->ecurp = SCSP_ENV_RELEASE;
-   slot->einc = slot->eincr;
-   slot->ecmp = SCSP_ENV_DE;
+   slot->env_phase = SCSP_ENV_RELEASE;
+   slot->env_step = slot->env_step_r;
+   slot->env_target = SCSP_ENV_DECAY_END;
 }
 
 //-------------------------------------------------------------------------
@@ -3307,8 +2781,22 @@ static void ScspUpdateSlotAddress(SlotState *slot)
       slot->lea = max_samples;
    slot->lea_shifted = slot->lea << SCSP_FREQ_LOW_BITS;
 
-   // FIXME/SCSP1: scsp1 advanced the address counter (fcnt) here, but that
-   // looks wrong to me -- shouldn't it only be advanced during ScspExec()?
+   // FIXME/SCSP1: scsp1 advanced the address counter here, but that looks
+   // wrong to me -- shouldn't it only be advanced during ScspExec()?
+}
+
+//----------------------------------//
+
+// ScspUpdateSlotFunc:  Update the audio generation function for the given
+// slot based on the slot's parameters.
+
+static void ScspUpdateSlotFunc(SlotState *slot)
+{
+   slot->audiogen = scsp_audiogen_func_table[slot->lfo_fm_shift >= 0]
+                                            [slot->lfo_am_shift >= 0]
+                                            [slot->pcm8b == 0]
+                                            [slot->outshift_l != 31]
+                                            [slot->outshift_r != 31];
 }
 
 //-------------------------------------------------------------------------

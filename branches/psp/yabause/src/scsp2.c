@@ -198,7 +198,7 @@ typedef struct SlotState_struct
    // Internal state
 
    // Audio generation routine (selected based on slot parameters)
-   void (*audiogen)(struct SlotState_struct *slot, u32 len);
+   void (* FASTCALL audiogen)(struct SlotState_struct *slot, u32 len);
 
    const void *buf;     // Pointer to sample data in sound RAM
 
@@ -603,7 +603,7 @@ DEFINE_AUDIOGEN(FASLR, 1,1,1,1,1)
 
 // Define the function lookup table.
 
-static void FASTCALL (*scsp_audiogen_func_table[2][2][2][2][2])(SlotState *slot, u32 len) =
+static void (* FASTCALL scsp_audiogen_func_table[2][2][2][2][2])(SlotState *slot, u32 len) =
 {
    {  // F==0
       {  // A==0

@@ -66,6 +66,9 @@ signals:
 	void requestSize( const QSize& size );
 	void requestFullscreen( bool fullscreen );
 	void error( const char* error );
+
+	void pause();
+	void run();
 };
 
 #endif // YABAUSETHREAD_H

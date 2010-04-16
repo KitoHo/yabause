@@ -21,6 +21,7 @@
 #include "QtYabause.h"
 #include "ui/UIYabause.h"
 #include "Settings.h"
+#include "VolatileSettings.h"
 
 #include <QApplication>
 #include <QLabel>
@@ -92,6 +93,7 @@ NULL
 UIYabause* mUIYabause = 0;
 // settings object
 Settings* mSettings = 0;
+VolatileSettings* mVolatileSettings = 0;
 // ports padbits
 QMap<uint, PerPad_struct*> mPort1PadsBits;
 QMap<uint, PerPad_struct*> mPort2PadsBits;
@@ -123,6 +125,13 @@ Settings* QtYabause::settings()
 	if ( !mSettings )
 		mSettings = new Settings();
 	return mSettings;
+}
+
+VolatileSettings* QtYabause::volatileSettings()
+{
+	if ( !mVolatileSettings )
+		mVolatileSettings = new VolatileSettings();
+	return mVolatileSettings;
 }
 
 int QtYabause::setTranslationFile()

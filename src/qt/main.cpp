@@ -23,6 +23,9 @@
 #include "QtYabause.h"
 #include "Settings.h"
 #include "ui/UIYabause.h"
+#ifndef NO_CLI
+#include "Arguments.h"
+#endif
 
 int main( int argc, char** argv )
 {
@@ -35,6 +38,9 @@ int main( int argc, char** argv )
 	// set translation file
 	if ( QtYabause::setTranslationFile() == -1 )
 		qWarning( "Can't set translation file" );
+#ifndef NO_CLI
+	Arguments::parse();
+#endif
 	// show main window
 	QtYabause::mainWindow()->setWindowTitle( app.applicationName() );
 	QtYabause::mainWindow()->show();

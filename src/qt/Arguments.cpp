@@ -115,6 +115,18 @@ namespace Arguments
 
 	void binary(const QString& param)
 	{
+		QString filename;
+		uint address = 0x06004000;
+		QStringList parts = param.split(':');
+		filename = parts[0];
+		if (parts.size() > 1)
+			address = parts[1].toUInt(NULL, 0);
+
+		VolatileSettings * vs = QtYabause::volatileSettings();
+		vs->setValue("autostart", true);
+		vs->setValue("autostart/binary", true);
+		vs->setValue("autostart/binary/filename", filename);
+		vs->setValue("autostart/binary/address", address);
 	}
 
 	void bios(const QString& param)

@@ -48,8 +48,16 @@ void YabauseThread::startEmulation()
 	reloadSettings();
 	initEmulation();
 
-	if (QtYabause::volatileSettings()->value("autostart").toBool())
+	VolatileSettings * vsettings = QtYabause::volatileSettings();
+
+	if (vsettings->value("autostart").toBool())
+	{
 		runEmulation();
+		if (vsettings->value("autostart/binary").toBool())
+			MappedMemoryLoadExec(
+				vsettings->value("autostart/binary/filename").toString().toLocal8Bit().constData(),
+				vsettings->value("autostart/binary/address").toUInt());
+	}
 }
 
 void YabauseThread::stopEmulation()

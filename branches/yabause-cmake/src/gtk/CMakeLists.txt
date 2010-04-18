@@ -52,7 +52,7 @@ set(yabause_gtk_SOURCES
 
 link_directories(..)
 add_executable(yabause-gtk ${yabause_gtk_SOURCES})
-target_link_libraries(yabause-gtk libyabause.a ${YABAUSE_LIBRARIES} ${PORT_LIBRARIES})
+target_link_libraries(yabause-gtk yabause ${YABAUSE_LIBRARIES} ${PORT_LIBRARIES})
 
 yab_port_success(yabause-gtk)
 configure_file(yabause.desktop.in ${YAB_PORT_NAME}.desktop)

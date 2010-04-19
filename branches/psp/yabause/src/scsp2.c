@@ -90,12 +90,8 @@
 #define SCSP_OUTPUT_FREQ        (SCSP_CLOCK_FREQ / 256)
 
 // SCSP clock increment per 1/10 scanline
-// Note 1: NTSC refresh rate is actually 60/1.001 = 59.94, but Yabause
-//         currently uses plain 60
-// Note 2: There are actually 262.5 lines per NTSC frame (and 312.5 per
-//         PAL frame), but the Yabause main loop runs 263/313 full lines
-#define SCSP_CLOCK_INC_NTSC     (((u64)SCSP_CLOCK_FREQ<<16) / 60 / 263 / 10)
-#define SCSP_CLOCK_INC_PAL      (((u64)SCSP_CLOCK_FREQ<<16) / 50 / 313 / 10)
+#define SCSP_CLOCK_INC_NTSC     (((u64)SCSP_CLOCK_FREQ<<20) * 1001 / 60000 / 263 / 10)
+#define SCSP_CLOCK_INC_PAL      (((u64)SCSP_CLOCK_FREQ<<20) / 50 / 313 / 10)
 
 // Limit on execution time for a single thread loop (in SCSP clock cycles);
 // if the thread's delay exceeds this value, we stop in the main loop to
@@ -429,7 +425,7 @@ static s32 scsp_tl_table[256];
 
 //-------- Data written by main thread only --------//
 
-// Cached fraction of a clock cycle (16.16 fixed point)
+// Cached fraction of a clock cycle (12.20 fixed point)
 static u32 scsp_clock_frac;
 // scsp_clock_frac increment per ScspExec(1) call
 static u32 scsp_clock_inc;
@@ -1090,8 +1086,8 @@ void ScspDeInit(void)
 void ScspExec(int decilines)
 {
    scsp_clock_frac += scsp_clock_inc * decilines;
-   scsp_clock_target += scsp_clock_frac >> 16;
-   scsp_clock_frac &= 0xFFFF;
+   scsp_clock_target += scsp_clock_frac >> 20;
+   scsp_clock_frac &= 0xFFFFF;
 
    if (scsp_thread_running)
    {

@@ -102,8 +102,9 @@ void print_usage(const char *program_name) {
 void YabauseChangeTiming(int freqtype) {
    // Setup all the variables related to timing
 
-   const u32 freq = (freqtype == CLKTYPE_26MHZ) ? 26846587 : 28636360;
-   const double freq_shifted = ((double) freq) * (1 << YABSYS_TIMING_BITS);
+   const double freq_base = 39375000.0 / 11.0;  // i.e. 3.57954545... MHz
+   const double freq_mult = (freqtype == CLKTYPE_26MHZ) ? 7.5 : 8.0;
+   const double freq_shifted = freq_base * freq_mult * (1 << YABSYS_TIMING_BITS);
    const double usec_shifted = 1.0e6 * (1 << YABSYS_TIMING_BITS);
    const double deciline_time = yabsys.IsPal ? 1.0 /  50        / 313 / 10
                                              : 1.0 / (60/1.001) / 263 / 10;

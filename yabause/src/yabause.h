@@ -72,6 +72,9 @@ void YabauseSetVideoFormat(int type);
 void YabauseSpeedySetup(void);
 int YabauseQuickLoadGame(void);
 
+#define YABSYS_TIMING_BITS  20
+#define YABSYS_TIMING_MASK  ((1 << YABSYS_TIMING_BITS) - 1)
+
 typedef struct
 {
    int DecilineMode;
@@ -79,9 +82,10 @@ typedef struct
    int LineCount;
    int VBlankLineCount;
    int MaxLineCount;
-   int DecilineStop;
-   u32 Duf;
-   u32 CycleCountII;
+   u32 DecilineStop;  // Fixed point
+   u32 SH2CycleFrac;  // Fixed point
+   u32 DecilineUsec;  // Fixed point
+   u32 UsecFrac;      // Fixed point
    int CurSH2FreqType;
    int IsPal;
    u8 UseThreads;

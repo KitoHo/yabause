@@ -45,6 +45,14 @@
 
 #undef ScspInit  // Disable compatibility alias
 
+// Macro for returning the uncached version of an address on PSP (does
+// nothing on other platforms):
+#ifdef PSP
+# define PSP_UNCACHED(ptr) ((typeof(ptr))((uint32_t)(ptr) | 0x40000000)
+#else
+# define PSP_UNCACHED(ptr) (ptr)
+#endif
+
 ///////////////////////////////////////////////////////////////////////////
 
 // This SCSP implementation is designed to be runnable as an independent
@@ -55,7 +63,7 @@
 // is performed via ScspThread().  This function is started as a subthread
 // (YAB_THREAD_SCSP), and loops over ScspDoExec() until scsp_thread_running
 // goes to zero, which is used as a signal for the thread to stop.
-// Synchronization is performed via the scsp.clock_target field; the SCSP
+// Synchronization is performed via the scsp_clock_target variable; the SCSP
 // thread will spin until clock_target != clock, then call ScspDoExec() for
 // (clock - clock_target) cycles.
 //
@@ -166,11 +174,14 @@
 // Reserve 10x the maximum samples per frame
 #define SCSP_SOUND_BUFSIZE      (10 * SCSP_SOUND_LEN_PAL)
 
+// CDDA data buffer size in sectors (must be at least 3)
+#define CDDA_NUM_BUFFERS        3
+
 // CDDA playback start delay in samples (see cdda_delay comments)
 #define CDDA_DELAY_SAMPLES      100
 
 //-------------------------------------------------------------------------
-// Internal state data
+// Internal state data structures
 
 // Per-slot data structure
 
@@ -377,10 +388,6 @@ typedef struct ScspState_struct {
 
    SlotState slot[32];  // Data for each slot
 
-   volatile u32  clock;          // Core 11.2896MHz clock (continually counts up)
-   volatile u32  clock_target;   // Execution target (execute until clock == target)
-   u32  clock_frac;     // Cached fraction of a clock cycle (16.16 fixed point)
-   u32  clock_inc;      // clock_frac increment per ScspExec(1) call
    u32  sample_timer;   // Sample output timer (in SCSP clocks, 256 = 1 sample)
 
    u32  sound_ram_mask; // Sound RAM address mask (tracks mem4mb)
@@ -396,61 +403,6 @@ typedef struct ScspState_struct {
 // Exported data
 
 u8 *SoundRam;
-
-//-------------------------------------------------------------------------
-// Local data
-
-// Current SCSP state
-static ScspState scsp;
-
-// Selected sound output module
-static SoundInterface_struct *SNDCore;
-
-// Main CPU (SCU) interrupt function pointer
-static void (*scsp_interrupt_handler)(void);
-
-// Flag: Is a subthread currently running?  (Also used to signal the
-// subthread to stop.)
-static u8 scsp_thread_running;
-
-// Buffer for external (SH-2) SCSP writes
-static volatile u8 scsp_write_buffer_size;  // 0 = nothing buffered
-static volatile u16 scsp_write_buffer_address;
-static volatile u32 scsp_write_buffer_data;
-
-// Flag: Generate sound with frame-accurate timing?
-static u8 scsp_frame_accurate;
-
-// PCM output buffers and related data
-static s32 scsp_buffer_L[SCSP_SOUND_BUFSIZE];
-static s32 scsp_buffer_R[SCSP_SOUND_BUFSIZE];
-static u32 scsp_sound_genpos;     // Offset of next sample to generate
-static u32 scsp_sound_left;       // Samples not yet sent to host driver
-
-// Parameters for audio data generation (these are file-scope to reduce
-// parameter passing overhead)
-static s32 *scsp_bufL;            // Base pointer for left channel
-static s32 *scsp_bufR;            // Base pointer for right channel
-
-// CDDA input buffer (2 sectors' worth)
-static union {
-   u8 sectors[2][2352];
-   u8 data[2*2352];
-} cdda_buf;
-static unsigned int cdda_next_in;  // Next sector buffer to receive into (0/1)
-static u32 cdda_out_left;          // Bytes of CDDA left to output
-
-// CDDA playback delay in samples (used to avoid audio popping when the
-// SCSP emulation gets a few samples ahead of the CDDA input)
-static u32 cdda_delay;
-
-// M68K-related data
-static s32 FASTCALL (*m68k_execf)(s32 cycles);  // M68K->Exec or M68KExecBP
-static s32 m68k_saved_cycles;      // Requested minus actual cycles executed
-static M68KBreakpointInfo m68k_breakpoint[M68K_MAX_BREAKPOINTS];
-static int m68k_num_breakpoints;
-static void (*M68KBreakpointCallback)(u32);
-static int m68k_in_breakpoint;
 
 //-------------------------------------------------------------------------
 // Lookup tables
@@ -471,6 +423,77 @@ static s32 scsp_decay_rate[62+16];
 
 // Table of volume multipliers for TL (total level) register
 static s32 scsp_tl_table[256];
+
+//-------------------------------------------------------------------------
+// Other local data
+
+//-------- Data written by main thread only --------//
+
+// Cached fraction of a clock cycle (16.16 fixed point)
+static u32 scsp_clock_frac;
+// scsp_clock_frac increment per ScspExec(1) call
+static u32 scsp_clock_inc;
+
+// Selected sound output module
+static SoundInterface_struct *SNDCore;
+
+// Main CPU (SCU) interrupt function pointer
+static void (*scsp_interrupt_handler)(void);
+
+// Flag: Generate sound with frame-accurate timing?
+static u8 scsp_frame_accurate;
+
+//-------- Data used for inter-thread communication --------//
+
+// Core 11.2896MHz clock (continually counts up)
+static volatile u32 scsp_clock;
+// Target clock value for execution (execute until clock == clock_target)
+static volatile u32 scsp_clock_target;
+
+// Flag: Is a subthread currently running?  (Also used to signal the
+// subthread to stop.)
+static volatile u8 scsp_thread_running;
+
+// Buffer for external (SH-2) SCSP writes
+static volatile u8 scsp_write_buffer_size;  // 0 = nothing buffered
+static volatile u16 scsp_write_buffer_address;
+static volatile u32 scsp_write_buffer_data;
+
+// CDDA input buffer and read/write pointers
+static union {
+   u8 sectors[CDDA_NUM_BUFFERS][2352];
+   u8 data[CDDA_NUM_BUFFERS*2352];
+} cdda_buf;
+static volatile u32 cdda_next_in;  // Offset of next sector to store
+static volatile u32 cdda_next_out; // Offset of next byte to read out
+
+//--- Data written by SCSP thread only (except when thread is stopped) ---//
+
+// Current SCSP state
+static ScspState scsp;
+
+// PCM output buffers and related data
+static s32 scsp_buffer_L[SCSP_SOUND_BUFSIZE];
+static s32 scsp_buffer_R[SCSP_SOUND_BUFSIZE];
+static u32 scsp_sound_genpos;     // Offset of next sample to generate
+static u32 scsp_sound_left;       // Samples not yet sent to host driver
+
+// Parameters for audio data generation (these are file-scope to reduce
+// parameter passing overhead)
+static s32 *scsp_bufL;            // Base pointer for left channel
+static s32 *scsp_bufR;            // Base pointer for right channel
+
+// CDDA playback delay in samples (used to avoid audio popping when the
+// SCSP emulation gets a few samples ahead of the CDDA input)
+static u32 cdda_delay;
+
+// M68K-related data
+static s32 FASTCALL (*m68k_execf)(s32 cycles);  // M68K->Exec or M68KExecBP
+static s32 m68k_saved_cycles;      // Requested minus actual cycles executed
+static M68KBreakpointInfo m68k_breakpoint[M68K_MAX_BREAKPOINTS];
+static int m68k_num_breakpoints;
+static void (*M68KBreakpointCallback)(u32);
+static int m68k_in_breakpoint;
 
 //-------------------------------------------------------------------------
 // Local function declarations
@@ -803,7 +826,7 @@ int ScspInit(int coreid, void (*interrupt_handler)(void))
    // Initialize the SCSP state
 
    scsp_interrupt_handler = interrupt_handler;
-   scsp.clock_inc = yabsys.IsPal ? SCSP_CLOCK_INC_PAL : SCSP_CLOCK_INC_NTSC;
+   scsp_clock_inc = yabsys.IsPal ? SCSP_CLOCK_INC_PAL : SCSP_CLOCK_INC_NTSC;
 
    ScspReset();
 
@@ -864,7 +887,7 @@ void ScspReset(void)
 
    if (scsp_thread_running)
    {
-      while (scsp.clock != scsp.clock_target)
+      while (scsp_clock != scsp_clock_target)
          YabThreadYield();
    }
 
@@ -923,12 +946,12 @@ void ScspReset(void)
    }
 
    scsp.sound_ram_mask = 0x3FFFF;
-   scsp.clock = 0;
-   scsp.clock_target = 0;
+   scsp_clock = 0;
+   scsp_clock_target = 0;
    scsp.sample_timer = 0;
 
    cdda_next_in = 0;
-   cdda_out_left = 0;
+   cdda_next_out = 0;
    cdda_delay = CDDA_DELAY_SAMPLES;
 }
 
@@ -989,7 +1012,7 @@ int ScspChangeSoundCore(int coreid)
 
 int ScspChangeVideoFormat(int type)
 {
-   scsp.clock_inc = yabsys.IsPal ? SCSP_CLOCK_INC_PAL : SCSP_CLOCK_INC_NTSC;
+   scsp_clock_inc = yabsys.IsPal ? SCSP_CLOCK_INC_PAL : SCSP_CLOCK_INC_NTSC;
 
    SNDCore->ChangeVideoFormat(type ? 50 : 60);
 
@@ -1066,17 +1089,17 @@ void ScspDeInit(void)
 
 void ScspExec(int decilines)
 {
-   scsp.clock_frac += scsp.clock_inc * decilines;
-   scsp.clock_target += scsp.clock_frac >> 16;
-   scsp.clock_frac &= 0xFFFF;
+   scsp_clock_frac += scsp_clock_inc * decilines;
+   scsp_clock_target += scsp_clock_frac >> 16;
+   scsp_clock_frac &= 0xFFFF;
 
    if (scsp_thread_running)
    {
-      while (scsp.clock_target - scsp.clock > SCSP_CLOCK_MAX_EXEC)
+      while (scsp_clock_target - scsp_clock > SCSP_CLOCK_MAX_EXEC)
          YabThreadYield();
    }
    else
-      ScspDoExec(scsp.clock_target - scsp.clock);
+      ScspDoExec(scsp_clock_target - scsp_clock);
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1107,7 +1130,7 @@ static void ScspThread(void)
          scsp_write_buffer_size = 0;
       }
 
-      clock_cycles = scsp.clock_target - scsp.clock;
+      clock_cycles = scsp_clock_target - scsp_clock;
       if (clock_cycles > SCSP_CLOCK_MAX_EXEC)
          clock_cycles = SCSP_CLOCK_MAX_EXEC;
       if (clock_cycles > 0)
@@ -1132,7 +1155,7 @@ static void ScspDoExec(u32 cycles)
    u32 audio_free;
 
 
-   scsp.clock += cycles;
+   scsp_clock += cycles;
    scsp.sample_timer += cycles;
    sample_count = scsp.sample_timer >> 8;
    scsp.sample_timer &= 0xFF;
@@ -1242,7 +1265,7 @@ static void ScspGenerateAudio(s32 *bufL, s32 *bufR, u32 samples)
    for (slotnum = 0; slotnum < 32; slotnum++)
       ScspGenerateAudioForSlot(&scsp.slot[slotnum], samples);
 
-   if (cdda_out_left > 0)
+   if (cdda_next_out != cdda_next_in)
    {
       if (cdda_delay > 0)
       {
@@ -1263,7 +1286,7 @@ static void ScspGenerateAudio(s32 *bufL, s32 *bufR, u32 samples)
       // on the assumption that a bit of constant static is preferable
       // to audible dropouts.
    }
-   else  // cdda_out_left == 0
+   else  // cdda_next_out == cdda_next_in, so no data buffered
       cdda_delay = CDDA_DELAY_SAMPLES;
 }
 
@@ -1309,27 +1332,29 @@ static void ScspGenerateAudioForSlot(SlotState *slot, u32 samples)
 
 static void ScspGenerateAudioForCDDA(s32 *bufL, s32 *bufR, u32 samples)
 {
-   if (samples > cdda_out_left / 4)
-      samples = cdda_out_left / 4;
-
    // May need to wrap around the buffer, so use nested loops
    while (samples > 0)
    {
-      s32 temp = (cdda_next_in * 2352) - cdda_out_left;
-      s32 outpos = (temp < 0) ? temp + sizeof(cdda_buf.data) : temp;
-      const u8 *buf = &cdda_buf.data[outpos];
-      const u8 *top;
-      u32 this_len = samples;
-      if (this_len > (sizeof(cdda_buf.data) - outpos) / 4)
-         this_len = (sizeof(cdda_buf.data) - outpos) / 4;
+      const u32 next_out = cdda_next_out;  // Save volatile value locally
+      const s32 temp = (cdda_next_in * 2352) - next_out;
+      const s32 out_left = (temp < 0) ? sizeof(cdda_buf) - next_out : temp;
+      const u32 this_len = (samples > out_left/4) ? out_left/4 : samples;
+      const u8 *buf = &cdda_buf.data[next_out];
+      const u8 *top = buf + this_len*4;
 
-      for (top = buf + this_len*4; buf < top; buf += 4, bufL++, bufR++)
+      if (this_len == 0)
+         break;  // We ran out of buffered data
+
+      for (; buf < top; buf += 4, bufL++, bufR++)
       {
          *bufL += (s32)(s16)((buf[1] << 8) | buf[0]);
          *bufR += (s32)(s16)((buf[3] << 8) | buf[2]);
       }
 
-      cdda_out_left -= this_len * 4;
+      if (next_out + this_len*4 >= sizeof(cdda_buf))
+         cdda_next_out = 0;
+      else
+         cdda_next_out = next_out + this_len*4;
       samples -= this_len;
    }
 }
@@ -1511,15 +1536,21 @@ void FASTCALL ScspWriteLong(u32 address, u32 data)
 
 void ScspReceiveCDDA(const u8 *sector)
 {
-   memcpy(cdda_buf.sectors[cdda_next_in], sector, 2352);
-   cdda_next_in = (cdda_next_in + 1)
-                  % (sizeof(cdda_buf.sectors) / sizeof(cdda_buf.sectors[0]));
-   cdda_out_left += 2352;
-   if (cdda_out_left > sizeof(cdda_buf.data))
+   const u32 next_in = cdda_next_in;  // Save volatile value locally
+   const u32 next_next_in = 
+      (next_in + 1) % (sizeof(cdda_buf.sectors) / sizeof(cdda_buf.sectors[0]));
+
+   // Make sure we have room for the new sector first
+   const u32 next_out = cdda_next_out;
+   if (next_out > next_in * 2352 && next_out <= (next_in+1) * 2352)
    {
-      SCSPLOG("WARNING: CDDA buffer overrun\n");
-      cdda_out_left = sizeof(cdda_buf.data);
+      SCSPLOG("WARNING: CDDA buffer overflow, discarding sector\n");
+      return;
    }
+
+   // Copy uncached on the PSP so the ME will see the data
+   memcpy(PSP_UNCACHED(cdda_buf.sectors[next_in]), sector, 2352);
+   cdda_next_in = next_next_in;
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -1666,11 +1697,13 @@ int SoundLoadState(FILE *fp, int version, int size)
 
    // Read 68k registers first
    yread(&check, (void *)&yabsys.IsM68KRunning, 1, 1, fp);
-   for (i = 0; i < 8; i++) {
+   for (i = 0; i < 8; i++)
+   {
       yread(&check, (void *)&temp, 4, 1, fp);
       M68K->SetDReg(i, temp);
    }
-   for (i = 0; i < 8; i++) {
+   for (i = 0; i < 8; i++)
+   {
       yread(&check, (void *)&temp, 4, 1, fp);
       M68K->SetAReg(i, temp);
    }
@@ -2269,7 +2302,8 @@ static u8 FASTCALL ScspReadByteDirect(u32 address)
 
 static u16 FASTCALL ScspReadWordDirect(u32 address)
 {
-   switch (address) {
+   switch (address)
+   {
       case 0x404:  // MIDI in
          return ScspMidiIn();
       case 0x408:  // MSLC/CA
@@ -3136,7 +3170,8 @@ static void ScspRunM68K(u32 cycles)
 {
    PROFILE_START("68K");
 
-   if (LIKELY(yabsys.IsM68KRunning)) {
+   if (LIKELY(yabsys.IsM68KRunning))
+   {
       s32 new_cycles = m68k_saved_cycles + cycles;
       if (LIKELY(new_cycles > 0))
          new_cycles -= (*m68k_execf)(new_cycles);
@@ -3162,8 +3197,10 @@ static s32 FASTCALL M68KExecBP(s32 cycles)
    while (cycles_executed < cycles_to_exec)
    {
       // Make sure it isn't one of our breakpoints
-      for (i = 0; i < m68k_num_breakpoints; i++) {
-         if ((M68K->GetPC() == m68k_breakpoint[i].addr) && !m68k_in_breakpoint) {
+      for (i = 0; i < m68k_num_breakpoints; i++)
+      {
+         if ((M68K->GetPC() == m68k_breakpoint[i].addr) && !m68k_in_breakpoint)
+         {
             m68k_in_breakpoint = 1;
             if (M68KBreakpointCallback)
                M68KBreakpointCallback(m68k_breakpoint[i].addr);
@@ -3306,7 +3343,8 @@ int M68KDelCodeBreakpoint(u32 address)
             m68k_breakpoint[m68k_num_breakpoints-1].addr = 0xFFFFFFFF;
             m68k_num_breakpoints--;
 
-            if (m68k_num_breakpoints == 0) {
+            if (m68k_num_breakpoints == 0)
+            {
                // Last breakpoint deleted, so go back to the fast exec routine
                m68k_execf = M68K->Exec;
             }

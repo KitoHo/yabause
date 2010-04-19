@@ -24,7 +24,7 @@ yabause_elf_SOURCES = config.c control.c display.c filesel.c font.c gu.c \
                       rtl.c rtl-mips.c rtlexec.c rtlinsn.c rtlopt.c rtlunit.c \
                       satopt-sh2.c \
                       sh2.c sh2-interpret.c sh2-opcodeinfo.c sh2-optimize.c \
-                      sys.c texcache.c yui.c \
+                      sys.c texcache.c threads.c yui.c \
                       me-utility.c \
                       \
                       common.h config.h control.h display.h filesel.h font.h \

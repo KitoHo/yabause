@@ -40,10 +40,11 @@ typedef struct
    const char *mpegpath;
    const char *cartpath;
    const char *netlinksetting;
-   int flags;
+   int videoformattype;
    int frameskip;
    int clocksync;  // 1 = sync internal clock to emulation, 0 = realtime clock
    u32 basetime;   // Initial time in clocksync mode (0 = start w/ system time)
+   int usethreads;
 } yabauseinit_struct;
 
 #define CLKTYPE_26MHZ           0
@@ -83,6 +84,7 @@ typedef struct
    u32 CycleCountII;
    int CurSH2FreqType;
    int IsPal;
+   u8 UseThreads;
    u8 IsSSH2Running;
    u8 IsM68KRunning;
    u64 OneFrameTime;

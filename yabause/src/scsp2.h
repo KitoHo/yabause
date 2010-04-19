@@ -54,20 +54,6 @@ extern SoundInterface_struct *SNDCoreList[];  // Defined by each port
 
 ///////////////////////////////////////////////////////////////////////////
 
-// Threading modes for ScspSetThreadMode()
-typedef enum {
-   // No threading; handle SH-2 SCSP accesses immediately (default mode)
-   SCSP_THREAD_NONE = 0,
-
-   // Pass all SH-2 SCSP accesses through an I/O buffer, including accesses
-   // with no side effects
-   SCSP_THREAD_STRICT = 1,
-
-   // Handle side effects of accesses within the SCSP emulation, but allow
-   // simple value reads and writes to access SCSP registers directly
-   SCSP_THREAD_FAST = 2,
-} ScspThreadMode;
-
 // Parameter block for M68K{Get,Set}Registers()
 typedef struct {
    u32 D[8];
@@ -95,13 +81,12 @@ extern void ScspReset(void);
 extern int ScspChangeSoundCore(int coreid);
 extern int ScspChangeVideoFormat(int type);
 extern void ScspSetFrameAccurate(int on);
-extern void ScspSetThreadMode(ScspThreadMode mode);
 extern void ScspMuteAudio(void);
 extern void ScspUnMuteAudio(void);
 extern void ScspSetVolume(int volume);
 extern void ScspDeInit(void);
 
-extern void ScspExec(void);
+extern void ScspExec(int decilines);
 
 extern u8 FASTCALL SoundRamReadByte(u32 address);
 extern u16 FASTCALL SoundRamReadWord(u32 address);
@@ -126,9 +111,7 @@ extern int ScspSlotDebugAudioSaveWav(u8 slotnum, const char *filename);
 extern void ScspConvert32uto16s(s32 *srcL, s32 *srcR, s16 *dest, u32 len);
 
 extern void M68KReset(void);
-extern void M68KExec(s32 cycles);
 extern void M68KStep(void);
-extern void M68KSync(void);
 extern void M68KWriteNotify(u32 address, u32 size);
 extern void M68KGetRegisters(M68KRegs *regs);
 extern void M68KSetRegisters(const M68KRegs *regs);

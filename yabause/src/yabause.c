@@ -133,7 +133,10 @@ void YabauseChangeTiming(int freqtype) {
 //////////////////////////////////////////////////////////////////////////////
 
 int YabauseInit(yabauseinit_struct *init)
-{     
+{
+   // Need to set this first, so init routines see it
+   yabsys.UseThreads = init->usethreads;
+
    // Initialize both cpu's
    if (SH2Init(init->sh2coretype) != 0)
    {
@@ -229,7 +232,7 @@ int YabauseInit(yabauseinit_struct *init)
 
    MappedMemoryInit();
 
-   YabauseSetVideoFormat(init->flags & 0x1);
+   YabauseSetVideoFormat(init->videoformattype);
    YabauseChangeTiming(CLKTYPE_26MHZ);
    yabsys.DecilineMode = 1;
 
@@ -397,6 +400,7 @@ int YabauseEmulate(void) {
 
    const unsigned int sh2cycles =
       yabsys.DecilineMode ? yabsys.DecilineStop : yabsys.DecilineStop * 10;
+#ifndef USE_SCSP2
    unsigned int m68kcycles;       // Integral M68k cycles per call
    unsigned int m68kcenticycles;  // 1/100 M68k cycles per call
    if (yabsys.IsPal)
@@ -411,6 +415,7 @@ int YabauseEmulate(void) {
       m68kcycles = yabsys.DecilineMode ? 71 : 716;
       m68kcenticycles = yabsys.DecilineMode ? 68 : 80;
    }
+#endif
 
    int oneframeexec = 0;
 
@@ -430,6 +435,12 @@ int YabauseEmulate(void) {
          if (yabsys.IsSSH2Running)
             SH2Exec(SSH2, sh2cycles);
          PROFILE_STOP("SSH2");
+
+#ifdef USE_SCSP2
+         PROFILE_START("SCSP");
+         ScspExec(1);
+         PROFILE_STOP("SCSP");
+#endif
 
          yabsys.DecilineCount++;
          if(yabsys.DecilineCount == 9)
@@ -462,11 +473,19 @@ int YabauseEmulate(void) {
             SH2Exec(SSH2, yabsys.DecilineStop);
          PROFILE_STOP("SSH2");
 
+#ifdef USE_SCSP2
+         PROFILE_START("SCSP");
+         ScspExec(10);
+         PROFILE_STOP("SCSP");
+#endif
+
       }  // if (yabsys.DecilineMode)
 
+#ifndef USE_SCSP2
       PROFILE_START("68K");
       M68KSync();  // Wait for the previous iteration to finish
       PROFILE_STOP("68K");
+#endif
 
       PROFILE_START("SCU");
       ScuExec(sh2cycles / 2);
@@ -478,9 +497,11 @@ int YabauseEmulate(void) {
          PROFILE_START("hblankout");
          Vdp2HBlankOUT();
          PROFILE_STOP("hblankout");
+#ifndef USE_SCSP2
          PROFILE_START("SCSP");
          ScspExec();
          PROFILE_STOP("SCSP");
+#endif
          yabsys.DecilineCount = 0;
          yabsys.LineCount++;
          if (yabsys.LineCount == yabsys.VBlankLineCount)
@@ -523,6 +544,7 @@ int YabauseEmulate(void) {
          }
       }
 
+#ifndef USE_SCSP2
       {
 	 static int saved_centicycles;
          int cycles;
@@ -537,11 +559,15 @@ int YabauseEmulate(void) {
          M68KExec(cycles);
          PROFILE_STOP("68K");
       }
+#endif
 
       PROFILE_STOP("Total Emulation");
    }
 
+#ifndef USE_SCSP2
    M68KSync();
+#endif
+
    return 0;
 }
 

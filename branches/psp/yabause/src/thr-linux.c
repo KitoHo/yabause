@@ -21,8 +21,10 @@
 #include "core.h"
 #include "threads.h"
 
-#include <pthread.h>
 #include <errno.h>
+#include <pthread.h>
+#include <signal.h>
+#include <unistd.h>
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -31,8 +33,19 @@ static pthread_t thread_handle[YAB_NUM_THREADS];
 
 //////////////////////////////////////////////////////////////////////////////
 
+static void dummy_sighandler(int signum_unused) {}  // For thread sleep/wake
+
 int YabThreadStart(unsigned int id, void (*func)(void))
 {
+   // Set up a dummy signal handler for SIGUSR1 so we can return from pause()
+   // in YabThreadSleep()
+   static const struct sigaction sa = {.sa_handler = dummy_sighandler};
+   if (sigaction(SIGUSR1, &sa, NULL) != 0)
+   {
+      perror("sigaction(SIGUSR1)");
+      return -1;
+   }
+
    if (thread_handle[id])
    {
       fprintf(stderr, "YabThreadStart: thread %u is already started!\n", id);
@@ -65,6 +78,23 @@ void YabThreadWait(unsigned int id)
 void YabThreadYield(void)
 {
    sched_yield();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void YabThreadSleep(void)
+{
+   pause();
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void YabThreadWake(unsigned int id)
+{
+   if (!thread_handle[id])
+      return;  // Thread isn't running
+
+   pthread_kill(thread_handle[id], SIGUSR1);
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -51,6 +51,12 @@ void YabThreadWait(unsigned int id);
 // YabThreadYield:  Yield CPU execution to another thread.
 void YabThreadYield(void);
 
+// YabThreadSleep:  Put the current thread to sleep.
+void YabThreadSleep(void);
+
+// YabThreadWake:  Wake up the given thread if it is asleep.
+void YabThreadWake(unsigned int id);
+
 ///////////////////////////////////////////////////////////////////////////
 
 #endif  // THREADS_H

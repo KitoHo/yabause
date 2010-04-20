@@ -19,6 +19,9 @@
 */
 
 #include "common.h"
+#include "config.h"
+#include "me.h"
+#include "me-utility.h"
 #include "sys.h"
 
 #include "../threads.h"
@@ -33,15 +36,16 @@ static struct {
     uint32_t stack_size;
 } thread_data[YAB_NUM_THREADS] = {
     [YAB_THREAD_SCSP] = {.name = "YabauseScspThread",
-			 .priority = THREADPRI_MAIN,
-			 .stack_size = 16384},  // FIXME: could be smaller?
+                         .priority = THREADPRI_MAIN,
+                         .stack_size = 16384},  // FIXME: could be smaller?
 };
 
 /*************************************************************************/
 /************************** Interface routines ***************************/
 /*************************************************************************/
 
-/* YabThreadStart:  Start a new thread for the given function.  Only one
+/**
+ * YabThreadStart:  Start a new thread for the given function.  Only one
  * thread will be started for each thread ID (YAB_THREAD_*).
  *
  * [Parameters]
@@ -53,26 +57,51 @@ static struct {
 int YabThreadStart(unsigned int id, void (*func)(void))
 {
     if (thread_data[id].handle) {
-	fprintf(stderr, "YabThreadStart: thread %u is already started!\n", id);
-	return -1;
+        fprintf(stderr, "YabThreadStart: thread %u is already started!\n", id);
+        return -1;
     }
 
-    int32_t res = sys_start_thread(thread_data[id].name, func,
-				   thread_data[id].priority,
-				   thread_data[id].stack_size, 0, NULL);
-    if (res < 0) {
-	DMSG("Failed to start thread %d (%s): %s", id, thread_data[id].name,
-	     psp_strerror(res));
-	return -1;
+    if (id == YAB_THREAD_SCSP) {  // We run the SCSP on the ME
+        if (!me_available || !config_get_use_me()) {
+            DMSG("ME not available or disabled by user");
+            return -1;
+        }
+        sceKernelDcacheWritebackAll();
+#ifdef PSP_DEBUG
+        meExceptionSetFatal(1);
+#endif
+        int32_t res;
+        if ((res = meStart()) < 0) {
+            DMSG("meStart(): %s", psp_strerror(res));
+            return -1;
+        } else if ((res = meWait()) < 0) {
+            DMSG("meWait(): %s", psp_strerror(res));
+            return -1;
+        } else if ((res = meCall((void *)func, NULL)) < 0) {
+            DMSG("Failed to start thread %d (%s) on ME: %s",
+                 id, thread_data[id].name, psp_strerror(res));
+            return -1;
+        }
+        thread_data[id].handle = 1;  // Anything nonzero will do
+    } else {
+        int32_t res = sys_start_thread(thread_data[id].name, func,
+                                       thread_data[id].priority,
+                                       thread_data[id].stack_size, 0, NULL);
+        if (res < 0) {
+            DMSG("Failed to start thread %d (%s): %s",
+                 id, thread_data[id].name, psp_strerror(res));
+            return -1;
+        }
+        thread_data[id].handle = res;
     }
 
-    thread_data[id].handle = res;
     return 0;
 }
 
 /*************************************************************************/
 
-/* YabThreadWait:  Wait for the given ID's thread to terminate.  Returns
+/**
+ * YabThreadWait:  Wait for the given ID's thread to terminate.  Returns
  * immediately if no thread has been started on the given ID.
  *
  * [Parameters]
@@ -83,15 +112,23 @@ int YabThreadStart(unsigned int id, void (*func)(void))
 void YabThreadWait(unsigned int id)
 {
     if (!thread_data[id].handle) {
-	return;  // Thread wasn't running in the first place
+        return;  // Thread wasn't running in the first place
     }
 
-    int32_t res;
-    if ((res = sceKernelWaitThreadEnd(thread_data[id].handle, NULL)) < 0) {
-	DMSG("WaitThreadEnd(%d): %s", id, psp_strerror(res));
-    }
-    if ((res = sceKernelDeleteThread(thread_data[id].handle)) < 0) {
-	DMSG("DeleteThread(%d): %s", id, psp_strerror(res));
+    if (id == YAB_THREAD_SCSP) {
+        sceKernelDcacheWritebackInvalidateAll();
+        int32_t res;
+        if ((res = meWait()) < 0) {
+            DMSG("meWait(): %s", psp_strerror(res));
+        }
+    } else {
+        int32_t res;
+        if ((res = sceKernelWaitThreadEnd(thread_data[id].handle, NULL)) < 0) {
+            DMSG("WaitThreadEnd(%d): %s", id, psp_strerror(res));
+        }
+        if ((res = sceKernelDeleteThread(thread_data[id].handle)) < 0) {
+            DMSG("DeleteThread(%d): %s", id, psp_strerror(res));
+        }
     }
 
     thread_data[id].handle = 0;
@@ -99,7 +136,8 @@ void YabThreadWait(unsigned int id)
 
 /*************************************************************************/
 
-/* YabThreadYield:  Yield CPU execution to another thread.
+/**
+ * YabThreadYield:  Yield CPU execution to another thread.
  *
  * [Parameters]
  *     None
@@ -108,7 +146,52 @@ void YabThreadWait(unsigned int id)
  */
 void YabThreadYield(void)
 {
-    sceKernelDelayThread(0);
+    if (meUtilityIsME()) {
+        /* On the ME, there's no other thread to yield to, but we do flush
+         * the cache to ensure the SC can see our updates. */
+        meUtilityDcacheWritebackInvalidateAll();
+    } else {
+        sceKernelDelayThread(0);
+    }
+}
+
+/*************************************************************************/
+
+/**
+ * YabThreadSleep:  Put the current thread to sleep.
+ *
+ * [Parameters]
+ *     None
+ * [Return value]
+ *     None
+ */
+void YabThreadSleep(void)
+{
+    if (meUtilityIsME()) {
+        /* Used in place of YabThreadYield() when the SCSP thread has
+         * nothing to do; there's no real point in sleeping on the ME, but
+         * flush the data cache as in Yield(). */
+        meUtilityDcacheWritebackInvalidateAll();
+    } else {
+        sceKernelSleepThread();
+    }
+}
+
+/*************************************************************************/
+
+/**
+ * YabThreadWake:  Wake up the given thread if it is asleep.
+ *
+ * [Parameters]
+ *     id: Yabause subthread ID (YAB_THREAD_*)
+ * [Return value]
+ *     None
+ */
+void YabThreadWake(unsigned int id)
+{
+    if (id != YAB_THREAD_SCSP && thread_data[id].handle) {
+        sceKernelWakeupThread(thread_data[id].handle);
+    }
 }
 
 /*************************************************************************/

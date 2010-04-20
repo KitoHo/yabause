@@ -30,13 +30,6 @@
 #include "threads.h"
 #include "yabause.h"
 
-#ifdef SYS_PROFILE_H
- #include SYS_PROFILE_H
-#else
- #define DONT_PROFILE
- #include "profile.h"
-#endif
-
 #include <math.h>
 #include <stdlib.h>
 
@@ -45,18 +38,10 @@
 
 #undef ScspInit  // Disable compatibility alias
 
-// Macro for returning the uncached version of an address on PSP (does
-// nothing on other platforms):
-#ifdef PSP
-# define PSP_UNCACHED(ptr) ((typeof(ptr))((uint32_t)(ptr) | 0x40000000)
-#else
-# define PSP_UNCACHED(ptr) (ptr)
-#endif
-
 ///////////////////////////////////////////////////////////////////////////
 
 // This SCSP implementation is designed to be runnable as an independent
-// thread, encompassing the SCSP emulation itself as well as the M68000
+// thread, encompassing the SCSP emulation itself as well as the MC68EC000
 // sound processor and the actual generation of PCM audio data.
 //
 // When running in multithreaded mode, the actual SCSP and M68K emulation
@@ -64,8 +49,10 @@
 // (YAB_THREAD_SCSP), and loops over ScspDoExec() until scsp_thread_running
 // goes to zero, which is used as a signal for the thread to stop.
 // Synchronization is performed via the scsp_clock_target variable; the SCSP
-// thread will spin until clock_target != clock, then call ScspDoExec() for
-// (clock - clock_target) cycles.
+// thread sleeps until clock_target != clock, then calls ScspDoExec() for
+// (clock - clock_target) cycles.  The main thread wakes up the subthread
+// both when clock_target is updated and when register writes, discussed
+// below, are submitted.
 //
 // Additionally, any register writes from outside the SCSP/M68K will be
 // processed synchronously in multithreaded mode, by passing the write
@@ -76,6 +63,54 @@
 // from the write operation.  (This will typically be no more expensive
 // than a pair of context switches, and it seems that SCSP register writes
 // from the SH-2 are uncommon.)
+//
+// The "PSP_*" macros scattered throughout the file are to support the
+// execution of the SCSP thread on the Media Engine CPU (ME) in the PSP.
+// The ME lacks cache coherence with the main CPU (SC), so special care
+// needs to be taken to avoid bugs arising from inconsistent cache states.
+// These macros are all no-ops on other platforms.
+
+//-------------------------------------------------------------------------
+// PSP cache management macros
+
+#ifdef PSP
+
+# include "psp/common.h"
+# include "psp/me.h"
+# include "psp/me-utility.h"
+
+// Data section management (to avoid cache line collisions between CPUs)
+# define PSP_SECTION(name) \
+   __attribute__((section(".meshared.scsp." #name)))
+# define PSP_SECTION_START(name) \
+   __attribute__((section(".meshared.scsp." #name), aligned(64))) \
+   extern volatile char __scsp_sectstart_##name[64];
+# define PSP_SECTION_END(name) \
+   __attribute__((section(".meshared.scsp." #name))) \
+   extern volatile char __scsp_sectend_##name;
+
+// Cache control
+# define PSP_WRITEBACK_CACHE(ptr,len) \
+   sceKernelDcacheWritebackRange((ptr), (len))
+# define PSP_WRITEBACK_ALL() \
+   sceKernelDcacheWritebackAll()
+# define PSP_FLUSH_ALL() \
+   sceKernelDcacheWritebackInvalidateAll()
+
+// Uncached variable access (either read or write)
+# define PSP_UC(var) (*((typeof(&var))((uint32_t)(&var) | 0x40000000)))
+
+#else  // !PSP
+
+# define PSP_SECTION(name)              /*nothing*/
+# define PSP_SECTION_START(name)        /*nothing*/
+# define PSP_SECTION_END(name)          /*nothing*/
+# define PSP_WRITEBACK_CACHE(ptr,len)   /*nothing*/
+# define PSP_WRITEBACK_ALL()            /*nothing*/
+# define PSP_FLUSH_ALL()                /*nothing*/
+# define PSP_UC(var)                    var
+
+#endif
 
 //-------------------------------------------------------------------------
 // SCSP constants
@@ -379,7 +414,6 @@ typedef struct ScspState_struct {
    ////////////
    // Internal state
 
-   u16  regcache[0x1000/2];  // Register value cache (for faster reads)
    s32  stack[32*2];    // 2 generations of sound output data ($600..$67E)
 
    SlotState slot[32];  // Data for each slot
@@ -441,27 +475,48 @@ static u8 scsp_frame_accurate;
 
 //-------- Data used for inter-thread communication --------//
 
+PSP_SECTION_START(sc_write)
+PSP_SECTION_START(me_write)
+
 // Core 11.2896MHz clock (continually counts up)
-static volatile u32 scsp_clock;
+PSP_SECTION(me_write)
+   static volatile u32 scsp_clock;
 // Target clock value for execution (execute until clock == clock_target)
-static volatile u32 scsp_clock_target;
+PSP_SECTION(sc_write)
+   static volatile u32 scsp_clock_target;
 
 // Flag: Is a subthread currently running?  (Also used to signal the
 // subthread to stop.)
-static volatile u8 scsp_thread_running;
+PSP_SECTION(sc_write)
+   static volatile u8 scsp_thread_running;
+
+// SCSP register value cache (caching handled separately)
+#ifdef PSP
+__attribute__((aligned(64)))
+#endif
+static u16 scsp_regcache[0x1000/2];
 
 // Buffer for external (SH-2) SCSP writes
-static volatile u8 scsp_write_buffer_size;  // 0 = nothing buffered
-static volatile u16 scsp_write_buffer_address;
-static volatile u32 scsp_write_buffer_data;
+PSP_SECTION(both_write)
+   static volatile u8 scsp_write_buffer_size;  // 0 = nothing buffered
+PSP_SECTION(sc_write)
+   static volatile u16 scsp_write_buffer_address;
+PSP_SECTION(sc_write)
+   static volatile u32 scsp_write_buffer_data;
 
 // CDDA input buffer and read/write pointers
+PSP_SECTION(sc_write)
 static union {
    u8 sectors[CDDA_NUM_BUFFERS][2352];
    u8 data[CDDA_NUM_BUFFERS*2352];
 } cdda_buf;
-static volatile u32 cdda_next_in;  // Offset of next sector to store
-static volatile u32 cdda_next_out; // Offset of next byte to read out
+PSP_SECTION(sc_write)
+   static volatile u32 cdda_next_in;  // Offset of next _sector_ to store
+PSP_SECTION(me_write)
+   static volatile u32 cdda_next_out; // Offset of next _byte_ to read out
+
+PSP_SECTION_END(sc_write)
+PSP_SECTION_END(me_write)
 
 //--- Data written by SCSP thread only (except when thread is stopped) ---//
 
@@ -826,6 +881,15 @@ int ScspInit(int coreid, void (*interrupt_handler)(void))
 
    ScspReset();
 
+   // Note that we NEVER reset the clock counter after initialization,
+   // because in multithreaded mode, that would cause a race condition in
+   // which the SCSP thread runs between the two assignments and detects
+   // clock != clock_target, causing it to execute a huge number of cycles.
+   // (We do, however, reset the accumulated fraction of a cycle inside
+   // ScspReset().)
+   scsp_clock = 0;
+   scsp_clock_target = 0;
+
    // Initialize the M68K state
 
    if (M68K->Init() != 0)
@@ -864,8 +928,12 @@ int ScspInit(int coreid, void (*interrupt_handler)(void))
    scsp_thread_running = 0;
    if (yabsys.UseThreads)
    {
-      if (YabThreadStart(YAB_THREAD_SCSP, ScspThread) == 0)
-         scsp_thread_running = 1;
+      scsp_thread_running = 1;
+      if (YabThreadStart(YAB_THREAD_SCSP, ScspThread) < 0)
+      {
+         SCSPLOG("Failed to start SCSP thread\n");
+         scsp_thread_running = 0;
+      }
    }
 
    // Successfully initialized!
@@ -883,8 +951,12 @@ void ScspReset(void)
 
    if (scsp_thread_running)
    {
-      while (scsp_clock != scsp_clock_target)
+      PSP_FLUSH_ALL();
+      while (PSP_UC(scsp_clock) != scsp_clock_target)
+      {
+         YabThreadWake(YAB_THREAD_SCSP);
          YabThreadYield();
+      }
    }
 
    scsp.mem4mb  = 0;
@@ -928,8 +1000,9 @@ void ScspReset(void)
    scsp.scieb   = 0;
    scsp.scipd   = 0;
 
-   memset(scsp.regcache, 0, sizeof(scsp.regcache));
-   scsp.regcache[0x400>>1] = SCSP_VERSION << 4;
+   memset(scsp_regcache, 0, sizeof(scsp_regcache));
+   scsp_regcache[0x400>>1] = SCSP_VERSION << 4;
+
    memset(scsp.stack, 0, sizeof(scsp.stack));
 
    for (slotnum = 0; slotnum < 32; slotnum++)
@@ -942,13 +1015,15 @@ void ScspReset(void)
    }
 
    scsp.sound_ram_mask = 0x3FFFF;
-   scsp_clock = 0;
-   scsp_clock_target = 0;
+   scsp_clock_frac = 0;
    scsp.sample_timer = 0;
 
    cdda_next_in = 0;
    cdda_next_out = 0;
    cdda_delay = CDDA_DELAY_SAMPLES;
+
+   if (scsp_thread_running)
+      PSP_WRITEBACK_ALL();
 }
 
 //-------------------------------------------------------------------------
@@ -1063,6 +1138,7 @@ void ScspDeInit(void)
    if (scsp_thread_running)
    {
       scsp_thread_running = 0;  // Tell the subthread to stop
+      YabThreadWake(YAB_THREAD_SCSP);
       YabThreadWait(YAB_THREAD_SCSP);
    }
 
@@ -1091,7 +1167,9 @@ void ScspExec(int decilines)
 
    if (scsp_thread_running)
    {
-      while (scsp_clock_target - scsp_clock > SCSP_CLOCK_MAX_EXEC)
+      PSP_WRITEBACK_ALL();
+      YabThreadWake(YAB_THREAD_SCSP);
+      while (scsp_clock_target - PSP_UC(scsp_clock) > SCSP_CLOCK_MAX_EXEC)
          YabThreadYield();
    }
    else
@@ -1107,10 +1185,10 @@ static void ScspThread(void)
 {
    while (scsp_thread_running)
    {
-      const u8 write_size = scsp_write_buffer_size;
+      const u8 write_size = PSP_UC(scsp_write_buffer_size);
       u32 clock_cycles;
 
-      if (write_size > 0)
+      if (write_size != 0)
       {
          const u32 address = scsp_write_buffer_address;
          const u32 data = scsp_write_buffer_data;
@@ -1123,16 +1201,19 @@ static void ScspThread(void)
             ScspWriteWordDirect(address, data >> 16);
             ScspWriteWordDirect(address+2, data & 0xFFFF);
          }
-         scsp_write_buffer_size = 0;
+         PSP_UC(scsp_write_buffer_size) = 0;
       }
 
       clock_cycles = scsp_clock_target - scsp_clock;
       if (clock_cycles > SCSP_CLOCK_MAX_EXEC)
          clock_cycles = SCSP_CLOCK_MAX_EXEC;
       if (clock_cycles > 0)
+      {
          ScspDoExec(clock_cycles);
-      else
          YabThreadYield();
+      }
+      else
+         YabThreadSleep();
    }
 }
 
@@ -1151,7 +1232,6 @@ static void ScspDoExec(u32 cycles)
    u32 audio_free;
 
 
-   scsp_clock += cycles;
    scsp.sample_timer += cycles;
    sample_count = scsp.sample_timer >> 8;
    scsp.sample_timer &= 0xFF;
@@ -1225,6 +1305,10 @@ static void ScspDoExec(u32 cycles)
 #endif
       }
    }  // if (scsp_frame_accurate)
+
+   // Update scsp_clock last, so the main thread can use it as a signal
+   // that we've finished processing to this point
+   scsp_clock += cycles;
 }
 
 //-------------------------------------------------------------------------
@@ -1261,7 +1345,7 @@ static void ScspGenerateAudio(s32 *bufL, s32 *bufR, u32 samples)
    for (slotnum = 0; slotnum < 32; slotnum++)
       ScspGenerateAudioForSlot(&scsp.slot[slotnum], samples);
 
-   if (cdda_next_out != cdda_next_in)
+   if (cdda_next_out != PSP_UC(cdda_next_in) * 2352)
    {
       if (cdda_delay > 0)
       {
@@ -1278,12 +1362,9 @@ static void ScspGenerateAudio(s32 *bufL, s32 *bufR, u32 samples)
       }
       if (cdda_delay == 0)
          ScspGenerateAudioForCDDA(bufL, bufR, samples);
-      // We intentionally don't reset cdda_delay on a buffer underrun,
-      // on the assumption that a bit of constant static is preferable
-      // to audible dropouts.
    }
-   else  // cdda_next_out == cdda_next_in, so no data buffered
-      cdda_delay = CDDA_DELAY_SAMPLES;
+   if (cdda_next_out == PSP_UC(cdda_next_in) * 2352)
+      cdda_delay = CDDA_DELAY_SAMPLES;  // No data buffered, so reset delay
 }
 
 //----------------------------------//
@@ -1332,7 +1413,7 @@ static void ScspGenerateAudioForCDDA(s32 *bufL, s32 *bufR, u32 samples)
    while (samples > 0)
    {
       const u32 next_out = cdda_next_out;  // Save volatile value locally
-      const s32 temp = (cdda_next_in * 2352) - next_out;
+      const s32 temp = (PSP_UC(cdda_next_in) * 2352) - next_out;
       const s32 out_left = (temp < 0) ? sizeof(cdda_buf) - next_out : temp;
       const u32 this_len = (samples > out_left/4) ? out_left/4 : samples;
       const u8 *buf = &cdda_buf.data[next_out];
@@ -1456,18 +1537,35 @@ void FASTCALL SoundRamWriteLong(u32 address, u32 data)
 
 u8 FASTCALL ScspReadByte(u32 address)
 {
-   return ScspReadByteDirect(address & 0xFFF);
+   const u16 data = ScspReadWord(address & ~1);
+   if (address & 1)
+      return data & 0xFF;
+   else
+      return data >> 8;
 }
 
 u16 FASTCALL ScspReadWord(u32 address)
 {
+#ifdef PSP  // Special handling for PSP cache management
+   switch (address)
+   {
+      case 0x404:  // MIDI in
+         return 0xFF;  // Not even supported, so don't bother trying
+      case 0x408:  // MSLC/CA
+         return scsp.mslc << 11
+              | ((scsp.slot[scsp.mslc].addr_counter
+                  >> (SCSP_FREQ_LOW_BITS + 12)) & 0xF) << 7;
+      default:
+         return PSP_UC(scsp_regcache[address >> 1]);
+   }
+#else
    return ScspReadWordDirect(address & 0xFFF);
+#endif
 }
 
 u32 FASTCALL ScspReadLong(u32 address)
 {
-   return (u32)ScspReadWordDirect(address & 0xFFF) << 16
-          | ScspReadWordDirect((address+2) & 0xFFF);
+   return (u32)ScspReadWord(address) << 16 | ScspReadWord(address+2);
 }
 
 //----------------------------------//
@@ -1476,13 +1574,14 @@ void FASTCALL ScspWriteByte(u32 address, u8 data)
 {
    if (scsp_thread_running)
    {
-      while (scsp_write_buffer_size)
-         YabThreadYield();
       scsp_write_buffer_address = address & 0xFFF;
       scsp_write_buffer_data = data;
       scsp_write_buffer_size = 1;
-      while (scsp_write_buffer_size)
+      while (PSP_UC(scsp_write_buffer_size) != 0)
+      {
+         YabThreadWake(YAB_THREAD_SCSP);
          YabThreadYield();
+      }
       return;
    }
 
@@ -1493,13 +1592,14 @@ void FASTCALL ScspWriteWord(u32 address, u16 data)
 {
    if (scsp_thread_running)
    {
-      while (scsp_write_buffer_size)
-         YabThreadYield();
       scsp_write_buffer_address = address & 0xFFF;
       scsp_write_buffer_data = data;
       scsp_write_buffer_size = 2;
-      while (scsp_write_buffer_size)
+      while (PSP_UC(scsp_write_buffer_size) != 0)
+      {
+         YabThreadWake(YAB_THREAD_SCSP);
          YabThreadYield();
+      }
       return;
    }
 
@@ -1510,13 +1610,14 @@ void FASTCALL ScspWriteLong(u32 address, u32 data)
 {
    if (scsp_thread_running)
    {
-      while (scsp_write_buffer_size)
-         YabThreadYield();
       scsp_write_buffer_address = address & 0xFFF;
       scsp_write_buffer_data = data;
       scsp_write_buffer_size = 4;
-      while (scsp_write_buffer_size)
+      while (PSP_UC(scsp_write_buffer_size) != 0)
+      {
+         YabThreadWake(YAB_THREAD_SCSP);
          YabThreadYield();
+      }
       return;
    }
 
@@ -1537,15 +1638,15 @@ void ScspReceiveCDDA(const u8 *sector)
       (next_in + 1) % (sizeof(cdda_buf.sectors) / sizeof(cdda_buf.sectors[0]));
 
    // Make sure we have room for the new sector first
-   const u32 next_out = cdda_next_out;
+   const u32 next_out = PSP_UC(cdda_next_out);
    if (next_out > next_in * 2352 && next_out <= (next_in+1) * 2352)
    {
       SCSPLOG("WARNING: CDDA buffer overflow, discarding sector\n");
       return;
    }
 
-   // Copy uncached on the PSP so the ME will see the data
-   memcpy(PSP_UNCACHED(cdda_buf.sectors[next_in]), sector, 2352);
+   memcpy(cdda_buf.sectors[next_in], sector, 2352);
+   PSP_WRITEBACK_CACHE(cdda_buf.sectors[next_in], 2352);
    cdda_next_in = next_next_in;
 }
 
@@ -1562,6 +1663,16 @@ int SoundSaveState(FILE *fp)
    u8 temp8;
    int offset;
    IOCheck_struct check;
+
+   if (scsp_thread_running)
+   {
+      PSP_FLUSH_ALL();
+      while (PSP_UC(scsp_clock) != scsp_clock_target)
+      {
+         YabThreadWake(YAB_THREAD_SCSP);
+         YabThreadYield();
+      }
+   }
 
    offset = StateWriteHeader(fp, "SCSP", 2);
 
@@ -1583,7 +1694,7 @@ int SoundSaveState(FILE *fp)
    ywrite(&check, (void *)&temp, 4, 1, fp);
 
    // Now for the SCSP registers
-   ywrite(&check, (void *)scsp.regcache, 0x1000, 1, fp);
+   ywrite(&check, (void *)scsp_regcache, 0x1000, 1, fp);
 
    // Sound RAM is important
    ywrite(&check, (void *)SoundRam, 0x80000, 1, fp);
@@ -1691,6 +1802,16 @@ int SoundLoadState(FILE *fp, int version, int size)
    u8 temp8;
    IOCheck_struct check;
 
+   if (scsp_thread_running)
+   {
+      PSP_FLUSH_ALL();
+      while (PSP_UC(scsp_clock) != scsp_clock_target)
+      {
+         YabThreadWake(YAB_THREAD_SCSP);
+         YabThreadYield();
+      }
+   }
+
    // Read 68k registers first
    yread(&check, (void *)&yabsys.IsM68KRunning, 1, 1, fp);
    for (i = 0; i < 8; i++)
@@ -1709,7 +1830,7 @@ int SoundLoadState(FILE *fp, int version, int size)
    M68K->SetPC(temp);
 
    // Now for the SCSP registers
-   yread(&check, (void *)scsp.regcache, 0x1000, 1, fp);
+   yread(&check, (void *)scsp_regcache, 0x1000, 1, fp);
 
    // And sound RAM
    yread(&check, (void *)SoundRam, 0x80000, 1, fp);
@@ -1718,7 +1839,7 @@ int SoundLoadState(FILE *fp, int version, int size)
    for (i = 0; i < 32; i++)
    {
       for (i2 = 0; i2 < 0x18; i2 += 2)
-         ScspWriteWordDirect(i<<5 | i2, scsp.regcache[(i<<5 | i2) >> 1]);
+         ScspWriteWordDirect(i<<5 | i2, scsp_regcache[(i<<5 | i2) >> 1]);
       // These are also called during writes, so they're not technically
       // necessary, but call them again anyway just to ensure everything's
       // up to date
@@ -1749,7 +1870,7 @@ int SoundLoadState(FILE *fp, int version, int size)
       yread(&check, (void *)&temp, 4, 1, fp);
       scsp.mem4mb = temp;
       // This one isn't saved in the state file (though it's not used anyway)
-      scsp.dac18b = (scsp.regcache[0x400>>1] >> 8) & 1;
+      scsp.dac18b = (scsp_regcache[0x400>>1] >> 8) & 1;
       yread(&check, (void *)&temp, 4, 1, fp);
       scsp.mvol = temp;
 
@@ -1811,6 +1932,9 @@ int SoundLoadState(FILE *fp, int version, int size)
 
       yread(&check, (void *)scsp.stack, 4, 32 * 2, fp);
    }
+
+   if (scsp_thread_running)
+      PSP_WRITEBACK_ALL();
 
    return size;
 }
@@ -2110,10 +2234,10 @@ int ScspSlotDebugSaveRegisters(u8 slotnum, const char *filename)
    for (i = (slotnum * 0x20); i < ((slotnum+1) * 0x20); i += 2)
    {
 #ifdef WORDS_BIGENDIAN
-      ywrite(&check, (void *)&scsp.regcache[i], 1, 2, fp);
+      ywrite(&check, (void *)&scsp_regcache[i], 1, 2, fp);
 #else
-      ywrite(&check, (void *)&scsp.regcache[i+1], 1, 1, fp);
-      ywrite(&check, (void *)&scsp.regcache[i], 1, 1, fp);
+      ywrite(&check, (void *)&scsp_regcache[i+1], 1, 1, fp);
+      ywrite(&check, (void *)&scsp_regcache[i], 1, 1, fp);
 #endif
    }
 
@@ -2303,11 +2427,11 @@ static u16 FASTCALL ScspReadWordDirect(u32 address)
       case 0x404:  // MIDI in
          return ScspMidiIn();
       case 0x408:  // MSLC/CA
-         return scsp.mslc   << 11
+         return scsp.mslc << 11
               | ((scsp.slot[scsp.mslc].addr_counter
-                  >> (SCSP_FREQ_LOW_BITS + 12)) & 0xF) <<  7;
+                  >> (SCSP_FREQ_LOW_BITS + 12)) & 0xF) << 7;
       default:
-         return scsp.regcache[address >> 1];
+         return PSP_UC(scsp_regcache[address >> 1]);
    }
 }
 
@@ -2367,9 +2491,9 @@ static void FASTCALL ScspWriteByteDirect(u32 address, u8 data)
                // 8 bits from the register cache
                u16 word_data;
                if (address & 1)
-                  word_data = (scsp.regcache[address >> 1] & 0xFF00) | data;
+                  word_data = (PSP_UC(scsp_regcache[address >> 1]) & 0xFF00) | data;
                else
-                  word_data = (scsp.regcache[address >> 1] & 0x00FF) | (data << 8);
+                  word_data = (PSP_UC(scsp_regcache[address >> 1]) & 0x00FF) | (data << 8);
                ScspWriteWordDirect(address & ~1, word_data);
                return;
             }
@@ -2473,13 +2597,13 @@ static void FASTCALL ScspWriteByteDirect(u32 address, u8 data)
 
    if (address & 1)
    {
-      scsp.regcache[address >> 1] &= 0xFF00;
-      scsp.regcache[address >> 1] |= data;
+      PSP_UC(scsp_regcache[address >> 1]) &= 0xFF00;
+      PSP_UC(scsp_regcache[address >> 1]) |= data;
    }
    else
    {
-      scsp.regcache[address >> 1] &= 0x00FF;
-      scsp.regcache[address >> 1] |= data << 8;
+      PSP_UC(scsp_regcache[address >> 1]) &= 0x00FF;
+      PSP_UC(scsp_regcache[address >> 1]) |= data << 8;
    }
 }
 
@@ -2892,7 +3016,7 @@ static void FASTCALL ScspWriteWordDirect(u32 address, u16 data)
          break;
    }
 
-   scsp.regcache[address >> 1] = data;
+   PSP_UC(scsp_regcache[address >> 1]) = data;
 }
 
 //-------------------------------------------------------------------------
@@ -3083,7 +3207,7 @@ static void ScspDoDMA(void)
 #endif  // FIXME/SCSP1: see above
 
    scsp.dexe = 0;
-   scsp.regcache[0x416>>1] &= ~(1<<12);
+   PSP_UC(scsp_regcache[0x416>>1]) &= ~(1<<12);
    ScspRaiseInterrupt(SCSP_INTERRUPT_DMA, SCSP_INTTARGET_BOTH);
 }
 
@@ -3098,7 +3222,7 @@ static void ScspRaiseInterrupt(int which, int target)
    if (target & SCSP_INTTARGET_MAIN)
    {
       scsp.mcipd |= 1 << which;
-      scsp.regcache[0x42C >> 1] = scsp.mcipd;
+      PSP_UC(scsp_regcache[0x42C >> 1]) = scsp.mcipd;
       if (scsp.mcieb & (1 << which))
          (*scsp_interrupt_handler)();
    }
@@ -3106,7 +3230,7 @@ static void ScspRaiseInterrupt(int which, int target)
    if (target & SCSP_INTTARGET_SOUND)
    {
       scsp.scipd |= 1 << which;
-      scsp.regcache[0x420 >> 1] = scsp.scipd;
+      PSP_UC(scsp_regcache[0x420 >> 1]) = scsp.scipd;
       if (scsp.scieb & (1 << which))
       {
          const int level_shift = (which > 7) ? 7 : which;
@@ -3148,13 +3272,13 @@ static void ScspClearInterrupts(u16 mask, int target)
    if (target & SCSP_INTTARGET_MAIN)
    {
       scsp.mcipd &= ~mask;
-      scsp.regcache[0x42C >> 1] = scsp.mcipd;
+      PSP_UC(scsp_regcache[0x42C >> 1]) = scsp.mcipd;
    }
 
    if (target & SCSP_INTTARGET_SOUND)
    {
       scsp.scipd &= ~mask;
-      scsp.regcache[0x420 >> 1] = scsp.scipd;
+      PSP_UC(scsp_regcache[0x420 >> 1]) = scsp.scipd;
    }
 }
 
@@ -3164,8 +3288,6 @@ static void ScspClearInterrupts(u16 mask, int target)
 
 static void ScspRunM68K(u32 cycles)
 {
-   PROFILE_START("68K");
-
    if (LIKELY(yabsys.IsM68KRunning))
    {
       s32 new_cycles = m68k_saved_cycles + cycles;
@@ -3173,8 +3295,6 @@ static void ScspRunM68K(u32 cycles)
          new_cycles -= (*m68k_execf)(new_cycles);
       m68k_saved_cycles = new_cycles;
    }
-
-   PROFILE_STOP("68K");
 }
 
 //----------------------------------//
@@ -3219,8 +3339,21 @@ static s32 FASTCALL M68KExecBP(s32 cycles)
 
 void M68KReset(void)
 {
+   if (scsp_thread_running)
+   {
+      PSP_FLUSH_ALL();
+      while (PSP_UC(scsp_clock) != scsp_clock_target)
+      {
+         YabThreadWake(YAB_THREAD_SCSP);
+         YabThreadYield();
+      }
+   }
+
    M68K->Reset();
    m68k_saved_cycles = 0;
+
+   if (scsp_thread_running)
+      PSP_WRITEBACK_ALL();
 }
 
 //-------------------------------------------------------------------------
@@ -3418,14 +3551,3 @@ void FASTCALL M68KWriteWord(u32 address, u32 data)
 }
 
 ///////////////////////////////////////////////////////////////////////////
-
-/*
- * Local variables:
- *   c-file-style: "stroustrup"
- *   c-basic-offset: 3
- *   c-file-offsets: ((case-label . +))
- *   indent-tabs-mode: nil
- * End:
- *
- * vim: expandtab shiftwidth=3:
- */

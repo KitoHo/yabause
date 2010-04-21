@@ -27,6 +27,7 @@ namespace Arguments
 	void fullscreen(const QString& param);
 	void help(const QString& param);
 	void iso(const QString& param);
+	void nobios(const QString& param);
 	void nosound(const QString& param);
 	void version(const QString& param);
 
@@ -53,7 +54,8 @@ namespace Arguments
 		{ "-f",  "--fullscreen", NULL,      "Start the emulator in fullscreen.",                  5, fullscreen },
 		{ "-h",  "--help", NULL,            "Show this help and exit.",                           0, help },
 		{ "-i",  "--iso=", "<ISO>",         "Choose a dump file.",                                4, iso },
-                { "-ns", "--nosound", NULL,         "Turns sound off.",                                   6, nosound },
+                { "-nb", "--no-bios", NULL,         "Use the emulated bios",                              3, nobios },
+                { "-ns", "--no-sound", NULL,        "Turns sound off.",                                   6, nosound },
 		{ "-v",  "--version", NULL,         "Show version and exit.",                             0, version },
 		LAST_OPTION
 	};
@@ -131,6 +133,8 @@ namespace Arguments
 
 	void bios(const QString& param)
 	{
+		VolatileSettings * vs = QtYabause::volatileSettings();
+		vs->setValue("General/Bios", param);
 	}
 
 	void cdrom(const QString& param)
@@ -139,6 +143,8 @@ namespace Arguments
 
 	void fullscreen(const QString& param)
 	{
+		VolatileSettings * vs = QtYabause::volatileSettings();
+		vs->setValue("Video/Fullscreen", true);
 	}
 
 	void help(const QString& param)
@@ -167,6 +173,12 @@ namespace Arguments
 
 	void iso(const QString& param)
 	{
+	}
+
+	void nobios(const QString& param)
+	{
+		VolatileSettings * vs = QtYabause::volatileSettings();
+		vs->setValue("General/Bios", "");
 	}
 
 	void nosound(const QString& param)

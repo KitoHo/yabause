@@ -178,6 +178,7 @@ void YabauseThread::reloadSettings()
 	//QMutexLocker l( &mMutex );
 	// get settings pointer
 	Settings* s = QtYabause::settings();
+	VolatileSettings* vs = QtYabause::volatileSettings();
 	
 	// reset yabause conf
 	resetYabauseConf();
@@ -207,7 +208,7 @@ void YabauseThread::reloadSettings()
 			case 'L': mYabauseConf.regionid = 0xD; break;
 		}
 	}
-	mYabauseConf.biospath = strdup( s->value( "General/Bios", mYabauseConf.biospath ).toString().toAscii().constData() );
+	mYabauseConf.biospath = strdup( vs->value( "General/Bios", mYabauseConf.biospath ).toString().toAscii().constData() );
 	mYabauseConf.cdpath = strdup( s->value( "General/CdRomISO", mYabauseConf.cdpath ).toString().toAscii().constData() );
 	mYabauseConf.buppath = strdup( s->value( "Memory/Path", mYabauseConf.buppath ).toString().toAscii().constData() );
 	mYabauseConf.mpegpath = strdup( s->value( "MpegROM/Path", mYabauseConf.mpegpath ).toString().toAscii().constData() );
@@ -215,7 +216,7 @@ void YabauseThread::reloadSettings()
 	mYabauseConf.flags = s->value( "Video/VideoFormat", mYabauseConf.flags ).toInt();
 	
 	emit requestSize( QSize( s->value( "Video/Width", 0 ).toInt(), s->value( "Video/Height", 0 ).toInt() ) );
-	emit requestFullscreen( s->value( "Video/Fullscreen", false ).toBool() );
+	emit requestFullscreen( vs->value( "Video/Fullscreen", false ).toBool() );
 
 	reloadControllers();
 }

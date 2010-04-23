@@ -8,9 +8,18 @@ set(yabause_SOURCES
 	m68kcore.c m68kd.c m68kq68.c memory.c movie.c
 	netlink.c
 	peripheral.c profile.c
-	scsp.c scu.c sh2core.c sh2d.c sh2idle.c sh2int.c sh2trace.c smpc.c
+	scu.c sh2core.c sh2d.c sh2idle.c sh2int.c sh2trace.c smpc.c snddummy.c
 	vdp1.c vdp2.c vdp2debug.c vidogl.c vidshared.c vidsoft.c
 	yabause.c ygl.c)
+
+# new SCSP
+option(YAB_USE_SCSP2 "Use the new SCSP implementation.")
+if (YAB_USE_SCSP2)
+	add_definitions(-DUSE_SCSP2=1)
+	set(yabause_SOURCES ${yabause_SOURCES} scsp2.c)
+else()
+	set(yabause_SOURCES ${yabause_SOURCES} scsp.c)
+endif()
 
 # Bigendian
 include(TestBigEndian)
@@ -191,16 +200,22 @@ endforeach(DEBUG)
 # Yabause Arch
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	add_definitions(-DARCH_IS_MACOSX=1)
+	set(yabause_SOURCES ${yabause_SOURCES} thr-dummy.c)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
 	add_definitions(-DARCH_IS_FREEBSD=1)
+	set(yabause_SOURCES ${yabause_SOURCES} thr-dummy.c)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	add_definitions(-DARCH_IS_LINUX=1)
+	set(yabause_SOURCES ${yabause_SOURCES} thr-linux.c)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "NetBSD")
 	add_definitions(-DARCH_IS_NETBSD=1)
+	set(yabause_SOURCES ${yabause_SOURCES} thr-dummy.c)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	add_definitions(-DARCH_IS_Windows=1)
+	set(yabause_SOURCES ${yabause_SOURCES} thr-dummy.c)
 else (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	add_definitions(-DUNKNOWN_ARCH=1)
+	set(yabause_SOURCES ${yabause_SOURCES} thr-dummy.c)
 endif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
 set(YAB_VERSION "${YAB_VERSION_MAJOR}.${YAB_VERSION_MINOR}.${YAB_VERSION_PATCH}")

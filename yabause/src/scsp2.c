@@ -79,6 +79,7 @@
 # include "psp/common.h"
 # include "psp/me.h"
 # include "psp/me-utility.h"
+# include "psp/misc.h"  // psp_writeback_cache_for_scsp() declaration
 
 // Data section management (to avoid cache line collisions between CPUs)
 # define PSP_SECTION(name) \
@@ -1175,7 +1176,9 @@ void ScspExec(int decilines)
 
    if (scsp_thread_running)
    {
-      PSP_WRITEBACK_ALL();
+#ifdef PSP
+      psp_writeback_cache_for_scsp();
+#endif
       while (scsp_clock_target - PSP_UC(scsp_clock) > SCSP_CLOCK_MAX_EXEC)
       {
          YabThreadWake(YAB_THREAD_SCSP);

@@ -579,10 +579,17 @@ to avoid data corruption due to the lack of cache coherency:
   also written by the other CPU (to avoid the cache line clobbering problem
   described above).
 
+* Sound RAM is accessed _with_ caching (except in one case described
+  below), because forcing every sound RAM access through an uncached
+  pointer causes significant slowdown.  Instead, cached CPU data is written
+  back to RAM at strategic points.
+
 * The SC's data cache is flushed (written back and invalidated) immediately
   before waiting for the SCSP thread to finish processing, e.g. for
   ScspReset().  The data cache is written back on every ScspExec() call,
-  but it is _not_ flushed for performance reasons.
+  but it is _not_ flushed for performance reasons; instead, sound RAM read
+  accesses from the SC are made through uncached addresses, as with SCSP
+  state variables above.
 
 * The ME's data cache is flushed after each iteration of the SCSP thread
   loop.  This flushing is not coded directly into scsp.c, but instead

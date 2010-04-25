@@ -1200,7 +1200,7 @@ static FASTCALL void Azel_0603DD6E(SH2State *state)
 
     if ((dest & 0x1FF00000) == 0x05A00000) {
         Cs2RapidCopyT2(SoundRam + (dest & 0x7FFFF), len/4);
-        M68KWriteNotify(dest, len);
+        M68KWriteNotify(dest & 0x7FFFF, len);
         return;
     }
 

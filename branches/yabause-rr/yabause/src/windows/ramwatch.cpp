@@ -419,7 +419,7 @@ void OpenRWRecentFile(int memwRFileNumber)
 	WatchFile = fopen(Str_Tmp,"rb");
 	if (!WatchFile)
 	{
-		int answer = MessageBox(MESSAGEBOXPARENT,(LPCWSTR)"Error opening file.",(LPCWSTR)"ERROR",MB_OKCANCEL);
+		int answer = MessageBox(MESSAGEBOXPARENT,(LPCWSTR)_T("Error opening file."),(LPCWSTR)_T("ERROR"),MB_OKCANCEL);
 		if (answer == IDOK)
 		{
 			rw_recent_files[rnum][0] = '\0';	//Clear file from list 

@@ -1008,7 +1008,8 @@ int YuiInit(LPSTR lpCmdLine)
 	GetPrivateProfileStringA("General", "Auto-frameskip", "1", tempstr, MAX_PATH, inifilename);
 	enableautofskip = atoi(tempstr);
 
-	
+	GetPrivateProfileStringA("General", "AutoLagSkip", "0", tempstr, MAX_PATH, inifilename);
+	AutoAdvanceLag = atoi(tempstr);
 
 #if DEBUG
    // Grab Logging settings
@@ -1335,6 +1336,9 @@ YabauseSetup:
 
    sprintf(tempstr, "%d", enableautofskip);
    WritePrivateProfileStringA("General", "Auto-frameskip", tempstr, inifilename);
+
+   sprintf(tempstr, "%d", AutoAdvanceLag);
+   WritePrivateProfileStringA("General", "AutoLagSkip", tempstr, inifilename);
 
    if (argv)
       LocalFree(argv);
@@ -2104,9 +2108,8 @@ void OpenConsole()
 	//COORD csize;
 	//CONSOLE_SCREEN_BUFFER_INFO csbiInfo; 
 	//SMALL_RECT srect;
+	//char buf[256];
 	//adelikat: commented out unused variables
-	
-	char buf[256];
 
 	if (hConsole) return;
 	AllocConsole();

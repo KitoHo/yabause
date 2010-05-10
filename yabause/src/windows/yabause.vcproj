@@ -812,6 +812,14 @@
 				<File
 					RelativePath=".\hotkey.cpp"
 					>
+					<FileConfiguration
+						Name="Release FastBuild|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							DisableSpecificWarnings="4244"
+						/>
+					</FileConfiguration>
 				</File>
 				<File
 					RelativePath=".\perdx.c"

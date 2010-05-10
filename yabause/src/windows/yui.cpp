@@ -1882,7 +1882,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 	case WM_SYSKEYDOWN:
 	case WM_CUSTKEYDOWN:
 		{
-			int modifiers = GetModifiers(wParam);
+			int modifiers = (int)GetModifiers(wParam);
 			if(!HandleKeyMessage(wParam,lParam, modifiers))
 				return 0;
 			break;

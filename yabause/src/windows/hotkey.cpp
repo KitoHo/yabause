@@ -233,8 +233,8 @@ bool S9xGetState (WORD KeyIdent)
 
 		//S9xUpdateJoyState();
 
-        switch (KeyIdent & 0xff)
-        {
+        //switch (KeyIdent & 0xff)
+        //{
 /*            case 0: return !Joystick [j].Left;  //TODO maybe
             case 1: return !Joystick [j].Right;
             case 2: return !Joystick [j].Up;
@@ -256,12 +256,12 @@ bool S9xGetState (WORD KeyIdent)
             case 47:return !Joystick [j].VUp;
             case 48:return !Joystick [j].VDown;*/
 
-            default:
+          //  default:
                 if ((KeyIdent & 0xff) > 40)
                     return true; // not pressed
 
 //                return !Joystick [j].Button [(KeyIdent & 0xff) - 8]; //TODO maybe
-        }
+        //}
     }
 
 	// the pause key is special, need this to catch all presses of it
@@ -1583,7 +1583,7 @@ void InitCustomKeys (SCustomKeys *keys)
 	keys->ToggleReadOnly.code = "ToggleReadOnly";
 	keys->ToggleReadOnly.name = L"Toggle Read Only";
 	keys->ToggleReadOnly.page = HOTKEY_PAGE_MOVIE;
-	keys->ToggleReadOnly.key = 'NULL';
+	keys->ToggleReadOnly.key = NULL;
 
 	keys->PlayMovie.handleKeyDown = HK_PlayMovie;
 	keys->PlayMovie.code = "PlayMovie";
@@ -1595,7 +1595,7 @@ void InitCustomKeys (SCustomKeys *keys)
 	keys->RecordMovie.code = "RecordMovie";
 	keys->RecordMovie.name = L"Record Movie";
 	keys->RecordMovie.page = HOTKEY_PAGE_MOVIE;
-	keys->RecordMovie.key = 'NULL';
+	keys->RecordMovie.key = NULL;
 	keys->RecordMovie.modifiers = CUSTKEY_SHIFT_MASK;
 
 	keys->StopMovie.handleKeyDown = HK_StopMovie;

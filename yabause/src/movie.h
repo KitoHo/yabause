@@ -122,14 +122,13 @@ public:
 	std::vector<char> savestate;
 	std::vector<MovieRecord> records;
 	std::vector<std::wstring> comments;
-	
+	 
 	int rerecordCount;
-//	Desmume_Guid guid;
 
 	//was the frame data stored in binary?
 	bool binaryFlag;
 
-	int getNumRecords() { return records.size(); }
+	int getNumRecords() { return (int)records.size(); }
 
 	class TDictionary : public std::map<std::string,std::string>
 	{

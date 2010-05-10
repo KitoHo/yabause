@@ -137,7 +137,7 @@ void MovieData::insertEmpty(int at, int frames)
 {
 	if(at == -1) 
 	{
-		int currcount = records.size();
+		int currcount = (int)records.size();
 		records.resize(records.size()+frames);
 		clearRecordRange(currcount,frames);
 	}
@@ -331,7 +331,7 @@ int MovieData::dump(std::ostream *os, bool binary)
 		*os << "binary 1" << endl;
 		
 	if(savestate.size() != 0)
-		*os << "savestate " << BytesToString(&savestate[0],savestate.size()) << endl;
+		*os << "savestate " << BytesToString(&savestate[0],(int)savestate.size()) << endl;
 	if(binary)
 	{
 		//put one | to start the binary dump
@@ -399,7 +399,7 @@ static bool LoadFM2(MovieData& movieData, std::istream* fp, int size, bool stopA
 			{
 				dorecord:
 				if (stopAfterHeader) return true;
-				int currcount = movieData.records.size();
+				int currcount = (int)movieData.records.size();
 				movieData.records.resize(currcount+1);
 				int preparse = fp->tellg();
 				movieData.records[currcount].parse(&movieData, fp);
@@ -522,13 +522,6 @@ void FCEUI_LoadMovie(const char *fname, bool _read_only, bool tasedit, int _paus
 	LoadFM2(currMovieData, &fs, INT_MAX, false);
 	fs.close();
 
-	//TODO
-	//fully reload the game to reinitialize everything before playing any movie
-	//poweron(true);
-
-//	extern bool _HACK_DONT_STOPMOVIE;
-//	_HACK_DONT_STOPMOVIE = true;
-//	NDS_Reset();
 #ifdef WIN32
 	HardResetGame();
 #else
@@ -799,7 +792,7 @@ extern "C" void FCEUMOV_AddInputState()
 			 mr.touch.touch = 0;
 		 }*/
 
-		 mr.dump(&currMovieData, osRecordingMovie,currMovieData.records.size());
+		 mr.dump(&currMovieData, osRecordingMovie,(int)currMovieData.records.size());
 		 currMovieData.records.push_back(mr);
 //		 osd->addFixed(180, 176, "%s", "Recording");
 	 }
@@ -1138,7 +1131,7 @@ void FCEUI_MakeBackupMovie(bool dispMessage)
 
 	currentFn = curMovieFilename;		//Get current moviefilename
 	backupFn = curMovieFilename;		//Make backup filename the same as current moviefilename
-	x = backupFn.find_last_of(".");		 //Find file extension
+	x = (int)backupFn.find_last_of(".");//Find file extension
 	backupFn = backupFn.substr(0,x);	//Remove extension
 	tempFn = backupFn;					//Store the filename at this point
 	for (unsigned int backNum=0;backNum<999;backNum++) //999 = arbituary limit to backup files

@@ -30,6 +30,7 @@
 #include "vdp1.h"
 #include "vdp2.h"
 #include "yabause.h"
+#include "movie.h"
 
 Smpc * SmpcRegs;
 u8 * SmpcRegsT;

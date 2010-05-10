@@ -1004,6 +1004,11 @@ int YuiInit(LPSTR lpCmdLine)
 	GetPrivateProfileStringA("Video", "OSD Display", "0", tempstr, MAX_PATH, inifilename);
 	int x = atoi(tempstr);
 	SetOSDToggle(x);
+	
+	GetPrivateProfileStringA("General", "Auto-frameskip", "1", tempstr, MAX_PATH, inifilename);
+	enableautofskip = atoi(tempstr);
+
+	
 
 #if DEBUG
    // Grab Logging settings
@@ -1327,6 +1332,9 @@ YabauseSetup:
    WritePrivateProfileStringA("General", "WindowX", tempstr, inifilename);
    sprintf(tempstr, "%d", yabwiny);
    WritePrivateProfileStringA("General", "WindowY", tempstr, inifilename);
+
+   sprintf(tempstr, "%d", enableautofskip);
+   WritePrivateProfileStringA("General", "Auto-frameskip", tempstr, inifilename);
 
    if (argv)
       LocalFree(argv);
@@ -2093,9 +2101,11 @@ LRESULT CALLBACK AboutDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam,
 HANDLE hConsole;
 void OpenConsole() 
 {
-	COORD csize;
-	CONSOLE_SCREEN_BUFFER_INFO csbiInfo; 
-	SMALL_RECT srect;
+	//COORD csize;
+	//CONSOLE_SCREEN_BUFFER_INFO csbiInfo; 
+	//SMALL_RECT srect;
+	//adelikat: commented out unused variables
+	
 	char buf[256];
 
 	if (hConsole) return;

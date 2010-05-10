@@ -4,8 +4,8 @@
 #include "resource.h"
 #include "ramwatch.h"
 #include "ram_search.h"
-
-
+#include <string>
+#include <tchar.h>
 
 extern "C" {
 #include "../cs2.h"
@@ -309,7 +309,7 @@ void UpdateRW_RMenu(HMENU menu, unsigned int mitem, unsigned int baseid)
 		}
 
 		// Insert the menu item
-		moo.cch = strlen(tmp);
+		moo.cch = (UINT)strlen(tmp);
 		moo.fType = 0;
 		moo.wID = baseid + x;
 		moo.dwTypeData = (LPWSTR)_16(tmp);
@@ -604,7 +604,7 @@ int Load_Watches(int clear, const char* filename)
 
 	if (!WatchFile)
 	{
-		MessageBox(MESSAGEBOXPARENT,(LPCWSTR)"Error opening file.",(LPCWSTR)"ERROR",MB_OK);
+		MessageBox(MESSAGEBOXPARENT,(LPCWSTR)_T("Error opening file."),(LPCWSTR)_T("ERROR"),MB_OK);
 		return 0;
 	}
 	if(clear)

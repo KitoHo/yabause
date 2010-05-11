@@ -495,6 +495,11 @@ PSP_SECTION(sc_write)
 PSP_SECTION(sc_write)
    static volatile u8 scsp_thread_running;
 
+// Flag: Has an interrupt request been generated for the main processor?
+// (Set by the subthread, cleared by the main thread.)
+PSP_SECTION(both_write)
+   static volatile u8 scsp_main_interrupt_pending;
+
 // Buffer for external (SH-2) SCSP writes (only _size is written by both
 // CPUs, but we keep all three in the same section for cache safety)
 PSP_SECTION(both_write)
@@ -577,6 +582,7 @@ static u16 ScspMidiIn(void);
 static void ScspMidiOut(u8 data);
 static void ScspDoDMA(void);
 
+static void ScspSyncThread(void);
 static void ScspRaiseInterrupt(int which, int target);
 static void ScspCheckInterrupts(u16 mask, int target);
 static void ScspClearInterrupts(u16 mask, int target);
@@ -599,18 +605,24 @@ static s32 FASTCALL M68KExecBP(s32 cycles);
 // will optimize out the disabled branches.
 
 // A couple of handy sub-macros:
-#define ADDRESS      (slot->addr_counter >> SCSP_FREQ_LOW_BITS)
+#define ADDRESS      (addr_counter >> SCSP_FREQ_LOW_BITS)
 #ifdef WORDS_BIGENDIAN
 #define ADDRESS_8BIT (ADDRESS)
 #else
 #define ADDRESS_8BIT (ADDRESS ^ 1)
 #endif
-#define ENV_POS      (slot->env_counter >> SCSP_ENV_LOW_BITS)
+#define ENV_POS      (env_counter >> SCSP_ENV_LOW_BITS)
 #define LFO_POS      ((slot->lfo_counter >> SCSP_LFO_LOW_BITS) & SCSP_LFO_MASK)
 
 #define DEFINE_AUDIOGEN(tag,F,A,S,L,R)                                      \
 static void FASTCALL audiogen_##tag(SlotState *slot, u32 len)               \
 {                                                                           \
+   /* Load these first to avoid having to reload them every iteration */    \
+         u32 addr_counter = slot->addr_counter;                             \
+   const u32 addr_step    = slot->addr_step;                                \
+         u32 env_counter  = slot->env_counter;                              \
+         u32 env_step     = slot->env_step;                                 \
+                                                                            \
    u32 pos;                                                                 \
    for (pos = 0; pos < len; pos++)                                          \
    {                                                                        \
@@ -622,7 +634,7 @@ static void FASTCALL audiogen_##tag(SlotState *slot, u32 len)               \
             env -= slot->lfo_am_wave[LFO_POS] >> slot->lfo_am_shift;        \
                                                                             \
          /* Apply envelope / channel volume to waveform data and output */  \
-         if (env > 0)                                                       \
+         if (LIKELY(env > 0))                                               \
          {                                                                  \
             s32 out;                                                        \
             if (S)                                                          \
@@ -641,49 +653,49 @@ static void FASTCALL audiogen_##tag(SlotState *slot, u32 len)               \
       if (F)                                                                \
       {                                                                     \
          /* FIXME: need to handle the case where LFO data range != 1<<FREQ_LOW_BITS */ \
-         slot->addr_counter += slot->lfo_fm_wave[LFO_POS]                   \
-                               << slot->lfo_fm_shift                        \
-                               >> slot->octave_shift;                       \
+         addr_counter += slot->lfo_fm_wave[LFO_POS]                         \
+                         << slot->lfo_fm_shift                              \
+                         >> slot->octave_shift;                             \
       }                                                                     \
-      slot->addr_counter += slot->addr_step;                                \
-      if (slot->addr_counter > slot->lea_shifted)                           \
+      addr_counter += addr_step;                                            \
+      if (UNLIKELY(addr_counter > slot->lea_shifted))                       \
       {                                                                     \
          /* FIXME/SCSP1: reverse/alternating loops not implemented */       \
          if (slot->lpctl)                                                   \
          {                                                                  \
             /* FIXME/SCSP1: should do modulo rather than simply reset */    \
-            slot->addr_counter = slot->lsa_shifted;                         \
+            addr_counter = slot->lsa_shifted;                               \
          }                                                                  \
          else                                                               \
          {                                                                  \
-            slot->env_counter = SCSP_ENV_DECAY_END;                         \
-            return;                                                         \
+            env_counter = SCSP_ENV_DECAY_END;                               \
+            goto done;                                                      \
          }                                                                  \
       }                                                                     \
                                                                             \
       /* Update envelope counter, advancing the envelope phase as needed */ \
-      slot->env_counter += slot->env_step;                                  \
-      if (slot->env_counter >= slot->env_target)                            \
+      env_counter += env_step;                                              \
+      if (UNLIKELY(env_counter >= slot->env_target))                        \
       {                                                                     \
          switch (slot->env_phase)                                           \
          {                                                                  \
             case SCSP_ENV_ATTACK:                                           \
-               slot->env_counter = SCSP_ENV_DECAY_START;                    \
-               slot->env_step = slot->env_step_d;                           \
+               env_counter = SCSP_ENV_DECAY_START;                          \
+               env_step = slot->env_step = slot->env_step_d;                \
                slot->env_target = slot->sl_target;                          \
                slot->env_phase = SCSP_ENV_DECAY;                            \
                break;                                                       \
             case SCSP_ENV_DECAY:                                            \
-               slot->env_counter = slot->sl_target;                         \
-               slot->env_step = slot->env_step_s;                           \
+               env_counter = slot->sl_target;                               \
+               env_step = slot->env_step = slot->env_step_s;                \
                slot->env_target = SCSP_ENV_DECAY_END;                       \
                slot->env_phase = SCSP_ENV_SUSTAIN;                          \
                break;                                                       \
             default:                                                        \
-               slot->env_counter = SCSP_ENV_DECAY_END;                      \
-               slot->env_step = 0;                                          \
+               env_counter = SCSP_ENV_DECAY_END;                            \
+               env_step = slot->env_step = 0;                               \
                slot->env_target = SCSP_ENV_DECAY_END + 1;                   \
-               return;                                                      \
+               goto done;                                                   \
          }                                                                  \
       }                                                                     \
                                                                             \
@@ -692,6 +704,10 @@ static void FASTCALL audiogen_##tag(SlotState *slot, u32 len)               \
       if ((F || A) && (L || R))                                             \
          slot->lfo_counter += slot->lfo_step;                               \
    }                                                                        \
+                                                                            \
+  done:                                                                     \
+   slot->addr_counter = addr_counter;                                       \
+   slot->env_counter = env_counter;                                         \
 }
 
 //-------------------------------------------------------------------------
@@ -935,6 +951,7 @@ int ScspInit(int coreid, void (*interrupt_handler)(void))
    if (yabsys.UseThreads)
    {
       scsp_thread_running = 1;  // Set now so the thread doesn't quit instantly
+      PSP_FLUSH_ALL();
       if (YabThreadStart(YAB_THREAD_SCSP, ScspThread) < 0)
       {
          SCSPLOG("Failed to start SCSP thread\n");
@@ -959,14 +976,7 @@ void ScspReset(void)
    int slotnum;
 
    if (scsp_thread_running)
-   {
-      PSP_FLUSH_ALL();
-      while (PSP_UC(scsp_clock) != scsp_clock_target)
-      {
-         YabThreadWake(YAB_THREAD_SCSP);
-         YabThreadYield();
-      }
-   }
+      ScspSyncThread();
 
    scsp.mem4mb  = 0;
    scsp.dac18b  = 0;
@@ -1027,12 +1037,15 @@ void ScspReset(void)
    scsp_clock_frac = 0;
    scsp.sample_timer = 0;
 
+   scsp_main_interrupt_pending = 0;
+   scsp_write_buffer_size = 0;
+
    cdda_next_in = 0;
    cdda_next_out = 0;
    cdda_delay = CDDA_DELAY_SAMPLES;
 
    if (scsp_thread_running)
-      PSP_WRITEBACK_ALL();
+      PSP_FLUSH_ALL();
 }
 
 //-------------------------------------------------------------------------
@@ -1184,6 +1197,11 @@ void ScspExec(int decilines)
          YabThreadWake(YAB_THREAD_SCSP);
          YabThreadYield();
       }
+      if (PSP_UC(scsp_main_interrupt_pending))
+      {
+          (*scsp_interrupt_handler)();
+          PSP_UC(scsp_main_interrupt_pending) = 0;
+      }
    }
    else
       ScspDoExec(scsp_clock_target - scsp_clock);
@@ -1333,7 +1351,7 @@ static void ScspUpdateTimer(u32 samples, u16 *timer_ptr, u8 timer_scale,
                             int interrupt)
 {
    u32 timer_new = *timer_ptr + (samples << (8 - timer_scale));
-   if (timer_new >= 0xFF00)
+   if (UNLIKELY(timer_new >= 0xFF00))
    {
       ScspRaiseInterrupt(interrupt, SCSP_INTTARGET_BOTH);
       timer_new -= 0xFF00;  // We won't pass 0xFF00 multiple times at once
@@ -1350,8 +1368,9 @@ static void ScspGenerateAudio(s32 *bufL, s32 *bufR, u32 samples)
 {
    int slotnum;
 
-   memset(bufL, 0, sizeof(s32) * samples);
-   memset(bufR, 0, sizeof(s32) * samples);
+   u32 i;
+   for (i = 0; i < samples; i++)
+      bufL[i] = bufR[i] = 0;
 
    scsp_bufL = bufL;
    scsp_bufR = bufR;
@@ -1389,29 +1408,6 @@ static void ScspGenerateAudioForSlot(SlotState *slot, u32 samples)
 {
    if (slot->env_counter >= SCSP_ENV_DECAY_END)
       return;  // No sound is currently playing
-
-   if (slot->ssctl)
-   {
-      // Update the address counter, since some games read it via the CA
-      // register even if the data itself isn't played
-      u32 pos;
-      for (pos = 0; pos < samples; pos++)
-      {
-         if ((slot->addr_counter += slot->addr_step) > slot->lea_shifted)
-         {
-            if (slot->lpctl)
-               slot->addr_counter = slot->lsa_shifted;
-            else
-            {
-               slot->env_counter = SCSP_ENV_DECAY_END;
-               break;
-            }
-         }
-      }
-
-      // FIXME: noise (ssctl==1) not implemented
-      return;
-   }
 
    (*slot->audiogen)(slot, samples);
 }
@@ -1470,7 +1466,11 @@ u8 FASTCALL SoundRamReadByte(u32 address)
       if (address > 0x7FFFF)
          return 0xFF;
    }
-   return T2ReadByte(PSP_UCPTR(SoundRam), address);
+#ifdef PSP
+   if (scsp_thread_running)
+      return T2ReadByte(PSP_UCPTR(SoundRam), address);
+#endif
+   return T2ReadByte(SoundRam, address);
 }
 
 u16 FASTCALL SoundRamReadWord(u32 address)
@@ -1483,7 +1483,11 @@ u16 FASTCALL SoundRamReadWord(u32 address)
       if (address > 0x7FFFF)
          return 0xFFFF;
    }
-   return T2ReadWord(PSP_UCPTR(SoundRam), address);
+#ifdef PSP
+   if (scsp_thread_running)
+      return T2ReadWord(PSP_UCPTR(SoundRam), address);
+#endif
+   return T2ReadWord(SoundRam, address);
 }
 
 u32 FASTCALL SoundRamReadLong(u32 address)
@@ -1496,7 +1500,11 @@ u32 FASTCALL SoundRamReadLong(u32 address)
       if (address > 0x7FFFF)
          return 0xFFFFFFFF;
    }
-   return T2ReadLong(PSP_UCPTR(SoundRam), address);
+#ifdef PSP
+   if (scsp_thread_running)
+      return T2ReadLong(PSP_UCPTR(SoundRam), address);
+#endif
+   return T2ReadLong(SoundRam, address);
 }
 
 //----------------------------------//
@@ -1678,14 +1686,7 @@ int SoundSaveState(FILE *fp)
    IOCheck_struct check;
 
    if (scsp_thread_running)
-   {
-      PSP_FLUSH_ALL();
-      while (PSP_UC(scsp_clock) != scsp_clock_target)
-      {
-         YabThreadWake(YAB_THREAD_SCSP);
-         YabThreadYield();
-      }
-   }
+      ScspSyncThread();
 
    offset = StateWriteHeader(fp, "SCSP", 2);
 
@@ -1816,14 +1817,7 @@ int SoundLoadState(FILE *fp, int version, int size)
    IOCheck_struct check;
 
    if (scsp_thread_running)
-   {
-      PSP_FLUSH_ALL();
-      while (PSP_UC(scsp_clock) != scsp_clock_target)
-      {
-         YabThreadWake(YAB_THREAD_SCSP);
-         YabThreadYield();
-      }
-   }
+      ScspSyncThread();
 
    // Read 68k registers first
    yread(&check, (void *)&m68k_running, 1, 1, fp);
@@ -1947,7 +1941,7 @@ int SoundLoadState(FILE *fp, int version, int size)
    }
 
    if (scsp_thread_running)
-      PSP_WRITEBACK_ALL();
+      PSP_FLUSH_ALL();
 
    return size;
 }
@@ -2467,11 +2461,16 @@ static void FASTCALL ScspWriteByteDirect(u32 address, u8 data)
                // FIXME/SCSP1: this is needed to mimic scsp1 and avoid
                // ScspUpdateSlotAddress() if not touching PCM8B/SA;
                // it might not be necessary
+
                slot->key    = (data >> 3) & 0x1;
                slot->sbctl  = (data >> 1) & 0x3;
                slot->ssctl  =((data >> 0) & 0x1) << 1 | (slot->ssctl & 0x1);
+
+               ScspUpdateSlotFunc(slot);
+
                if (data & (1<<4))
                   ScspDoKeyOnOff();
+
                data &= 0x0F;  // Don't save KYONEX
                break;
 
@@ -3124,11 +3123,15 @@ static void ScspUpdateSlotAddress(SlotState *slot)
 
 static void ScspUpdateSlotFunc(SlotState *slot)
 {
-   slot->audiogen = scsp_audiogen_func_table[slot->lfo_fm_shift >= 0]
-                                            [slot->lfo_am_shift >= 0]
-                                            [slot->pcm8b == 0]
-                                            [slot->outshift_l != 31]
-                                            [slot->outshift_r != 31];
+   if (slot->ssctl)
+      // FIXME: noise (ssctl==1) not implemented
+      slot->audiogen = scsp_audiogen_func_table[0][0][0][0][0];
+   else
+      slot->audiogen = scsp_audiogen_func_table[slot->lfo_fm_shift >= 0]
+                                               [slot->lfo_am_shift >= 0]
+                                               [slot->pcm8b == 0]
+                                               [slot->outshift_l != 31]
+                                               [slot->outshift_r != 31];
 }
 
 //-------------------------------------------------------------------------
@@ -3228,6 +3231,21 @@ static void ScspDoDMA(void)
 // Other SCSP internal helper routines
 ///////////////////////////////////////////////////////////////////////////
 
+// ScspSyncThread:  Wait for the SCSP subthread to finish executing all
+// pending cycles.  Do not call if the subthread is not running.
+
+static void ScspSyncThread(void)
+{
+   PSP_FLUSH_ALL();
+   while (PSP_UC(scsp_clock) != scsp_clock_target)
+   {
+      YabThreadWake(YAB_THREAD_SCSP);
+      YabThreadYield();
+   }
+}
+
+//-------------------------------------------------------------------------
+
 // ScspRaiseInterrupt:  Raise an interrupt for the main and/or sound CPU.
 
 static void ScspRaiseInterrupt(int which, int target)
@@ -3237,7 +3255,12 @@ static void ScspRaiseInterrupt(int which, int target)
       scsp.mcipd |= 1 << which;
       PSP_UC(scsp_regcache[0x42C >> 1]) = scsp.mcipd;
       if (scsp.mcieb & (1 << which))
-         (*scsp_interrupt_handler)();
+      {
+         if (scsp_thread_running)
+            PSP_UC(scsp_main_interrupt_pending) = 1;
+         else
+            (*scsp_interrupt_handler)();
+      }
    }
 
    if (target & SCSP_INTTARGET_SOUND)
@@ -3353,14 +3376,7 @@ static s32 FASTCALL M68KExecBP(s32 cycles)
 void M68KStart(void)
 {
    if (scsp_thread_running)
-   {
-      PSP_FLUSH_ALL();
-      while (PSP_UC(scsp_clock) != scsp_clock_target)
-      {
-         YabThreadWake(YAB_THREAD_SCSP);
-         YabThreadYield();
-      }
-   }
+      ScspSyncThread();
 
    M68K->Reset();
    m68k_saved_cycles = 0;
@@ -3368,7 +3384,7 @@ void M68KStart(void)
    m68k_running = 1;
 
    if (scsp_thread_running)
-      PSP_WRITEBACK_ALL();
+      PSP_FLUSH_ALL();
 }
 
 //-------------------------------------------------------------------------
@@ -3378,19 +3394,12 @@ void M68KStart(void)
 void M68KStop(void)
 {
    if (scsp_thread_running)
-   {
-      PSP_FLUSH_ALL();
-      while (PSP_UC(scsp_clock) != scsp_clock_target)
-      {
-         YabThreadWake(YAB_THREAD_SCSP);
-         YabThreadYield();
-      }
-   }
+      ScspSyncThread();
 
    m68k_running = 0;
 
    if (scsp_thread_running)
-      PSP_WRITEBACK_ALL();
+      PSP_FLUSH_ALL();
 }
 
 //-------------------------------------------------------------------------

@@ -213,9 +213,9 @@ static INLINE int StateCheckRetrieveHeader(FILE *fp, const char *name, int *vers
  */
 
 #ifdef PSP
-# define BSWAP16(x)  __builtin_allegrex_wsbh((x))
-# define BSWAP32(x)  __builtin_allegrex_wsbw((x))
-# define WSWAP32(x)  __builtin_allegrex_rotr((x), 16)
+# define BSWAP16(x)  ((typeof(x)) __builtin_allegrex_wsbh((x)))
+# define BSWAP32(x)  ((typeof(x)) __builtin_allegrex_wsbw((x)))
+# define WSWAP32(x)  ((typeof(x)) __builtin_allegrex_rotr((x), 16))
 #endif
 
 /* Defaults: */

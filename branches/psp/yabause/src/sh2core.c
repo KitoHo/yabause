@@ -1000,6 +1000,7 @@ void FASTCALL OnchipWriteByte(u32 addr, u8 val) {
          return;
       case 0x011:
          CurrentSH2->onchip.FTCSR = (CurrentSH2->onchip.FTCSR & (val & 0xFE)) | (val & 0x1);
+         return;
       case 0x012:
          CurrentSH2->onchip.FRC.part.H = val;
          return;

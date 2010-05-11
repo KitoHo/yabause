@@ -433,7 +433,6 @@ unsigned int saturn_optimize_sh2(SH2State *state, uint32_t address,
             num_insns = hand_tuned_table[i].length;
             const uint32_t sum = checksum(fetch, num_insns);
             if (sum != hand_tuned_table[i].sum) {
-printf("%08X %08X\n",address,sum); //FIXME temp
                 continue;
             }
         }

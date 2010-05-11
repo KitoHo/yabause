@@ -309,31 +309,6 @@ void display_begin_frame(void)
 void display_end_frame(void)
 {
     guFinish();
-#if 0
-guSync(0,0);
-static int frame;if(frame>=780&&frame<900){
-char buf[100];FILE*f;static char mem[0x200000];
-/*
-sprintf(buf,"frame%03d.dlist",frame);
-f=fopen(buf,"w");setvbuf(f,NULL,_IOFBF,0x200000);
-fwrite(display_list,sizeof(display_list),1,f);fclose(f);
-*/
-sprintf(buf,"frame%03d.ppm",frame);
-char*src=(char*)display_work_buffer(),*dest=mem;
-dest+=sprintf(dest,"P6\n%d %d 255\n",display_width,display_height);
-int y;for(y=0;y<display_height;y++,src+=(512-display_width)*4){
-int x;for(x=0;x<display_width;x++,src+=4,dest+=3){dest[0]=src[0];dest[1]=src[1];dest[2]=src[2];}}
-f=fopen(buf,"w");setvbuf(f,NULL,_IOFBF,0x200000);
-fwrite(mem,dest-mem,1,f);fclose(f);
-/*
-sprintf(buf,"frame%03d.vram",frame);
-memcpy(mem,display_spare_vram(),0x4200000-(uintptr_t)display_spare_vram());
-f=fopen(buf,"w");setvbuf(f,NULL,_IOFBF,0x200000);
-fwrite(mem,0x4200000-(uintptr_t)display_spare_vram(),1,f);fclose(f);
-*/
-}
-frame++;
-#endif
     swap_pending = 1;
     /* Give the new thread a slightly higher priority than us, or else it
      * won't actually get a chance to run. */

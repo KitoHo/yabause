@@ -3507,12 +3507,10 @@ void M68KClearCodeBreakpoints(void)
 // M68K{Read,Write}{Byte,Word}:  Memory access routines for the M68K
 // emulation.  Exported for use in debugging.
 
-// FIXME/SCSP1: replace 0x7FFFF with scsp.sound_ram_mask
-
 u32 FASTCALL M68KReadByte(u32 address)
 {
    if (address < 0x100000)
-      return T2ReadByte(SoundRam, address & 0x7FFFF);
+      return T2ReadByte(SoundRam, address & scsp.sound_ram_mask);
    else
       return ScspReadByteDirect(address & 0xFFF);
 }
@@ -3520,7 +3518,7 @@ u32 FASTCALL M68KReadByte(u32 address)
 u32 FASTCALL M68KReadWord(u32 address)
 {
    if (address < 0x100000)
-      return T2ReadWord(SoundRam, address & 0x7FFFF);
+      return T2ReadWord(SoundRam, address & scsp.sound_ram_mask);
    else
       return ScspReadWordDirect(address & 0xFFF);
 }
@@ -3528,7 +3526,7 @@ u32 FASTCALL M68KReadWord(u32 address)
 void FASTCALL M68KWriteByte(u32 address, u32 data)
 {
    if (address < 0x100000)
-      T2WriteByte(SoundRam, address & 0x7FFFF, data);
+      T2WriteByte(SoundRam, address & scsp.sound_ram_mask, data);
    else
       ScspWriteByteDirect(address & 0xFFF, data);
 }
@@ -3536,7 +3534,7 @@ void FASTCALL M68KWriteByte(u32 address, u32 data)
 void FASTCALL M68KWriteWord(u32 address, u32 data)
 {
    if (address < 0x100000)
-      T2WriteWord(SoundRam, address & 0x7FFFF, data);
+      T2WriteWord(SoundRam, address & scsp.sound_ram_mask, data);
    else
       ScspWriteWordDirect(address & 0xFFF, data);
 }

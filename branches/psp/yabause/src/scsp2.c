@@ -3131,7 +3131,6 @@ static void ScspMidiOut(u8 data)
 
 static void ScspDoDMA(void)
 {
-#if 0  // FIXME/SCSP1: disabled for now because scsp1 didn't implement it
    const u32 dmea = scsp.dmea & scsp.sound_ram_mask;
 
    if (scsp.ddir)  // {RAM,zero} -> registers
@@ -3151,7 +3150,7 @@ static void ScspDoDMA(void)
             ScspWriteWordDirect(scsp.drga + i, T2ReadWord(SoundRam, dmea + i));
       }
    }
-   else  // !scsp.ddir
+   else  // !scsp.ddir, i.e. registers -> RAM
    {
       SCSPLOG("DMA %s registers[$%03X] -> RAM[$%05X]\n",
               scsp.dgate ? "clear" : "copy", scsp.drga, dmea);
@@ -3165,7 +3164,6 @@ static void ScspDoDMA(void)
       }
       M68K->WriteNotify(dmea, scsp.dtlg);
    }
-#endif  // FIXME/SCSP1: see above
 
    scsp.dexe = 0;
    PSP_UC(scsp_regcache[0x416>>1]) &= ~(1<<12);

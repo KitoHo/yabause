@@ -2411,68 +2411,17 @@ static void FASTCALL ScspWriteByteDirect(u32 address, u8 data)
       case 0x1:
       case 0x2:
       case 0x3:
+      write_as_word:
       {
-         const int slotnum = (address & 0x3E0) >> 5;
-         SlotState *slot = &scsp.slot[slotnum];
-         switch (address & 0x1F)
-         {
-            case 0x00:
-               // FIXME/SCSP1: this is needed to mimic scsp1 and avoid
-               // ScspUpdateSlotAddress() if not touching PCM8B/SA;
-               // it might not be necessary
-
-               slot->key    = (data >> 3) & 0x1;
-               slot->sbctl  = (data >> 1) & 0x3;
-               slot->ssctl  =((data >> 0) & 0x1) << 1 | (slot->ssctl & 0x1);
-
-               ScspUpdateSlotFunc(slot);
-
-               if (data & (1<<4))
-                  ScspDoKeyOnOff();
-
-               data &= 0x0F;  // Don't save KYONEX
-               break;
-
-            case 0x01:
-            case 0x02:
-            case 0x03:
-            case 0x04:
-            case 0x05:
-            case 0x06:
-            case 0x07:
-            case 0x08:
-            case 0x09:
-            case 0x0A:
-            case 0x0B:
-            case 0x0C:
-            case 0x0D:
-            case 0x0E:
-            case 0x0F:
-            case 0x10:
-            case 0x11:
-            case 0x12:
-            case 0x13:
-            case 0x14:
-            case 0x15:
-            case 0x16:
-            case 0x17:
-            write_as_word:
-            {
-               // These can be treated as word writes, borrowing the missing
-               // 8 bits from the register cache
-               u16 word_data;
-               if (address & 1)
-                  word_data = (PSP_UC(scsp_regcache[address >> 1]) & 0xFF00) | data;
-               else
-                  word_data = (PSP_UC(scsp_regcache[address >> 1]) & 0x00FF) | (data << 8);
-               ScspWriteWordDirect(address & ~1, word_data);
-               return;
-            }
-
-            default:
-               goto unhandled_write;
-         }
-         break;
+         // These can be treated as word writes, borrowing the missing
+         // 8 bits from the register cache
+         u16 word_data;
+         if (address & 1)
+            word_data = (PSP_UC(scsp_regcache[address >> 1]) & 0xFF00) | data;
+         else
+            word_data = (PSP_UC(scsp_regcache[address >> 1]) & 0x00FF) | (data << 8);
+         ScspWriteWordDirect(address & ~1, word_data);
+         return;
       }
 
       case 0x4:

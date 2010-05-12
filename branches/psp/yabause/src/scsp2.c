@@ -834,20 +834,18 @@ int ScspInit(int coreid, void (*interrupt_handler)(void))
    {
       // Amplitude modulation uses unsigned values which are subtracted
       // from the base envelope value
-      // FIXME/SCSP1: these waveforms are all inverted (they should start
-      // at zero, not maximum)
-      scsp_lfo_wave_amp[SCSP_LFO_SAWTOOTH][i] = SCSP_LFO_MASK - i;
+      scsp_lfo_wave_amp[SCSP_LFO_SAWTOOTH][i] = i;
       if (i < SCSP_LFO_LEN / 2)
-         scsp_lfo_wave_amp[SCSP_LFO_SQUARE][i] = SCSP_LFO_MASK;
-      else
          scsp_lfo_wave_amp[SCSP_LFO_SQUARE][i] = 0;
-      if (i < SCSP_LFO_LEN / 2)
-         scsp_lfo_wave_amp[SCSP_LFO_TRIANGLE][i] = SCSP_LFO_MASK - i*2;
       else
-         scsp_lfo_wave_amp[SCSP_LFO_TRIANGLE][i] = (i - SCSP_LFO_LEN/2) * 2;
+         scsp_lfo_wave_amp[SCSP_LFO_SQUARE][i] = SCSP_LFO_MASK;
+      if (i < SCSP_LFO_LEN / 2)
+         scsp_lfo_wave_amp[SCSP_LFO_TRIANGLE][i] = i*2;
+      else
+         scsp_lfo_wave_amp[SCSP_LFO_TRIANGLE][i] = SCSP_LFO_MASK - ((i - SCSP_LFO_LEN/2) * 2);
       scsp_lfo_wave_amp[SCSP_LFO_NOISE][i] = rand() & SCSP_LFO_MASK;
-      // FIXME/SCSP1: note that the noise generator output should be
-      // independent of LFORE/LFOF
+      // FIXME: note that the noise generator output should be independent
+      // of LFORE/LFOF
 
       // Frequency modulation uses signed values which are added to the
       // address counter
@@ -855,16 +853,14 @@ int ScspInit(int coreid, void (*interrupt_handler)(void))
          scsp_lfo_wave_freq[SCSP_LFO_SAWTOOTH][i] = i;
       else
          scsp_lfo_wave_freq[SCSP_LFO_SAWTOOTH][i] = i - SCSP_LFO_LEN;
-      // FIXME/SCSP1: this is wrong, the -128/+128 are bogus
       if (i < SCSP_LFO_LEN / 2)
-         scsp_lfo_wave_freq[SCSP_LFO_SQUARE][i] = SCSP_LFO_MASK - SCSP_LFO_LEN/2 - 128;
+         scsp_lfo_wave_freq[SCSP_LFO_SQUARE][i] = SCSP_LFO_MASK - SCSP_LFO_LEN/2;
       else
-         scsp_lfo_wave_freq[SCSP_LFO_SQUARE][i] = 0 - SCSP_LFO_LEN/2 + 128;
+         scsp_lfo_wave_freq[SCSP_LFO_SQUARE][i] = 0 - SCSP_LFO_LEN/2;
       if (i < SCSP_LFO_LEN / 4)
          scsp_lfo_wave_freq[SCSP_LFO_TRIANGLE][i] = i*2;
       else if (i < SCSP_LFO_LEN * 3 / 4)
-         // FIXME/SCSP1: this is wrong, should be MASK not LEN
-         scsp_lfo_wave_freq[SCSP_LFO_TRIANGLE][i] = SCSP_LFO_LEN - i*2;
+         scsp_lfo_wave_freq[SCSP_LFO_TRIANGLE][i] = SCSP_LFO_MASK - i*2;
       else
          scsp_lfo_wave_freq[SCSP_LFO_TRIANGLE][i] = i*2 - SCSP_LFO_LEN*2;
       scsp_lfo_wave_freq[SCSP_LFO_NOISE][i] = scsp_lfo_wave_amp[SCSP_LFO_NOISE][i] - SCSP_LFO_LEN/2;

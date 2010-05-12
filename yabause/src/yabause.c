@@ -318,7 +318,6 @@ void YabauseResetNoLoad(void) {
    Cs2Reset();
    ScuReset();
    ScspReset();
-   M68KStop();
    Vdp1Reset();
    Vdp2Reset();
    SmpcReset();

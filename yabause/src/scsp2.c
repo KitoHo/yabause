@@ -966,10 +966,8 @@ int ScspInit(int coreid, void (*interrupt_handler)(void))
 
 //-------------------------------------------------------------------------
 
-// ScspReset:  Reset the SCSP to its power-on state.
-
-// FIXME/SCSP1:  Should this also stop the M68K?  Calling patterns seem
-// inconsistent -- YabauseResetNoLoad stops it, but SmpcCKCHG{320,352} don't.
+// ScspReset:  Reset the SCSP to its power-on state, also stopping the M68K
+// processor.
 
 void ScspReset(void)
 {
@@ -1043,6 +1041,8 @@ void ScspReset(void)
    cdda_next_in = 0;
    cdda_next_out = 0;
    cdda_delay = CDDA_DELAY_SAMPLES;
+
+   m68k_running = 0;
 
    if (scsp_thread_running)
       PSP_FLUSH_ALL();

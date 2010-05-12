@@ -1457,18 +1457,7 @@ static void ScspGenerateAudioForCDDA(s32 *bufL, s32 *bufR, u32 samples)
 
 u8 FASTCALL SoundRamReadByte(u32 address)
 {
-   // FIXME/SCSP1: shouldn't the 0x7FFFF comparison below be a mask operation?
-   // If so, this whole routine could turn into just:
-   //    return T2ReadByte(SoundRam, address & scsp.sound_ram_mask);
-   // (and likewise for other read/write routines below)
-   if (scsp.mem4mb == 0)
-      address &= 0x3FFFF;
-   else
-   {
-      address &= 0xFFFFF;
-      if (address > 0x7FFFF)
-         return 0xFF;
-   }
+   address &= scsp.sound_ram_mask;
 #ifdef PSP
    if (scsp_thread_running)
       return T2ReadByte(PSP_UCPTR(SoundRam), address);
@@ -1478,14 +1467,7 @@ u8 FASTCALL SoundRamReadByte(u32 address)
 
 u16 FASTCALL SoundRamReadWord(u32 address)
 {
-   if (scsp.mem4mb == 0)
-      address &= 0x3FFFF;
-   else
-   {
-      address &= 0xFFFFF;
-      if (address > 0x7FFFF)
-         return 0xFFFF;
-   }
+   address &= scsp.sound_ram_mask;
 #ifdef PSP
    if (scsp_thread_running)
       return T2ReadWord(PSP_UCPTR(SoundRam), address);
@@ -1495,14 +1477,7 @@ u16 FASTCALL SoundRamReadWord(u32 address)
 
 u32 FASTCALL SoundRamReadLong(u32 address)
 {
-   if (scsp.mem4mb == 0)
-      address &= 0x3FFFF;
-   else
-   {
-      address &= 0xFFFFF;
-      if (address > 0x7FFFF)
-         return 0xFFFFFFFF;
-   }
+   address &= scsp.sound_ram_mask;
 #ifdef PSP
    if (scsp_thread_running)
       return T2ReadLong(PSP_UCPTR(SoundRam), address);
@@ -1514,42 +1489,21 @@ u32 FASTCALL SoundRamReadLong(u32 address)
 
 void FASTCALL SoundRamWriteByte(u32 address, u8 data)
 {
-   if (scsp.mem4mb == 0)
-      address &= 0x3FFFF;
-   else
-   {
-      address &= 0xFFFFF;
-      if (address > 0x7FFFF)
-         return;
-   }
+   address &= scsp.sound_ram_mask;
    T2WriteByte(SoundRam, address, data);
    M68K->WriteNotify(address, 1);
 }
 
 void FASTCALL SoundRamWriteWord(u32 address, u16 data)
 {
-   if (scsp.mem4mb == 0)
-      address &= 0x3FFFF;
-   else
-   {
-      address &= 0xFFFFF;
-      if (address > 0x7FFFF)
-         return;
-   }
+   address &= scsp.sound_ram_mask;
    T2WriteWord(SoundRam, address, data);
    M68K->WriteNotify(address, 2);
 }
 
 void FASTCALL SoundRamWriteLong(u32 address, u32 data)
 {
-   if (scsp.mem4mb == 0)
-      address &= 0x3FFFF;
-   else
-   {
-      address &= 0xFFFFF;
-      if (address > 0x7FFFF)
-         return;
-   }
+   address &= scsp.sound_ram_mask;
    T2WriteLong(SoundRam, address, data);
    M68K->WriteNotify(address, 4);
 }

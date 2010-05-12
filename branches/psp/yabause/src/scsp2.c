@@ -564,6 +564,7 @@ static u8 m68k_in_breakpoint;
 
 static void ScspThread(void);
 static void ScspDoExec(u32 cycles);
+static u32 ScspTimerCyclesLeft(u16 timer, u8 timer_scale);
 static void ScspUpdateTimer(u32 samples, u16 *timer_ptr, u8 timer_scale,
                             int interrupt);
 static void ScspGenerateAudio(s32 *bufL, s32 *bufR, u32 samples);
@@ -1260,22 +1261,42 @@ static void ScspDoExec(u32 cycles)
 #ifdef WIN32
    s16 stereodata16[(44100 / 60) * 16]; //11760
 #endif
+   u32 cycles_left;
    u32 sample_count;
    u32 audio_free;
 
 
-   scsp.sample_timer += cycles;
-   sample_count = scsp.sample_timer >> 8;
-   scsp.sample_timer &= 0xFF;
+   // If any of the timer interrupts are enabled, give the M68K a chance
+   // to respond to them immediately, so that music doesn't slow down if
+   // the SCSP thread gets behind and executes a lot of cycles at once.
+   sample_count = 0;
+   cycles_left = cycles;
+   while (cycles_left > 0)
+   {
+      u32 this_samples = 0;
+      u32 this_cycles = cycles_left;
+      if (scsp.scieb & (1 << SCSP_INTERRUPT_TIMER_A))
+         this_cycles = min(this_cycles, ScspTimerCyclesLeft(scsp.tima, scsp.tactl));
+      if (scsp.scieb & (1 << SCSP_INTERRUPT_TIMER_B))
+         this_cycles = min(this_cycles, ScspTimerCyclesLeft(scsp.timb, scsp.tbctl));
+      if (scsp.scieb & (1 << SCSP_INTERRUPT_TIMER_C))
+         this_cycles = min(this_cycles, ScspTimerCyclesLeft(scsp.timc, scsp.tcctl));
 
-   ScspRunM68K(cycles);
+      scsp.sample_timer += this_cycles;
+      this_samples = scsp.sample_timer >> 8;
+      scsp.sample_timer &= 0xFF;
+      cycles_left -= this_cycles;
+      sample_count += this_samples;
 
-   ScspUpdateTimer(sample_count, &scsp.tima, scsp.tactl,
-                   SCSP_INTERRUPT_TIMER_A);
-   ScspUpdateTimer(sample_count, &scsp.timb, scsp.tbctl,
-                   SCSP_INTERRUPT_TIMER_B);
-   ScspUpdateTimer(sample_count, &scsp.timc, scsp.tcctl,
-                   SCSP_INTERRUPT_TIMER_C);
+      ScspRunM68K(this_cycles);
+
+      ScspUpdateTimer(this_samples, &scsp.tima, scsp.tactl,
+                      SCSP_INTERRUPT_TIMER_A);
+      ScspUpdateTimer(this_samples, &scsp.timb, scsp.tbctl,
+                      SCSP_INTERRUPT_TIMER_B);
+      ScspUpdateTimer(this_samples, &scsp.timc, scsp.tcctl,
+                      SCSP_INTERRUPT_TIMER_C);
+   }
 
    if (scsp_frame_accurate)
    {
@@ -1344,6 +1365,16 @@ static void ScspDoExec(u32 cycles)
 }
 
 //-------------------------------------------------------------------------
+
+// ScspTimerCyclesLeft:  Return the approximate number of SCSP clock cycles
+// before an SCSP timer (A, B, or C) triggers an interrupt.
+
+static u32 ScspTimerCyclesLeft(u16 timer, u8 timer_scale)
+{
+   return (0xFF00 - timer) << timer_scale;
+}
+
+//----------------------------------//
 
 // ScspUpdateTimer:  Update an SCSP timer (A, B, or C) by the given number
 // of output samples, and raise an interrupt if the timer reaches 0xFF.

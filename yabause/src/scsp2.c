@@ -578,6 +578,7 @@ static void ScspDoKeyOnOff(void);
 static void ScspKeyOn(SlotState *slot);
 static void ScspKeyOff(SlotState *slot);
 static void ScspUpdateSlotAddress(SlotState *slot);
+static void ScspUpdateSlotEnv(SlotState *slot);
 static void ScspUpdateSlotFunc(SlotState *slot);
 static u16 ScspMidiIn(void);
 static void ScspMidiOut(u8 data);
@@ -2633,36 +2634,7 @@ static void FASTCALL ScspWriteWordDirect(u32 address, u16 data)
                slot->dr     = (data >>  6) & 0x1F;
                slot->eghold = (data >>  5) & 0x1;
                slot->ar     = (data >>  0) & 0x1F;
-
-               if (slot->sr)
-               {
-                  const s32 *rate_table = &scsp_decay_rate[slot->sr << 1];
-                  // FIXME/SCSP1: doesn't this need to be 15 instead of 14?
-                  // (also below)
-                  slot->env_step_s = rate_table[(14 - slot->octave_shift)
-                                                >> slot->krs_shift];
-               }
-               else
-                  slot->env_step_s = 0;
-
-               if (slot->dr)
-               {
-                  const s32 *rate_table = &scsp_decay_rate[slot->dr << 1];
-                  slot->env_step_d = rate_table[(14 - slot->octave_shift)
-                                                >> slot->krs_shift];
-               }
-               else
-                  slot->env_step_d = 0;
-
-               if (slot->ar)
-               {
-                  const s32 *rate_table = &scsp_attack_rate[slot->ar << 1];
-                  slot->env_step_a = rate_table[(14 - slot->octave_shift)
-                                                >> slot->krs_shift];
-               }
-               else
-                  slot->env_step_a = 0;
-
+               ScspUpdateSlotEnv(slot);
                break;
 
             case 0x0A:
@@ -2676,19 +2648,11 @@ static void FASTCALL ScspWriteWordDirect(u32 address, u16 data)
                   slot->krs_shift = 4;
                else
                   slot->krs_shift = slot->krs >> 2;
-               // FIXME/SCSP1: should update ar/dr/sr lookups here
+
+               ScspUpdateSlotEnv(slot);
 
                slot->sl_target = (slot->sl << (5 + SCSP_ENV_LOW_BITS))
                                  + SCSP_ENV_DECAY_START;
-
-               if (slot->rr)
-               {
-                  const s32 *rate_table = &scsp_decay_rate[slot->rr << 1];
-                  slot->env_step_r = rate_table[(14 - slot->octave_shift)
-                                                >> slot->krs_shift];
-               }
-               else
-                  slot->env_step_r = 0;
 
                break;
 
@@ -2712,13 +2676,14 @@ static void FASTCALL ScspWriteWordDirect(u32 address, u16 data)
                data &= 0x7BFF;
                slot->oct    = (data >> 11) & 0xF;
                slot->fns    = (data >>  0) & 0x3FF;
-               // FIXME/SCSP1: should update ar/dr/sr/rr lookups here
 
                if (slot->oct & 8)
                   slot->octave_shift = 23 - slot->oct;
                else
                   slot->octave_shift = 7 - slot->oct;
                slot->addr_step = ((0x400 + slot->fns) << 7) >> slot->octave_shift;
+
+               ScspUpdateSlotEnv(slot);
 
                break;
 
@@ -3059,6 +3024,51 @@ static void ScspUpdateSlotAddress(SlotState *slot)
    slot->lea_shifted = ((slot->lea + 1) << SCSP_FREQ_LOW_BITS) - 1;
 
    slot->looplen_shifted = slot->lea_shifted - slot->lsa_shifted + 1;
+}
+
+//----------------------------------//
+
+// ScspUpdateSlotEnv:  Update the envelope step values from the SR/DR/AR/RR
+// slot registers.  slot->krs_shift and slot->octave_shift are assumed to
+// be up to date with respect to the KRS and OCT registers.
+
+static void ScspUpdateSlotEnv(SlotState *slot)
+{
+   if (slot->sr)
+   {
+      const s32 *rate_table = &scsp_decay_rate[slot->sr << 1];
+      slot->env_step_s = rate_table[(15 - slot->octave_shift)
+                                    >> slot->krs_shift];
+   }
+   else
+      slot->env_step_s = 0;
+
+   if (slot->dr)
+   {
+      const s32 *rate_table = &scsp_decay_rate[slot->dr << 1];
+      slot->env_step_d = rate_table[(15 - slot->octave_shift)
+                                    >> slot->krs_shift];
+   }
+   else
+      slot->env_step_d = 0;
+
+   if (slot->ar)
+   {
+      const s32 *rate_table = &scsp_attack_rate[slot->ar << 1];
+      slot->env_step_a = rate_table[(15 - slot->octave_shift)
+                                    >> slot->krs_shift];
+   }
+   else
+      slot->env_step_a = 0;
+
+   if (slot->rr)
+   {
+      const s32 *rate_table = &scsp_decay_rate[slot->rr << 1];
+      slot->env_step_r = rate_table[(15 - slot->octave_shift)
+                                    >> slot->krs_shift];
+   }
+   else
+      slot->env_step_r = 0;
 }
 
 //----------------------------------//

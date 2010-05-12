@@ -701,9 +701,10 @@ static void FASTCALL audiogen_##tag(SlotState *slot, u32 len)               \
          }                                                                  \
       }                                                                     \
                                                                             \
-      /* Update the LFO counter if either LFO waveform is in use */         \
-      /* FIXME/SCSP1: should update whenever LFORE == 0 */                  \
-      if ((F || A) && (L || R))                                             \
+      /* Update the LFO counter if either LFO waveform is in use            \
+       * (technically, we should update whenever slot->lfore == 0, but      \
+       * we skip the update on non-modulated channels to save time) */      \
+      if (F || A)                                                           \
          slot->lfo_counter += slot->lfo_step;                               \
    }                                                                        \
                                                                             \
@@ -2732,25 +2733,24 @@ static void FASTCALL ScspWriteWordDirect(u32 address, u16 data)
                if (slot->lfore)
                {
                   slot->lfo_step = -1;
+                  slot->lfo_counter = 0;
+                  slot->lfo_fm_shift = -1;
+                  slot->lfo_am_shift = -1;
                }
                else
                {
-                  // FIXME/SCSP1: would be simpler to clear this in the LFORE branch
-                  if (slot->lfo_step == -1)
-                     slot->lfo_counter = 0;
+                  slot->lfo_step = scsp_lfo_step[slot->lfof];
+                  if (slot->plfos)
+                     slot->lfo_fm_shift = slot->plfos - 1;
+                  else
+                     slot->lfo_fm_shift = -1;
+                  if (slot->alfos)
+                     slot->lfo_am_shift = 11 - slot->alfos;
+                  else
+                     slot->lfo_am_shift = -1;
                }
-
-               slot->lfo_step = scsp_lfo_step[slot->lfof];
                slot->lfo_fm_wave = scsp_lfo_wave_freq[slot->plfows];
-               if (slot->plfos)
-                  slot->lfo_fm_shift = slot->plfos - 1;
-               else
-                  slot->lfo_fm_shift = -1;
                slot->lfo_am_wave = scsp_lfo_wave_amp[slot->alfows];
-               if (slot->alfos)
-                  slot->lfo_am_shift = 11 - slot->alfos;
-               else
-                  slot->lfo_am_shift = -1;
 
                ScspUpdateSlotFunc(slot);
 

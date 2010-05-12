@@ -200,6 +200,15 @@ static INLINE int StateCheckRetrieveHeader(FILE *fp, const char *name, int *vers
 
 //////////////////////////////////////////////////////////////////////////////
 
+/* Minimum/maximum values */
+
+#undef min
+#undef max
+#define min(a,b)  ((a) < (b) ? (a) : (b))
+#define max(a,b)  ((a) > (b) ? (a) : (b))
+
+//////////////////////////////////////////////////////////////////////////////
+
 /*
  * BSWAP16(x) swaps two bytes in a 16-bit value (AABB -> BBAA) or adjacent
  * bytes in a 32-bit value (AABBCCDD -> BBAADDCC).

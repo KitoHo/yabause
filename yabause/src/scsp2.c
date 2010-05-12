@@ -1063,19 +1063,20 @@ int ScspChangeSoundCore(int coreid)
    if (SNDCore)
       SNDCore->DeInit();
 
-   // So which core do we want?
+   // If the default was requested, use the first core in the list
    if (coreid == SNDCORE_DEFAULT)
-      // FIXME/SCSP1: replace with: coreid = SNDCoreList[0] ? SNDCoreList[0]->id : 0;
-      coreid = 0; // Assume we want the first one
-
-   // Go through core list and find the id
-   for (i = 0; SNDCoreList[i] != NULL; i++)
+      SNDCore = SNDCoreList[0];
+   else
    {
-      if (SNDCoreList[i]->id == coreid)
+      // Otherwise, go through core list and find the id
+      for (i = 0; SNDCoreList[i] != NULL; i++)
       {
-         // Set to current core
-         SNDCore = SNDCoreList[i];
-         break;
+         if (SNDCoreList[i]->id == coreid)
+         {
+            // Set to current core
+            SNDCore = SNDCoreList[i];
+            break;
+         }
       }
    }
 

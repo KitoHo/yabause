@@ -301,6 +301,7 @@ typedef struct SlotState_struct
    u8   octave_shift;   // Octave shift amount (0..15)
    u32  lsa_shifted;    // lsa << SCSP_FREQ_LOW_BITS (for addr_counter)
    u32  lea_shifted;    // lea << SCSP_FREQ_LOW_BITS (for addr_counter)
+   u32  looplen_shifted;// (lea - lsa + 1) << SCSP_FREQ_LOW_BITS
 
    u32  env_phase;      // Current envelope phase (attack/decay/...)
    s32  env_counter;    // Envelope counter
@@ -660,11 +661,12 @@ static void FASTCALL audiogen_##tag(SlotState *slot, u32 len)               \
       addr_counter += addr_step;                                            \
       if (UNLIKELY(addr_counter > slot->lea_shifted))                       \
       {                                                                     \
-         /* FIXME/SCSP1: reverse/alternating loops not implemented */       \
+         /* FIXME: reverse/alternating loops not implemented */             \
          if (slot->lpctl)                                                   \
          {                                                                  \
-            /* FIXME/SCSP1: should do modulo rather than simply reset */    \
-            addr_counter = slot->lsa_shifted;                               \
+            addr_counter = slot->lsa_shifted                                \
+                         + ((addr_counter - slot->lsa_shifted)              \
+                            % slot->looplen_shifted);                       \
          }                                                                  \
          else                                                               \
          {                                                                  \
@@ -2660,23 +2662,14 @@ static void FASTCALL ScspWriteWordDirect(u32 address, u16 data)
 
             case 0x04:
                slot->lsa    = data;
-               // FIXME/SCSP1: disabled because scsp1 didn't do it
-               //if (slot->env_counter < SCSP_ENV_DECAY_END)
-               //   ScspUpdateSlotAddress(slot);
-               // FIXME/SCSP1: the next line can be dropped if the above is
-               // uncommented
-               slot->lsa_shifted = slot->lsa << SCSP_FREQ_LOW_BITS;
+               if (slot->env_counter < SCSP_ENV_DECAY_END)
+                  ScspUpdateSlotAddress(slot);
                break;
 
             case 0x06:
                slot->lea    = data;
-               // FIXME/SCSP1: disabled because scsp1 didn't do it
-               //if (slot->env_counter < SCSP_ENV_DECAY_END)
-               //   ScspUpdateSlotAddress(slot);
-               // FIXME/SCSP1: the next line can be dropped if the above is
-               // uncommented
-               // FIXME/SCSP1: this should actually be ((lea+1)<<BITS) - 1
-               slot->lea_shifted = slot->lea << SCSP_FREQ_LOW_BITS;
+               if (slot->env_counter < SCSP_ENV_DECAY_END)
+                  ScspUpdateSlotAddress(slot);
                break;
 
             case 0x08:
@@ -3096,24 +3089,21 @@ static void ScspUpdateSlotAddress(SlotState *slot)
 
    if (slot->pcm8b)
       slot->sa &= ~1;
-   // FIXME/SCSP1: should slot->sa be masked by scsp.sound_ram_mask?
+   slot->sa &= scsp.sound_ram_mask;
    slot->buf = &SoundRam[slot->sa];
-   // FIXME/SCSP1: should this likewise use scsp.sound_ram_mask?
-   max_samples = (SCSP_RAM_MASK + 1) - slot->sa;
+   max_samples = scsp.sound_ram_mask - slot->sa;
    if (slot->pcm8b)
       max_samples >>= 1;
 
-   // FIXME/SCSP1: should tweak slot->lsa as well
-   //if (slot->lsa > max_samples)
-   //   slot->lsa = max_samples;
+   if (slot->lsa > max_samples)
+      slot->lsa = max_samples;
    slot->lsa_shifted = slot->lsa << SCSP_FREQ_LOW_BITS;
 
    if (slot->lea > max_samples)
       slot->lea = max_samples;
-   slot->lea_shifted = slot->lea << SCSP_FREQ_LOW_BITS;
+   slot->lea_shifted = ((slot->lea + 1) << SCSP_FREQ_LOW_BITS) - 1;
 
-   // FIXME/SCSP1: scsp1 advanced the address counter here, but that looks
-   // wrong to me -- shouldn't it only be advanced during ScspExec()?
+   slot->looplen_shifted = slot->lea_shifted - slot->lsa_shifted + 1;
 }
 
 //----------------------------------//

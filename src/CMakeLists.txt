@@ -5,7 +5,7 @@ set(yabause_SOURCES
 	cdbase.c cheat.c coffelf.c cs0.c cs1.c cs2.c
 	debug.c
 	error.c
-	m68kcore.c m68kd.c m68kq68.c memory.c movie.c
+	m68kcore.c m68kd.c memory.c movie.c
 	netlink.c
 	peripheral.c profile.c
 	scu.c sh2core.c sh2d.c sh2idle.c sh2int.c sh2trace.c smpc.c snddummy.c
@@ -181,6 +181,15 @@ if (YAB_WANT_C68K)
 	include_directories(${CMAKE_CURRENT_BINARY_DIR}/c68k)
 	set(yabause_SOURCES ${yabause_SOURCES} c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c m68kc68k.c)
 endif(YAB_WANT_C68K)
+
+# q68
+option(YAB_WANT_Q68 "enable q68 compilation" OFF)
+if (YAB_WANT_Q68)
+	add_definitions(-DHAVE_Q68=1)
+	set(yabause_SOURCES ${yabause_SOURCES}
+		m68kq68.c q68/q68.c q68/q68-core.c q68/q68-disasm.c
+		q68/q68-const.h q68/q68.h q68/q68-internal.h q68/q68-jit.h q68/q68-jit-psp.h q68/q68-jit-x86.h)
+endif()
 
 # *DEBUG
 set(YAB_DEBUG "" CACHE STRING "List of enabled debug information") 

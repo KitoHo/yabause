@@ -64,12 +64,12 @@ void *padbits;
 /* Flag indicating whether the ME is available for use */
 int me_available;
 
+/* Have we successfully initialized the Yabause core? */
+int yabause_initted;
+
 /*************************************************************************/
 /****************************** Local data *******************************/
 /*************************************************************************/
-
-/* Have we successfully initialized the Yabause core? */
-static int initted;
 
 /* Flag indicating whether the menu is currently displayed */
 static int in_menu;
@@ -122,7 +122,7 @@ int main(int argc, char **argv)
         in_menu = 1;
     } else {
         if (init_yabause()) {
-            initted = 1;
+            yabause_initted = 1;
         } else {
             /* Start in the menu so the user sees the error message. */
             menu_open();
@@ -159,10 +159,10 @@ static void iterate_main_loop(void)
             if (osk_status()) {
                 /* If the OSK is active, SELECT is used to switch character
                  * sets, so we shouldn't respond to it. */
-            } else if (!initted && !init_yabause()) {
+            } else if (!yabause_initted && !init_yabause()) {
                 /* We failed to start the emulator, so stay in the menu. */
             } else {
-                initted = 1;  // In case we just successfully initialized
+                yabause_initted = 1;  // In case we just successfully initted
                 menu_close();
                 in_menu = 0;
             }

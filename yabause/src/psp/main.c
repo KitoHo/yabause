@@ -28,7 +28,9 @@
 #include "init.h"
 #include "menu.h"
 #include "misc.h"
+#include "osk.h"
 #include "psp-video.h"
+#include "timing.h"
 
 #ifdef SYS_PROFILE_H
 # include "profile.h"  // Can only be ours
@@ -128,6 +130,7 @@ int main(int argc, char **argv)
         }
     }
 
+    timing_init();
     for (;;) {
         iterate_main_loop();
     }
@@ -148,19 +151,15 @@ int main(int argc, char **argv)
  */
 static void iterate_main_loop(void)
 {
-    const uint32_t MIN_WAIT = (1001000/60)*9/10;  // Allow minor fluctuations
-    static uint32_t last_frame_time = 0;
-    uint32_t now;
-    while ((now = sceKernelGetSystemTimeLow()) - last_frame_time < MIN_WAIT) {
-        sceDisplayWaitVblankStart();
-    }
-    last_frame_time = now;
-
+    timing_sync();
     control_update();
 
     if (control_new_buttons() & PSP_CTRL_SELECT) {
         if (in_menu) {
-            if (!initted && !init_yabause()) {
+            if (osk_status()) {
+                /* If the OSK is active, SELECT is used to switch character
+                 * sets, so we shouldn't respond to it. */
+            } else if (!initted && !init_yabause()) {
                 /* We failed to start the emulator, so stay in the menu. */
             } else {
                 initted = 1;  // In case we just successfully initialized
@@ -192,12 +191,6 @@ static void iterate_main_loop(void)
  */
 static void emulate_one_frame(void)
 {
-#if defined(PSP_DEBUG) || defined(SYS_PROFILE_H)  // Unused otherwise
-    static int frame = 0;
-    DMSG("frame %d", frame);
-    frame++;
-#endif
-
     PERCore->HandleEvents();  // Also runs the actual emulation
 
     check_autosave();
@@ -207,7 +200,10 @@ static void emulate_one_frame(void)
     scePowerTick(0);
 
 #ifdef SYS_PROFILE_H  // Print out profiling info every 100 frames
+    static unsigned int frame = 0;
+    frame++;
     if (frame % 100 == 0) {
+        printf("Profiling statistics at frame %u:\n", frame);
         PROFILE_PRINT();
         PROFILE_RESET();
     }

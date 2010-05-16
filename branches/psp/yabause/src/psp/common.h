@@ -105,6 +105,9 @@ extern void *padbits;
 /* Flag indicating whether the ME is available for use */
 extern int me_available;
 
+/* Have we successfully initialized the Yabause core? */
+extern int yabause_initted;
+
 /**************************************************************************/
 
 /* Convenience macros (not PSP-related, except DSTART/DEND) */

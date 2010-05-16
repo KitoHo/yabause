@@ -774,7 +774,10 @@ static void process_option_main(const uint32_t buttons)
         break;
 
       case OPT_MAIN_RESET:
-        if ((buttons & PSP_CTRL_LTRIGGER) && (buttons & PSP_CTRL_RTRIGGER)) {
+        if (yabause_initted
+         && (buttons & PSP_CTRL_LTRIGGER)
+         && (buttons & PSP_CTRL_RTRIGGER)
+        ) {
             do_reset();
         }
 
@@ -810,6 +813,9 @@ static void process_option_general(const uint32_t buttons)
         break;
 
       case OPT_GENERAL_BUP_SAVE_NOW: {
+        if (!yabause_initted) {
+            break;
+        }
         const char *path = config_get_path_bup();
         if (!path || !*path) {  // Check this early just in case
             status_text = "No backup RAM file configured!";
@@ -828,6 +834,9 @@ static void process_option_general(const uint32_t buttons)
       }  // case OPT_GENERAL_BUP_SAVE_NOW
 
       case OPT_GENERAL_BUP_SAVE_AS: {
+        if (!yabause_initted) {
+            break;
+        }
         const unsigned int maxlen = 100;  // Reasonable limit
         const char *path = config_get_path_bup();
         if (!path) {
@@ -1089,9 +1098,11 @@ static void process_option_advanced(const uint32_t buttons)
                 status_color = TEXT_COLOR_NG;
                 status_timer = STATUS_DISPTIME;
             }
-            SH2DeInit();
-            SH2Init(new_module);
-            do_reset();
+            if (yabause_initted) {
+                SH2DeInit();
+                SH2Init(new_module);
+                do_reset();
+            }
         }
         break;
 
@@ -1269,7 +1280,10 @@ static void process_input_filesel(const uint32_t new_buttons)
 
         if (filename) {
 
-            int need_reset = 1;
+            /* We only need to reset if the emulator has already been
+             * started */
+            int need_reset = yabause_initted;
+
             /* We can only come here from the "Files" menu, so there's no
              * need to check cur_menu */
 
@@ -1285,11 +1299,13 @@ static void process_input_filesel(const uint32_t new_buttons)
                     status_timer = STATUS_DISPTIME;
                     need_reset = 0;
                 }
-                if (LoadBios(filename) != 0) {
-                    status_text = "Failed to load BIOS image!";
-                    status_color = TEXT_COLOR_NG;
-                    status_timer = STATUS_DISPTIME;
-                    need_reset = 0;
+                if (yabause_initted) {
+                    if (LoadBios(filename) != 0) {
+                        status_text = "Failed to load BIOS image!";
+                        status_color = TEXT_COLOR_NG;
+                        status_timer = STATUS_DISPTIME;
+                        need_reset = 0;
+                    }
                 }
                 break;
 
@@ -1303,9 +1319,11 @@ static void process_input_filesel(const uint32_t new_buttons)
                     status_timer = STATUS_DISPTIME;
                     need_reset = 0;
                 }
-                /* Unfortunately, Cs2ChangeCDCore() doesn't return an error
-                 * if the load fails, so we'll just hope it worked. */
-                Cs2ChangeCDCore(CDCORE_ISO, filename);
+                if (yabause_initted) {
+                    /* Unfortunately, Cs2ChangeCDCore() doesn't return an error
+                     * if the load fails, so we'll just hope it worked. */
+                    Cs2ChangeCDCore(CDCORE_ISO, filename);
+                }
                 break;
 
               case OPT_FILES_PATH_BUP:
@@ -1319,11 +1337,13 @@ static void process_input_filesel(const uint32_t new_buttons)
                     status_timer = STATUS_DISPTIME;
                     need_reset = 0;
                 }
-                if (LoadBackupRam(filename) != 0) {
-                    status_text = "Failed to load backup RAM image!";
-                    status_color = TEXT_COLOR_NG;
-                    status_timer = STATUS_DISPTIME;
-                    need_reset = 0;
+                if (yabause_initted) {
+                    if (LoadBackupRam(filename) != 0) {
+                        status_text = "Failed to load backup RAM image!";
+                        status_color = TEXT_COLOR_NG;
+                        status_timer = STATUS_DISPTIME;
+                        need_reset = 0;
+                    }
                 }
                 break;
 
@@ -1532,7 +1552,13 @@ static void draw_menu(void)
         y += line_height*3/2;
         draw_menu_option(OPT_MAIN_SAVE, menu_left_edge, y, "Save settings");
         y += line_height;
-        draw_menu_option(OPT_MAIN_RESET, menu_left_edge, y, "Reset emulator");
+        if (yabause_initted) {
+            draw_menu_option(OPT_MAIN_RESET, menu_left_edge, y,
+                             "Reset emulator");
+        } else {
+            draw_disabled_menu_option(OPT_MAIN_RESET, menu_left_edge, y,
+                                      "Reset emulator");
+        }
         y = menu_help_y;
         switch ((MainMenuOption)cur_option) {
           case OPT_MAIN_GENERAL:
@@ -1600,11 +1626,21 @@ static void draw_menu(void)
                          "[%c] Auto-save backup RAM",
                          config_get_bup_autosave() ? '*' : ' ');
         y += line_height;
-        draw_menu_option(OPT_GENERAL_BUP_SAVE_NOW, menu_left_edge, y,
-                         "    Save backup RAM now");
+        if (yabause_initted) {
+            draw_menu_option(OPT_GENERAL_BUP_SAVE_NOW, menu_left_edge, y,
+                             "    Save backup RAM now");
+        } else {
+            draw_disabled_menu_option(OPT_GENERAL_BUP_SAVE_NOW, menu_left_edge,
+                                      y, "    Save backup RAM now");
+        }
         y += line_height;
-        draw_menu_option(OPT_GENERAL_BUP_SAVE_AS, menu_left_edge, y,
-                         "    Save backup RAM as...");
+        if (yabause_initted) {
+            draw_menu_option(OPT_GENERAL_BUP_SAVE_AS, menu_left_edge, y,
+                             "    Save backup RAM as...");
+        } else {
+            draw_disabled_menu_option(OPT_GENERAL_BUP_SAVE_AS, menu_left_edge,
+                                      y, "    Save backup RAM as...");
+        }
         y = menu_help_y;
         switch ((GeneralMenuOption)cur_option) {
           case OPT_GENERAL_START_IN_EMU:
@@ -2304,16 +2340,24 @@ static const char *cur_option_confirm_text(void)
     switch ((MenuIndex)cur_menu) {
       case MENU_MAIN:
         switch ((MainMenuOption)cur_option) {
-            case OPT_MAIN_SAVE:  return "O: Save settings";
-            case OPT_MAIN_RESET: return "L+R+O: Reset emulator";
-            default:             return "O: Enter submenu";
+          case OPT_MAIN_SAVE:
+            return "O: Save settings";
+          case OPT_MAIN_RESET:
+            return yabause_initted ? "L+R+O: Reset emulator" : "";
+          default:
+            return "O: Enter submenu";
         }
       case MENU_GENERAL:
         switch ((GeneralMenuOption)cur_option) {
           case OPT_GENERAL_FILES:
             return "O: Enter submenu    X: Return to previous menu";
           case OPT_GENERAL_BUP_SAVE_NOW:
-            return "O: Save backup RAM    X: Return to previous menu";
+          case OPT_GENERAL_BUP_SAVE_AS:
+            if (yabause_initted) {
+                return "O: Save backup RAM    X: Return to previous menu";
+            } else {
+                return "X: Return to previous menu";
+            }
           default:
             return "O: Toggle on/off    X: Return to previous menu";
         }
@@ -2348,6 +2392,12 @@ static const char *cur_option_confirm_text(void)
             return "L+R+O: Toggle on/off    X: Return to previous menu";
           case OPT_ADVANCED_SH2_OPTIMIZE:
             return "O: Enter submenu    X: Return to previous menu";
+          case OPT_ADVANCED_MEDIA_ENGINE:
+            if (me_available) {
+                return "O: Enter submenu    X: Return to previous menu";
+            } else {
+                return "X: Return to previous menu";
+            }
           default:
             return "O: Toggle on/off    X: Return to previous menu";
         }

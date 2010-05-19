@@ -155,6 +155,9 @@ static uint8_t Azel_sky_palette, Azel_ground_palette;
 /* Does the sky wrap vertically? */
 static uint8_t Azel_sky_wrap_v;
 
+/* Is the ground texture already reduced by half? */
+static uint8_t Azel_ground_reduced;
+
 /* VDP2 plane addresses for sky and ground planes. */
 static uint32_t Azel_sky_plane_address, Azel_ground_plane_address;
 
@@ -172,7 +175,7 @@ struct Azel_RBG0_coord {int x, y, overdraw_x, overdraw_y;};
 static void Azel_cache_plane(uint32_t plane_address, uint32_t tile_base,
                              uint8_t *dest);
 static void Azel_make_mipmap(const uint8_t *in, unsigned int size,
-                             uint8_t *out);
+                             uint8_t *out, unsigned int stride);
 static void Azel_get_rotation_matrix(uint32_t address, float matrix[2][3],
                                      float *kx_ret, float *ky_ret,
                                      float *Xp_ret, float *Yp_ret);
@@ -303,12 +306,16 @@ static void Azel_cache_RBG0(void)
     const unsigned int planewh_A = Vdp2Regs->PLSZ>>8 & 0x3;
     const unsigned int planewh_B = Vdp2Regs->PLSZ>>12 & 0x3;
     const unsigned int rpmd = Vdp2Regs->RPMD & 0x3;
+    const unsigned int raovr = Vdp2Regs->PLSZ>>10 & 0x3;
+    const unsigned int raopn = Vdp2Regs->OVPNRA;
     if (colornumber != 1 || patternwh != 2 || patterndatasize != 2
-     || auxmode || planewh_A != 0 || planewh_B != 0 || rpmd != 2
+     || auxmode || planewh_A != 0 || planewh_B != 0 
+     || (rpmd != 2 && !(rpmd == 0 && raovr == 1 && raopn == 0x5000))
     ) {
         DMSG("Wrong RBG0 format for cache: colornumber=%u patternwh=%u"
-             " patterndatasize=%u auxmode=%u planewh=%u/%u", colornumber,
-             patternwh, patterndatasize, auxmode, planewh_A, planewh_B);
+             " patterndatasize=%u auxmode=%u planewh=%u/%u rpmd=%u",
+             colornumber, patternwh, patterndatasize, auxmode, planewh_A,
+             planewh_B, rpmd);
         Azel_RBG0_cached = 0;
         return;
     }
@@ -390,15 +397,48 @@ static void Azel_cache_RBG0(void)
     Azel_cache_plane(sky_plane_address,
                      (supplementdata & 0xC) << 15 | (supplementdata & 3) << 5,
                      Azel_sky_cache);
-    Azel_cache_plane(ground_plane_address,
-                     (supplementdata & 0xC) << 15 | (supplementdata & 3) << 5,
-                     Azel_ground_cache);
+    if ((Vdp2Regs->RPMD & 3) == 0
+     && Vdp2Regs->MPABRA == 0x0100
+     && Vdp2Regs->MPEFRA == 0x0203
+    ) {
+        /* Special case for the dome area of the Uru underground dungeon,
+         * which is a shrunken 1024x1024 map.  We reduce it to 512x512 and
+         * adjust the scale factors appropriately when drawing. */
+        Azel_ground_reduced = 1;
+        uint8_t *temp = malloc(512*512);
+        if (!temp) {
+            DMSG("No temporary memory for reducing dome RBG0");
+            return;
+        }
+        Azel_cache_plane(ground_plane_address,
+                         (supplementdata & 0xC)<<15 | (supplementdata & 3)<<5,
+                         temp);
+        Azel_make_mipmap(temp, 512, Azel_ground_cache, 512);
+        Azel_cache_plane(ground_plane_address + 0x800,
+                         (supplementdata & 0xC)<<15 | (supplementdata & 3)<<5,
+                         temp);
+        Azel_make_mipmap(temp, 512, Azel_ground_cache + 256*8, 512);
+        Azel_cache_plane(ground_plane_address + 0x1800,
+                         (supplementdata & 0xC)<<15 | (supplementdata & 3)<<5,
+                         temp);
+        Azel_make_mipmap(temp, 512, Azel_ground_cache + 512*256, 512);
+        Azel_cache_plane(ground_plane_address + 0x1000,
+                         (supplementdata & 0xC)<<15 | (supplementdata & 3)<<5,
+                         temp);
+        Azel_make_mipmap(temp, 512, Azel_ground_cache + 512*256 + 256*8, 512);
+        free(temp);
+    } else {
+        Azel_ground_reduced = 0;
+        Azel_cache_plane(ground_plane_address,
+                         (supplementdata & 0xC)<<15 | (supplementdata & 3)<<5,
+                         Azel_ground_cache);
+    }
     Azel_make_mipmap(Azel_ground_cache, 512,
-                     Azel_ground_cache + 512*512);
+                     Azel_ground_cache + 512*512, 256);
     Azel_make_mipmap(Azel_ground_cache + 512*512, 256,
-                     Azel_ground_cache + 512*512 + 256*256);
+                     Azel_ground_cache + 512*512 + 256*256, 128);
     Azel_make_mipmap(Azel_ground_cache + 512*512 + 256*256, 128,
-                     Azel_ground_cache + 512*512 + 256*256 + 128*128);
+                     Azel_ground_cache + 512*512 + 256*256 + 128*128, 64);
 
     /* Record other data in relevant variables and set the cached flag. */
 
@@ -475,14 +515,15 @@ static void Azel_cache_plane(uint32_t plane_address, uint32_t tile_base,
  * by dropping every second pixel.
  *
  * [Parameters]
- *       in: Input pixel buffer
- *     size: Size (width and height) of input pixel buffer
- *      out: Output pixel buffer
+ *         in: Input pixel buffer
+ *       size: Size (width and height) of input pixel buffer
+ *        out: Output pixel buffer
+ *     stride: Line length of output buffer (normally size/2)
  * [Return value]
  *     None
  */
 static void Azel_make_mipmap(const uint8_t *in, unsigned int size,
-                             uint8_t *out)
+                             uint8_t *out, unsigned int stride)
 {
 #define SHRINK                          \
     asm(".set push; .set noreorder\n"   \
@@ -503,7 +544,7 @@ static void Azel_make_mipmap(const uint8_t *in, unsigned int size,
     )
 
     unsigned int y;
-    for (y = 0; y < size; y += 16, in += size*8) {
+    for (y = 0; y < size; y += 16, in += size*8, out += (stride - size/2)*8) {
         unsigned int x;
         for (x = 0; x < size; x += 32, in += 128, out += 64) {
             unsigned int line;
@@ -564,13 +605,20 @@ static int Azel_draw_RBG0(vdp2draw_struct *info,
         return 0;
     }
 
-    /* Make sure it's a mode-1 layer with 4-byte, mode-0 coefficients
-     * for the ground (set A) and no coefficients for the sky (set B). */
+    /* Make sure it's an RPMD mode 2 layer with 4-byte, mode-0 coefficients
+     * for the ground (set A) and no coefficients for the sky (set B).
+     * However, also allow mode 0 with certain parameter settings used in
+     * the Uru underground dungeon. */
 
-    if (info->rotatemode != 1) {
+    if ((Vdp2Regs->RPMD & 3) != 2
+     && !((Vdp2Regs->RPMD & 3) == 0
+          && (Vdp2Regs->PLSZ>>10 & 3) == 1
+          && Vdp2Regs->OVPNRA == 0x5000)
+    ) {
         DMSG("Can't optimize RBG0 (bad rotatemode=%d)", info->rotatemode);
         return 0;
     }
+    const int has_sky = ((Vdp2Regs->RPMD & 3) == 2);
     const uint32_t param_address = (Vdp2Regs->RPTA.all << 1) & 0x7FF7C;
     const uint32_t coef_base_high = (Vdp2Regs->KTAOF & 1) << 18;
     if ((Vdp2Regs->KTCTL & 0x0F0F) != 0x0001) {
@@ -742,7 +790,7 @@ static int Azel_draw_RBG0(vdp2draw_struct *info,
      * adjusted by the Z factor and may end up slightly different from the
      * original values in the coord[] array. */
 
-    if (nverts[sky_coord_set] > 0) {
+    if (has_sky && nverts[sky_coord_set] > 0) {
 
         vertices = guGetMemory(sizeof(*vertices) * nverts[sky_coord_set]);
         unsigned int i;
@@ -788,7 +836,11 @@ static int Azel_draw_RBG0(vdp2draw_struct *info,
     guClutMode(GU_PSM_8888, 0, 255, 0);
     guClutLoad(32, ground_clut);
     guTexMode(GU_PSM_T8, 0, 0, 1);
-    guTexWrap(GU_REPEAT, GU_REPEAT);
+    if (has_sky) {
+        guTexWrap(GU_REPEAT, GU_REPEAT);
+    } else {  // Uru underground special case.
+        guTexWrap(GU_CLAMP, GU_CLAMP);
+    }
 
     float Mproj[4][4];
     Mproj[0][0] = 2.0f / disp_width;
@@ -1272,8 +1324,8 @@ static int Azel_draw_RBG0(vdp2draw_struct *info,
                                            ground_M,
                                            vertices[i].z, vertices[i].z,
                                            ground_Xp, ground_Yp);
-                vertices[i].u /= 512;
-                vertices[i].v /= 512;
+                vertices[i].u /= (Azel_ground_reduced ? 1024 : 512);
+                vertices[i].v /= (Azel_ground_reduced ? 1024 : 512);
                 if (do_shimmer) {
                     /* Fake the "shimmering" effect with a simple sinusoidal
                      * offset.  The PSP doesn't have enough hardware operators

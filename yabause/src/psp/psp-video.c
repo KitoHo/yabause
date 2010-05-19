@@ -165,8 +165,8 @@ static CustomDrawRoutine *custom_draw_func[5];
  * for timing purposes? */
 static uint8_t RBG0_draw_func_is_fast;
 
-/* Did we draw a fast RBG0 this frame? */
-static uint8_t drew_fast_RBG0;
+/* Did we draw a slow RBG0 this frame? */
+static uint8_t drew_slow_RBG0;
 
 /*----------------------------------*/
 
@@ -909,9 +909,7 @@ static void psp_vdp2_draw_end(void)
         } else {
             frames_to_skip = config_get_frameskip_num();
         }
-        if ((Vdp2Regs->BGON & Vdp2External.disptoggle & (1 << BG_RBG0))
-         && config_get_enable_rotate() && !drew_fast_RBG0
-        ) {
+        if (drew_slow_RBG0) {
             frames_to_skip += 1 + frames_to_skip;
         }
         if (disp_height > 272 && frames_to_skip == 0
@@ -919,7 +917,7 @@ static void psp_vdp2_draw_end(void)
         ) {
             frames_to_skip = 1;
         }
-        drew_fast_RBG0 = 0;
+        drew_slow_RBG0 = 0;
     }
 }
 
@@ -1947,6 +1945,16 @@ static void vdp2_draw_graphics(int layer)
     clip[1].ystart = 0; clip[1].yend = disp_height;
     ReadWindowData(info.wctl, clip);
 
+    /* Check for a zero-size clip window, which some games seem to use to
+     * temporarily disable a screen. */
+    if (clip[0].xstart >= clip[0].xend
+     || clip[0].ystart >= clip[0].yend
+     || clip[1].xstart >= clip[1].xend
+     || clip[1].ystart >= clip[1].yend
+    ) {
+        return;
+    }
+
     info.priority = bg_priority[layer];
     switch (layer) {
         case BG_NBG0: info.PlaneAddr = (void *)Vdp2NBG0PlaneAddr; break;
@@ -1978,7 +1986,7 @@ static void vdp2_draw_graphics(int layer)
     if (custom_draw_func[layer]) {
         custom_draw_succeeded = (*custom_draw_func[layer])(&info, clip);
         if (custom_draw_succeeded && layer == BG_RBG0) {
-            drew_fast_RBG0 = RBG0_draw_func_is_fast;
+            drew_slow_RBG0 = !RBG0_draw_func_is_fast;
         }
     }
 
@@ -2026,6 +2034,9 @@ static void vdp2_draw_graphics(int layer)
 
         /* Render the graphics. */
         (*draw_map_func)(&info, clip);
+        if (layer == BG_RBG0) {
+            drew_slow_RBG0 = 1;
+        }
 
     }  // if (!custom_draw_succeeded)
 

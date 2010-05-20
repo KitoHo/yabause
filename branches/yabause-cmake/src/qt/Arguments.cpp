@@ -173,6 +173,9 @@ namespace Arguments
 
 	void iso(const QString& param)
 	{
+		VolatileSettings * vs = QtYabause::volatileSettings();
+		vs->setValue( "General/CdRom", CDCORE_ISO );
+		vs->setValue( "General/CdRomISO", param );
 	}
 
 	void nobios(const QString& param)

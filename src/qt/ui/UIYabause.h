@@ -79,6 +79,7 @@ protected:
 public slots:
 	void appendLog( const char* msg );
 	void pause();
+	void reset();
 	void run();
 
 protected slots:

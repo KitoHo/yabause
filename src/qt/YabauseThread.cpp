@@ -122,6 +122,9 @@ bool YabauseThread::resetEmulation( bool fullreset )
 		return false;
 	if ( fullreset )
 		YabauseReset();
+
+	emit reset();
+
 	return true;
 }
 

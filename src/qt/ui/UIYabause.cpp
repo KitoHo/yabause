@@ -93,6 +93,7 @@ UIYabause::UIYabause( QWidget* parent )
 	connect( mLogDock->toggleViewAction(), SIGNAL( toggled( bool ) ), aViewLog, SLOT( setChecked( bool ) ) );
 	connect( mYabauseThread, SIGNAL( error( const char* ) ), this, SLOT( appendLog( const char* ) ) );
 	connect( mYabauseThread, SIGNAL( pause() ), this, SLOT( pause() ) );
+	connect( mYabauseThread, SIGNAL( reset() ), this, SLOT( reset() ) );
 	connect( mYabauseThread, SIGNAL( run() ), this, SLOT( run() ) );
 	// retranslate widgets
 	QtYabause::retranslateWidget( this );
@@ -484,6 +485,11 @@ void UIYabause::pause()
 	aEmulationRun->setEnabled( true );
 	aEmulationPause->setEnabled( false );
 	aEmulationReset->setEnabled( true );
+}
+
+void UIYabause::reset()
+{
+	mYabauseGL->updateView( mYabauseGL->size() );
 }
 
 void UIYabause::run()

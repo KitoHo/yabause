@@ -68,6 +68,7 @@ signals:
 	void error( const char* error );
 
 	void pause();
+	void reset();
 	void run();
 };
 

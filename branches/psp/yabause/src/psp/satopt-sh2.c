@@ -3708,9 +3708,9 @@ static ALWAYS_INLINE void Azel_06035Exx_scale_common(
 
 static FASTCALL void Azel_06035E70(SH2State *state)
 {
-    int32_t *r5_ptr =
-        state->R[5] & 0x6000000 ? (int32_t *)HRAM_PTR(state->R[5])
-                                : (int32_t *)LRAM_PTR(state->R[5]);
+    uint32_t r5 = HRAM_LOADL(0x604AEA4, 0);
+    int32_t *r5_ptr = r5 & 0x6000000 ? (int32_t *)HRAM_PTR(r5)
+                                     : (int32_t *)LRAM_PTR(r5);
     Azel_06035Exx_scale_common(state->R[4], r5_ptr+0);
     state->PC = state->PR;
     state->cycles += 28;
@@ -3718,9 +3718,9 @@ static FASTCALL void Azel_06035E70(SH2State *state)
 
 static FASTCALL void Azel_06035EA0(SH2State *state)
 {
-    int32_t *r5_ptr =
-        state->R[5] & 0x6000000 ? (int32_t *)HRAM_PTR(state->R[5])
-                                : (int32_t *)LRAM_PTR(state->R[5]);
+    uint32_t r5 = HRAM_LOADL(0x604AEA4, 0);
+    int32_t *r5_ptr = r5 & 0x6000000 ? (int32_t *)HRAM_PTR(r5)
+                                     : (int32_t *)LRAM_PTR(r5);
     Azel_06035Exx_scale_common(state->R[4], r5_ptr+1);
     state->PC = state->PR;
     state->cycles += 28;
@@ -3728,9 +3728,9 @@ static FASTCALL void Azel_06035EA0(SH2State *state)
 
 static FASTCALL void Azel_06035ED0(SH2State *state)
 {
-    int32_t *r5_ptr =
-        state->R[5] & 0x6000000 ? (int32_t *)HRAM_PTR(state->R[5])
-                                : (int32_t *)LRAM_PTR(state->R[5]);
+    uint32_t r5 = HRAM_LOADL(0x604AEA4, 0);
+    int32_t *r5_ptr = r5 & 0x6000000 ? (int32_t *)HRAM_PTR(r5)
+                                     : (int32_t *)LRAM_PTR(r5);
     Azel_06035Exx_scale_common(state->R[4], r5_ptr+2);
     state->PC = state->PR;
     state->cycles += 28;

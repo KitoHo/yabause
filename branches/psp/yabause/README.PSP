@@ -334,7 +334,7 @@ The main menu contains six options:
         * "Show FPS"
 
           When enabled, the emulator's current speed in emulated frames per
-          second (FPS) will be displayed in the upper-left corner of the
+          second (FPS) will be displayed in the upper-right corner of the
           screen as "FPS: XX.X (Y/Z)".  The number "XX.X" is the average
           frame rate, calculated from the last few seconds of emulation;
           "Y" shows the number of Saturn frames emulated since the previous

@@ -50,7 +50,6 @@ set(yabause_gtk_SOURCES
 	yuiviewer.c
 	yuiwindow.c)
 
-link_directories(..)
 add_executable(yabause-gtk ${yabause_gtk_SOURCES})
 target_link_libraries(yabause-gtk yabause ${YABAUSE_LIBRARIES} ${PORT_LIBRARIES})
 

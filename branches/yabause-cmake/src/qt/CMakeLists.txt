@@ -126,7 +126,6 @@ if (APPLE)
 	set_target_properties( yabause-qt PROPERTIES MACOSX_BUNDLE_COPYRIGHT "(c) Yabause Team" )
 endif (APPLE)
 
-link_directories( .. )
 target_link_libraries( yabause-qt yabause )
 target_link_libraries( yabause-qt ${YABAUSE_LIBRARIES} )
 target_link_libraries( yabause-qt ${PORT_LIBRARIES} )

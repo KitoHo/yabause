@@ -115,7 +115,6 @@ set(yabause_windows_SOURCES
 	settings/settings-sound.c
 	settings/settings-video.c)
 
-link_directories(..)
 add_executable(yabause-windows WIN32 ${yabause_windows_SOURCES} ${yabause_windows_RESOURCES} ${yabause_windows_HEADERS})
 target_link_libraries(yabause-windows yabause ${YABAUSE_LIBRARIES} ${PORT_LIBRARIES} comctl32 ${DIRECTX_LIBRARIES} vfw32)
 

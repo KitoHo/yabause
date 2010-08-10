@@ -49,12 +49,12 @@
 #define IDM_TOGGLE_OSD                  144
 #define IDM_AUTOLAG                     145
 #define IDC_VDP1REFRESH                 146
-#define IDM_WINDOW1X					147
-#define IDM_WINDOW2X					148
-#define IDM_WINDOW3X					149
+#define IDM_WINDOW1X                    147
+#define IDM_WINDOW2X                    148
+#define IDM_WINDOW3X                    149
 #define IDM_AUTOFRAMESKIP               150
 #define IDM_MUTESOUND                   151
-#define IDM_WINDOW4X					152
+#define IDM_WINDOW4X                    152
 #define IDC_WATCHLIST                   900
 #define IDC_1_BYTE                      902
 #define IDC_2_BYTES                     903
@@ -77,6 +77,8 @@
 #define IDC_C_WATCH                     921
 #define IDC_C_WATCH_DUPLICATE           922
 #define IDC_C_WATCH_UP                  923
+#define IDC_C_WATCH_DUPLICATE2          923
+#define IDC_C_WATCH_SEPARATE            923
 #define IDC_C_WATCH_DOWN                924
 #define IDC_C_ADDCHEAT                  925
 #define ID_RAM_WATCH                    926

@@ -967,8 +967,14 @@ void CompactAddrs()
 
 void soft_reset_address_info ()
 {
+	if (resetPrevValues) {
+		if(s_prevValues)
+			memcpy(s_prevValues, s_curValues, (sizeof(*s_prevValues)*(MAX_RAM_SIZE)));
+		s_prevValuesNeedUpdate = false;
+	}
 	ResetMemoryRegions();
-	memset(buffers->s_numChanges, 0, sizeof(buffers->s_numChanges));
+	if(s_numChanges)
+		memset(s_numChanges, 0, (sizeof(*s_numChanges)*(MAX_RAM_SIZE)));
 	CompactAddrs();
 }
 void reset_address_info ()

@@ -15,6 +15,9 @@ endif (VARIADIC_MACROS_OK)
 set(gen68k_SOURCES c68kexec.c c68k.c gen68k.c)
 
 add_definitions(-DC68K_GEN)
+if (MSVC)
+	add_definitions(-DC68K_NO_JUMP_TABLE)
+endif (MSVC)
 
 add_executable(gen68k ${gen68k_SOURCES})
 

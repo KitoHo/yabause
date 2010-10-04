@@ -241,5 +241,5 @@ void PERMacJoyFlush(void)   {
 }
 
 void PERMacJoyKeyName(u32 key, char *name, int size)    {
-    snprintf(name, size, "%x", key);
+    snprintf(name, size, "%x", (unsigned int)key);
 }

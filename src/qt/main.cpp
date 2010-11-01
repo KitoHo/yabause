@@ -35,9 +35,11 @@ int main( int argc, char** argv )
 	app.setApplicationName( QString( "Qt Yabause v%1 - A Beautiful And Under-rated Saturn Emulator" ).arg( VERSION ) );
 	// init settings
 	Settings::setIniInformations();
+#ifdef HAVE_LIBMINI18N
 	// set translation file
 	if ( QtYabause::setTranslationFile() == -1 )
 		qWarning( "Can't set translation file" );
+#endif
 #ifndef NO_CLI
 	Arguments::parse();
 #endif

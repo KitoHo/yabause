@@ -86,19 +86,6 @@ if (UNIX AND MINI18N_FOUND)
 	add_definitions(-DYTSDIR=\"${CMAKE_INSTALL_PREFIX}/share/${PACKAGE}/yts\")
 endif (UNIX AND MINI18N_FOUND)
 
-# Linux
-if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-	check_c_source_compiles("
-		#include <linux/cdrom.h>
-		int main(int argc, char ** argv) { int i = CDSL_CURRENT; }
-	" LINUX_CDROM_H_OK)
-	if (NOT LINUX_CDROM_H_OK)
-       		add_definitions(-DLINUX_CDROM_H_IS_BROKEN)
-	endif (NOT LINUX_CDROM_H_OK)
-
-	set(yabause_SOURCES ${yabause_SOURCES} cd-linux.c perlinuxjoy.c)
-endif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-
 # APPLE // not necessary mac os x, but i don't care ;)
 if (APPLE)
 	FIND_LIBRARY(COREFOUNDATION_LIBRARY NAMES CoreFoundation )
@@ -211,20 +198,31 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	set(yabause_SOURCES ${yabause_SOURCES} thr-dummy.c)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
 	add_definitions(-DARCH_IS_FREEBSD=1)
-	set(yabause_SOURCES ${yabause_SOURCES} thr-dummy.c)
+	set(yabause_SOURCES ${yabause_SOURCES} thr-dummy.c cd-freebsd.c)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	add_definitions(-DARCH_IS_LINUX=1)
-	set(yabause_SOURCES ${yabause_SOURCES} thr-linux.c)
+	set(yabause_SOURCES ${yabause_SOURCES} thr-linux.c cd-linux.c perlinuxjoy.c)
+
+	check_c_source_compiles("
+		#include <linux/cdrom.h>
+		int main(int argc, char ** argv) { int i = CDSL_CURRENT; }
+	" LINUX_CDROM_H_OK)
+	if (NOT LINUX_CDROM_H_OK)
+       		add_definitions(-DLINUX_CDROM_H_IS_BROKEN)
+	endif (NOT LINUX_CDROM_H_OK)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "NetBSD")
 	add_definitions(-DARCH_IS_NETBSD=1)
-	set(yabause_SOURCES ${yabause_SOURCES} thr-dummy.c)
+	set(yabause_SOURCES ${yabause_SOURCES} thr-dummy.c cd-netbsd.c)
+elseif (${CMAKE_SYSTEM_NAME} MATCHES "OpenBSD")
+	add_definitions(-DARCH_IS_NETBSD=1)
+	set(yabause_SOURCES ${yabause_SOURCES} thr-dummy.c cd-netbsd.c)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-	add_definitions(-DARCH_IS_Windows=1)
+	add_definitions(-DARCH_IS_WINDOWS=1)
 	set(yabause_SOURCES ${yabause_SOURCES} thr-dummy.c)
-else (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+else ()
 	add_definitions(-DUNKNOWN_ARCH=1)
 	set(yabause_SOURCES ${yabause_SOURCES} thr-dummy.c)
-endif (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+endif ()
 
 set(YAB_VERSION "${YAB_VERSION_MAJOR}.${YAB_VERSION_MINOR}.${YAB_VERSION_PATCH}")
 add_definitions(-DPACKAGE=\"yabause\")

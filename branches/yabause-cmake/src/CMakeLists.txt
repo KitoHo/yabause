@@ -1,5 +1,7 @@
 project(yabause)
 
+include(CheckIncludeFile)
+
 set(yabause_SOURCES
 	bios.c
 	cdbase.c cheat.c coffelf.c cs0.c cs1.c cs2.c
@@ -97,7 +99,6 @@ endif (APPLE)
 # Visual Studio
 if (MSVC)
         # Find stdint.h
-        include(CheckIncludeFile)
         check_include_file("stdint.h" STDINT_H_FOUND)
 
         # Find DDK
@@ -141,7 +142,6 @@ endif (WIN32)
 # MinGW ddk
 if ( WIN32 AND MINGW )
 	# Find ntddcdrm.h
-	include(CheckIncludeFile)
 	check_include_file("ddk/ntddcdrm.h" NTDDCDRM_H_FOUND)
 	
 	if ( NOT NTDDCDRM_H_FOUND )
@@ -192,6 +192,12 @@ foreach(DEBUG IN LISTS YAB_DEBUG)
 	endif (${DEBUG} STREQUAL "main")
 endforeach(DEBUG)
 
+# Peripheral key name
+option(YAB_PERKEYNAME "Try to display key names instead of cryptic values" OFF)
+if (YAB_PERKEYNAME)
+	add_definitions(-DPERKEYNAME=1)
+endif()
+
 # Yabause Arch
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	add_definitions(-DARCH_IS_MACOSX=1)
@@ -201,7 +207,12 @@ elseif (${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
 	set(yabause_SOURCES ${yabause_SOURCES} thr-dummy.c cd-freebsd.c)
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	add_definitions(-DARCH_IS_LINUX=1)
-	set(yabause_SOURCES ${yabause_SOURCES} thr-linux.c cd-linux.c perlinuxjoy.c)
+	set(yabause_SOURCES ${yabause_SOURCES} thr-linux.c cd-linux.c)
+
+	check_include_file("linux/joystick.h" LINUX_HAS_JOYSTICK)
+	if (LINUX_HAS_JOYSTICK)
+		set(yabause_SOURCES ${yabause_SOURCES} perlinuxjoy.c)
+	endif()
 
 	check_c_source_compiles("
 		#include <linux/cdrom.h>

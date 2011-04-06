@@ -2293,12 +2293,12 @@ void VIDSoftVdp1NormalSpriteDraw() {
 	spriteWidth = ((cmd.CMDSIZE >> 8) & 0x3F) * 8;
 	spriteHeight = cmd.CMDSIZE & 0xFF;
 
-	topRightx = topLeftx+spriteWidth;
+	topRightx = topLeftx + (spriteWidth - 1);
 	topRighty = topLefty;
-	bottomRightx = topLeftx+spriteWidth;
-	bottomRighty = topLefty+spriteHeight;
+	bottomRightx = topLeftx + (spriteWidth - 1);
+	bottomRighty = topLefty + (spriteHeight - 1);
 	bottomLeftx = topLeftx;
-	bottomLefty = topLefty+spriteHeight;
+	bottomLefty = topLefty + (spriteHeight - 1);
 
 	drawQuad(topLeftx,topLefty,bottomLeftx,bottomLefty,topRightx,topRighty,bottomRightx,bottomRighty);
 }
@@ -2393,14 +2393,14 @@ void VIDSoftVdp1ScaledSpriteDraw(){
 	topLeftx = x0;
 	topLefty = y0;
 
-	topRightx = x1+x0;
+	topRightx = x1+x0 - 1;
 	topRighty = topLefty;
 
-	bottomRightx = x1+x0;
-	bottomRighty = y1+y0;
+	bottomRightx = x1+x0 - 1;
+	bottomRighty = y1+y0 - 1;
 
 	bottomLeftx = topLeftx;
-	bottomLefty = y1+y0;
+	bottomLefty = y1+y0 - 1;
 
 	drawQuad(topLeftx,topLefty,bottomLeftx,bottomLefty,topRightx,topRighty,bottomRightx,bottomRighty);
 }

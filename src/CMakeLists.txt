@@ -54,6 +54,12 @@ if (YAB_WANT_OPENGL)
 	if (OPENGL_FOUND)
 		add_definitions(-DHAVE_LIBGL=1)
 		set(YABAUSE_LIBRARIES ${YABAUSE_LIBRARIES} ${OPENGL_LIBRARY})
+
+		include(FindGLUT)
+		if (GLUT_FOUND)
+			add_definitions(-DHAVE_LIBGLUT=1)
+			set(YABAUSE_LIBRARIES ${YABAUSE_LIBRARIES} ${GLUT_LIBRARY})
+		endif()
 	endif(OPENGL_FOUND)
 endif (YAB_WANT_OPENGL)
 

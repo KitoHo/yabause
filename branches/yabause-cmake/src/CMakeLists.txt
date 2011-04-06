@@ -1,5 +1,6 @@
 project(yabause)
 
+include(CheckFunctionExists)
 include(CheckIncludeFile)
 
 set(yabause_SOURCES
@@ -39,6 +40,12 @@ check_c_source_compiles("#define MACRO(...) puts(__VA_ARGS__)
 if (VARIADIC_MACROS_OK)
 	add_definitions(-DHAVE_C99_VARIADIC_MACROS=1)
 endif (VARIADIC_MACROS_OK)
+
+# gettimeofday
+check_function_exists(gettimeofday GETTIMEOFDAY_OK)
+if (GETTIMEOFDAY_OK)
+    add_definitions(-DHAVE_GETTIMEOFDAY=1)
+endif ()
 
 # OpenGL
 option(YAB_WANT_OPENGL "use OpenGL for video output (most ports require it)" ON)

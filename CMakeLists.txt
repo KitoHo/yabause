@@ -14,4 +14,5 @@ set(CPAKE_PACKAGE_VENDOR "Yabause team")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/COPYING")
 include(CPack)
 
-subdirs(l10n src)
+add_subdirectory(l10n)
+add_subdirectory(src)

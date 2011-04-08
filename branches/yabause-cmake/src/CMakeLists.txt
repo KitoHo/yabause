@@ -47,6 +47,12 @@ if (GETTIMEOFDAY_OK)
     add_definitions(-DHAVE_GETTIMEOFDAY=1)
 endif ()
 
+# sys/time.h
+check_include_file("sys/time.h" SYSTIME_OK)
+if (SYSTIME_OK)
+	add_definitions(-DHAVE_SYS_TIME_H=1)
+endif()
+
 # OpenGL
 option(YAB_WANT_OPENGL "use OpenGL for video output (most ports require it)" ON)
 if (YAB_WANT_OPENGL)

@@ -58,7 +58,6 @@
 #endif
 #ifdef GEKKO
 #include <ogc/lwp_watchdog.h>
-extern long long gettime();
 #endif
 #ifdef PSP
 #include "psp/common.h"

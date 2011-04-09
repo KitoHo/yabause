@@ -170,6 +170,13 @@ if ( WIN32 AND MINGW )
 	set(yabause_SOURCES ${yabause_SOURCES} cd-windows.c)
 endif ( WIN32 AND MINGW )
 
+if (WII)
+	set(CMAKE_C_FLAGS "-mrvl -mcpu=750 -meabi -mhard-float")
+	add_definitions(-DGEKKO=1)
+	# that shouldn't be hardcoded, either use an ENV variable or try to detect it...
+	include_directories(/opt/devkitpro/libogc/include/)
+endif()
+
 # c68k
 option(YAB_WANT_C68K "enable c68k compilation" ON)
 if (YAB_WANT_C68K)
@@ -282,7 +289,7 @@ endmacro(yab_port_success)
 
 option(YAB_MULTIBUILD "Choose wether to build all ports or only a single one")
 set(YAB_PORT_BUILT FALSE)
-set(YAB_PORTS "gtk;qt;windows;dreamcast" CACHE STRING "List of ports to build")
+set(YAB_PORTS "gtk;qt;windows;dreamcast;wii" CACHE STRING "List of ports to build")
 foreach(PORT IN LISTS YAB_PORTS)
 	add_subdirectory(${PORT})
 endforeach(PORT)

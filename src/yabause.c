@@ -42,7 +42,7 @@
 #include "bios.h"
 #include "movie.h"
 #ifdef HAVE_LIBSDL
- #ifdef __APPLE__
+ #if defined(__APPLE__) || defined(GEKKO)
   #include <SDL/SDL.h>
  #else
   #include "SDL.h"

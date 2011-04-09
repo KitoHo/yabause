@@ -224,6 +224,18 @@ if (YAB_PERKEYNAME)
 	add_definitions(-DPERKEYNAME=1)
 endif()
 
+# Exec from cache
+option(YAB_EXEC_FROM_CACHE "Allow code execution from 0xC0000000" OFF)
+if (YAB_EXEC_FROM_CACHE)
+	add_definitions(-DEXEC_FROM_CACHE=1)
+endif()
+
+# Optimized DMA
+option(YAB_OPTIMIZED_DMA "Use optimized DMA when possible" OFF)
+if (YAB_OPTIMIZED_DMA)
+	add_definitions(-DOPTIMIZED_DMA=1)
+endif()
+
 # Yabause Arch
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	add_definitions(-DARCH_IS_MACOSX=1)

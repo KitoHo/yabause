@@ -66,6 +66,13 @@ if (YAB_WANT_OPENGL)
 			add_definitions(-DHAVE_LIBGLUT=1)
 			set(YABAUSE_LIBRARIES ${YABAUSE_LIBRARIES} ${GLUT_LIBRARY})
 		endif()
+
+		# glXGetProcAddress
+		set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} ${OPENGL_LIBRARY})
+		check_function_exists(glXGetProcAddress GLXGETPROCADDRESS_OK)
+		if (GLXGETPROCADDRESS_OK)
+			add_definitions(-DHAVE_GLXGETPROCADDRESS=1)
+		endif()
 	endif(OPENGL_FOUND)
 endif (YAB_WANT_OPENGL)
 
@@ -217,6 +224,18 @@ foreach(DEBUG IN LISTS YAB_DEBUG)
 		add_definitions(-D${UPDEBUG}_DEBUG=1)
 	endif (${DEBUG} STREQUAL "main")
 endforeach(DEBUG)
+
+# Mic shaders
+option(YAB_SHADERS "Enable OpenGL shaders for gouraud and mesh")
+if (GLXGETPROCADDRESS_OK AND YAB_SHADERS)
+	add_definitions(-DUSEMICSHADERS=1)
+endif()
+
+# Network
+option(YAB_NETWORK "Enable network")
+if (YAB_NETWORK)
+	add_definitions(-DUSESOCKET=1)
+endif()
 
 # Peripheral key name
 option(YAB_PERKEYNAME "Try to display key names instead of cryptic values" OFF)

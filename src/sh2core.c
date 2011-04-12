@@ -894,12 +894,40 @@ u8 FASTCALL OnchipReadByte(u32 addr) {
          return CurrentSH2->onchip.FICR >> 8;
       case 0x019:
          return CurrentSH2->onchip.FICR & 0xFF;
+      case 0x060:
+         return CurrentSH2->onchip.IPRB >> 8;
+      case 0x062:
+         return CurrentSH2->onchip.VCRA >> 8;
+      case 0x063:
+         return CurrentSH2->onchip.VCRA & 0xFF;
+      case 0x064:
+         return CurrentSH2->onchip.VCRB >> 8;
+      case 0x065:
+         return CurrentSH2->onchip.VCRB & 0xFF;
+      case 0x066:
+         return CurrentSH2->onchip.VCRC >> 8;
+      case 0x067:
+         return CurrentSH2->onchip.VCRC & 0xFF;
+      case 0x068:
+         return CurrentSH2->onchip.VCRD >> 8;
       case 0x080:
          return CurrentSH2->onchip.WTCSR;
       case 0x081:
          return CurrentSH2->onchip.WTCNT;
       case 0x092:
          return CurrentSH2->onchip.CCR;
+      case 0x0E0:
+         return CurrentSH2->onchip.ICR >> 8;
+      case 0x0E1:
+         return CurrentSH2->onchip.ICR & 0xFF;
+      case 0x0E2:
+         return CurrentSH2->onchip.IPRA >> 8;
+      case 0x0E3:
+         return CurrentSH2->onchip.IPRA & 0xFF;
+      case 0x0E4:
+         return CurrentSH2->onchip.VCRWDT >> 8;
+      case 0x0E5:
+         return CurrentSH2->onchip.VCRWDT & 0xFF;
       default:
          LOG("Unhandled Onchip byte read %08X\n", (int)addr);
          break;
@@ -915,10 +943,20 @@ u16 FASTCALL OnchipReadWord(u32 addr) {
    {
       case 0x060:
          return CurrentSH2->onchip.IPRB;
+      case 0x062:
+         return CurrentSH2->onchip.VCRA;
+      case 0x064:
+         return CurrentSH2->onchip.VCRB;
+      case 0x066:
+         return CurrentSH2->onchip.VCRC;
+      case 0x068:
+         return CurrentSH2->onchip.VCRD;
       case 0x0E0:
          return CurrentSH2->onchip.ICR;
       case 0x0E2:
          return CurrentSH2->onchip.IPRA;
+      case 0x0E4:
+         return CurrentSH2->onchip.VCRWDT;
       case 0x1E2: // real BCR1 register is located at 0x1E2-0x1E3; Sega Rally OK
          return CurrentSH2->onchip.BCR1;
       case 0x1E6:
@@ -1170,6 +1208,18 @@ void FASTCALL OnchipWriteWord(u32 addr, u16 val) {
       case 0x060:
          CurrentSH2->onchip.IPRB = val & 0xFF00;
          return;
+      case 0x062:
+         CurrentSH2->onchip.VCRA = val & 0x7F7F;
+         return;
+      case 0x064:
+         CurrentSH2->onchip.VCRB = val & 0x7F7F;
+         return;
+      case 0x066:
+         CurrentSH2->onchip.VCRC = val & 0x7F7F;
+         return;
+      case 0x068:
+         CurrentSH2->onchip.VCRD = val & 0x7F7F;
+         return;
       case 0x080:
          // This and RSTCSR have got to be the most wackiest register
          // mappings I've ever seen
@@ -1232,6 +1282,9 @@ void FASTCALL OnchipWriteWord(u32 addr, u16 val) {
          return;
       case 0x0E2:
          CurrentSH2->onchip.IPRA = val & 0xFFF0;
+         return;
+      case 0x0E4:
+         CurrentSH2->onchip.VCRWDT = val & 0x7F7F;
          return;
       case 0x108:
       case 0x128:

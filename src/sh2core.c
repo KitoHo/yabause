@@ -954,10 +954,26 @@ u32 FASTCALL OnchipReadLong(u32 addr) {
       case 0x11C: // Acts as a separate register, but is set to the same value
       case 0x13C: // as DVDNTL after division
          return CurrentSH2->onchip.DVDNTUL;
+      case 0x180:
+         return CurrentSH2->onchip.SAR0;
+      case 0x184:
+         return CurrentSH2->onchip.DAR0;
+      case 0x188:
+         return CurrentSH2->onchip.TCR0;
       case 0x18C:
          return CurrentSH2->onchip.CHCR0;
+      case 0x190:
+         return CurrentSH2->onchip.SAR1;
+      case 0x194:
+         return CurrentSH2->onchip.DAR1;
+      case 0x198:
+         return CurrentSH2->onchip.TCR1;
       case 0x19C:
          return CurrentSH2->onchip.CHCR1;
+      case 0x1A0:
+         return CurrentSH2->onchip.VCRDMA0;
+      case 0x1A8:
+         return CurrentSH2->onchip.VCRDMA1;
       case 0x1B0:
          return CurrentSH2->onchip.DMAOR;
       case 0x1E0:

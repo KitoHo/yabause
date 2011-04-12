@@ -868,16 +868,32 @@ u8 FASTCALL OnchipReadByte(u32 addr) {
       case 0x005:
 //         LOG("Receive Data Register read: %02X PC = %08X\n", CurrentSH2->onchip.RDR, SH2Core->GetPC(CurrentSH2));
          return CurrentSH2->onchip.RDR;
+      case 0x010:
+         return CurrentSH2->onchip.TIER;
       case 0x011:
          return CurrentSH2->onchip.FTCSR;
       case 0x012:         
          return CurrentSH2->onchip.FRC.part.H;
       case 0x013:
          return CurrentSH2->onchip.FRC.part.L;
+      case 0x014:
+         if (!(CurrentSH2->onchip.TOCR & 0x10))
+            return CurrentSH2->onchip.OCRA >> 8;
+         else
+            return CurrentSH2->onchip.OCRB >> 8;
+      case 0x015:
+         if (!(CurrentSH2->onchip.TOCR & 0x10))
+            return CurrentSH2->onchip.OCRA & 0xFF;
+         else
+            return CurrentSH2->onchip.OCRB & 0xFF;
       case 0x016:
          return CurrentSH2->onchip.TCR;
       case 0x017:
          return CurrentSH2->onchip.TOCR;
+      case 0x018:
+         return CurrentSH2->onchip.FICR >> 8;
+      case 0x019:
+         return CurrentSH2->onchip.FICR & 0xFF;
       case 0x080:
          return CurrentSH2->onchip.WTCSR;
       case 0x081:

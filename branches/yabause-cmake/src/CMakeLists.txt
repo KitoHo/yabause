@@ -60,6 +60,12 @@ if (SYSTIME_OK)
 	add_definitions(-DHAVE_SYS_TIME_H=1)
 endif()
 
+# Find stdint.h
+check_include_file("stdint.h" STDINT_H_FOUND)
+if (STDINT_H_FOUND)
+	add_definitions(-DHAVE_STDINT_H=1)
+endif()
+
 # OpenGL
 option(YAB_WANT_OPENGL "use OpenGL for video output (most ports require it)" ON)
 if (YAB_WANT_OPENGL)
@@ -131,9 +137,6 @@ endif (APPLE)
 
 # Visual Studio
 if (MSVC)
-        # Find stdint.h
-        check_include_file("stdint.h" STDINT_H_FOUND)
-
         # Find DDK
         if (EXISTS "$ENV{SYSTEMDRIVE}/WINDDK/3790.1830/")
 		set(DDK_DIR "$ENV{SYSTEMDRIVE}/WINDDK/3790.1830/")

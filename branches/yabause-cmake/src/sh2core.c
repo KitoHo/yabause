@@ -903,6 +903,20 @@ u16 FASTCALL OnchipReadWord(u32 addr) {
          return CurrentSH2->onchip.ICR;
       case 0x0E2:
          return CurrentSH2->onchip.IPRA;
+      case 0x1E2: // real BCR1 register is located at 0x1E2-0x1E3; Sega Rally OK
+         return CurrentSH2->onchip.BCR1;
+      case 0x1E6:
+         return CurrentSH2->onchip.BCR2;
+      case 0x1EA:
+         return CurrentSH2->onchip.WCR;
+      case 0x1EE:
+         return CurrentSH2->onchip.MCR;
+      case 0x1F2:
+         return CurrentSH2->onchip.RTCSR;
+      case 0x1F6:
+         return CurrentSH2->onchip.RTCNT;
+      case 0x1FA:
+         return CurrentSH2->onchip.RTCOR;
       default:
          LOG("Unhandled Onchip word read %08X\n", (int)addr);
          return 0;
@@ -948,6 +962,18 @@ u32 FASTCALL OnchipReadLong(u32 addr) {
          return CurrentSH2->onchip.DMAOR;
       case 0x1E0:
          return CurrentSH2->onchip.BCR1;
+      case 0x1E4:
+         return CurrentSH2->onchip.BCR2;
+      case 0x1E8:
+         return CurrentSH2->onchip.WCR;
+      case 0x1EC:
+         return CurrentSH2->onchip.MCR;
+      case 0x1F0:
+         return CurrentSH2->onchip.RTCSR;
+      case 0x1F4:
+         return CurrentSH2->onchip.RTCNT;
+      case 0x1F8:
+         return CurrentSH2->onchip.RTCOR;
       default:
          LOG("Unhandled Onchip long read %08X\n", (int)addr);
          return 0;

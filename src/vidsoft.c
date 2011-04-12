@@ -2633,7 +2633,7 @@ void VIDSoftVdp2DrawEnd(void)
 
    // Figure out whether to draw vdp1 framebuffer or vdp2 framebuffer pixels
    // based on priority
-   if (Vdp1Regs->disptoggle)
+   if (Vdp1External.disptoggle)
    {
       prioritytable[0] = Vdp2Regs->PRISA & 0x7;
       prioritytable[1] = (Vdp2Regs->PRISA >> 8) & 0x7;

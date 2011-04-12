@@ -2805,7 +2805,7 @@ void VIDGCDVdp2DrawEnd(void)
 
    // Figure out whether to draw vdp1 framebuffer or vdp2 framebuffer pixels
    // based on priority
-   if (Vdp1Regs->disptoggle)
+   if (Vdp1External.disptoggle)
    {
       prioritytable[0] = Vdp2Regs->PRISA & 0x7;
       prioritytable[1] = (Vdp2Regs->PRISA >> 8) & 0x7;
@@ -3026,7 +3026,7 @@ static void Vdp1DrawPriority(int prio) {
 
     // Figure out whether to draw vdp1 framebuffer or vdp2 framebuffer pixels
     // based on priority
-    if(Vdp1Regs->disptoggle) {
+    if(Vdp1External.disptoggle) {
         dispatch_apply(vdp2height, dispatch_get_global_queue(2, 0), ^(size_t i2) {
             u16 *fb16 = (u16 *)(vdp1frontframebuffer) + (i2 * vdp1width);
             u32 *fb = vdp2framebuffer + (i2 * vdp2width);

@@ -47,6 +47,13 @@ if (GETTIMEOFDAY_OK)
     add_definitions(-DHAVE_GETTIMEOFDAY=1)
 endif ()
 
+# floorf
+set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} "-lm")
+check_function_exists(floorf FLOORF_OK)
+if (FLOORF_OK)
+	add_definitions(-DHAVE_FLOORF=1)
+endif ()
+
 # sys/time.h
 check_include_file("sys/time.h" SYSTIME_OK)
 if (SYSTIME_OK)

@@ -747,7 +747,7 @@ static INLINE u32 FASTCALL Vdp2Blend(vdp2draw_struct *info, u32 src, u32 dst) {
 static void FASTCALL GCDVdp2DrawScroll(vdp2draw_struct *_info, u32 *_textdata, int width, int height)
 {
     int i, j;
-    clipping_struct _clip[2];
+    clipping_struct _clip[2], _clip1, _clip2;
     u32 _linewnd0addr, _linewnd1addr;
     screeninfo_struct _sinfo;
     int scrollx, scrolly;
@@ -766,6 +766,8 @@ static void FASTCALL GCDVdp2DrawScroll(vdp2draw_struct *_info, u32 *_textdata, i
     _clip[0].xstart = _clip[0].ystart = _clip[0].xend = _clip[0].yend = 0;
     _clip[1].xstart = _clip[1].ystart = _clip[1].xend = _clip[1].yend = 0;
     ReadWindowData(_info->wctl, _clip);
+    _clip1 = _clip[0];
+    _clip2 = _clip[1];
     _linewnd0addr = _linewnd1addr = 0;
     ReadLineWindowData(&_info->islinewindow, _info->wctl, &_linewnd0addr, &_linewnd1addr);
 
@@ -791,7 +793,7 @@ static void FASTCALL GCDVdp2DrawScroll(vdp2draw_struct *_info, u32 *_textdata, i
         u32 *textdata = _textdata + (j * width);
         u32 linewnd0addr = _linewnd0addr, linewnd1addr = _linewnd1addr;
         screeninfo_struct sinfo = _sinfo;
-        clipping_struct clip[2] = { _clip[0], _clip[1] };
+        clipping_struct clip[2] = { _clip1, _clip2 };
         vdp2draw_struct inf = *_info;
         vdp2draw_struct *info = &inf;
         int Y;
@@ -2391,12 +2393,12 @@ void VIDGCDVdp1NormalSpriteDraw() {
 	spriteWidth = ((cmd.CMDSIZE >> 8) & 0x3F) * 8;
 	spriteHeight = cmd.CMDSIZE & 0xFF;
 
-	topRightx = topLeftx+spriteWidth;
+	topRightx = topLeftx + (spriteWidth - 1);
 	topRighty = topLefty;
-	bottomRightx = topLeftx+spriteWidth;
-	bottomRighty = topLefty+spriteHeight;
+	bottomRightx = topLeftx + (spriteWidth - 1);
+	bottomRighty = topLefty + (spriteHeight - 1);
 	bottomLeftx = topLeftx;
-	bottomLefty = topLefty+spriteHeight;
+	bottomLefty = topLefty + (spriteHeight - 1);
 
 	drawQuad(topLeftx,topLefty,bottomLeftx,bottomLefty,topRightx,topRighty,bottomRightx,bottomRighty);
 }
@@ -2491,14 +2493,14 @@ void VIDGCDVdp1ScaledSpriteDraw(){
 	topLeftx = x0;
 	topLefty = y0;
 
-	topRightx = x1+x0;
+	topRightx = x1 + x0 - 1;
 	topRighty = topLefty;
 
-	bottomRightx = x1+x0;
-	bottomRighty = y1+y0;
+	bottomRightx = x1 + x0 - 1;
+	bottomRighty = y1 + y0 - 1;
 
 	bottomLeftx = topLeftx;
-	bottomLefty = y1+y0;
+	bottomLefty = y1 + y0 - 1;
 
 	drawQuad(topLeftx,topLefty,bottomLeftx,bottomLefty,topRightx,topRighty,bottomRightx,bottomRighty);
 }

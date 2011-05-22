@@ -123,12 +123,16 @@
 
 - (void)keyDown:(NSEvent *)event
 {
-    PerKeyDown([[event charactersIgnoringModifiers] characterAtIndex:0]);
+    if([[event charactersIgnoringModifiers] length] >= 1) {
+        PerKeyDown([[event charactersIgnoringModifiers] characterAtIndex:0]);
+    }
 }
 
 - (void)keyUp:(NSEvent *)event
 {
-    PerKeyUp([[event charactersIgnoringModifiers] characterAtIndex:0]);
+    if([[event charactersIgnoringModifiers] length] >= 1) {
+        PerKeyUp([[event charactersIgnoringModifiers] characterAtIndex:0]);
+    }
 }
 
 - (void)showWindow

@@ -17,6 +17,8 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
+#include <ctype.h>
+
 #include "YabausePrefsController.h"
 
 #include "cs0.h"
@@ -25,6 +27,7 @@
 #include "scsp.h"
 #include "smpc.h"
 #include "sndmac.h"
+#include "PerCocoa.h"
 
 @implementation YabausePrefsController
 
@@ -263,6 +266,139 @@
     /* Update the preferences file. */
     [_prefs setBool:([sender state] == NSOnState) forKey:@"Emulate BIOS"];
     [_prefs synchronize];
+}
+
+- (IBAction)buttonSelect:(id)sender
+{
+    NSInteger rv;
+    NSInteger tag = [sender tag];
+    int port = tag > 12 ? 1 : 0;
+    u8 num = tag > 12 ? tag - 13 : tag;
+    u32 value = PERCocoaGetKey(num, port);
+    unichar ch;
+
+    /* Fill in current setting from prefs */
+    if(value != (u32)-1) {
+        switch(value) {
+            case '\r':
+                ch = 0x23CE;
+                break;
+
+            case '\t':
+                ch = 0x21E5;
+                break;
+
+            case 27:
+                ch = 0x241B;
+                break;
+
+            case 127:
+                ch = 0x232B;
+                break;
+
+            case NSLeftArrowFunctionKey:
+                ch = 0x2190;
+                break;
+
+            case NSUpArrowFunctionKey:
+                ch = 0x2191;
+                break;
+
+            case NSRightArrowFunctionKey:
+                ch = 0x2192;
+                break;
+
+            case NSDownArrowFunctionKey:
+                ch = 0x2193;
+                break;
+
+            default:
+                ch = toupper(((int)value));
+        }
+
+        [buttonBox setStringValue:[NSString stringWithCharacters:&ch length:1]];
+    }
+    else {
+        [buttonBox setStringValue:@""];
+    }
+
+    /* Open up the sheet and ask for the user's input */
+    [NSApp beginSheet:buttonAssignment
+       modalForWindow:prefsPane
+        modalDelegate:self
+       didEndSelector:nil
+          contextInfo:NULL];
+
+    rv = [NSApp runModalForWindow:buttonAssignment];
+    [NSApp endSheet:buttonAssignment];
+    [buttonAssignment orderOut:nil];
+
+    /* Did the user accept what they put in? */
+    if(rv == NSOKButton) {
+        NSString *s = [buttonBox stringValue];
+        u32 val;
+
+        /* This shouldn't happen... */
+        if([s length] < 1) {
+            return;
+        }
+
+        switch([s characterAtIndex:0]) {
+            case 0x23CE:    /* Return */
+                val = '\r';
+                break;
+
+            case 0x21E5:    /* Tab */
+                val = '\t';
+                break;
+
+            case 0x241B:    /* Escape */
+                val = 27;
+                break;
+
+            case 0x232B:    /* Backspace */
+                val = 127;
+                break;
+
+            case 0x2190:    /* Left */
+                val = NSLeftArrowFunctionKey;
+                break;
+
+            case 0x2191:    /* Up */
+                val = NSUpArrowFunctionKey;
+                break;
+
+            case 0x2192:    /* Right */
+                val = NSRightArrowFunctionKey;
+                break;
+
+            case 0x2193:    /* Down */
+                val = NSDownArrowFunctionKey;
+                break;
+
+            default:
+                val = tolower([s characterAtIndex:0]);
+        }
+
+        /* Update the key mapping, if we're already running. This will also save
+           the key to the preferences. */
+        if(tag > 12) {
+            PERCocoaSetKey(val, tag - 13, 1);
+        }
+        else {
+            PERCocoaSetKey(val, tag, 0);
+        }
+    }
+}
+
+- (IBAction)buttonSetOk:(id)sender
+{
+    [NSApp stopModalWithCode:NSOKButton];
+}
+
+- (IBAction)buttonSetCancel:(id)sender
+{
+    [NSApp stopModalWithCode:NSCancelButton];
 }
 
 - (int)cartType

@@ -1,4 +1,4 @@
-/*  Copyright 2010 Lawrence Sebald
+/*  Copyright 2010-2011 Lawrence Sebald
 
     This file is part of Yabause.
 
@@ -33,6 +33,9 @@
     IBOutlet NSPopUpButton *region;
     IBOutlet NSPopUpButton *soundCore;
     IBOutlet NSPopUpButton *videoCore;
+    IBOutlet NSPanel *prefsPane;
+    IBOutlet NSPanel *buttonAssignment;
+    IBOutlet NSTextField *buttonBox;
 
     int _cartType;
     int _region;
@@ -57,6 +60,10 @@
 - (IBAction)bramBrowse:(id)sender;
 - (IBAction)cartBrowse:(id)sender;
 - (IBAction)biosToggle:(id)sender;
+- (IBAction)buttonSelect:(id)sender;
+
+- (IBAction)buttonSetOk:(id)sender;
+- (IBAction)buttonSetCancel:(id)sender;
 
 - (int)cartType;
 - (int)region;

@@ -1,4 +1,4 @@
-/*  Copyright 2010, 2011 Lawrence Sebald
+/*  Copyright 2011 Lawrence Sebald
 
     This file is part of Yabause.
 
@@ -17,16 +17,24 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 */
 
-#ifndef PerCocoa_h
-#define PerCocoa_h
+#ifndef YabauseButtonFormatter_h
+#define YabauseButtonFormatter_h
 
-#include "peripheral.h"
+#import <Cocoa/Cocoa.h>
 
-#define PERCORE_COCOA 42
-extern PerInterface_struct PERCocoa;
 
-/* Update a key mapping */
-void PERCocoaSetKey(u32 key, u8 name, int port);
-u32 PERCocoaGetKey(u8 n, int p);
+@interface YabauseButtonFormatter : NSFormatter {
+}
 
-#endif /* !PerCocoa_h */
+- (NSString *)stringForObjectValue:(id)obj;
+- (BOOL)getObjectValue:(id *)obj
+             forString:(NSString *)str 
+      errorDescription:(NSString **)err;
+
+-       (BOOL)control:(NSControl*)control
+             textView:(NSTextView*)textView
+  doCommandBySelector:(SEL)commandSelector;
+
+@end /* @interface YabauseButtonFormatter */
+
+#endif /* !YabauseButtonFormatter_h */

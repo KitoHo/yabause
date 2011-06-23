@@ -25,6 +25,8 @@ if (OPENGL_FOUND)
 endif (OPENGL_FOUND)
 include_directories(${PORT_INCLUDE_DIRS})
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -I/usr/include/gdk-pixbuf-2.0")
+
 set(yabause_gtk_SOURCES
 	gtk-compat.c
 	gtkglwidget.c

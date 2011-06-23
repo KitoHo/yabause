@@ -70,6 +70,9 @@ SH2Interface_struct *SH2CoreList[] = {
 #ifdef TEST_PSP_SH2
 &SH2PSP,
 #endif
+#if defined(SH2_DYNAREC)             
+&SH2Dynarec,
+#endif
 NULL
 };
 

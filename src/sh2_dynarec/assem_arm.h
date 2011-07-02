@@ -33,8 +33,8 @@
 // Note: FP is set to &dynarec_local when executing generated code.
 // Thus the local variables are actually global and not on the stack.
 
-extern char sh2_dynarec_target[16777216];
-extern u_int memory_map[1048576]; // 32-bit
+extern u8 sh2_dynarec_target[16777216];
+extern u32 memory_map[1048576]; // 32-bit
 
 //#define BASE_ADDR 0x6000000 // Code generator target address
 #define BASE_ADDR ((u_int)&sh2_dynarec_target) // Code generator target address

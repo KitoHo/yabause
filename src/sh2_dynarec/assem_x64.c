@@ -18,10 +18,10 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.          *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-uint64_t memory_map[1048576];
-u_int mini_ht_master[32][2]  __attribute__((aligned(8)));
-u_int mini_ht_slave[32][2]  __attribute__((aligned(8)));
-u_char restore_candidate[512]  __attribute__((aligned(4)));
+u64 memory_map[1048576];
+u32 mini_ht_master[32][2]  __attribute__((aligned(8)));
+u32 mini_ht_slave[32][2]  __attribute__((aligned(8)));
+u8 restore_candidate[512]  __attribute__((aligned(4)));
 int rccount;
 int master_reg[22];
 int master_cc; // Cycle count
@@ -49,90 +49,90 @@ void jump_vaddr_ebx_slave();
 void jump_vaddr_ebp_slave();
 void jump_vaddr_edi_slave();
 
-const void * jump_vaddr_reg[2][8] = {
+const pointer jump_vaddr_reg[2][8] = {
   {
-    jump_vaddr_eax_master,
-    jump_vaddr_ecx_master,
-    jump_vaddr_edx_master,
-    jump_vaddr_ebx_master,
+    (pointer)jump_vaddr_eax_master,
+    (pointer)jump_vaddr_ecx_master,
+    (pointer)jump_vaddr_edx_master,
+    (pointer)jump_vaddr_ebx_master,
     0,
-    jump_vaddr_ebp_master,
+    (pointer)jump_vaddr_ebp_master,
     0,
-    jump_vaddr_edi_master
+    (pointer)jump_vaddr_edi_master
   },{
-    jump_vaddr_eax_slave,
-    jump_vaddr_ecx_slave,
-    jump_vaddr_edx_slave,
-    jump_vaddr_ebx_slave,
+    (pointer)jump_vaddr_eax_slave,
+    (pointer)jump_vaddr_ecx_slave,
+    (pointer)jump_vaddr_edx_slave,
+    (pointer)jump_vaddr_ebx_slave,
     0,
-    jump_vaddr_ebp_slave,
+    (pointer)jump_vaddr_ebp_slave,
     0,
-    jump_vaddr_edi_slave
+    (pointer)jump_vaddr_edi_slave
   }
 };
 
 // We need these for cmovcc instructions on x86
-u_int const_zero=0;
-u_int const_one=1;
+u32 const_zero=0;
+u32 const_one=1;
 
 /* Linker */
 
-void set_jump_target(int addr,int target)
+void set_jump_target(pointer addr,pointer target)
 {
-  u_char *ptr=(u_char *)addr;
+  u8 *ptr=(u8 *)addr;
   if(*ptr==0x0f)
   {
     assert(ptr[1]>=0x80&&ptr[1]<=0x8f);
-    u_int *ptr2=(u_int *)(ptr+2);
-    *ptr2=target-(int)ptr2-4;
+    u32 *ptr2=(u32 *)(ptr+2);
+    *ptr2=target-(u32)ptr2-4;
   }
   else if(*ptr==0xe8||*ptr==0xe9) {
-    u_int *ptr2=(u_int *)(ptr+1);
-    *ptr2=target-(int)ptr2-4;
+    u32 *ptr2=(u32 *)(ptr+1);
+    *ptr2=target-(u32)ptr2-4;
   }
   else
   {
     assert(*ptr==0xc7); /* mov immediate (store address) */
-    u_int *ptr2=(u_int *)(ptr+6);
+    u32 *ptr2=(u32 *)(ptr+6);
     *ptr2=target;
   }
 }
 
 void *kill_pointer(void *stub)
 {
-  int i_ptr=*((int *)(stub+6));
-  *((int *)i_ptr)=(int)stub-(int)i_ptr-4;
+  u32 i_ptr=*((u32 *)(stub+6));
+  *((u32 *)i_ptr)=(u32)stub-(u32)i_ptr-4;
   return i_ptr;
 }
-int get_pointer(void *stub)
+pointer get_pointer(void *stub)
 {
-  int i_ptr=*((int *)(stub+6));
-  return *((int *)i_ptr)+(int)i_ptr+4;
+  pointer i_ptr=*((u32 *)(stub+6));
+  return *((s32 *)i_ptr)+i_ptr+4;
 }
 
 // Find the "clean" entry point from a "dirty" entry point
 // by skipping past the call to verify_code
-u_int get_clean_addr(int addr)
+pointer get_clean_addr(pointer addr)
 {
-  u_char *ptr=(u_char *)addr;
+  u8 *ptr=(u8 *)addr;
   if(ptr[0]==0xB8) {
     assert(ptr[21]==0xE8); // call instruction
-    if(ptr[26]==0xE9) return *(u_int *)(ptr+27)+addr+31; // follow jmp
+    if(ptr[26]==0xE9) return *(s32 *)(ptr+27)+addr+31; // follow jmp
     else return(addr+26);
   }
   /* 64-bit source pointer */
   assert(ptr[26]==0xE8); // call instruction
-  if(ptr[31]==0xE9) return *(u_int *)(ptr+32)+addr+36; // follow jmp
+  if(ptr[31]==0xE9) return *(s32 *)(ptr+32)+addr+36; // follow jmp
   else return(addr+31);
 }
 
-int verify_dirty(int addr)
+int verify_dirty(pointer addr)
 {
-  u_char *ptr=(u_char *)addr;
+  u8 *ptr=(u8 *)addr;
   if(ptr[0]==0xB8) {
-    u_int source=*(u_int *)(ptr+1);
-    u_int copy=*(u_int *)(ptr+6);
-    u_int len=*(u_int *)(ptr+11);
+    u32 source=*(u32 *)(ptr+1);
+    u32 copy=*(u32 *)(ptr+6);
+    u32 len=*(u32 *)(ptr+11);
     //printf("source=%x source-rdram=%x\n",source,source-(int)rdram);
     assert(ptr[21]==0xE8); // call instruction
     //printf("verify_dirty: %x %x %x\n",source,copy,len);
@@ -140,9 +140,9 @@ int verify_dirty(int addr)
   }
   assert(ptr[0]==0x48&&ptr[1]==0xB8);
   /* 64-bit source pointer */
-  uint64_t source=*(uint64_t *)(ptr+2);
-  u_int copy=*(u_int *)(ptr+11);
-  u_int len=*(u_int *)(ptr+16);
+  u64 source=*(u64 *)(ptr+2);
+  u32 copy=*(u32 *)(ptr+11);
+  u32 len=*(u32 *)(ptr+16);
   //printf("source=%x source-rdram=%x\n",source,source-(int)rdram);
   assert(ptr[26]==0xE8); // call instruction
   //printf("verify_dirty: %x %x %x\n",source,copy,len);
@@ -151,9 +151,9 @@ int verify_dirty(int addr)
 
 // This doesn't necessarily find all clean entry points, just
 // guarantees that it's not dirty
-int isclean(int addr)
+int isclean(pointer addr)
 {
-  u_char *ptr=(u_char *)addr;
+  u8 *ptr=(u8 *)addr;
   if(ptr[0]==0xB8) {
     if(ptr[0]!=0xB8) return 1; // mov imm,%eax
     if(ptr[5]!=0xBB) return 1; // mov imm,%ebx
@@ -173,21 +173,21 @@ int isclean(int addr)
   return 0;
 }
 
-void get_bounds(int addr,u_int *start,u_int *end)
+void get_bounds(pointer addr,u32 *start,u32 *end)
 {
-  u_char *ptr=(u_char *)addr;
+  u8 *ptr=(u8 *)addr;
   if(ptr[0]==0xB8) {
-    u_int source=*(u_int *)(ptr+1);
-    //u_int copy=*(u_int *)(ptr+6);
-    u_int len=*(u_int *)(ptr+11);
+    u32 source=*(u32 *)(ptr+1);
+    //u32 copy=*(u32 *)(ptr+6);
+    u32 len=*(u32 *)(ptr+11);
     assert(ptr[21]==0xE8); // call instruction
     *start=source;
     *end=source+len;
   }else{
     assert(ptr[0]==0x48&&ptr[1]==0xB8);
-    uint64_t source=*(uint64_t *)(ptr+2);
-    //u_int copy=*(u_int *)(ptr+11);
-    u_int len=*(u_int *)(ptr+16);
+    u64 source=*(u64 *)(ptr+2);
+    //32 copy=*(u32 *)(ptr+11);
+    u32 len=*(u32 *)(ptr+16);
     assert(ptr[26]==0xE8); // call instruction
     *start=source;
     *end=source+len;
@@ -282,7 +282,7 @@ void alloc_reg(struct regstat *cur,int i,signed char reg)
   
   // Ok, now we have to evict someone
   // Pick a register we hopefully won't need soon
-  u_char hsn[MAXREG+1];
+  unsigned char hsn[MAXREG+1];
   memset(hsn,10,sizeof(hsn));
   int j;
   lsn(hsn,i,&preferred_reg);
@@ -406,7 +406,7 @@ void alloc_reg_temp(struct regstat *cur,int i,signed char reg)
   // Pick a register we hopefully won't need soon
   // TODO: we might want to follow unconditional jumps here
   // TODO: get rid of dupe code and make this into a function
-  u_char hsn[MAXREG+1];
+  unsigned char hsn[MAXREG+1];
   memset(hsn,10,sizeof(hsn));
   int j;
   lsn(hsn,i,&preferred_reg);
@@ -475,7 +475,7 @@ void alloc_reg_temp(struct regstat *cur,int i,signed char reg)
 void alloc_x86_reg(struct regstat *cur,int i,signed char reg,char hr)
 {
   int n;
-  int dirty=0;
+  u32 dirty=0;
   
   // see if it's already allocated (and dealloc it)
   for(n=0;n<HOST_REGS;n++)
@@ -518,43 +518,43 @@ char regname[16][4] = {
  "r14",
  "r15"};
 
-void output_byte(u_char byte)
+void output_byte(u8 byte)
 {
   *(out++)=byte;
 }
-void output_modrm(u_char mod,u_char rm,u_char ext)
+void output_modrm(u8 mod,u8 rm,u8 ext)
 {
   assert(mod<4);
   assert(rm<8);
   assert(ext<8);
-  u_char byte=(mod<<6)|(ext<<3)|rm;
+  u8 byte=(mod<<6)|(ext<<3)|rm;
   *(out++)=byte;
 }
-void output_sib(u_char scale,u_char index,u_char base)
+void output_sib(u8 scale,u8 index,u8 base)
 {
   assert(scale<4);
   assert(index<8);
   assert(base<8);
-  u_char byte=(scale<<6)|(index<<3)|base;
+  u8 byte=(scale<<6)|(index<<3)|base;
   *(out++)=byte;
 }
-void output_rex(u_char w,u_char r,u_char x,u_char b)
+void output_rex(u8 w,u8 r,u8 x,u8 b)
 {
   assert(w<2);
   assert(r<2);
   assert(x<2);
   assert(b<2);
-  u_char byte=0x40|(w<<3)|(r<<2)|(x<<1)|b;
+  u8 byte=0x40|(w<<3)|(r<<2)|(x<<1)|b;
   *(out++)=byte;
 }
-void output_w32(u_int word)
+void output_w32(u32 word)
 {
-  *((u_int *)out)=word;
+  *((u32 *)out)=word;
   out+=4;
 }
-void output_w64(uint64_t word)
+void output_w64(u64 word)
 {
-  *((uint64_t *)out)=word;
+  *((u64 *)out)=word;
   out+=8;
 }
 
@@ -739,7 +739,7 @@ void emit_not(int rs,int rt)
   output_modrm(3,rt,2);
 }
 
-void emit_and(u_int rs1,u_int rs2,u_int rt)
+void emit_and(unsigned int rs1,unsigned int rs2,unsigned int rt)
 {
   assert(rs1<8);
   assert(rs2<8);
@@ -761,7 +761,7 @@ void emit_and(u_int rs1,u_int rs2,u_int rt)
   }
 }
 
-void emit_or(u_int rs1,u_int rs2,u_int rt)
+void emit_or(unsigned int rs1,unsigned int rs2,unsigned int rt)
 {
   assert(rs1<8);
   assert(rs2<8);
@@ -787,7 +787,7 @@ void emit_or_and_set_flags(int rs1,int rs2,int rt)
   emit_or(rs1,rs2,rt);
 }
 
-void emit_xor(u_int rs1,u_int rs2,u_int rt)
+void emit_xor(unsigned int rs1,unsigned int rs2,unsigned int rt)
 {
   assert(rs1<8);
   assert(rs2<8);
@@ -809,7 +809,7 @@ void emit_xor(u_int rs1,u_int rs2,u_int rt)
   }
 }
 
-void emit_movimm(int imm,u_int rt)
+void emit_movimm(int imm,unsigned int rt)
 {
   assem_debug("mov $%d,%%%s\n",imm,regname[rt]);
   assert(rt<16);
@@ -818,7 +818,7 @@ void emit_movimm(int imm,u_int rt)
   output_w32(imm);
 }
 
-void emit_movimm64(uint64_t imm,u_int rt)
+void emit_movimm64(u64 imm,unsigned int rt)
 {
   assem_debug("movq $0x%llx,%%%s\n",imm,regname[rt]);
   assert(rt<16);
@@ -930,7 +930,7 @@ void emit_addimm_no_flags(int imm,int rt)
   }
 }
 
-void emit_adcimm(int imm,u_int rt)
+void emit_adcimm(int imm,unsigned int rt)
 {
   assem_debug("adc $%d,%%%s\n",imm,regname[rt]);
   assert(rt<8);
@@ -946,7 +946,7 @@ void emit_adcimm(int imm,u_int rt)
     output_w32(imm);
   }
 }
-void emit_sbbimm(int imm,u_int rt)
+void emit_sbbimm(int imm,unsigned int rt)
 {
   assem_debug("sbb $%d,%%%s\n",imm,regname[rt]);
   assert(rt<8);
@@ -1070,7 +1070,7 @@ void emit_xorimm(int rs,int imm,int rt)
   }
 }
 
-void emit_shlimm(int rs,u_int imm,int rt)
+void emit_shlimm(int rs,unsigned int imm,int rt)
 {
   if(rs==rt) {
     assem_debug("shl %%%s,%d\n",regname[rt],imm);
@@ -1086,7 +1086,7 @@ void emit_shlimm(int rs,u_int imm,int rt)
   }
 }
 
-void emit_shlimm64(int rs,u_int imm,int rt)
+void emit_shlimm64(int rs,unsigned int imm,int rt)
 {
   if(rs==rt) {
     assem_debug("shl %%%s,%d\n",regname[rt],imm);
@@ -1103,7 +1103,7 @@ void emit_shlimm64(int rs,u_int imm,int rt)
   }
 }
 
-void emit_shrimm(int rs,u_int imm,int rt)
+void emit_shrimm(int rs,unsigned int imm,int rt)
 {
   if(rs==rt) {
     assem_debug("shr %%%s,%d\n",regname[rt],imm);
@@ -1119,7 +1119,7 @@ void emit_shrimm(int rs,u_int imm,int rt)
   }
 }
 
-void emit_shrimm64(int rs,u_int imm,int rt)
+void emit_shrimm64(int rs,unsigned int imm,int rt)
 {
   assert(rs==rt);
   if(rs==rt) {
@@ -1137,7 +1137,7 @@ void emit_shrimm64(int rs,u_int imm,int rt)
   }
 }
 
-void emit_sarimm(int rs,u_int imm,int rt)
+void emit_sarimm(int rs,unsigned int imm,int rt)
 {
   if(rs==rt) {
     assem_debug("sar %%%s,%d\n",regname[rt],imm);
@@ -1153,7 +1153,7 @@ void emit_sarimm(int rs,u_int imm,int rt)
   }
 }
 
-void emit_rorimm(int rs,u_int imm,int rt)
+void emit_rorimm(int rs,unsigned int imm,int rt)
 {
   if(rs==rt) {
     assem_debug("ror %%%s,%d\n",regname[rt],imm);
@@ -1184,7 +1184,7 @@ void emit_swapb(int rs,int rt)
   }
 }
 
-void emit_shldimm(int rs,int rs2,u_int imm,int rt)
+void emit_shldimm(int rs,int rs2,unsigned int imm,int rt)
 {
   if(rs==rt) {
     assem_debug("shld %%%s,%%%s,%d\n",regname[rt],regname[rs2],imm);
@@ -1200,7 +1200,7 @@ void emit_shldimm(int rs,int rs2,u_int imm,int rt)
   }
 }
 
-void emit_shrdimm(int rs,int rs2,u_int imm,int rt)
+void emit_shrdimm(int rs,int rs2,unsigned int imm,int rt)
 {
   if(rs==rt) {
     assem_debug("shrd %%%s,%%%s,%d\n",regname[rt],regname[rs2],imm);
@@ -1267,7 +1267,7 @@ void emit_cmpimm(int rs,int imm)
   }
 }
 
-void emit_cmovne(u_int *addr,int rt)
+void emit_cmovne(u32 *addr,int rt)
 {
   assem_debug("cmovne %x,%%%s",(int)addr,regname[rt]);
   if(addr==&const_zero) assem_debug(" [zero]\n");
@@ -1278,7 +1278,7 @@ void emit_cmovne(u_int *addr,int rt)
   output_modrm(0,5,rt);
   output_w32((int)addr-(int)out-4); // Note: rip-relative in 64-bit mode
 }
-void emit_cmovl(u_int *addr,int rt)
+void emit_cmovl(u32 *addr,int rt)
 {
   assem_debug("cmovl %x,%%%s",(int)addr,regname[rt]);
   if(addr==&const_zero) assem_debug(" [zero]\n");
@@ -1289,7 +1289,7 @@ void emit_cmovl(u_int *addr,int rt)
   output_modrm(0,5,rt);
   output_w32((int)addr-(int)out-4); // Note: rip-relative in 64-bit mode
 }
-void emit_cmovs(u_int *addr,int rt)
+void emit_cmovs(u32 *addr,int rt)
 {
   assem_debug("cmovs %x,%%%s",(int)addr,regname[rt]);
   if(addr==&const_zero) assem_debug(" [zero]\n");
@@ -1783,33 +1783,33 @@ void emit_pushimm(int imm)
 //  assem_debug("popa\n");
 //  output_byte(0x61);
 //}
-void emit_pushreg(u_int r)
+void emit_pushreg(unsigned int r)
 {
   assem_debug("push %%%s\n",regname[r]);
   assert(r<8);
   output_byte(0x50+r);
 }
-void emit_popreg(u_int r)
+void emit_popreg(unsigned int r)
 {
   assem_debug("pop %%%s\n",regname[r]);
   assert(r<8);
   output_byte(0x58+r);
 }
-void emit_callreg(u_int r)
+void emit_callreg(unsigned int r)
 {
   assem_debug("call *%%%s\n",regname[r]);
   assert(r<8);
   output_byte(0xFF);
   output_modrm(3,r,2);
 }
-void emit_jmpreg(u_int r)
+void emit_jmpreg(unsigned int r)
 {
   assem_debug("jmp *%%%s\n",regname[r]);
   assert(r<8);
   output_byte(0xFF);
   output_modrm(3,r,4);
 }
-void emit_jmpmem_indexed(u_int addr,u_int r)
+void emit_jmpmem_indexed(u32 addr,unsigned int r)
 {
   assem_debug("jmp *%x(%%%s)\n",addr,regname[r]);
   assert(r<8);
@@ -1842,23 +1842,23 @@ void emit_negc(int rs, int rt, int sr)
   assert(rs>=0&&rs<8);
   if(rt<0) {
     emit_shrimm(sr,1,sr); // Get C flag
-    emit_jc((int)out+10); // 6
+    emit_jc((pointer)out+10); // 6
     emit_neg(rs,rs); // 2
     emit_neg(rs,rs); // 2
     emit_adc(sr,sr); // Save C flag
   }else{
     if(rs!=rt) emit_mov(rs,rt);
     emit_shrimm(sr,1,sr); // Get C flag
-    emit_jc((int)out+9); // 6
+    emit_jc((pointer)out+9); // 6
     emit_addimm(rt,-1,rt); // 3
     emit_adc(sr,sr); // Save C flag
     emit_not(rt,rt);
   }
 }
 
-void emit_readword(uint64_t addr, int rt)
+void emit_readword(u64 addr, int rt)
 {
-  if(addr-(uint64_t)out+0x7FFFFFFA>0xFFFFFFFE) {
+  if(addr-(u64)out+0x7FFFFFFA>0xFFFFFFFE) {
     //TODO: special eax case
     emit_movimm64(addr,rt);
     assem_debug("mov (%%%s),%%%s\n",regname[rt],regname[rt]);
@@ -1968,9 +1968,9 @@ void emit_movmem_indexedx8_64(int addr, int rs, int rt)
   output_sib(3,rs,5);
   output_w32(addr);
 }
-void emit_movsbl(uint64_t addr, int rt)
+void emit_movsbl(u64 addr, int rt)
 {
-  if(addr-(uint64_t)out+0x7FFFFFF9>0xFFFFFFFE) {
+  if(addr-(u64)out+0x7FFFFFF9>0xFFFFFFFE) {
     emit_movimm64(addr,rt);
     assem_debug("movsbl (%%%s),%%%s\n",regname[rt],regname[rt]);
     output_byte(0x0F);
@@ -1999,7 +1999,7 @@ void emit_movsbl_indexed(int addr, int rs, int rt)
   output_modrm(2,rs,rt);
   output_w32(addr);
 }
-void emit_movsbl_map(uint64_t addr, int map, int rt)
+void emit_movsbl_map(u64 addr, int map, int rt)
 {
   if(map<0) emit_movsbl(addr, rt);
   else
@@ -2041,9 +2041,9 @@ void emit_movsbl_indexed_map(int addr, int rs, int map, int rt)
     }
   }
 }
-void emit_movswl(uint64_t addr, int rt)
+void emit_movswl(u64 addr, int rt)
 {
-  if(addr-(uint64_t)out+0x7FFFFFF9>0xFFFFFFFE) {
+  if(addr-(u64)out+0x7FFFFFF9>0xFFFFFFFE) {
     emit_movimm64(addr,rt);
     assem_debug("movswl (%%%s),%%%s\n",regname[rt],regname[rt]);
     output_byte(0x0F);
@@ -2072,7 +2072,7 @@ void emit_movswl_indexed(int addr, int rs, int rt)
   output_modrm(2,rs,rt);
   output_w32(addr);
 }
-void emit_movswl_map(uint64_t addr, int map, int rt)
+void emit_movswl_map(u64 addr, int map, int rt)
 {
   if(map<0) emit_movswl(addr, rt);
   else
@@ -2200,10 +2200,10 @@ void emit_movzwl_map(int addr, int map, int rt)
     output_w32(addr);
   }
 }
-void emit_movq(uint64_t addr, int rt)
+void emit_movq(u64 addr, int rt)
 {
-  if(addr-(uint64_t)out+0x7FFFFFFA>0xFFFFFFFF) {
-    assert(addr-(uint64_t)out+0x7FFFFFFA<0x100000000);
+  if(addr-(u64)out+0x7FFFFFFA>0xFFFFFFFF) {
+    assert(addr-(u64)out+0x7FFFFFFA<0x100000000);
     //TODO: special eax case
     emit_movimm64(addr,rt);
     //FIXME
@@ -2620,14 +2620,14 @@ void emit_div0s(int s1, int s2, int sr, int temp) {
 }
 
 // Load return address
-void emit_load_return_address(u_int rt)
+void emit_load_return_address(unsigned int rt)
 {
   // (assumes this instruction will be followed by a 5-byte jmp instruction)
   emit_movimm((int)out+10,rt);
 }
 
 // Load 2 immediates optimizing for small code size
-void emit_mov2imm_compact(int imm1,u_int rt1,int imm2,u_int rt2)
+void emit_mov2imm_compact(int imm1,unsigned int rt1,int imm2,unsigned int rt2)
 {
   emit_movimm(imm1,rt1);
   if(imm2-imm1<128&&imm2-imm1>=-128) emit_addimm(rt1,imm2-imm1,rt2);
@@ -2712,7 +2712,7 @@ void emit_fldl(int r)
   if(r!=EBP) output_modrm(0,r,0);
   else {output_modrm(1,EBP,0);output_byte(0);}
 }
-void emit_fucomip(u_int r)
+void emit_fucomip(unsigned int r)
 {
   assem_debug("fucomip %d\n",r);
   assert(r<8);
@@ -2895,7 +2895,7 @@ void emit_fldcw(int addr)
   output_modrm(0,5,5);
   output_w32(addr-(int)out-4); // Note: rip-relative in 64-bit mode
 }
-void emit_movss_load(u_int addr,u_int ssereg)
+void emit_movss_load(unsigned int addr,unsigned int ssereg)
 {
   assem_debug("movss (%%%s),xmm%d\n",regname[addr],ssereg);
   assert(ssereg<8);
@@ -2905,7 +2905,7 @@ void emit_movss_load(u_int addr,u_int ssereg)
   if(addr!=EBP) output_modrm(0,addr,ssereg);
   else {output_modrm(1,EBP,ssereg);output_byte(0);}
 }
-void emit_movsd_load(u_int addr,u_int ssereg)
+void emit_movsd_load(unsigned int addr,unsigned int ssereg)
 {
   assem_debug("movsd (%%%s),xmm%d\n",regname[addr],ssereg);
   assert(ssereg<8);
@@ -2915,7 +2915,7 @@ void emit_movsd_load(u_int addr,u_int ssereg)
   if(addr!=EBP) output_modrm(0,addr,ssereg);
   else {output_modrm(1,EBP,ssereg);output_byte(0);}
 }
-void emit_movd_store(u_int ssereg,u_int addr)
+void emit_movd_store(unsigned int ssereg,unsigned int addr)
 {
   assem_debug("movd xmm%d,(%%%s)\n",ssereg,regname[addr]);
   assert(ssereg<8);
@@ -2925,7 +2925,7 @@ void emit_movd_store(u_int ssereg,u_int addr)
   if(addr!=EBP) output_modrm(0,addr,ssereg);
   else {output_modrm(1,EBP,ssereg);output_byte(0);}
 }
-void emit_cvttps2dq(u_int ssereg1,u_int ssereg2)
+void emit_cvttps2dq(unsigned int ssereg1,unsigned int ssereg2)
 {
   assem_debug("cvttps2dq xmm%d,xmm%d\n",ssereg1,ssereg2);
   assert(ssereg1<8);
@@ -2935,7 +2935,7 @@ void emit_cvttps2dq(u_int ssereg1,u_int ssereg2)
   output_byte(0x5b);
   output_modrm(3,ssereg1,ssereg2);
 }
-void emit_cvttpd2dq(u_int ssereg1,u_int ssereg2)
+void emit_cvttpd2dq(unsigned int ssereg1,unsigned int ssereg2)
 {
   assem_debug("cvttpd2dq xmm%d,xmm%d\n",ssereg1,ssereg2);
   assert(ssereg1<8);
@@ -2946,7 +2946,7 @@ void emit_cvttpd2dq(u_int ssereg1,u_int ssereg2)
   output_modrm(3,ssereg1,ssereg2);
 }
 
-unsigned int count_bits(u_int reglist)
+unsigned int count_bits(u32 reglist)
 {
   int count=0;
   while(reglist)
@@ -2961,7 +2961,7 @@ unsigned int count_bits(u_int reglist)
 // This code is executed infrequently so we try to minimize code size
 // by pushing registers onto the stack instead of writing them to their
 // usual locations
-void save_regs(u_int reglist)
+void save_regs(u32 reglist)
 {
   reglist&=0xC7; // only save the caller-save registers, %eax, %ecx, %edx, %esi, %edi
   int hr;
@@ -2978,7 +2978,7 @@ void save_regs(u_int reglist)
   emit_addimm64(ESP,-(5-count)*8,ESP);
 }
 // Restore registers after function call
-void restore_regs(u_int reglist)
+void restore_regs(u32 reglist)
 {
   reglist&=0xC7; // only save the caller-save registers, %eax, %ecx, %edx, %esi, %edi
   int hr;
@@ -2997,9 +2997,9 @@ void restore_regs(u_int reglist)
 
 /* Stubs/epilogue */
 
-emit_extjump(int addr, int target)
+emit_extjump(pointer addr, int target)
 {
-  u_char *ptr=(u_char *)addr;
+  u8 *ptr=(u8 *)addr;
   if(*ptr==0x0f)
   {
     assert(ptr[1]>=0x80&&ptr[1]<=0x8f);
@@ -3023,7 +3023,7 @@ emit_extjump(int addr, int target)
   emit_writeword(ECX,(int)&last_count);
 #endif
 //DEBUG <
-  emit_jmp((int)dyna_linker);
+  emit_jmp((pointer)dyna_linker);
 }
 
 do_readstub(int n)
@@ -3034,7 +3034,7 @@ do_readstub(int n)
   int i=stubs[n][3];
   int rs=stubs[n][4];
   struct regstat *i_regs=(struct regstat *)stubs[n][5];
-  u_int reglist=stubs[n][7];
+  u32 reglist=stubs[n][7];
   signed char *i_regmap=i_regs->regmap;
   int addr=get_reg(i_regmap,AGEN1+(i&1));
   int rt;
@@ -3130,7 +3130,7 @@ do_readstub(int n)
   emit_jmp(stubs[n][2]); // return address
 }
 
-inline_readstub(int type, int i, u_int addr, signed char regmap[], int target, int adj, u_int reglist)
+inline_readstub(int type, int i, u32 addr, signed char regmap[], int target, int adj, u32 reglist)
 {
   assem_debug("inline_readstub\n");
   //int rs=get_reg(regmap,target);
@@ -3170,7 +3170,7 @@ do_writestub(int n)
   int i=stubs[n][3];
   int rs=stubs[n][4];
   struct regstat *i_regs=(struct regstat *)stubs[n][5];
-  u_int reglist=stubs[n][7];
+  u32 reglist=stubs[n][7];
   signed char *i_regmap=i_regs->regmap;
   int addr=get_reg(i_regmap,AGEN1+(i&1));
   int rt=get_reg(i_regmap,rs1[i]);
@@ -3229,7 +3229,7 @@ do_writestub(int n)
   emit_jmp(stubs[n][2]); // return address
 }
 
-inline_writestub(int type, int i, u_int addr, signed char regmap[], int target, int adj, u_int reglist)
+inline_writestub(int type, int i, u32 addr, signed char regmap[], int target, int adj, u32 reglist)
 {
   assem_debug("inline_writestub\n");
   //int rs=get_reg(regmap,-1);
@@ -3259,7 +3259,7 @@ do_rmwstub(int n)
   int i=stubs[n][3];
   int rs=stubs[n][4];
   struct regstat *i_regs=(struct regstat *)stubs[n][5];
-  u_int reglist=stubs[n][7];
+  u32 reglist=stubs[n][7];
   signed char *i_regmap=i_regs->regmap;
   int addr=get_reg(i_regmap,AGEN1+(i&1));
   //int rt=get_reg(i_regmap,rs1[i]);
@@ -3352,13 +3352,13 @@ void printregs(int edi,int esi,int ebp,int esp,int b,int d,int c,int a)
 int do_dirty_stub(int i)
 {
   assem_debug("do_dirty_stub %x\n",start+i*2);
-  u_int alignedlen=((((u_int)source)+slen*2+2)&~2)-(u_int)alignedsource;
-  if((uint64_t)source<=0xFFFFFFFF)
-    emit_movimm(((u_int)source)&~3,EAX); //alignedsource
+  u32 alignedlen=((((u32)source)+slen*2+2)&~2)-(u32)alignedsource;
+  if((u64)source<=0xFFFFFFFF)
+    emit_movimm(((u32)source)&~3,EAX); //alignedsource
   else
-    emit_movimm64(((uint64_t)source)&~3,EAX); //alignedsource
-  emit_movimm((u_int)copy,EBX);
-  emit_movimm((((u_int)source+slen*2+2)&~3)-((u_int)source&~3),ECX);
+    emit_movimm64(((u64)source)&~3,EAX); //alignedsource
+  emit_movimm((u32)copy,EBX);
+  emit_movimm((((u32)source+slen*2+2)&~3)-((u32)source&~3),ECX);
   emit_movimm(start+i*2+slave,12);
   emit_call((int)&verify_code);
   int entry=(int)out;
@@ -3370,7 +3370,7 @@ int do_dirty_stub(int i)
 
 /* Memory Map */
 
-int do_map_r(int s,int ar,int map,int cache,int x,int a,int shift,int c,u_int addr)
+int do_map_r(int s,int ar,int map,int cache,int x,int a,int shift,int c,u32 addr)
 {
   if(c) {
     /*if((signed int)addr>=(signed int)0xC0000000) {
@@ -3390,7 +3390,7 @@ int do_map_r(int s,int ar,int map,int cache,int x,int a,int shift,int c,u_int ad
   }
   return map;
 }
-int do_map_r_branch(int map, int c, u_int addr, int *jaddr)
+int do_map_r_branch(int map, int c, u32 addr, int *jaddr)
 {
   if(!c) {
     emit_test64(map,map);
@@ -3406,7 +3406,7 @@ int gen_tlb_addr_r(int ar, int map) {
   }
 }
 
-int do_map_w(int s,int ar,int map,int cache,int x,int c,u_int addr)
+int do_map_w(int s,int ar,int map,int cache,int x,int c,u32 addr)
 {
   if(c) {
     if(can_direct_write(addr)) {
@@ -3426,7 +3426,7 @@ int do_map_w(int s,int ar,int map,int cache,int x,int c,u_int addr)
   emit_shlimm64(map,2,map);
   return map;
 }
-int do_map_w_branch(int map, int c, u_int addr, int *jaddr)
+int do_map_w_branch(int map, int c, u32 addr, int *jaddr)
 {
   if(!c||can_direct_write(addr)) {
     *jaddr=(int)out;
@@ -3441,7 +3441,7 @@ int gen_tlb_addr_w(int ar, int map) {
 }
 
 // We don't need this for x86
-generate_map_const(u_int addr,int reg) {
+generate_map_const(u32 addr,int reg) {
   // void *mapaddr=memory_map+(addr>>12);
 }
 
@@ -3465,9 +3465,9 @@ void do_miniht_load(int ht,int rh) {
 }
 
 void do_miniht_jump(int rs,int rh,int ht) {
-  emit_cmpmem_indexed(slave?(int)mini_ht_slave:(int)mini_ht_master,rh,rs);
+  emit_cmpmem_indexed(slave?(u32)mini_ht_slave:(u32)mini_ht_master,rh,rs);
   emit_jne(jump_vaddr_reg[slave][rs]);
-  emit_readword_indexed(slave?(int)mini_ht_slave+4:(int)mini_ht_master+4,rh,rh);
+  emit_readword_indexed(slave?(u32)mini_ht_slave+4:(u32)mini_ht_master+4,rh,rh);
   emit_jmpreg(rh);
 }
 
@@ -3481,7 +3481,7 @@ void do_miniht_insert(int return_address,int rt,int temp) {
   else emit_writeword_imm(0,(int)&mini_ht_master[(return_address&0xFF)>>3][1]);
 }
 
-void wb_valid(signed char pre[],signed char entry[],u_int dirty_pre,u_int dirty,uint64_t u)
+void wb_valid(signed char pre[],signed char entry[],u32 dirty_pre,u32 dirty,u64 u)
 {
   //if(dirty_pre==dirty) return;
   int hr,reg,new_hr;

@@ -32,4 +32,4 @@
 #define ESI 6
 #define EDI 7
 
-extern uint64_t memory_map[1048576]; // 64-bit
+extern u64 memory_map[1048576]; // 64-bit

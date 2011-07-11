@@ -7641,10 +7641,15 @@ int sh2_recompile_block(int addr)
         break;
       case 3:
         // Clear jump_out
-        #ifdef __arm__
-        if((expirep&2047)==0) 
+        if((expirep&2047)==0) {
+          #ifdef __arm__
           do_clear_cache();
-        #endif
+          #endif
+          #ifdef USE_MINI_HT
+          memset(mini_ht_master,-1,sizeof(mini_ht_master));
+          memset(mini_ht_slave,-1,sizeof(mini_ht_slave));
+          #endif
+        }
         ll_remove_matching_addrs(jump_out+(expirep&2047),base,shift);
         break;
     }

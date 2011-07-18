@@ -855,6 +855,19 @@ macw_saturation:
 	mov	pc, lr
 	.size	macw, .-macw
 
+/* __clear_cache syscall for Linux OS with broken libraries */
+	.align	2
+	.global	clear_cache
+	.type	clear_cache, %function
+clear_cache:
+	push	{r7, lr}
+	mov	r7, #2
+	mov	r2, #0
+	orr	r7, #0xf0000
+	svc	0x00000000
+	pop	{r7, pc}
+	.size	clear_cache, .-clear_cache
+
 	.align	2
 	.global	breakpoint
 	.type	breakpoint, %function

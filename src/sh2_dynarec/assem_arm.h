@@ -37,6 +37,10 @@ extern u8 sh2_dynarec_target[16777216];
 extern u32 memory_map[1048576]; // 32-bit
 
 //#define BASE_ADDR 0x6000000 // Code generator target address
-#define BASE_ADDR ((u_int)&sh2_dynarec_target) // Code generator target address
+#define BASE_ADDR ((u32)&sh2_dynarec_target) // Code generator target address
 #define TARGET_SIZE_2 24 // 2^24 = 16 megabytes
 //#define TARGET_SIZE_2 25 // 2^25 = 32 megabytes
+
+#ifdef ANDROID
+#define __clear_cache clear_cache
+#endif

@@ -1613,14 +1613,14 @@ void emit_cmppl(int s, int sr, int temp)
 void emit_addc(int s, int t, int sr)
 {
   emit_lsrs_imm(sr,1,sr);
-  emit_adc(s,t,t);
+  emit_adcs(s,t,t);
   emit_adc(sr,sr,sr);
 }
 void emit_subc(int s, int t, int sr)
 {
   emit_xorimm(sr,1,sr);
   emit_lsrs_imm(sr,1,sr);
-  emit_subs(t,s,t);
+  emit_sbcs(t,s,t);
   emit_adc(sr,sr,sr);
   emit_xorimm(sr,1,sr);
 }
@@ -1667,7 +1667,7 @@ void emit_rotclsr(int t, int sr)
 {
   emit_lsrs_imm(sr,1,sr);
   emit_adcs(t,t,t);
-  emit_adcs(sr,sr,sr);
+  emit_adc(sr,sr,sr);
 }
 void emit_rotcrsr(int t, int sr)
 {

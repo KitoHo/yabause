@@ -35,6 +35,9 @@ void * slave_ip; // Translated PC
 void FASTCALL WriteInvalidateLong(u32 addr, u32 val);
 void FASTCALL WriteInvalidateWord(u32 addr, u32 val);
 void FASTCALL WriteInvalidateByte(u32 addr, u32 val);
+void FASTCALL WriteInvalidateByteSwapped(u32 addr, u32 val);
+
+u32 rmw_temp; // Temporary storage for TAS.B instruction
 
 void jump_vaddr_eax_master();
 void jump_vaddr_ecx_master();
@@ -2395,8 +2398,8 @@ void emit_mov2imm_compact(int imm1,unsigned int rt1,int imm2,unsigned int rt2)
   else emit_movimm(imm2,rt2);
 }
 
-// special case for checking pending_exception
-void emit_cmpmem_imm_byte(int addr,int imm)
+// compare byte in memory
+void emit_cmpmem_imm_byte(pointer addr,int imm)
 {
   assert(imm<128&&imm>=-127);
   assem_debug("cmpb $%d,%x\n",imm,addr);
@@ -2989,7 +2992,7 @@ do_writestub(int n)
     }
   }
   else if(rt!=EDX) emit_mov(rt,EDX);
-  //if(type==STOREB_STUB) emit_xorimm(EAX,1,EAX); // WriteInvalidateByte does this
+  //if(type==STOREB_STUB) emit_xorimm(EAX,1,EAX); // WriteInvalidateByteSwapped does this
   
   //if(i_regmap[HOST_CCREG]==CCREG) emit_storereg(CCREG,HOST_CCREG);//DEBUG
   /*if(i_regmap[HOST_CCREG]==CCREG) {
@@ -3043,12 +3046,11 @@ do_writestub(int n)
     temp=!addr;
   }*/
   if(type==STOREB_STUB)
-    emit_call((int)WriteInvalidateByte);
+    emit_call((int)WriteInvalidateByteSwapped);
   if(type==STOREW_STUB)
     emit_call((int)WriteInvalidateWord);
   if(type==STOREL_STUB)
     emit_call((int)WriteInvalidateLong);
-  //  emit_call((int)MappedMemoryWriteLong);
   
   restore_regs(reglist);
   emit_jmp(stubs[n][2]); // return address
@@ -3065,10 +3067,8 @@ inline_writestub(int type, int i, u32 addr, signed char regmap[], int target, in
   // "FASTCALL" api: address in eax, data in edx
   if(rt!=EDX) emit_mov(rt,EDX);
   emit_movimm(addr,EAX); // FIXME - should be able to move the existing value
-  //if(type==STOREB_STUB) emit_xorimm(EAX,1,EAX); // WriteInvalidateByte does this
   if(type==STOREB_STUB)
-    emit_call((int)MappedMemoryWriteByte);
-    //emit_call((int)WriteInvalidateByte);
+    emit_call((int)WriteInvalidateByte);
   if(type==STOREW_STUB)
     emit_call((int)WriteInvalidateWord);
   if(type==STOREL_STUB)
@@ -3100,7 +3100,7 @@ do_rmwstub(int n)
     emit_writeword_indexed(rs,0,ESP);
   
   //if(i_regmap[HOST_CCREG]==CCREG) emit_storereg(CCREG,HOST_CCREG);//DEBUG
-  if(i_regmap[HOST_CCREG]==CCREG) {
+  /*if(i_regmap[HOST_CCREG]==CCREG) {
     emit_addimm(HOST_CCREG,CLOCK_DIVIDER*(stubs[n][6]),HOST_CCREG);
     output_byte(0x03);
     output_modrm(1,4,HOST_CCREG);
@@ -3121,7 +3121,7 @@ do_rmwstub(int n)
     output_sib(0,4,4);
     output_byte(12+16);
     emit_writeword(ECX,(int)&MSH2->cycles);
-  }
+  }*/
   emit_call((int)MappedMemoryReadByte);
   emit_mov(EAX,EDX);
   if(rs==EAX||rs==ECX||rs==EDX)
@@ -3135,10 +3135,12 @@ do_rmwstub(int n)
   if(type==RMWO_STUB)
     emit_orimm(EDX,imm[i],EDX);
   if(type==RMWT_STUB) { // TAS.B
-    emit_writeword_indexed(EDX,0,ESP);
+    //emit_writeword_indexed(EDX,0,ESP);
+    emit_writeword(EDX,(pointer)&rmw_temp);
     emit_orimm(EDX,0x80,EDX);
   }
-  emit_call((int)MappedMemoryWriteByte);
+  //emit_call((int)MappedMemoryWriteByte);
+  emit_call((int)WriteInvalidateByte);
   
   restore_regs(reglist);
 
@@ -3147,12 +3149,13 @@ do_rmwstub(int n)
     sr=get_reg(i_regs->regmap,SR);
     assert(sr>=0); // Liveness analysis?
     emit_andimm(sr,~1,sr);
-    assem_debug("cmp $%d,%d+%%%s\n",1,-16,regname[ESP]);
-    output_byte(0x80);
-    output_modrm(1,4,7);
-    output_sib(0,4,4);
-    output_byte(-16);
-    output_byte(1);
+    //assem_debug("cmp $%d,%d+%%%s\n",1,-16,regname[ESP]);
+    //output_byte(0x80);
+    //output_modrm(1,4,7);
+    //output_sib(0,4,4);
+    //output_byte(-16);
+    //output_byte(1);
+    emit_cmpmem_imm_byte((pointer)&rmw_temp,1);
     emit_adcimm(0,sr);
   }
   emit_jmp(stubs[n][2]); // return address

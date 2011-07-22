@@ -27,6 +27,7 @@ extern u8 restore_candidate[512]  __attribute__((aligned(4)));
 void FASTCALL WriteInvalidateLong(u32 addr, u32 val);
 void FASTCALL WriteInvalidateWord(u32 addr, u32 val);
 void FASTCALL WriteInvalidateByte(u32 addr, u32 val);
+void FASTCALL WriteInvalidateByteSwapped(u32 addr, u32 val);
 
 void jump_vaddr_r0_master();
 void jump_vaddr_r1_master();
@@ -2897,7 +2898,7 @@ do_writestub(int n)
     }
   }
   else if(rt!=1) emit_mov(rt,1);
-  //if(type==STOREB_STUB) emit_xorimm(EAX,1,EAX); // WriteInvalidateByte does this
+  //if(type==STOREB_STUB) emit_xorimm(EAX,1,EAX); // WriteInvalidateByteSwapped does this
   
   //if(i_regmap[HOST_CCREG]==CCREG) emit_storereg(CCREG,HOST_CCREG);//DEBUG
   //ds=i_regs!=&regs[i];
@@ -2906,12 +2907,11 @@ do_writestub(int n)
   //wb_dirtys(i_regs->regmap_entry,i_regs->was32,i_regs->wasdirty&~(1<<addr)&(real_rs<0?-1:~(1<<real_rs)));
   
   if(type==STOREB_STUB)
-    emit_call((int)WriteInvalidateByte);
+    emit_call((int)WriteInvalidateByteSwapped);
   if(type==STOREW_STUB)
     emit_call((int)WriteInvalidateWord);
   if(type==STOREL_STUB)
     emit_call((int)WriteInvalidateLong);
-  //  emit_call((int)MappedMemoryWriteLong);
   
   restore_regs(reglist);
   emit_jmp(stubs[n][2]); // return address
@@ -2928,10 +2928,8 @@ inline_writestub(int type, int i, u32 addr, signed char regmap[], int target, in
   // "FASTCALL" api: address in r0, data in r1
   if(rt!=1) emit_mov(rt,1);
   emit_movimm(addr,0); // FIXME - should be able to move the existing value
-  //if(type==STOREB_STUB) emit_xorimm(EAX,1,EAX); // WriteInvalidateByte does this
   if(type==STOREB_STUB)
-    emit_call((int)MappedMemoryWriteByte);
-    //emit_call((int)WriteInvalidateByte);
+    emit_call((int)WriteInvalidateByte);
   if(type==STOREW_STUB)
     emit_call((int)WriteInvalidateWord);
   if(type==STOREL_STUB)
@@ -2964,7 +2962,7 @@ do_rmwstub(int n)
   
   //if(i_regmap[HOST_CCREG]==CCREG) emit_storereg(CCREG,HOST_CCREG);//DEBUG
   emit_call((int)MappedMemoryReadByte);
-  emit_mov(0,1);
+  //emit_mov(0,1);
   if(type==RMWA_STUB)
     emit_andimm(0,imm[i],1);
   if(type==RMWX_STUB)
@@ -2979,7 +2977,8 @@ do_rmwstub(int n)
     emit_readword((int)&dynarec_local+24,0);
   else
     emit_mov(rs,0);
-  emit_call((int)MappedMemoryWriteByte);
+  //emit_call((int)MappedMemoryWriteByte);
+  emit_call((int)WriteInvalidateByte);
   
   restore_regs(reglist);
 

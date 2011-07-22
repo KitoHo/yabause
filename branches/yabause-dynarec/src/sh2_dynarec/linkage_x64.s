@@ -539,11 +539,15 @@ WriteInvalidateWord:
 	/*pop	%rax*/
 	jmp	MappedMemoryWriteWord
 	.size	WriteInvalidateWord, .-WriteInvalidateWord
+.globl WriteInvalidateByteSwapped
+	.type	WriteInvalidateByteSwapped, @function
+WriteInvalidateByteSwapped:
+	xor	$1, %edi
+	.size	WriteInvalidateByteSwapped, .-WriteInvalidateByteSwapped
 .globl WriteInvalidateByte
 	.type	WriteInvalidateByte, @function
 WriteInvalidateByte:
 	mov	%edi, %ecx
-	xor	$1, %edi
 	shr	$12, %ecx
 	bt	%ecx, cached_code
 	jnc	MappedMemoryWriteByte

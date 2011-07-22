@@ -695,6 +695,7 @@ WriteInvalidateWord:
 	lsr	r3, r0, #12
 	ldr	r2, [r12, r2, lsl #2]
 	mov	r12, #1
+	movt	r1, #0
 	tst	r12, r2, ror r3
 	beq	MappedMemoryWriteWord
 	push	{r0, r1, r2, lr}
@@ -717,6 +718,7 @@ WriteInvalidateByte:
 	lsr	r3, r0, #12
 	ldr	r2, [r12, r2, lsl #2]
 	mov	r12, #1
+	and	r1, r1, #0xff
 	tst	r12, r2, ror r3
 	beq	MappedMemoryWriteByte
 	push	{r0, r1, r2, lr}

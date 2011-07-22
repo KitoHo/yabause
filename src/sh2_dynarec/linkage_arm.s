@@ -703,6 +703,11 @@ WriteInvalidateWord:
 	b	MappedMemoryWriteWord
 	.size	WriteInvalidateWord, .-WriteInvalidateWord
 	.align	2
+	.global	WriteInvalidateByteSwapped
+	.type	WriteInvalidateByteSwapped, %function
+WriteInvalidateByteSwapped:
+	eor	r0, r0, #1
+	.size	WriteInvalidateByteSwapped, .-WriteInvalidateByteSwapped
 	.global	WriteInvalidateByte
 	.type	WriteInvalidateByte, %function
 WriteInvalidateByte:
@@ -710,7 +715,6 @@ WriteInvalidateByte:
 	lsr	r2, r0, #17
 	movt	r12, #:upper16:cached_code
 	lsr	r3, r0, #12
-	eor	r0, r0, #1
 	ldr	r2, [r12, r2, lsl #2]
 	mov	r12, #1
 	tst	r12, r2, ror r3

@@ -1574,8 +1574,11 @@ void system_alloc(struct regstat *current,int i)
   if(opcode[i]==12) { // TRAPA
     alloc_reg(current,i,15); // Stack reg
     dirty_reg(current,15);
-    alloc_reg(current,i,SR);
+    alloc_reg(current,i,SR); // Status/flags
     alloc_reg(current,i,VBR);
+    alloc_reg(current,i,MOREG); // memory_map offset
+    alloc_reg_temp(current,i,-1);
+    minimum_free_regs[i]=1;
   }
   current->isdoingcp=0;
 }
@@ -2621,32 +2624,6 @@ void complex_assemble(int i,struct regstat *i_regs)
     emit_writeword(ECX,slave?(int)&SSH2->cycles:(int)&MSH2->cycles);
 //  }*/
     emit_call((pointer)macw);
-  }
-}
-
-void system_assemble(int i,struct regstat *i_regs)
-{
-  signed char ccreg=get_reg(i_regs->regmap,CCREG);
-  assert(ccreg==HOST_CCREG);
-  assert(!is_delayslot);
-  if(opcode[i]==0&&opcode2[i]==11&&opcode3[i]==1) { // SLEEP
-    emit_addimm(HOST_CCREG,CLOCK_DIVIDER*ccadj[i],HOST_CCREG);
-    pointer jaddr=(pointer)out;
-    emit_jns(0);
-    pointer return_address=(pointer)out;
-    emit_zeroreg(HOST_CCREG);
-    set_jump_target(jaddr,(pointer)out);
-    add_stub(CC_STUB,(int)out,return_address,0,i,start+i*2,TAKEN,0);
-    emit_jmp(0);
-    // DEBUG: Count in multiples of three to match interpreter
-    //emit_addimm_and_set_flags(CLOCK_DIVIDER*3,HOST_CCREG);
-    //add_stub(CC_STUB,(int)out,return_address,0,i,start+i*2,TAKEN,0);
-    //emit_jns(0);
-    emit_jmp(return_address);
-  }
-  else {
-    emit_addimm(HOST_CCREG,CLOCK_DIVIDER*(ccadj[i]+cycles[i]+cycles[i+1]),HOST_CCREG);
-    assert(opcode[i]==0&&opcode2[i]==11&&opcode3[i]==1);
   }
 }
 
@@ -4108,6 +4085,86 @@ void sjump_assemble(int i,struct regstat *i_regs)
   }
 }
 
+void system_assemble(int i,struct regstat *i_regs)
+{
+  signed char ccreg=get_reg(i_regs->regmap,CCREG);
+  assert(ccreg==HOST_CCREG);
+  assert(!is_delayslot);
+  if(opcode[i]==0&&opcode2[i]==11&&opcode3[i]==1) { // SLEEP
+    emit_addimm(HOST_CCREG,CLOCK_DIVIDER*ccadj[i],HOST_CCREG);
+    pointer jaddr=(pointer)out;
+    emit_jns(0);
+    pointer return_address=(pointer)out;
+    emit_zeroreg(HOST_CCREG);
+    set_jump_target(jaddr,(pointer)out);
+    add_stub(CC_STUB,(int)out,return_address,0,i,start+i*2,TAKEN,0);
+    emit_jmp(0);
+    // DEBUG: Count in multiples of three to match interpreter
+    //emit_addimm_and_set_flags(CLOCK_DIVIDER*3,HOST_CCREG);
+    //add_stub(CC_STUB,(int)out,return_address,0,i,start+i*2,TAKEN,0);
+    //emit_jns(0);
+    emit_jmp(return_address);
+  }
+  else {
+    assert(opcode[i]==12); // TRAPA
+    int b,t,sr,st,map=-1,cache=-1;
+    int jaddr=0;
+    unsigned int hr;
+    u32 reglist=0;
+    t=get_reg(i_regs->regmap,-1);
+    b=get_reg(i_regs->regmap,VBR);
+    sr=get_reg(i_regs->regmap,SR);
+    st=get_reg(i_regs->regmap,15); // STACK
+    for(hr=0;hr<HOST_REGS;hr++) {
+      if(i_regs->regmap[hr]>=0) reglist|=1<<hr;
+    }
+    assert(t>=0);
+    assert(b>=0);
+    assert(sr>=0);
+    assert(st>=0);
+    emit_addimm(st,-4,st);
+    map=get_reg(i_regs->regmap,MOREG);
+    cache=get_reg(i_regs->regmap,MMREG);
+    assert(map>=0);
+    reglist&=~(1<<map);
+    map=do_map_w(st,st,map,cache,0,0,0);
+    do_map_w_branch(map,0,0,&jaddr);
+    // Save SR
+    emit_rorimm(sr,16,sr);
+    emit_writeword_indexed_map(sr,0,st,map,map);
+    emit_rorimm(sr,16,sr);
+    if(jaddr) {
+      add_stub(STOREL_STUB,jaddr,(int)out,i,st,(int)i_regs,ccadj[i],reglist);
+    }
+    emit_addimm(st,-4,st);
+    store_regs_bt(i_regs->regmap,i_regs->dirty,-1);
+    emit_movimm(start+i*2+2,sr);
+    emit_addimm(b,imm[i]<<2,b);
+    map=do_map_w(st,st,map,cache,0,0,0);
+    do_map_w_branch(map,0,0,&jaddr);
+    // Save PC
+    emit_rorimm(sr,16,sr);
+    emit_writeword_indexed_map(sr,0,st,map,map);
+    if(jaddr) {
+      add_stub(STOREL_STUB,jaddr,(int)out,i,st,(int)i_regs,ccadj[i],reglist);
+    }
+    // Load PC
+    map=do_map_r(b,b,map,cache,0,-1,-1,0,0);
+    do_map_r_branch(map,0,0,&jaddr);
+    emit_readword_indexed_map(0,b,map,t);
+    emit_rorimm(t,16,t);
+    if(jaddr)
+      add_stub(LOADL_STUB,jaddr,(int)out,i,t,(int)i_regs,ccadj[i],reglist);
+    if(i_regs->regmap[HOST_CCREG]!=CCREG) {
+      emit_loadreg(CCREG,HOST_CCREG);
+    }
+    emit_addimm_and_set_flags(CLOCK_DIVIDER*(ccadj[i]+cycles[i]),HOST_CCREG);
+    //add_stub(CC_STUB,(int)out,jump_vaddr_reg[slave][t],0,i,-1,TAKEN,0); // FIXME
+    //emit_jns(0);
+    emit_jmp(jump_vaddr_reg[slave][t]);
+  }
+}
+
 // Basic liveness analysis for SH2 registers
 void unneeded_registers(int istart,int iend,int r)
 {
@@ -4243,6 +4300,11 @@ void unneeded_registers(int istart,int iend,int r)
     {
       // RTE instruction (return from exception)
       u=(1<<SR);
+    }
+    else if(itype[i]==SYSTEM && opcode[i]==12)
+    {
+      // TRAPA instruction (syscall)
+      u=0;
     }
     //u=uu=0; // DEBUG
     //tdep=(~uu>>rt1[i])&1;
@@ -5590,9 +5652,11 @@ int sh2_recompile_block(int addr)
           cycles[i]=4;
         }
         else if(op==12) { // TRAPA
-          rs1[i]=15; // Stack pointer
-          rs2[i]=CCREG; // SR/TBIT too?
-          rs3[i]=VBR;
+          rs1[i]=SR; // Status/flags
+          //rs2[i]=CCREG;
+          rs2[i]=VBR;
+          rs3[i]=15; // Stack pointer
+          imm[i]=(unsigned int)((unsigned char)source[i]);
           cycles[i]=8;
         }
         else { // SLEEP
@@ -6295,6 +6359,18 @@ int sh2_recompile_block(int addr)
     {
       // TRAPA instruction (software interrupt)
       nr=0;
+      for(hr=0;hr<HOST_REGS;hr++)
+      {
+        // Source registers are needed
+        if(regmap_pre[i][hr]==15) nr|=1<<hr;
+        if(regmap_pre[i][hr]==SR) nr|=1<<hr;
+        if(regmap_pre[i][hr]==VBR) nr|=1<<hr;
+        if(regmap_pre[i][hr]==CCREG) nr|=1<<hr;
+        if(regs[i].regmap_entry[hr]==15) nr|=1<<hr;
+        if(regs[i].regmap_entry[hr]==SR) nr|=1<<hr;
+        if(regs[i].regmap_entry[hr]==VBR) nr|=1<<hr;
+        if(regs[i].regmap_entry[hr]==CCREG) nr|=1<<hr;
+      }
     }
     else // Non-branch
     {
@@ -6436,6 +6512,9 @@ int sh2_recompile_block(int addr)
             if(itype[i]==COMPLEX) {
               temp1=MACH;
               temp2=MACL;
+            }
+            else if(itype[i]==SYSTEM) {
+              temp2=CCREG;
             }
             if(regs[i].regmap[hr]!=rt1[i] && regs[i].regmap[hr]!=rt2[i] &&
                regs[i].regmap[hr]!=rs1[i] && regs[i].regmap[hr]!=rs2[i] &&

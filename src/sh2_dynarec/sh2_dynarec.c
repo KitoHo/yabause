@@ -54,6 +54,8 @@ struct regstat
   u32 wasdoingcp;
   u32 isdoingcp;
   u32 cpmap[HOST_REGS];
+  u32 isconst;
+  u32 constmap[SH2_REGS];
 };
 
 struct ll_entry
@@ -1078,6 +1080,129 @@ void clean_blocks(u32 page)
 }
 
 
+do_consts(int i,u32 *isconst,u32 *constmap)
+{
+  switch(itype[i]) {
+    case LOAD:
+      sh2_clear_const(isconst,constmap,rt1[i]);
+      if(addrmode[i]==POSTINC) {
+        int size=(opcode[i]==4)?2:(opcode2[i]&3);
+        constmap[rt2[i]]+=1<<size;
+      }
+      break;
+    case STORE:
+      if(addrmode[i]==PREDEC) {
+        int size=(opcode[i]==4)?2:(opcode2[i]&3);
+        constmap[rt1[i]]-=1<<size;
+      }
+      break;
+    case RMW:
+      break;
+    case PCREL:
+      if(opcode[i]==12) sh2_set_const(isconst,constmap,rt1[i],((start+i*2+4)&~3)+imm[i]); // MOVA
+      else { // PC-relative load (constant pool)
+        u32 addr=((start+i*2+4)&~3)+imm[i];
+        if((u32)((addr-start)>>1)<slen) {
+          int value;
+          if(opcode[i]==9) value=(s16)source[((start+i*2+4)+imm[i]-start)>>1]; // MOV.W
+          else value=(source[(((start+i*2+4)&~3)+imm[i]-start)>>1]<<16)+source[(((start+i*2+4)&~3)+imm[i]+2-start)>>1]; // MOV.L
+          sh2_set_const(isconst,constmap,rt1[i],value);
+        }
+        else sh2_clear_const(isconst,constmap,rt1[i]);
+      }
+      break;
+    case MOV:
+      if(((*isconst)>>rs1[i])&1) {
+        int v=constmap[rs1[i]];
+        sh2_set_const(isconst,constmap,rt1[i],v);
+      }
+      else sh2_clear_const(isconst,constmap,rt1[i]);
+      break;
+    case IMM8:
+      if(opcode[i]==0x7) { // ADD
+        if(((*isconst)>>rs1[i])&1) {
+          int v=constmap[rs1[i]];
+          sh2_set_const(isconst,constmap,rt1[i],v+imm[i]);
+        }
+        else sh2_clear_const(isconst,constmap,rt1[i]);
+      }
+      else if(opcode[i]==0x8) { // CMP/EQ
+      }
+      else if(opcode[i]==12) {
+        if(opcode2[i]==8) { // TST
+        }else
+        // AND/XOR/OR
+        if(((*isconst)>>rs1[i])&1) {
+          int v=constmap[rs1[i]];
+          if(opcode2[i]==0x09) sh2_set_const(isconst,constmap,rt1[i],v&imm[i]);
+          if(opcode2[i]==0x0a) sh2_set_const(isconst,constmap,rt1[i],v^imm[i]);
+          if(opcode2[i]==0x0b) sh2_set_const(isconst,constmap,rt1[i],v|imm[i]);
+        }
+        else sh2_clear_const(isconst,constmap,rt1[i]);
+      }
+      else { // opcode[i]==0xE
+        assert(opcode[i]==0xE);
+        sh2_set_const(isconst,constmap,rt1[i],imm[i]); // MOV
+      }
+      break;
+    case FLAGS:
+      if(opcode2[i]==9) { // MOVT
+        sh2_clear_const(isconst,constmap,rt1[i]);
+      }
+      break;
+    case ALU:
+      sh2_clear_const(isconst,constmap,rt1[i]);
+      break;
+    case EXT:
+      sh2_clear_const(isconst,constmap,rt1[i]);
+      break;
+    case MULTDIV:
+      if(opcode[i]==0) {
+        if(opcode2[i]==7) // MUL.L
+        {
+          sh2_clear_const(isconst,constmap,MACL);
+        }
+        if(opcode2[i]==8) // CLRMAC
+        {
+          sh2_clear_const(isconst,constmap,MACH);
+          sh2_clear_const(isconst,constmap,MACL);
+        }
+        if(opcode2[i]==9) // DIV0U
+        {
+        }
+      }
+      if(opcode[i]==2) {
+        if(opcode2[i]==7) // DIV0S
+        {
+        }
+        if(opcode2[i]==14||opcode2[i]==15) // MULU.W / MULS.W
+        {
+          sh2_clear_const(isconst,constmap,MACL);
+        }
+      }
+      if(opcode[i]==3) {
+        // DMULU.L / DMULS.L
+        sh2_clear_const(isconst,constmap,MACH);
+        sh2_clear_const(isconst,constmap,MACL);
+      }
+      break;
+    case SHIFTIMM:
+      sh2_clear_const(isconst,constmap,rt1[i]);
+      break;
+    case UJUMP:
+    case RJUMP:
+    case SJUMP:
+    case CJUMP:
+      break;
+    case SYSTEM:
+      *isconst=0;
+      break;
+    case COMPLEX:
+      *isconst=0;
+      break;
+  }
+}
+
 void mov_alloc(struct regstat *current,int i)
 {
   // Note: Don't need to actually alloc the source registers
@@ -2055,15 +2180,42 @@ void load_assemble(int i,struct regstat *i_regs)
       c=(i_regs->wasdoingcp>>s)&1;
     if(c) {
       if(dualindex)
-         constaddr=cpmap[i][s]+cpmap[i][o];
+        constaddr=cpmap[i][s]+cpmap[i][o];
       else
-         constaddr=cpmap[i][s]+offset;
+        constaddr=cpmap[i][s]+offset;
+      //if(dualindex) {
+      // if((i_regs->isconst>>rs1[i])&(i_regs->isconst>>rs2[i])&1)
+      //  assert(constaddr==i_regs->constmap[rs1[i]]+i_regs->constmap[rs2[i]]);
+      //}else
+      // if((i_regs->isconst>>rs1[i])&1)
+      //  assert(constaddr==i_regs->constmap[rs1[i]]+offset);
       if(addrmode[i]==POSTINC) constaddr-=1<<size;
+      //printf("constaddr=%x offset=%x\n",constaddr,offset);
+      memtarget=can_direct_read(constaddr);
     }
-    //printf("constaddr=%x offset=%x\n",constaddr,offset);
-    memtarget=can_direct_read(constaddr);
   }
   if(t<0) t=get_reg(i_regs->regmap,-1);
+  if(!c) {
+    if(dualindex) {
+      c=(i_regs->isconst>>rs1[i])&(i_regs->isconst>>rs2[i])&1;
+    } else {
+      c=(i_regs->isconst>>rs1[i])&1;
+    }
+    if(c) {
+      if(dualindex)
+        constaddr=i_regs->constmap[rs1[i]]+i_regs->constmap[rs2[i]];
+      else
+        constaddr=i_regs->constmap[rs1[i]]+offset;
+      if(addrmode[i]==POSTINC) constaddr-=1<<size;
+      //printf("constaddr=%x offset=%x\n",constaddr,offset);
+      memtarget=can_direct_read(constaddr);
+      #ifndef HOST_IMM_ADDR32
+      // In this case, the constant is not already loaded into a register
+      if(can_direct_read(constaddr))
+        emit_movimm(map_address(constaddr^(!size)),t);
+      #endif
+    }
+  }
   if(offset||dualindex||s<0||c) addr=t;
   else addr=s;
   //printf("load_assemble: c=%d\n",c);
@@ -2154,9 +2306,11 @@ void load_assemble(int i,struct regstat *i_regs)
     else
       inline_readstub(LOADL_STUB,i,constaddr,i_regs->regmap,rt1[i],ccadj[i],reglist);
   }
-  if(addrmode[i]==POSTINC&&!c) {
-    if(!(i_regs->u&(1LL<<rt2[i]))&&rt1[i]!=rt2[i]) 
-      emit_addimm(s,1<<size,s);
+  if(addrmode[i]==POSTINC) {
+    if(!((i_regs->wasdoingcp>>s)&1)) {
+      if(!(i_regs->u&(1LL<<rt2[i]))&&rt1[i]!=rt2[i]) 
+        emit_addimm(s,1<<size,s);
+    }
   }
   //emit_storereg(rt1[i],tl); // DEBUG
   //if(opcode[i]==0x23)
@@ -2218,12 +2372,34 @@ void store_assemble(int i,struct regstat *i_regs)
       c=(i_regs->wasdoingcp>>s)&1;
     if(c) {
       if(dualindex)
-         constaddr=cpmap[i][s]+cpmap[i][o];
+        constaddr=cpmap[i][s]+cpmap[i][o];
       else
-         constaddr=cpmap[i][s]+offset;
+        constaddr=cpmap[i][s]+offset;
     }
     //printf("constaddr=%x offset=%x\n",constaddr,offset);
     memtarget=can_direct_write(constaddr);
+  }
+  if(!c) {
+    if(dualindex) {
+      c=(i_regs->isconst>>rs2[i])&(i_regs->isconst>>rs3[i])&1;
+    } else {
+      c=(i_regs->isconst>>rs2[i])&1;
+    }
+    if(c) {
+      if(dualindex)
+        constaddr=i_regs->constmap[rs2[i]]+i_regs->constmap[rs3[i]];
+      else
+        constaddr=i_regs->constmap[rs2[i]]+offset;
+      //printf("constaddr=%x offset=%x\n",constaddr,offset);
+      memtarget=can_direct_write(constaddr);
+      // In this case, the constant is not already loaded into a register
+      if(can_direct_write(constaddr)) {
+        emit_movimm(constaddr^(!size),temp);
+        map=get_reg(i_regs->regmap,MOREG);
+        if(map<0) map=get_alt_reg(i_regs->regmap,-1);
+        generate_map_const(constaddr,map);
+      }
+    }
   }
   assert(t>=0);
   assert(temp>=0);
@@ -2279,7 +2455,10 @@ void store_assemble(int i,struct regstat *i_regs)
   } else if(c&&!memtarget) {
     inline_writestub(type,i,constaddr,i_regs->regmap,rs1[i],ccadj[i],reglist);
   }
-  if(addrmode[i]==PREDEC&&!c&&rt1[i]==rs1[i]) emit_addimm(s,-(1<<size),s); // Old value is written, so this "pre-decrement" is really post-decrement
+  if(addrmode[i]==PREDEC) {
+    assert(s>=0);
+    if(!((i_regs->wasdoingcp>>s)&1)&&rt1[i]==rs1[i]) emit_addimm(s,-(1<<size),s); // Old value is written, so this "pre-decrement" is really post-decrement
+  }
   //if(opcode[i]==0x2B || opcode[i]==0x3F)
   //if(opcode[i]==0x2B || opcode[i]==0x28)
   //if(opcode[i]==0x2B || opcode[i]==0x29)
@@ -3597,18 +3776,19 @@ void rjump_assemble(int i,struct regstat *i_regs)
     assert(rt2[i+1]!=rt1[i]);
     rt=get_reg(branch_regs[i].regmap,rt1[i]);
     assem_debug("branch(%d): eax=%d ecx=%d edx=%d ebx=%d ebp=%d esi=%d edi=%d\n",i,branch_regs[i].regmap[0],branch_regs[i].regmap[1],branch_regs[i].regmap[2],branch_regs[i].regmap[3],branch_regs[i].regmap[5],branch_regs[i].regmap[6],branch_regs[i].regmap[7]);
-    assert(rt>=0);
-    return_address=start+i*2+4;
-    #ifdef REG_PREFETCH
-    if(temp>=0) 
-    {
-      if(i_regmap[temp]!=PTEMP) emit_movimm((int)hash_table[((return_address>>16)^return_address)&0xFFFF],temp);
+    if(rt>=0) {
+      return_address=start+i*2+4;
+      #ifdef REG_PREFETCH
+      if(temp>=0) 
+      {
+        if(i_regmap[temp]!=PTEMP) emit_movimm((int)hash_table[((return_address>>16)^return_address)&0xFFFF],temp);
+      }
+      #endif
+      emit_movimm(return_address,rt); // PC into link register
+      #ifdef IMM_PREFETCH
+      emit_prefetch(hash_table[((return_address>>16)^return_address)&0xFFFF]);
+      #endif
     }
-    #endif
-    emit_movimm(return_address,rt); // PC into link register
-    #ifdef IMM_PREFETCH
-    emit_prefetch(hash_table[((return_address>>16)^return_address)&0xFFFF]);
-    #endif
   }
   cc=get_reg(branch_regs[i].regmap,CCREG);
   assert(cc==HOST_CCREG);
@@ -3660,14 +3840,19 @@ void rjump_assemble(int i,struct regstat *i_regs)
     emit_jmp(jump_vaddr_reg[slave][temp]);
   }
   else {
-    if(((i_regs->wasdoingcp>>rs)&1)&&regs[i].regmap[rs]==branch_regs[i].regmap[rs]) {
+    if((((i_regs->wasdoingcp>>rs)&1)&&regs[i].regmap[rs]==branch_regs[i].regmap[rs])
+       ||((i_regs->isconst>>rs1[i])&1)) {
       // Do constant propagation, branch to fixed address
-      u32 constaddr=cpmap[i][rs];
+      u32 constaddr;
+      if(((i_regs->wasdoingcp>>rs)&1)&&regs[i].regmap[rs]==branch_regs[i].regmap[rs])
+        constaddr=cpmap[i][rs];
+      else
+        constaddr=i_regs->constmap[rs1[i]];
       if(opcode[i]==0&&opcode2[i]==3) {
         // PC-relative branch, add PC+4
         constaddr+=start+i*2+4;
       }
-      ba[i]=constaddr;
+      assert(ba[i]==constaddr);
       store_regs_bt(branch_regs[i].regmap,branch_regs[i].dirty,ba[i]);
       //emit_addimm_and_set_flags(CLOCK_DIVIDER*(ccadj[i]+cycles[i]+cycles[i+1]),HOST_CCREG);
       //add_stub(CC_STUB,(int)out,jump_vaddr_reg[rs],0,i,-1,TAKEN,0);
@@ -4183,18 +4368,7 @@ void unneeded_registers(int istart,int iend,int r)
     //printf("unneeded registers i=%d (%d,%d) r=%d\n",i,istart,iend,r);
     if(itype[i]==RJUMP||itype[i]==UJUMP||itype[i]==CJUMP||itype[i]==SJUMP)
     {
-      // If subroutine call, flag return address as a possible branch target
-      if(rt1[i]==PR && i<slen-2) bt[i+2]=1;
-      
-      if(ba[i]>=start && ba[i]<(start+slen*2) ) {
-        // Possibly internal branch, flag target
-        bt[(ba[i]-start)>>1]=1;
-      }
-      
-      // Since we haven't completed the constant propagation yet,
-      // we can't assume the target of the RJUMP is correct.
-
-      if(ba[i]<start || ba[i]>=(start+slen*2) || itype[i]==RJUMP)
+      if(ba[i]<start || ba[i]>=(start+slen*2))
       {
         // Branch out of this block, flush all regs
         u=0;
@@ -4212,7 +4386,7 @@ void unneeded_registers(int istart,int iend,int r)
       {
         if(ba[i]<=start+i*2) {
           // Backward branch
-          if(itype[i]==UJUMP/*||itype[i]==RJUMP*/)
+          if(itype[i]==UJUMP||itype[i]==RJUMP)
           {
             // Unconditional branch
             temp_u=0;
@@ -4245,7 +4419,7 @@ void unneeded_registers(int istart,int iend,int r)
             unneeded_reg[(ba[i]-start)>>1]=0;
           }
         } /*else*/ if(1) {
-          if(itype[i]==UJUMP/*||itype[i]==RJUMP*/)
+          if(itype[i]==UJUMP||itype[i]==RJUMP)
           {
             // Unconditional branch
             u=unneeded_reg[(ba[i]-start)>>1];
@@ -5074,6 +5248,7 @@ int sh2_recompile_block(int addr)
   unsigned int writelimit=0xFFFFFFFF;
   u32 p_constmap[SH2_REGS];
   u32 p_isconst=0;
+  slen=MAXBLOCK;
 
   //printf("addr = %x source = %x %x\n", addr,source,source[0]);
   
@@ -5368,7 +5543,6 @@ int sh2_recompile_block(int addr)
         }
         else if(mode!=GBRIND) imm[i]=0;
         if(mode==POSTINC) rt2[i]=rs1[i];
-        sh2_clear_const(&p_isconst,p_constmap,rt1[i]);
         break;
       case STORE:
         if(op==4) {
@@ -5439,13 +5613,6 @@ int sh2_recompile_block(int addr)
         if (op==13 && lastconst < ((start+i*2+4)&~3)+imm[i]+2) // MOV.L
           lastconst = ((start+i*2+4)&~3)+imm[i]+2;
         //printf("lastconst=%x\n",lastconst);
-        if(op==12) sh2_set_const(&p_isconst,p_constmap,rt1[i],((start+i*2+4)&~3)+imm[i]); // MOVA
-        else { // Preliminary constant propagation
-          int value;
-          if(op==9) value=(s16)source[((start+i*2+4)+imm[i]-start)>>1]; // MOV.W
-          else value=(source[(((start+i*2+4)&~3)+imm[i]-start)>>1]<<16)+source[(((start+i*2+4)&~3)+imm[i]+2-start)>>1]; // MOV.L
-          sh2_set_const(&p_isconst,p_constmap,rt1[i],value);
-        }
         break;
       case MOV:
         if(op==6) {
@@ -5532,7 +5699,6 @@ int sh2_recompile_block(int addr)
           if(op2==10)
             rs2[i]=rt2[i]=TBIT; // NEGC sets T bit
         }
-        sh2_clear_const(&p_isconst,p_constmap,rt1[i]);
         break;
       case EXT:
         rs1[i]=(source[i]>>4)&0xf;
@@ -5690,6 +5856,8 @@ int sh2_recompile_block(int addr)
         }
         break;
     }
+    // Do preliminary constant propagation
+    do_consts(i,&p_isconst,p_constmap);
     /* Calculate branch target addresses */
     if(type==UJUMP)
       ba[i]=start+i*2+4+((((signed int)source[i])<<20)>>19);
@@ -5757,6 +5925,7 @@ int sh2_recompile_block(int addr)
           i++;
           rs1[i]=-1;
           rs2[i]=-1;
+          rs3[i]=-1;
           rt1[i]=-1;
           rt2[i]=-1;
           lt1[i]=-1;
@@ -5805,6 +5974,61 @@ int sh2_recompile_block(int addr)
 
   /* Pass 2 - Register dependencies and branch targets */
 
+  // Flag branch targets
+  for(i=0;i<slen;i++)
+  {
+    if(itype[i]==RJUMP||itype[i]==UJUMP||itype[i]==CJUMP||itype[i]==SJUMP)
+    {
+      // If subroutine call, flag return address as a possible branch target
+      if(rt1[i]==PR && i<slen-2) bt[i+2]=1;
+      
+      if(ba[i]>=start && ba[i]<(start+slen*2) ) {
+        // Possibly internal branch, flag target
+        bt[(ba[i]-start)>>1]=1;
+      }
+    }
+  }
+
+  // Do constant propagation
+  p_isconst=0;
+  for(i=0;i<slen;i++)
+  {
+    if(bt[i])
+    {
+      // Can't do constant propagation if a branch target intervenes
+      p_isconst=0;
+    }
+    if(i>1&&(itype[i-2]==UJUMP||itype[i-2]==RJUMP)) p_isconst=0;
+    if(i>0&&(itype[i-1]==UJUMP||itype[i-1]==RJUMP)) p_isconst=0;
+    if(i>0&&(itype[i-1]==CJUMP||itype[i-1]==SJUMP)) p_isconst=0;
+    do_consts(i,&p_isconst,p_constmap);
+    if(itype[i]==RJUMP) {
+      if(opcode[i]!=0||opcode2[i]!=11||opcode3[i]!=2) { // Not RTE
+        if((p_isconst>>rs1[i])&1) {
+          // Do constant propagation, branch to fixed address
+          u32 constaddr=p_constmap[rs1[i]];
+          if(opcode[i]==0&&opcode2[i]==3) {
+            // PC-relative branch, add PC+4
+            constaddr+=start+i*2+4;
+          }
+          ba[i]=constaddr;
+          //if(internal_branch(constaddr))
+          //  if(!bt[(constaddr-start)>>1]) printf("oops: %x\n",constaddr);
+          //assert(bt[(constaddr-start)>>1]);
+        }
+      }
+    }
+    // No stack-based addressing modes in the delay slot,
+    // to avoid incorrect constants due to pre-incrementing.
+    // TODO: This really should only drop the address register
+    if(itype[i]==UJUMP||itype[i]==RJUMP||itype[i]==SJUMP) {
+      if((source[i+1]&0xF00A)==0x4002) p_isconst=0;
+      if((source[i+1]&0xB00E)==0x2004) p_isconst=0;
+      if((source[i+1]&0xB00F)==0x2006) p_isconst=0;
+    }
+    memcpy(regs[i].constmap,p_constmap,sizeof(u32)*SH2_REGS);
+    regs[i].isconst=p_isconst;
+  }
   unneeded_registers(0,slen-1,0);
   
   /* Pass 3 - Register allocation */
@@ -6129,6 +6353,7 @@ int sh2_recompile_block(int addr)
           memcpy(&branch_regs[i-1],&current,sizeof(current));
           branch_regs[i-1].isdoingcp=0;
           branch_regs[i-1].wasdoingcp=0;
+          branch_regs[i-1].isconst=0;
           branch_regs[i-1].u=branch_unneeded_reg[i-1]&~((1LL<<rs1[i-1])|(1LL<<rs2[i-1]));
           alloc_cc(&branch_regs[i-1],i-1);
           dirty_reg(&branch_regs[i-1],CCREG);
@@ -6143,6 +6368,7 @@ int sh2_recompile_block(int addr)
           memcpy(&branch_regs[i-1],&current,sizeof(current));
           branch_regs[i-1].isdoingcp=0;
           branch_regs[i-1].wasdoingcp=0;
+          branch_regs[i-1].isconst=0;
           branch_regs[i-1].u=branch_unneeded_reg[i-1]&~((1LL<<rs1[i-1])|(1LL<<rs2[i-1]));
           alloc_cc(&branch_regs[i-1],i-1);
           dirty_reg(&branch_regs[i-1],CCREG);
@@ -6187,6 +6413,7 @@ int sh2_recompile_block(int addr)
           memcpy(&branch_regs[i-1],&current,sizeof(current));
           branch_regs[i-1].isdoingcp=0;
           branch_regs[i-1].wasdoingcp=0;
+          branch_regs[i-1].isconst=0;
           memcpy(&branch_regs[i-1].regmap_entry,&current.regmap,sizeof(current.regmap));
           memcpy(cpmap[i],cpmap[i-1],sizeof(current.cpmap));
           break;
@@ -7228,9 +7455,49 @@ int sh2_recompile_block(int addr)
   {
     if(itype[i]==CJUMP||itype[i]==SJUMP)
     {
-      // Mark this address as a branch target since it may be called
-      // upon return from interrupt
-      if(!regs[i].wasdoingcp)
+      // Avoid unnecessary constant propagation
+      int hr;
+      for(hr=0;hr<HOST_REGS;hr++) {
+        if(hr!=EXCLUDE_REG) {
+          if(regs[i].regmap_entry[hr]>=0) {
+            if(itype[i]==SJUMP) {
+              if(regs[i].regmap_entry[hr]==rs1[i+1]) continue;
+              if(regs[i].regmap_entry[hr]==rs2[i+1]) continue;
+              if(regs[i].regmap_entry[hr]==rs3[i+1]) continue;
+              if(regs[i].regmap_entry[hr]==rt1[i+1]) continue;
+              if(regs[i].regmap_entry[hr]==rt2[i+1]) continue;
+            }
+            if(i>0) {
+              if(regs[i].regmap_entry[hr]==rs1[i-1]) continue;
+              if(regs[i].regmap_entry[hr]==rs2[i-1]) continue;
+              if(regs[i].regmap_entry[hr]==rs3[i-1]) continue;
+              if(regs[i].regmap_entry[hr]==rt1[i-1]) continue;
+              if(regs[i].regmap_entry[hr]==rt2[i-1]) continue;
+            }
+            //if(regs[i].wasdoingcp&(1<<hr)) printf("drop wcp: %x\n",start+i*2);
+            //if(regs[i].isdoingcp&(1<<hr)) printf("drop icp: %x\n",start+i*2);
+            regs[i].wasdoingcp&=~(1<<hr);
+            regs[i].isdoingcp&=~(1<<hr);
+          }
+        }
+      }
+      u32 sregs=0;
+      if(itype[i]==SJUMP)
+      {
+        // Don't intervene if constant propagation is being performed
+        // on a register used by an instruction in the delay slot
+        if(itype[i+1]==LOAD) {
+          if(rs1[i+1]>=0) sregs|=1<<rs1[i+1];
+          if(rs2[i+1]>=0) sregs|=1<<rs2[i+1];
+        }
+        if(itype[i+1]==STORE) {
+          if(rs2[i+1]>=0) sregs|=1<<rs2[i+1];
+          if(rs3[i+1]>=0) sregs|=1<<rs3[i+1];
+        }
+      }
+      // If no constant propagation is being done, mark this address as a
+      // branch target since it may be called upon return from interrupt
+      if(!regs[i].wasdoingcp&&!(regs[i].isconst&sregs))
         bt[i]=1;
     }    
   }

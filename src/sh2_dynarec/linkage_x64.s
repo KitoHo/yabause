@@ -707,6 +707,35 @@ macw_saturation:
 	ret
 	.size	macw, .-macw
 
+.globl master_handle_bios
+	.type	master_handle_bios, @function
+master_handle_bios:
+	mov	(%rsp), %rdx /* get return address */
+	mov	%eax, master_pc
+	mov	%esi, master_cc
+	mov	%rdx, master_ip
+	mov	MSH2, %rdi
+	call	BiosHandleFunc
+	mov	master_ip, %rdx
+	mov	master_cc, %esi
+	mov	%rdx, (%rsp)
+	ret	/* jmp *master_ip */
+	.size	master_handle_bios, .-master_handle_bios
+
+.globl slave_handle_bios
+	.type	slave_handle_bios, @function
+slave_handle_bios:
+	pop	%rdx /* get return address */
+	mov	%eax, slave_pc
+	mov	%esi, slave_cc
+	mov	%rdx, slave_ip
+	mov	SSH2, %rdi
+	call	BiosHandleFunc
+	mov	slave_ip, %rdx
+	mov	slave_cc, %esi
+	jmp	*%rdx /* jmp *slave_ip */
+	.size	slave_handle_bios, .-slave_handle_bios
+
 .globl breakpoint
 	.type	breakpoint, @function
 breakpoint:

@@ -861,6 +861,38 @@ macw_saturation:
 	mov	pc, lr
 	.size	macw, .-macw
 
+	.align	2
+	.global	master_handle_bios
+	.type	master_handle_bios, %function
+master_handle_bios:
+	movw	r1, #:lower16:MSH2
+	str	r0, [fp, #master_pc-dynarec_local]
+	movt	r1, #:upper16:MSH2
+	str	r10, [fp, #master_cc-dynarec_local]
+	str	r14, [fp, #master_ip-dynarec_local]
+	ldr	r0, [r1] /* MSH2 */
+	bl	BiosHandleFunc
+	ldr	r14, [fp, #master_ip-dynarec_local]
+	ldr	r10, [fp, #master_cc-dynarec_local]
+	mov	pc, lr
+	.size	master_handle_bios, .-master_handle_bios
+
+	.align	2
+	.global	slave_handle_bios
+	.type	slave_handle_bios, %function
+slave_handle_bios:
+	movw	r1, #:lower16:SSH2
+	str	r0, [fp, #slave_pc-dynarec_local]
+	movt	r1, #:upper16:SSH2
+	str	r10, [fp, #slave_cc-dynarec_local]
+	str	r14, [fp, #slave_ip-dynarec_local]
+	ldr	r0, [r1] /* SSH2 */
+	bl	BiosHandleFunc
+	ldr	r14, [fp, #slave_ip-dynarec_local]
+	ldr	r10, [fp, #slave_cc-dynarec_local]
+	mov	pc, lr
+	.size	slave_handle_bios, .-slave_handle_bios
+
 /* __clear_cache syscall for Linux OS with broken libraries */
 	.align	2
 	.global	clear_cache

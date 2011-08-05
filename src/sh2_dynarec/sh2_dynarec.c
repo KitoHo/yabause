@@ -28,6 +28,7 @@
 
 #include "../memory.h"
 #include "../sh2core.h"
+#include "../yabause.h"
 
 #ifdef __i386__
 #include "assem_x86.h"
@@ -185,6 +186,7 @@ struct ll_entry
 #define SYSCALL 18// SYSCALL (TRAPA)
 #define NI 19     // Not implemented
 #define DATA 20   // Constant pool data not decoded as instructions
+#define BIOS 21   // Emulate BIOS function
 
   /* addressing modes */
 #define REGIND 1  // @Rn
@@ -229,6 +231,8 @@ void slave_entry();
 void div1();
 void macl();
 void macw();
+void master_handle_bios();
+void slave_handle_bios();
 
 // Needed by assembler
 void wb_register(signed char r,signed char regmap[],u32 dirty);
@@ -4350,6 +4354,20 @@ void system_assemble(int i,struct regstat *i_regs)
   }
 }
 
+void bios_assemble(int i,struct regstat *i_regs)
+{
+  signed char ccreg=get_reg(i_regs->regmap,CCREG);
+  assert(ccreg==HOST_CCREG);
+  assert(!is_delayslot);
+  emit_movimm(start+i*2,0);
+  //emit_writeword(0,slave?(int)&slave_pc:(int)&master_pc);
+  emit_addimm(HOST_CCREG,CLOCK_DIVIDER*ccadj[i],HOST_CCREG);
+  if(slave)
+    emit_call((pointer)slave_handle_bios); // Probably doesn't work
+  else
+    emit_call((pointer)master_handle_bios);
+}
+
 // Basic liveness analysis for SH2 registers
 void unneeded_registers(int istart,int iend,int r)
 {
@@ -5948,6 +5966,13 @@ int sh2_recompile_block(int addr)
       // Don't get too close to the limit
       if(i>MAXBLOCK/2) done=1;
     }
+    if(yabsys.emulatebios) {
+      if(start+i*2>=0x200&&start+i*2<0x600) {
+        strcpy(insn[i],"(BIOS)");
+        itype[i]=BIOS;
+        done=1;
+      }
+    }
     //if(i>0&&itype[i-1]==SYSCALL&&stop_after_jal) done=1;
     //if(i>0&&itype[i-1]==SYSTEM&&source[i-1]==0x002B) done=1; // RTE
     //assert(i<MAXBLOCK-1);
@@ -5963,10 +5988,6 @@ int sh2_recompile_block(int addr)
       // Constant propagation
       //if(i>0&&(itype[i-1]==UJUMP||itype[i-1]==RJUMP)) isconst[i+1]=0;
       if(i>0&&(itype[i-1]==UJUMP||itype[i-1]==RJUMP)) p_isconst=0;
-      else {
-        //isconst[i+1]=isconst[i];
-        //memcpy(constmap+i+1,constmap+i,sizeof(constmap[0]));
-      }
     }
   }
   slen=i;
@@ -7771,6 +7792,8 @@ int sh2_recompile_block(int addr)
           complex_assemble(i,&regs[i]);break;
         case SYSTEM:
           system_assemble(i,&regs[i]);break;
+        case BIOS:
+          bios_assemble(i,&regs[i]);break;
         case UJUMP:
           ujump_assemble(i,&regs[i]);ds=1;break;
         case RJUMP:
@@ -7789,12 +7812,9 @@ int sh2_recompile_block(int addr)
   // If the block did not end with an unconditional branch,
   // add a jump to the next instruction.
   if(i>1) {
-    //if(itype[i-2]!=UJUMP&&itype[i-2]!=RJUMP&&(source[i-2]>>16)!=0x1000&&itype[i-1]!=SPAN) {
     if(itype[i-2]!=UJUMP&&itype[i-2]!=RJUMP&&itype[i-1]!=DATA) {
-      //assert(itype[i-1]!=UJUMP&&itype[i-1]!=CJUMP&&itype[i-1]!=SJUMP&&itype[i-1]!=RJUMP&&itype[i-1]!=FJUMP);
       assert(i==slen);
-      //if(itype[i-2]!=CJUMP&&itype[i-2]!=SJUMP&&itype[i-2]!=FJUMP) {
-      if(itype[i-2]!=CJUMP&&itype[i-2]!=SJUMP) {
+      if(itype[i-2]!=SJUMP) {
         store_regs_bt(regs[i-1].regmap,regs[i-1].dirty,start+i*2);
         if(regs[i-1].regmap[HOST_CCREG]!=CCREG)
           emit_loadreg(CCREG,HOST_CCREG);
@@ -7812,7 +7832,6 @@ int sh2_recompile_block(int addr)
   else
   {
     assert(i>0);
-    //assert(itype[i-1]!=UJUMP&&itype[i-1]!=CJUMP&&itype[i-1]!=SJUMP&&itype[i-1]!=RJUMP&&itype[i-1]!=FJUMP);
     store_regs_bt(regs[i-1].regmap,regs[i-1].dirty,start+i*2);
     if(regs[i-1].regmap[HOST_CCREG]!=CCREG)
       emit_loadreg(CCREG,HOST_CCREG);
@@ -8004,7 +8023,6 @@ int sh2_recompile_block(int addr)
   return 0;
 }
 
-#include "../yabause.h"
 #include "../sh2core.h"
 
 extern int framecounter;

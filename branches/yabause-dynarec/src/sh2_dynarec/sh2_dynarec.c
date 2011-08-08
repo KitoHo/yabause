@@ -3560,6 +3560,13 @@ void do_ccstub(int n)
   set_jump_target(stubs[n][1],(pointer)out);
   int i=stubs[n][4];
   if(stubs[n][6]==NODS) {
+    if(itype[i+1]==LOAD&&rs1[i+1]==rt1[i+1]&&addrmode[i+1]!=DUALIND&&addrmode[i+1]!=GBRIND) {
+      int hr=get_reg(regs[i].regmap,rs1[i+1]);
+      if(hr>=0&&((regs[i].wasdoingcp>>hr)&1))
+      {
+        emit_movimm(cpmap[i][hr],hr);
+      }
+    }
     wb_dirtys(regs[i].regmap_entry,regs[i].dirty);
   }
   else if(stubs[n][6]!=TAKEN) {
@@ -3625,6 +3632,21 @@ void do_ccstub(int n)
         if(stubs[n][3]) emit_addimm(HOST_CCREG,-CLOCK_DIVIDER*stubs[n][3],HOST_CCREG);
         load_all_regs(regs[i].regmap);
         load_consts(regmap_pre[i],regs[i].regmap,i);
+        if(itype[i+1]==LOAD&&rs1[i+1]==rt1[i+1]&&addrmode[i+1]!=DUALIND&&addrmode[i+1]!=GBRIND) {
+          int hr=get_reg(regs[i].regmap,rs1[i+1]);
+          if(hr>=0&&((regs[i].wasdoingcp>>hr)&1))
+          {
+            #ifdef HOST_IMM_ADDR32
+            if(!can_direct_read(cpmap[i][hr]+imm[i+1]))
+            #endif
+            {
+              int value=cpmap[i][hr]+imm[i+1];
+              if(can_direct_read(value)) value=map_address(value);
+              if((opcode2[i+1]&3)==0) value^=1; // byteswap for little-endian
+              emit_movimm(value,hr);
+            }
+          }
+        }
         ccstub_return[i]=0;
       }
     }

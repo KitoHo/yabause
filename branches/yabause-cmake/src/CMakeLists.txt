@@ -236,6 +236,7 @@ if (YAB_WANT_C68K)
 	add_definitions(-DHAVE_C68K=1)
 	include_directories(${CMAKE_CURRENT_BINARY_DIR}/c68k)
 	set(yabause_SOURCES ${yabause_SOURCES} c68k/c68kexec.c c68k/c68k.c c68k/gen68k.c m68kc68k.c)
+	set_source_files_properties(c68k/c68kexec.c PROPERTIES COMPILE_FLAGS "-O0")
 endif(YAB_WANT_C68K)
 
 # q68

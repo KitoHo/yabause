@@ -27,7 +27,7 @@
 
 SH2_struct *MSH2=NULL;
 SH2_struct *SSH2=NULL;
-static SH2_struct *CurrentSH2;
+SH2_struct *CurrentSH2;
 SH2Interface_struct *SH2Core=NULL;
 extern SH2Interface_struct *SH2CoreList[];
 
@@ -136,7 +136,7 @@ void SH2Reset(SH2_struct *context)
    SH2Core->SetInterrupts(context, 0, context->interrupts);
 
    // Core specific reset
-   SH2Core->Reset();
+   SH2Core->Reset(context);
 
    // Reset Onchip modules
    OnchipReset(context);
@@ -1773,6 +1773,7 @@ void DMATransfer(u32 *CHCR, u32 *SAR, u32 *DAR, u32 *TCR, u32 *VCRDMA)
             *TCR = 0;
             break;
       }
+      SH2WriteNotify(destInc<0?*DAR:*DAR-i*destInc,i*abs(destInc));
    }
 
    if (*CHCR & 0x4)
@@ -1912,6 +1913,16 @@ int SH2LoadState(SH2_struct *context, FILE *fp, UNUSED int version, int size)
    yread(&check, (void *)&context->isslave, sizeof(u8), 1, fp);
    yread(&check, (void *)&context->isIdle, sizeof(u8), 1, fp);
    yread(&check, (void *)&context->instruction, sizeof(u16), 1, fp);
+
+   #if defined(SH2_DYNAREC)
+   if(SH2Core->id==2) {
+     invalidate_all_pages();
+     if (context->isslave == 1) {
+       // If the slave SH2 isn't running, make sure the dynarec stops it
+       if(!yabsys.IsSSH2Running) SH2Core->Reset(SSH2);
+     }
+   }
+   #endif
 
    return size;
 }

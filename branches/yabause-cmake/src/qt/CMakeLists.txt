@@ -5,6 +5,7 @@ yab_port_start()
 find_package(Qt4)
 
 if (NOT QT4_FOUND)
+	message(STATUS "NO QT4_FOUND")
 	return()
 endif (NOT QT4_FOUND)
 

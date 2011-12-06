@@ -1,6 +1,7 @@
 /*  Copyright 2005-2006 Guillaume Duhamel
     Copyright 2005-2006 Theo Berkau
-
+    Copyright 2011 Shinya Miyamoto
+    
     This file is part of Yabause.
 
     Yabause is free software; you can redistribute it and/or modify
@@ -20,10 +21,17 @@
 
 #ifdef HAVE_LIBGL
 #include <stdlib.h>
+#include <math.h>
 #include "ygl.h"
 #include "yui.h"
 #include "vidshared.h"
 
+#ifdef WIN32
+#include <windows.h>
+#include <wingdi.h>
+#elif HAVE_GLXGETPROCADDRESS
+#include <GL/glx.h>
+#endif
 YglTextureManager * YglTM;
 Ygl * _Ygl;
 
@@ -41,6 +49,68 @@ typedef struct
    float s, t, r, q;
 } texturecoordinate_struct;
 
+#ifdef HAVE_GLXGETPROCADDRESS
+void STDCALL * (*yglGetProcAddress)(const char *szProcName) = (void STDCALL *(*)(const char *))glXGetProcAddress;
+#elif WIN32
+#define yglGetProcAddress wglGetProcAddress
+#endif
+
+
+// extention function pointers
+GLuint (STDCALL *pfglCreateProgram)(void);
+GLuint (STDCALL *pfglCreateShader)(GLenum);
+void (STDCALL *pfglCompileShader)(GLuint);
+void (STDCALL *pfglAttachShader)(GLuint,GLuint);
+void (STDCALL *pfglLinkProgram)(GLuint);
+void (STDCALL *pfglUseProgram)(GLuint);
+GLint (STDCALL *pfglGetUniformLocation)(GLuint,const GLchar *);
+void (STDCALL *pfglShaderSource)(GLuint,GLsizei,const GLchar **,const GLint *);
+void (STDCALL *pfglUniform1i)(GLint,GLint);
+void (STDCALL *pfglGetShaderInfoLog)(GLuint,GLsizei,GLsizei *,GLchar *);
+void (STDCALL *pfglVertexAttribPointer)(GLuint index,GLint size, GLenum type, GLboolean normalized, GLsizei stride,const void *pointer);
+GLint (STDCALL *pfglGetAttribLocation)(GLuint program,const GLchar *    name);
+void (STDCALL *pfglBindAttribLocation)( GLuint program, GLuint index, const GLchar * name);
+void (STDCALL *pfglGetProgramiv)( GLuint    program, GLenum pname, GLint * params);
+void (STDCALL *pfglGetShaderiv)(GLuint shader,GLenum pname,GLint *    params);
+void (STDCALL *pfglEnableVertexAttribArray)(GLuint index);
+void (STDCALL *pfglDisableVertexAttribArray)(GLuint index);
+
+// extention function dummys
+GLuint pfglCreateProgramdmy(void){return 0;}
+GLuint pfglCreateShaderdmy(GLenum a){ return 0;}
+void pfglCompileShaderdmy(GLuint a){return;}
+void pfglAttachShaderdmy(GLuint a,GLuint b){return;}
+void pfglLinkProgramdmy(GLuint a){return;}
+void pfglUseProgramdmy(GLuint a){return;}
+GLint pfglGetUniformLocationdmy(GLuint a,const GLchar * b){return 0;}
+void pfglShaderSourcedmy(GLuint a,GLsizei b,const GLchar **c,const GLint *d){return;}
+void pfglUniform1idmy(GLint a,GLint b){return;}
+void pfglVertexAttribPointerdmy(GLuint index,GLint size, GLenum type, GLboolean normalized, GLsizei stride,const void *pointer){return;}
+GLint pfglGetAttribLocationdmy(GLuint program,const GLchar * name){return 0;}
+void pfglBindAttribLocationdmy( GLuint program, GLuint index, const GLchar * name){return;}
+void pfglGetProgramivdmy(GLuint    program, GLenum pname, GLint * params)
+{
+   if( pname == GL_LINK_STATUS ) *params = GL_FALSE;
+   return;
+}
+GLchar s_msg_no_opengl2[]="Your GPU driver does not support OpenGL 2.0.\nOpenGL Video Interface is running fallback mode.";
+void pfglGetShaderivdmy(GLuint shader,GLenum pname,GLint *    params)
+{
+   if( pname == GL_COMPILE_STATUS ) *params = GL_FALSE;
+   if( pname == GL_INFO_LOG_LENGTH ) *params = strlen(s_msg_no_opengl2)+1;
+   return;
+}
+void pfglGetShaderInfoLogdmy(GLuint a,GLsizei b,GLsizei *c,GLchar *d)
+{
+   memcpy(d,s_msg_no_opengl2,b);
+   *c=b;
+   return;
+}
+void pfglEnableVertexAttribArraydmy(GLuint index){return;}
+void pfglDisableVertexAttribArraydmy(GLuint index){return;}
+
+
+
 #define STD_Q2 (1.0f)
 #define EPS (1e-10)
 #define EQ(a,b) (abs((a)-(b)) < EPS)
@@ -49,7 +119,7 @@ typedef struct
 // AXB = |A||B|sin
 INLINE float cross2d( float veca[2], float vecb[2] )
 {
-	return (veca[0]*vecb[1])-(vecb[0]*veca[1]);
+   return (veca[0]*vecb[1])-(vecb[0]*veca[1]);
 }
 
 /*-----------------------------------------
@@ -87,179 +157,179 @@ int FASTCALL YglIntersectionOppsiteEdge(float * a1, float * a2, float * b1, floa
 
 
 int YglCalcTextureQ(
-	int	*pnts,
-	float *q	
+   int   *pnts,
+   float *q   
 )
 {
-	float p1[2],p2[2],p3[2],p4[2],o[2];
-	float	q1, q3, q4, qw;
-	float	x, y;
-	float	dx, w;
-	float	b;
-	float	ww;
-	
-	// fast calculation for triangle
-	if (( pnts[2*0+0] == pnts[2*1+0] ) && ( pnts[2*0+1] == pnts[2*1+1] )) {
-		q[0] = 1.0f;
-		q[1] = 1.0f;
-		q[2] = 1.0f;
-		q[3] = 1.0f;
-		return 0;
-		
-	} else if (( pnts[2*1+0] == pnts[2*2+0] ) && ( pnts[2*1+1] == pnts[2*2+1] ))  {
-		q[0] = 1.0f;
-		q[1] = 1.0f;
-		q[2] = 1.0f;
-		q[3] = 1.0f;
-		return 0;
-	} else if (( pnts[2*2+0] == pnts[2*3+0] ) && ( pnts[2*2+1] == pnts[2*3+1] ))  {
-		q[0] = 1.0f;
-		q[1] = 1.0f;
-		q[2] = 1.0f;
-		q[3] = 1.0f;
-		return 0;
-	} else if (( pnts[2*3+0] == pnts[2*0+0] ) && ( pnts[2*3+1] == pnts[2*0+1] )) {
-		q[0] = 1.0f;
-		q[1] = 1.0f;
-		q[2] = 1.0f;
-		q[3] = 1.0f;
-		return 0;
-	}
+   float p1[2],p2[2],p3[2],p4[2],o[2];
+   float   q1, q3, q4, qw;
+   float   x, y;
+   float   dx, w;
+   float   b;
+   float   ww;
+   
+   // fast calculation for triangle
+   if (( pnts[2*0+0] == pnts[2*1+0] ) && ( pnts[2*0+1] == pnts[2*1+1] )) {
+      q[0] = 1.0f;
+      q[1] = 1.0f;
+      q[2] = 1.0f;
+      q[3] = 1.0f;
+      return 0;
+      
+   } else if (( pnts[2*1+0] == pnts[2*2+0] ) && ( pnts[2*1+1] == pnts[2*2+1] ))  {
+      q[0] = 1.0f;
+      q[1] = 1.0f;
+      q[2] = 1.0f;
+      q[3] = 1.0f;
+      return 0;
+   } else if (( pnts[2*2+0] == pnts[2*3+0] ) && ( pnts[2*2+1] == pnts[2*3+1] ))  {
+      q[0] = 1.0f;
+      q[1] = 1.0f;
+      q[2] = 1.0f;
+      q[3] = 1.0f;
+      return 0;
+   } else if (( pnts[2*3+0] == pnts[2*0+0] ) && ( pnts[2*3+1] == pnts[2*0+1] )) {
+      q[0] = 1.0f;
+      q[1] = 1.0f;
+      q[2] = 1.0f;
+      q[3] = 1.0f;
+      return 0;
+   }
 
-	p1[0]=pnts[0];
-	p1[1]=pnts[1];
-	p2[0]=pnts[2];
-	p2[1]=pnts[3];
-	p3[0]=pnts[4];
-	p3[1]=pnts[5];
-	p4[0]=pnts[6];
-	p4[1]=pnts[7];
+   p1[0]=pnts[0];
+   p1[1]=pnts[1];
+   p2[0]=pnts[2];
+   p2[1]=pnts[3];
+   p3[0]=pnts[4];
+   p3[1]=pnts[5];
+   p4[0]=pnts[6];
+   p4[1]=pnts[7];
 
-	// calcurate Q1
-	if( YglIntersectionOppsiteEdge( p3, p1, p2, p4,  o ) == 0 )
-	{
-		dx = o[0]-p1[0];
-		if( !IS_ZERO(dx) )
-		{
-			w = p3[0]-p2[0];
-			if( !IS_ZERO(w) )
-			 q1 = fabs(dx/w);
-			else
-			 q1 = 0.0f;
-		}else{
-			w = p3[1] - p2[1];
-			if ( !IS_ZERO(w) ) 
-			{
-				ww = ( o[1] - p1[1] );
-				if ( !IS_ZERO(ww) )
-					q1 = fabs(ww / w);
-				else
-					q1 = 0.0f;
-			} else {
-				q1 = 0.0f;
-			}			
-		}
-	}else{
-		q1 = 1.0f;
-	}
+   // calcurate Q1
+   if( YglIntersectionOppsiteEdge( p3, p1, p2, p4,  o ) == 0 )
+   {
+      dx = o[0]-p1[0];
+      if( !IS_ZERO(dx) )
+      {
+         w = p3[0]-p2[0];
+         if( !IS_ZERO(w) )
+          q1 = fabs(dx/w);
+         else
+          q1 = 0.0f;
+      }else{
+         w = p3[1] - p2[1];
+         if ( !IS_ZERO(w) ) 
+         {
+            ww = ( o[1] - p1[1] );
+            if ( !IS_ZERO(ww) )
+               q1 = fabs(ww / w);
+            else
+               q1 = 0.0f;
+         } else {
+            q1 = 0.0f;
+         }         
+      }
+   }else{
+      q1 = 1.0f;
+   }
 
-	/* q2 = 1.0f; */
+   /* q2 = 1.0f; */
 
-	// calcurate Q3
-	if( YglIntersectionOppsiteEdge( p1, p3, p2,p4,  o ) == 0 )
-	{
-		dx = o[0]-p3[0];
-		if( !IS_ZERO(dx) )
-		{
-			w = p1[0]-p2[0];
-			if( !IS_ZERO(w) )
-			 q3 = fabs(dx/w);
-			else
-			 q3 = 0.0f;
-		}else{
-			w = p1[1] - p2[1];
-			if ( !IS_ZERO(w) ) 
-			{
-				ww = ( o[1] - p3[1] );
-				if ( !IS_ZERO(ww) )
-					q3 = fabs(ww / w);
-				else
-					q3 = 0.0f;
-			} else {
-				q3 = 0.0f;
-			}			
-		}
-	}else{
-		q3 = 1.0f;
-	}
+   // calcurate Q3
+   if( YglIntersectionOppsiteEdge( p1, p3, p2,p4,  o ) == 0 )
+   {
+      dx = o[0]-p3[0];
+      if( !IS_ZERO(dx) )
+      {
+         w = p1[0]-p2[0];
+         if( !IS_ZERO(w) )
+          q3 = fabs(dx/w);
+         else
+          q3 = 0.0f;
+      }else{
+         w = p1[1] - p2[1];
+         if ( !IS_ZERO(w) ) 
+         {
+            ww = ( o[1] - p3[1] );
+            if ( !IS_ZERO(ww) )
+               q3 = fabs(ww / w);
+            else
+               q3 = 0.0f;
+         } else {
+            q3 = 0.0f;
+         }         
+      }
+   }else{
+      q3 = 1.0f;
+   }
 
-	
-	// calcurate Q4
-	if( YglIntersectionOppsiteEdge( p3, p1, p4, p2,  o ) == 0 )
-	{
-		dx = o[0]-p1[0];
-		if( !IS_ZERO(dx) )
-		{
-			w = p3[0]-p4[0];
-			if( !IS_ZERO(w) )
-			 qw = fabs(dx/w);
-			else
-			 qw = 0.0f;
-		}else{
-			w = p3[1] - p4[1];
-			if ( !IS_ZERO(w) ) 
-			{
-				ww = ( o[1] - p1[1] );
-				if ( !IS_ZERO(ww) )
-					qw = fabs(ww / w);
-				else
-					qw = 0.0f;
-			} else {
-				qw = 0.0f;
-			}			
-		}
-		if ( !IS_ZERO(qw) )
-		{
-			w	= qw / q1;
-		}
-		else
-		{
-			w	= 0.0f;
-		}
-		if ( IS_ZERO(w) ) {
-			q4 = 1.0f;
-		} else {
-			q4 = 1.0f / w;
-		}		
-	}else{
-		q4 = 1.0f;
-	}
+   
+   // calcurate Q4
+   if( YglIntersectionOppsiteEdge( p3, p1, p4, p2,  o ) == 0 )
+   {
+      dx = o[0]-p1[0];
+      if( !IS_ZERO(dx) )
+      {
+         w = p3[0]-p4[0];
+         if( !IS_ZERO(w) )
+          qw = fabs(dx/w);
+         else
+          qw = 0.0f;
+      }else{
+         w = p3[1] - p4[1];
+         if ( !IS_ZERO(w) ) 
+         {
+            ww = ( o[1] - p1[1] );
+            if ( !IS_ZERO(ww) )
+               qw = fabs(ww / w);
+            else
+               qw = 0.0f;
+         } else {
+            qw = 0.0f;
+         }         
+      }
+      if ( !IS_ZERO(qw) )
+      {
+         w   = qw / q1;
+      }
+      else
+      {
+         w   = 0.0f;
+      }
+      if ( IS_ZERO(w) ) {
+         q4 = 1.0f;
+      } else {
+         q4 = 1.0f / w;
+      }      
+   }else{
+      q4 = 1.0f;
+   }
 
-	qw = q1;
-	if ( qw < 1.0f )	/* q2 = 1.0f */
-		qw = 1.0f;
-	if ( qw < q3 )
-		qw = q3;
-	if ( qw < q4 )
-		qw = q4;
+   qw = q1;
+   if ( qw < 1.0f )   /* q2 = 1.0f */
+      qw = 1.0f;
+   if ( qw < q3 )
+      qw = q3;
+   if ( qw < q4 )
+      qw = q4;
 
-	if ( 1.0f != qw )
-	{
-		qw		= 1.0f / qw;
+   if ( 1.0f != qw )
+   {
+      qw      = 1.0f / qw;
 
-		q[0]	= q1 * qw;
-		q[1]	= 1.0f * qw;
-		q[2]	= q3 * qw;
-		q[3]	= q4 * qw;
-	}
-	else
-	{
-		q[0]	= q1;
-		q[1]	= 1.0f;
-		q[2]	= q3;
-		q[3]	= q4;
-	}
-	return 0;
+      q[0]   = q1 * qw;
+      q[1]   = 1.0f * qw;
+      q[2]   = q3 * qw;
+      q[3]   = q4 * qw;
+   }
+   else
+   {
+      q[0]   = q1;
+      q[1]   = 1.0f;
+      q[2]   = q3;
+      q[3]   = q4;
+   }
+   return 0;
 }
 
 
@@ -356,35 +426,39 @@ int YglScreenInit(int r, int g, int b, int d) {
 
 //////////////////////////////////////////////////////////////////////////////
 
+
 int YglInit(int width, int height, unsigned int depth) {
-   unsigned int i;
+   unsigned int i,j;
 
    VideoInitGlut();
 
    YglTMInit(width, height);
-
+   
    if ((_Ygl = (Ygl *) malloc(sizeof(Ygl))) == NULL)
       return -1;
    _Ygl->depth = depth;
    if ((_Ygl->levels = (YglLevel *) malloc(sizeof(YglLevel) * depth)) == NULL)
       return -1;
    for(i = 0;i < depth;i++) {
-      _Ygl->levels[i].currentQuad = 0;
-      _Ygl->levels[i].maxQuad = 8 * 2000;
-#ifdef USEMICSHADERS
-      _Ygl->levels[i].currentColors = 0;
-      _Ygl->levels[i].maxColors = 16 * 2000;
-#endif
-      if ((_Ygl->levels[i].quads = (int *) malloc(_Ygl->levels[i].maxQuad * sizeof(int))) == NULL)
+     _Ygl->levels[i].prgcurrent = 0;
+     _Ygl->levels[i].prgcount = 1;
+     _Ygl->levels[i].prg = (YglProgram*)malloc(sizeof(YglProgram)*_Ygl->levels[i].prgcount);
+     memset(  _Ygl->levels[i].prg,0,sizeof(YglProgram)*_Ygl->levels[i].prgcount);
+     if( _Ygl->levels[i].prg == NULL ) return -1;
+     
+     for(j = 0;j < _Ygl->levels[i].prgcount; j++) {
+       _Ygl->levels[i].prg[j].prg=0;
+      _Ygl->levels[i].prg[j].currentQuad = 0;
+      _Ygl->levels[i].prg[j].maxQuad = 8 * 2000;
+      if ((_Ygl->levels[i].prg[j].quads = (int *) malloc(_Ygl->levels[i].prg[j].maxQuad * sizeof(int))) == NULL)
          return -1;
 
-      if ((_Ygl->levels[i].textcoords = (float *) malloc(_Ygl->levels[i].maxQuad * sizeof(float) * 2)) == NULL)
+      if ((_Ygl->levels[i].prg[j].textcoords = (float *) malloc(_Ygl->levels[i].prg[j].maxQuad * sizeof(float) * 2)) == NULL)
          return -1;
 
-#ifdef USEMICSHADERS
-      if ((_Ygl->levels[i].colors = (unsigned char *) malloc(_Ygl->levels[i].maxColors * sizeof(unsigned char))) == NULL)
+       if ((_Ygl->levels[i].prg[j].vertexAttribute = (float *) malloc(_Ygl->levels[i].prg[j].maxQuad * sizeof(float)*2)) == NULL)
          return -1;
-#endif
+     }
    }
 
    YuiSetVideoAttribute(DOUBLEBUFFER, 1);
@@ -395,7 +469,7 @@ int YglInit(int width, int height, unsigned int depth) {
       {
          if (!YglScreenInit(5, 6, 5, 16))
          {
-	    YuiErrorMsg("Couldn't set GL mode\n");
+       YuiErrorMsg("Couldn't set GL mode\n");
             return -1;
          }
       }
@@ -403,6 +477,50 @@ int YglInit(int width, int height, unsigned int depth) {
 
    YglGLInit(width, height);
 
+   // Set up Extention
+   pfglCreateProgram = (GLuint (STDCALL *)(void)) yglGetProcAddress("glCreateProgram");
+   if( pfglCreateProgram == NULL )
+   {
+      YuiErrorMsg(s_msg_no_opengl2);
+      pfglCreateProgram = pfglCreateProgramdmy;
+   }
+   pfglCreateShader = (GLuint (STDCALL *)(GLenum))yglGetProcAddress("glCreateShader");
+   if( pfglCreateShader == NULL ) pfglCreateShader = pfglCreateShaderdmy;
+   pfglCompileShader = (void (STDCALL *)(GLuint))yglGetProcAddress("glCompileShader");
+   if(pfglCompileShader==NULL) pfglCompileShader = pfglCompileShaderdmy;
+   pfglAttachShader = (void (STDCALL *)(GLuint,GLuint))yglGetProcAddress("glAttachShader");
+   if(pfglAttachShader == NULL) pfglAttachShader = pfglAttachShaderdmy;
+   pfglLinkProgram = (void (STDCALL *)(GLuint))yglGetProcAddress("glLinkProgram");
+   if(pfglLinkProgram == NULL ) pfglLinkProgram = pfglLinkProgramdmy;
+   pfglUseProgram = (void (STDCALL *)(GLuint))yglGetProcAddress("glUseProgram");
+   if(pfglUseProgram == NULL ) pfglUseProgram = pfglUseProgramdmy;
+   pfglGetUniformLocation = (GLint (STDCALL *)(GLuint,const GLchar *))yglGetProcAddress("glGetUniformLocation");
+   if( pfglGetUniformLocation == NULL ) pfglGetUniformLocation = pfglGetUniformLocationdmy;
+   pfglShaderSource = (void (STDCALL *)(GLuint,GLsizei,const GLchar **,const GLint *))yglGetProcAddress("glShaderSource");
+   if( pfglShaderSource == NULL ) pfglShaderSource = pfglShaderSourcedmy;
+   pfglUniform1i = (void (STDCALL *)(GLint,GLint))yglGetProcAddress("glUniform1i");
+   if( pfglUniform1i == NULL ) pfglUniform1i = pfglUniform1idmy;
+   pfglGetShaderInfoLog = (void (STDCALL *)(GLuint,GLsizei,GLsizei *,GLchar *))yglGetProcAddress("glGetShaderInfoLog");
+   if( pfglGetShaderInfoLog == NULL ) pfglGetShaderInfoLog = pfglGetShaderInfoLogdmy;
+   pfglVertexAttribPointer = (void (STDCALL *)(GLuint index,GLint size, GLenum type, GLboolean normalized, GLsizei stride,const void *pointer)) yglGetProcAddress("glVertexAttribPointer");
+   if( pfglVertexAttribPointer == NULL ) pfglVertexAttribPointer = pfglVertexAttribPointerdmy;
+   pfglGetAttribLocation  = (GLint (STDCALL *)(GLuint program,const GLchar *    name)) yglGetProcAddress("glGetAttribLocation");
+   if( pfglGetAttribLocation == NULL ) pfglGetAttribLocation = pfglGetAttribLocationdmy;
+   pfglBindAttribLocation = (void (STDCALL *)( GLuint program, GLuint index, const GLchar * name))yglGetProcAddress("glBindAttribLocation");
+   if( pfglGetAttribLocation == NULL ) pfglGetAttribLocation = pfglGetAttribLocationdmy;
+   pfglGetProgramiv = (void (STDCALL *)( GLuint    program, GLenum pname, GLint * params))yglGetProcAddress("glGetProgramiv");
+   if( pfglGetProgramiv == NULL ) pfglGetProgramiv = pfglGetProgramivdmy;
+   pfglGetShaderiv  = (void (STDCALL *)(GLuint shader,GLenum pname,GLint *    params))yglGetProcAddress("glGetShaderiv");
+   if( pfglGetShaderiv == NULL ) pfglGetShaderiv = pfglGetShaderivdmy;
+   pfglEnableVertexAttribArray = (void (STDCALL *)(GLuint index))yglGetProcAddress("glEnableVertexAttribArray");
+   if( pfglEnableVertexAttribArray == NULL ) pfglEnableVertexAttribArray = pfglEnableVertexAttribArraydmy;
+   pfglDisableVertexAttribArray = (void (STDCALL *)(GLuint index))yglGetProcAddress("glDisableVertexAttribArray");
+   if( pfglDisableVertexAttribArray == NULL ) pfglDisableVertexAttribArray = pfglDisableVertexAttribArraydmy;
+   
+      
+   if( YglProgramInit() != 0 ) 
+      return -1;
+   
    _Ygl->st = 0;
    _Ygl->msglength = 0;
 
@@ -413,10 +531,11 @@ int YglInit(int width, int height, unsigned int depth) {
    return 0;
 }
 
+
 //////////////////////////////////////////////////////////////////////////////
 
 void YglDeInit(void) {
-   unsigned int i;
+   unsigned int i,j;
 
    YglTMDeInit();
 
@@ -426,10 +545,16 @@ void YglDeInit(void) {
       {
          for (i = 0; i < _Ygl->depth; i++)
          {
-            if (_Ygl->levels[i].quads)
-               free(_Ygl->levels[i].quads);
-            if (_Ygl->levels[i].textcoords)
-               free(_Ygl->levels[i].textcoords);
+         for (j = 0; j < _Ygl->levels[i].prgcount; j++)
+         {
+            if (_Ygl->levels[i].prg[j].quads)
+            free(_Ygl->levels[i].prg[j].quads);
+            if (_Ygl->levels[i].prg[j].textcoords)
+            free(_Ygl->levels[i].prg[j].textcoords);
+            if (_Ygl->levels[i].prg[j].vertexAttribute)
+            free(_Ygl->levels[i].prg[j].vertexAttribute);
+         }
+         free(_Ygl->levels[i].prg);
          }
          free(_Ygl->levels);
       }
@@ -445,9 +570,11 @@ void YglDeInit(void) {
 
 float * YglQuad(YglSprite * input, YglTexture * output, YglCache * c) {
    unsigned int x, y;
-   YglLevel *level;
+   YglLevel   *level;
+   YglProgram *program;
    texturecoordinate_struct *tmp;
    float q[4];
+   int prg = PG_NORMAL;
 
    if (input->priority > 7) {
       VDP1LOG("sprite with priority %d\n", input->priority);
@@ -455,33 +582,22 @@ float * YglQuad(YglSprite * input, YglTexture * output, YglCache * c) {
    }
 
    level = &_Ygl->levels[input->priority];
-
-   if (level->currentQuad == level->maxQuad) {
-      level->maxQuad += 8;
-      level->quads = (int *) realloc(level->quads, level->maxQuad * sizeof(int));
-      level->textcoords = (float *) realloc(level->textcoords, level->maxQuad * sizeof(float) * 2);
+   if( level->prg[level->prgcurrent].prg != YglGetProgramId(prg) ) {
+      YglProgramChange(level,prg);
+   }
+   program = &level->prg[level->prgcurrent];
+   
+   if (program->currentQuad == program->maxQuad) {
+      program->maxQuad += 8*128;
+      program->quads = (int *) realloc(program->quads, program->maxQuad * sizeof(int));
+      program->textcoords = (float *) realloc(program->textcoords, program->maxQuad * sizeof(float) * 2);
+      program->vertexAttribute = (float *) realloc(program->vertexAttribute, program->maxQuad * sizeof(float)*2);          
       YglCacheReset();
    }
+   tmp = (texturecoordinate_struct *)(program->textcoords + (program->currentQuad * 2));
+   memcpy(program->quads + program->currentQuad, input->vertices, 8 * sizeof(int));
 
-#ifdef USEMICSHADERS
-   if (level->currentColors == level->maxColors) {
-      level->maxColors += 16;
-      level->colors = (unsigned char *) realloc(level->colors, level->maxColors * sizeof(unsigned char));
-      YglCacheReset();
-   }
-#endif
-
-   tmp = (texturecoordinate_struct *)(level->textcoords + (level->currentQuad * 2));
-
-   memcpy(level->quads + level->currentQuad, input->vertices, 8 * sizeof(int));
-#ifdef USEMICSHADERS
-   memcpy(level->colors + level->currentColors, noMeshGouraud, 16 * sizeof(unsigned char));
-#endif
-
-   level->currentQuad += 8;
-#ifdef USEMICSHADERS
-   level->currentColors += 16;
-#endif
+   program->currentQuad += 8;
    YglTMAllocate(output, input->w, input->h, &x, &y);
 
    tmp[0].r = tmp[1].r = tmp[2].r = tmp[3].r = 0; // these can stay at 0
@@ -503,47 +619,47 @@ float * YglQuad(YglSprite * input, YglTexture * output, YglCache * c) {
 
    if( c != NULL )
    {
-	   switch(input->flip) {
-		  case 0:
-			 c->x = *(level->textcoords + ((level->currentQuad - 8) * 2));   // upper left coordinates(0)
-			 c->y = *(level->textcoords + ((level->currentQuad - 8) * 2)+1); // upper left coordinates(0)	
-			 break;
-		  case 1:
-			 c->x = *(level->textcoords + ((level->currentQuad - 6) * 2));   // upper left coordinates(0)
-			 c->y = *(level->textcoords + ((level->currentQuad - 6) * 2)+1); // upper left coordinates(0)		 
-			 break;
-		 case 2:
-			 c->x = *(level->textcoords + ((level->currentQuad - 2) * 2));   // upper left coordinates(0)
-			 c->y = *(level->textcoords + ((level->currentQuad - 2) * 2)+1); // upper left coordinates(0)		 
-			 break;
-		 case 3:
-			 c->x = *(level->textcoords + ((level->currentQuad - 4) * 2));   // upper left coordinates(0)
-			 c->y = *(level->textcoords + ((level->currentQuad - 4) * 2)+1); // upper left coordinates(0)		 
-			 break;
-	   }
+      switch(input->flip) {
+        case 0:
+          c->x = *(program->textcoords + ((program->currentQuad - 8) * 2));   // upper left coordinates(0)
+          c->y = *(program->textcoords + ((program->currentQuad - 8) * 2)+1); // upper left coordinates(0)   
+          break;
+        case 1:
+          c->x = *(program->textcoords + ((program->currentQuad - 6) * 2));   // upper left coordinates(0)
+          c->y = *(program->textcoords + ((program->currentQuad - 6) * 2)+1); // upper left coordinates(0)       
+          break;
+       case 2:
+          c->x = *(program->textcoords + ((program->currentQuad - 2) * 2));   // upper left coordinates(0)
+          c->y = *(program->textcoords + ((program->currentQuad - 2) * 2)+1); // upper left coordinates(0)       
+          break;
+       case 3:
+          c->x = *(program->textcoords + ((program->currentQuad - 4) * 2));   // upper left coordinates(0)
+          c->y = *(program->textcoords + ((program->currentQuad - 4) * 2)+1); // upper left coordinates(0)       
+          break;
+      }
    }
 
    
    if( input->dst == 1 )
    {
-	YglCalcTextureQ(input->vertices,q);
-	tmp[0].s *= q[0];
-	tmp[0].t *= q[0];
-	tmp[1].s *= q[1];
-	tmp[1].t *= q[1];
-	tmp[2].s *= q[2];
-	tmp[2].t *= q[2];
-	tmp[3].s *= q[3];
-	tmp[3].t *= q[3];
-	tmp[0].q = q[0]; 
-	tmp[1].q = q[1]; 
-	tmp[2].q = q[2]; 
-	tmp[3].q = q[3]; 
+      YglCalcTextureQ(input->vertices,q);
+      tmp[0].s *= q[0];
+      tmp[0].t *= q[0];
+      tmp[1].s *= q[1];
+      tmp[1].t *= q[1];
+      tmp[2].s *= q[2];
+      tmp[2].t *= q[2];
+      tmp[3].s *= q[3];
+      tmp[3].t *= q[3];
+      tmp[0].q = q[0]; 
+      tmp[1].q = q[1]; 
+      tmp[2].q = q[2]; 
+      tmp[3].q = q[3]; 
    }else{
-	tmp[0].q = 1.0f; 
-	tmp[1].q = 1.0f; 
-	tmp[2].q = 1.0f; 
-	tmp[3].q = 1.0f; 
+      tmp[0].q = 1.0f; 
+      tmp[1].q = 1.0f; 
+      tmp[2].q = 1.0f; 
+      tmp[3].q = 1.0f; 
    }
 
 
@@ -552,35 +668,43 @@ float * YglQuad(YglSprite * input, YglTexture * output, YglCache * c) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-#ifdef USEMICSHADERS
-int YglQuad2(YglSprite * input, YglTexture * output, YglColor * colors,YglCache * c) {
+int YglQuadGrowShading(YglSprite * input, YglTexture * output, float * colors,YglCache * c) {
    unsigned int x, y;
-   YglLevel *level;
+   YglLevel   *level;
+   YglProgram *program;
    texturecoordinate_struct *tmp;
+   float * vtxa;
+   float q[4];
+   int prg = PG_VFP1_GOURAUDSAHDING;
 
    level = &_Ygl->levels[input->priority];
+   if( level->prg[level->prgcurrent].prg != YglGetProgramId(prg) ) {
+      YglProgramChange(level,prg);
+   }
+   program = &level->prg[level->prgcurrent];
+   
 
-   if (level->currentQuad == level->maxQuad) {
-      level->maxQuad += 8;
-      level->quads = (int *) realloc(level->quads, level->maxQuad * sizeof(int));
-      level->textcoords = (int *) realloc(level->textcoords, level->maxQuad * sizeof(float));
+   if (program->currentQuad == program->maxQuad) 
+   {
+      program->maxQuad += 8*128;
+      program->quads = (int *) realloc(program->quads, program->maxQuad * sizeof(int));
+      program->textcoords = (float *) realloc(program->textcoords, program->maxQuad * sizeof(float)*2);
+      program->vertexAttribute = (float *) realloc(program->vertexAttribute, program->maxQuad * sizeof(float)*2);
       YglCacheReset();
    }
 
-   if (level->currentColors == level->maxColors)
-   {
-	   level->maxColors += 16;
-	   level->colors = (unsigned char *) realloc(level->colors, level->maxColors * sizeof(unsigned char));
-	   YglCacheReset();
-   }
 
-   tmp = (texturecoordinate_struct *)(level->textcoords + (level->currentQuad * 2));
+   // Vertex
+   memcpy(program->quads + program->currentQuad, input->vertices, 8 * sizeof(int));
+   
+   // Color
+   vtxa = (program->vertexAttribute + (program->currentQuad * 2));
+   memcpy( vtxa, colors, sizeof(float)*4*4);
 
-   memcpy(level->quads + level->currentQuad, input->vertices, 8 * sizeof(int));
-   memcpy(level->colors + level->currentColors, colors, 16 * sizeof(unsigned char));
-
-   level->currentQuad += 8;
-   level->currentColors += 16;
+   // texture
+   tmp = (texturecoordinate_struct *)(program->textcoords + (program->currentQuad * 2));
+   
+   program->currentQuad += 8;
 
    YglTMAllocate(output, input->w, input->h, &x, &y);
 
@@ -601,91 +725,89 @@ int YglQuad2(YglSprite * input, YglTexture * output, YglColor * colors,YglCache 
       tmp[2].t = tmp[3].t = (float)(y + input->h);
    }
 
-    switch(input->flip) {
+   if( c != NULL )
+   {
+      switch(input->flip) {
       case 0:
-         c->x = *(level->textcoords + ((level->currentQuad - 8) * 2));   // upper left coordinates(0)
-         c->y = *(level->textcoords + ((level->currentQuad - 8) * 2)+1); // upper left coordinates(0)	
-		 break;
+         c->x = *(program->textcoords + ((program->currentQuad - 8) * 2));   // upper left coordinates(0)
+         c->y = *(program->textcoords + ((program->currentQuad - 8) * 2)+1); // upper left coordinates(0)   
+         break;
       case 1:
-         c->x = *(level->textcoords + ((level->currentQuad - 6) * 2));   // upper left coordinates(0)
-         c->y = *(level->textcoords + ((level->currentQuad - 6) * 2)+1); // upper left coordinates(0)		 
-		 break;
-	 case 2:
-         c->x = *(level->textcoords + ((level->currentQuad - 2) * 2));   // upper left coordinates(0)
-         c->y = *(level->textcoords + ((level->currentQuad - 2) * 2)+1); // upper left coordinates(0)		 
-		 break;
-	 case 3:
-         c->x = *(level->textcoords + ((level->currentQuad - 4) * 2));   // upper left coordinates(0)
-         c->y = *(level->textcoords + ((level->currentQuad - 4) * 2)+1); // upper left coordinates(0)		 
-		 break;
+         c->x = *(program->textcoords + ((program->currentQuad - 6) * 2));   // upper left coordinates(0)
+         c->y = *(program->textcoords + ((program->currentQuad - 6) * 2)+1); // upper left coordinates(0)       
+         break;
+      case 2:
+         c->x = *(program->textcoords + ((program->currentQuad - 2) * 2));   // upper left coordinates(0)
+         c->y = *(program->textcoords + ((program->currentQuad - 2) * 2)+1); // upper left coordinates(0)       
+         break;
+      case 3:
+         c->x = *(program->textcoords + ((program->currentQuad - 4) * 2));   // upper left coordinates(0)
+         c->y = *(program->textcoords + ((program->currentQuad - 4) * 2)+1); // upper left coordinates(0)       
+         break;
+   }
    }
 
-    if( input->dst == 1 )
+   if( input->dst == 1 )
    {
-	YglCalcTextureQ(input->vertices,q);
-	tmp[0].s *= q[0];
-	tmp[0].t *= q[0];
-	tmp[1].s *= q[1];
-	tmp[1].t *= q[1];
-	tmp[2].s *= q[2];
-	tmp[2].t *= q[2];
-	tmp[3].s *= q[3];
-	tmp[3].t *= q[3];
-
-	tmp[0].q = q[0]; 
-	tmp[1].q = q[1]; 
-	tmp[2].q = q[2]; 
-	tmp[3].q = q[3]; 
-	
+      YglCalcTextureQ(input->vertices,q);
+      tmp[0].s *= q[0];
+      tmp[0].t *= q[0];
+      tmp[1].s *= q[1];
+      tmp[1].t *= q[1];
+      tmp[2].s *= q[2];
+      tmp[2].t *= q[2];
+      tmp[3].s *= q[3];
+      tmp[3].t *= q[3];
+      tmp[0].q = q[0]; 
+      tmp[1].q = q[1]; 
+      tmp[2].q = q[2]; 
+      tmp[3].q = q[3]; 
    }else{
-	tmp[0].q = 1.0f; 
-	tmp[1].q = 1.0f; 
-	tmp[2].q = 1.0f; 
-	tmp[3].q = 1.0f; 
+      tmp[0].q = 1.0f; 
+      tmp[1].q = 1.0f; 
+      tmp[2].q = 1.0f; 
+      tmp[3].q = 1.0f; 
    }
 
    return 0;
 }
-#endif
 
 //////////////////////////////////////////////////////////////////////////////
 
 void YglCachedQuad(YglSprite * input, YglCache * cache) {
-   YglLevel * level = _Ygl->levels + input->priority;
+   YglLevel   * level;
+   YglProgram * program;
    unsigned int x,y;
    texturecoordinate_struct *tmp;
-	float q[4];
+   float q[4];
 
+   int prg = PG_NORMAL;
+  
+   level = &_Ygl->levels[input->priority];
+   if( level->prg[level->prgcurrent].prg != YglGetProgramId(prg) ) {
+      YglProgramChange(level,prg);
+   }
+   program = &level->prg[level->prgcurrent];
+   
    x = cache->x;
    y = cache->y;
 
-   if (level->currentQuad == level->maxQuad) {
-      level->maxQuad += 8;
-      level->quads = (int *) realloc(level->quads, level->maxQuad * sizeof(int));
-      level->textcoords = (int *) realloc(level->textcoords, level->maxQuad * sizeof(float) * 2);
-      YglCacheReset();
-   }
-
-#ifdef USEMICSHADERS
-   if (level->currentColors == level->maxColors)
+   if (program->currentQuad == program->maxQuad) 
    {
-      level->maxColors += 16;
-      level->colors = (unsigned char *) realloc(level->colors, level->maxColors * sizeof(unsigned char));
+      program->maxQuad += 8*128;
+      program->quads = (int *) realloc(program->quads, program->maxQuad * sizeof(int));
+      program->textcoords = (float *) realloc(program->textcoords, program->maxQuad * sizeof(float) * 2);
+      program->vertexAttribute = (float *) realloc(program->vertexAttribute, program->maxQuad * sizeof(float)*2);     
       YglCacheReset();
    }
-#endif
 
-   tmp = (texturecoordinate_struct *)(level->textcoords + (level->currentQuad * 2));
+   // Vertex
+   memcpy(program->quads + program->currentQuad, input->vertices, 8 * sizeof(int));
 
-   memcpy(level->quads + level->currentQuad, input->vertices, 8 * sizeof(int));
-#ifdef USEMICSHADERS
-   memcpy(level->colors + level->currentColors, noMeshGouraud, 16 * sizeof(unsigned char));
-#endif
-
-   level->currentQuad += 8;
-#ifdef USEMICSHADERS
-   level->currentColors += 16;
-#endif
+   // Color
+   tmp = (texturecoordinate_struct *)(program->textcoords + (program->currentQuad * 2));
+      
+   program->currentQuad += 8;
 
    tmp[0].r = tmp[1].r = tmp[2].r = tmp[3].r = 0; // these can stay at 0
 
@@ -706,24 +828,24 @@ void YglCachedQuad(YglSprite * input, YglCache * cache) {
 
    if( input->dst == 1 )
    {
-		YglCalcTextureQ(input->vertices,q);
-		tmp[0].s *= q[0];
-	tmp[0].t *= q[0];
-	tmp[1].s *= q[1];
-	tmp[1].t *= q[1];
-	tmp[2].s *= q[2];
-	tmp[2].t *= q[2];
-	tmp[3].s *= q[3];
-	tmp[3].t *= q[3];
-	tmp[0].q = q[0]; 
-	tmp[1].q = q[1]; 
-	tmp[2].q = q[2]; 
-	tmp[3].q = q[3]; 
+      YglCalcTextureQ(input->vertices,q);
+      tmp[0].s *= q[0];
+      tmp[0].t *= q[0];
+      tmp[1].s *= q[1];
+      tmp[1].t *= q[1];
+      tmp[2].s *= q[2];
+      tmp[2].t *= q[2];
+      tmp[3].s *= q[3];
+      tmp[3].t *= q[3];
+      tmp[0].q = q[0]; 
+      tmp[1].q = q[1]; 
+      tmp[2].q = q[2]; 
+      tmp[3].q = q[3]; 
    }else{
-	tmp[0].q = 1.0f; 
-	tmp[1].q = 1.0f; 
-	tmp[2].q = 1.0f; 
-	tmp[3].q = 1.0f; 
+      tmp[0].q = 1.0f; 
+      tmp[1].q = 1.0f; 
+      tmp[2].q = 1.0f; 
+      tmp[3].q = 1.0f; 
    }
 
    
@@ -731,39 +853,48 @@ void YglCachedQuad(YglSprite * input, YglCache * cache) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-#ifdef USEMICSHADERS
-void YglCachedQuad2(YglSprite * input, int * cache, YglColor * colors) {
-   YglLevel * level = _Ygl->levels + input->priority;
+void YglCacheQuadGrowShading(YglSprite * input, float * colors,YglCache * cache) {
+   YglLevel   * level;
+   YglProgram * program;
    unsigned int x,y;
    texturecoordinate_struct *tmp;
+   float q[4];
+   int prg = PG_VFP1_GOURAUDSAHDING;
+   int currentpg = 0;
+   float * vtxa;
+   
 
+   level = &_Ygl->levels[input->priority];
+   if( level->prg[level->prgcurrent].prg != YglGetProgramId(prg) ) {
+      YglProgramChange(level,prg);
+   }
+   program = &level->prg[level->prgcurrent];
+   
    x = cache->x;
    y = cache->y;
 
-   if (level->currentQuad == level->maxQuad) {
-      level->maxQuad += 8;
-      level->quads = (int *) realloc(level->quads, level->maxQuad * sizeof(int));
-      level->textcoords = (float *) realloc(level->textcoords, level->maxQuad * sizeof(float));
+   if (program->currentQuad == program->maxQuad) {
+      program->maxQuad += 8*128;
+      program->quads = (int *) realloc(program->quads, program->maxQuad * sizeof(int));
+      program->textcoords = (float *) realloc(program->textcoords, program->maxQuad * sizeof(float)*2);
+      program->vertexAttribute = (float *) realloc(program->vertexAttribute, program->maxQuad * sizeof(float)*2);
       YglCacheReset();
    }
 
-   if (level->currentColors == level->maxColors)
-   {
-	   level->maxColors += 16;
-	   level->colors = (unsigned char *) realloc(level->colors, level->maxColors * sizeof(unsigned char));
-	   YglCacheReset();
-   }
+   // Vertex
+   memcpy(program->quads + program->currentQuad, input->vertices, 8 * sizeof(int));
 
-   tmp = (texturecoordinate_struct *)(level->textcoords + (level->currentQuad * 2));
-
-   memcpy(level->quads + level->currentQuad, input->vertices, 8 * sizeof(int));
-   memcpy(level->colors + level->currentColors, colors, 16 * sizeof(unsigned char));
-
-   level->currentQuad += 8;
-   level->currentColors += 16;
+   // Color 
+   vtxa = (program->vertexAttribute + (program->currentQuad * 2));
+   memcpy( vtxa, colors, sizeof(float)*4*4);
+ 
+   // Texture 
+   tmp = (texturecoordinate_struct *)(program->textcoords + (program->currentQuad * 2));
+ 
+   program->currentQuad += 8;
 
    tmp[0].r = tmp[1].r = tmp[2].r = tmp[3].r = 0; // these can stay at 0
-	
+   
   if (input->flip & 0x1) {
       tmp[0].s = tmp[3].s = (float)(x + input->w);
       tmp[1].s = tmp[2].s = (float)(x);
@@ -781,80 +912,77 @@ void YglCachedQuad2(YglSprite * input, int * cache, YglColor * colors) {
 
    if( input->dst == 1 )
    {
-	YglCalcTextureQ(input->vertices,q);
-	tmp[0].s *= q[0];
-	tmp[0].t *= q[0];
-	tmp[1].s *= q[1];
-	tmp[1].t *= q[1];
-	tmp[2].s *= q[2];
-	tmp[2].t *= q[2];
-	tmp[3].s *= q[3];
-	tmp[3].t *= q[3];
-	tmp[0].q = q[0]; 
-	tmp[1].q = q[1]; 
-	tmp[2].q = q[2]; 
-	tmp[3].q = q[3]; 
+      YglCalcTextureQ(input->vertices,q);
+      tmp[0].s *= q[0];
+      tmp[0].t *= q[0];
+      tmp[1].s *= q[1];
+      tmp[1].t *= q[1];
+      tmp[2].s *= q[2];
+      tmp[2].t *= q[2];
+      tmp[3].s *= q[3];
+      tmp[3].t *= q[3];
+      tmp[0].q = q[0]; 
+      tmp[1].q = q[1]; 
+      tmp[2].q = q[2]; 
+      tmp[3].q = q[3]; 
    }else{
-	tmp[0].q = 1.0f; 
-	tmp[1].q = 1.0f; 
-	tmp[2].q = 1.0f; 
-	tmp[3].q = 1.0f; 
+      tmp[0].q = 1.0f; 
+      tmp[1].q = 1.0f; 
+      tmp[2].q = 1.0f; 
+      tmp[3].q = 1.0f; 
    }
 }
-#endif
 
 //////////////////////////////////////////////////////////////////////////////
 
 void YglRender(void) {
    YglLevel * level;
+   GLuint cprg=0;
 
    glEnable(GL_TEXTURE_2D);
-#ifdef USEMICSHADERS
    glShadeModel(GL_SMOOTH);
-#endif
 
    glBindTexture(GL_TEXTURE_2D, _Ygl->texture);
 
    glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, YglTM->width, YglTM->yMax, GL_RGBA, GL_UNSIGNED_BYTE, YglTM->texture);
 
-#ifdef USEMICSHADERS
-   if (useShaders)
-   {
-     glEnableClientState(GL_COLOR_ARRAY);
-     pfglUseProgram(shaderProgram);
-   }
-#endif
+   cprg = 0;
+   pfglUseProgram(0);
 
    if(_Ygl->st) {
       int vertices [] = { 0, 0, 320, 0, 320, 224, 0, 224 };
       int text [] = { 0, 0, YglTM->width, 0, YglTM->width, YglTM->height, 0, YglTM->height };
       glVertexPointer(2, GL_INT, 0, vertices);
-#ifdef USEMICSHADERS
-      // FIXME: this needs to be defined  --AC
-      //glColorPointer(4, GL_UNSIGNED_BYTE, 0, colors);
-#endif
       glTexCoordPointer(4, GL_INT, 0, text);
       glDrawArrays(GL_QUADS, 0, 4);
    } else {
-      unsigned int i;
-      for(i = 0;i < _Ygl->depth;i++) {
+      unsigned int i,j;
+      for(i = 0;i < _Ygl->depth;i++) 
+      {
          level = _Ygl->levels + i;
-         glVertexPointer(2, GL_INT, 0, level->quads);
-#ifdef USEMICSHADERS
-         glColorPointer(4, GL_UNSIGNED_BYTE, 0, level->colors);
-#endif
-         glTexCoordPointer(4, GL_FLOAT, 0, level->textcoords);
-         glDrawArrays(GL_QUADS, 0, level->currentQuad / 2);
+         for( j=0;j<(level->prgcurrent+1); j++ )
+         {
+            if( level->prg[j].prg != cprg )
+            {
+               cprg = level->prg[j].prg;
+               pfglUseProgram(level->prg[j].prg);
+            }
+            glVertexPointer(2, GL_INT, 0, level->prg[j].quads);
+            glTexCoordPointer(4, GL_FLOAT, 0, level->prg[j].textcoords);
+            if(level->prg[j].setupUniform) 
+			{
+				level->prg[j].setupUniform((void*)&level->prg[j]);
+			}
+            glDrawArrays(GL_QUADS, 0, level->prg[j].currentQuad/2);
+			if( level->prg[j].cleanupUniform )
+			{
+				level->prg[j].cleanupUniform((void*)&level->prg[j]);
+			}
+         }
+         level->prgcurrent = 0;
       }
    }
 
-#ifdef USEMICSHADERS
-   if (useShaders)
-   {
-      glDisableClientState(GL_COLOR_ARRAY);
-      pfglUseProgram(0);
-   }
-#endif
 
    glDisable(GL_TEXTURE_2D);
 #ifndef _arch_dreamcast
@@ -878,7 +1006,7 @@ void YglRender(void) {
 
 void YglReset(void) {
    YglLevel * level;
-   unsigned int i;
+   unsigned int i,j;
 
    glClear(GL_COLOR_BUFFER_BIT);
 
@@ -886,7 +1014,11 @@ void YglReset(void) {
 
    for(i = 0;i < _Ygl->depth;i++) {
       level = _Ygl->levels + i;
-      level->currentQuad = 0;
+     level->prgcurrent = 0;
+     for( j=0; j< level->prgcount; j++ )
+     {
+      level->prg[j].currentQuad = 0;
+     }
    }
    _Ygl->msglength = 0;
 }
@@ -924,10 +1056,10 @@ int YglIsCached(u32 addr, YglCache * c ) {
    for (i = 0; i < cachelistsize; i++)
    {
       if (addr == cachelist[i].id)
-	  {
+     {
          c->x=cachelist[i].c.x;
-		 c->y=cachelist[i].c.y;
-		 return 1;
+       c->y=cachelist[i].c.y;
+       return 1;
       }
    }
 
@@ -950,6 +1082,8 @@ void YglCacheReset(void) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+
 
 #endif
 

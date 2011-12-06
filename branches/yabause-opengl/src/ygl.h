@@ -21,6 +21,8 @@
 #ifdef HAVE_LIBGL
 #ifdef _MSC_VER
 #include <windows.h>
+#include <GL/gl.h>
+#include "windows/glext.h"
 #endif
 
 #ifdef HAVE_LIBSDL
@@ -53,11 +55,6 @@
 
 #include "core.h"
 
-#ifdef USEMICSHADERS
-extern GLuint shaderProgram;
-extern int useShaders;
-extern const unsigned char noMeshGouraud[16];
-#endif
 
 typedef struct {
 	int vertices[8];
@@ -78,11 +75,6 @@ typedef struct {
 	unsigned int w;
 } YglTexture;
 
-#ifdef USEMICSHADERS
-typedef struct {
-	unsigned char rgba[4*4];
-} YglColor;
-#endif
 
 typedef struct {
 	unsigned int currentX;
@@ -100,16 +92,28 @@ void YglTMDeInit(void);
 void YglTMReset(void);
 void YglTMAllocate(YglTexture *, unsigned int, unsigned int, unsigned int *, unsigned int *);
 
+enum
+{
+	PG_NORMAL=0,
+	PG_VFP1_GOURAUDSAHDING,
+	PG_MAX,
+};
 typedef struct {
+	GLuint prg;
 	int * quads;
 	float * textcoords;
+	float * vertexAttribute;
 	int currentQuad;
 	int maxQuad;
-#ifdef USEMICSHADERS
-	unsigned char * colors;
-	int currentColors;
-	int maxColors;
-#endif
+	int vaid;
+	int (*setupUniform)(void *);
+	int (*cleanupUniform)(void *);
+} YglProgram;
+
+typedef struct {
+	int prgcount;
+	int prgcurrent;
+	YglProgram * prg;
 } YglLevel;
 
 typedef struct {
@@ -131,23 +135,20 @@ int YglInit(int, int, unsigned int);
 void YglDeInit(void);
 float * YglQuad(YglSprite *, YglTexture *,YglCache * c);
 void YglCachedQuad(YglSprite *, YglCache *);
-#ifdef USEMICSHADERS
-float * YglQuad2(YglSprite *, YglTexture *, YglColor *,YglCache * c);
-void YglCachedQuad2(YglSprite *, YglCache *, YglColor *);
-#endif
 void YglRender(void);
 void YglReset(void);
 void YglShowTexture(void);
 void YglChangeResolution(int, int);
 void YglOnScreenDebugMessage(char *, ...);
+void YglCacheQuadGrowShading(YglSprite * input, float * colors, YglCache * cache);
+int YglQuadGrowShading(YglSprite * input, YglTexture * output, float * colors,YglCache * c);
 
 int YglIsCached(u32,YglCache *);
 void YglCacheAdd(u32,YglCache *);
 void YglCacheReset(void);
 
-#ifdef USEMICSHADERS
 
-#if 0  // Does anything need this?  It breaks a bunch of prototypes if
+#if 1  // Does anything need this?  It breaks a bunch of prototypes if
        // GLchar is typedef'd instead of #define'd  --AC
 #ifndef GLchar
 #define GLchar GLbyte
@@ -164,8 +165,13 @@ extern void (STDCALL *pfglUseProgram)(GLuint);
 extern GLint (STDCALL *pfglGetUniformLocation)(GLuint,const GLchar *);
 extern void (STDCALL *pfglUniform1i)(GLint,GLint);
 extern void (STDCALL *pfglGetShaderInfoLog)(GLuint,GLsizei,GLsizei *,GLchar *);
+extern void (STDCALL *pfglVertexAttribPointer)(GLuint index,GLint size, GLenum type, GLboolean normalized, GLsizei stride,const void *pointer);
+extern void (STDCALL *pfglBindAttribLocation)( GLuint program, GLuint index, const GLchar * name);
+extern void (STDCALL *pfglGetProgramiv)( GLuint    program, GLenum pname, GLint * params);
+extern void (STDCALL *pfglGetShaderiv)(GLuint shader,GLenum pname,GLint *    params);
+extern GLint (STDCALL *pfglGetAttribLocation)(GLuint program,const GLchar *    name);
 
-#endif
-
+extern void (STDCALL *pfglEnableVertexAttribArray)(GLuint index);
+extern void (STDCALL *pfglDisableVertexAttribArray)(GLuint index);
 #endif
 #endif

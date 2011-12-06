@@ -29,19 +29,11 @@
 #include "ygl.h"
 #include "yui.h"
 
-#ifdef USEMICSHADERS
-#ifdef WIN32
-#include <windows.h>
-#include <wingdi.h>
-#elif HAVE_GLXGETPROCADDRESS
-#include <GL/glx.h>
-#endif
-#endif
 
 #if defined WORDS_BIGENDIAN
-#define SAT2YAB1(alpha,temp)		(alpha | (temp & 0x7C00) << 1 | (temp & 0x3E0) << 14 | (temp & 0x1F) << 27)
+#define SAT2YAB1(alpha,temp)      (alpha | (temp & 0x7C00) << 1 | (temp & 0x3E0) << 14 | (temp & 0x1F) << 27)
 #else
-#define SAT2YAB1(alpha,temp)		(alpha << 24 | (temp & 0x1F) << 3 | (temp & 0x3E0) << 6 | (temp & 0x7C00) << 9)
+#define SAT2YAB1(alpha,temp)      (alpha << 24 | (temp & 0x1F) << 3 | (temp & 0x3E0) << 6 | (temp & 0x7C00) << 9)
 #endif
 
 #if defined WORDS_BIGENDIAN
@@ -50,18 +42,18 @@
 #define SAT2YAB2(alpha,dot1,dot2)       (alpha << 24 | ((dot1 & 0xFF) << 16) | (dot2 & 0xFF00) | (dot2 & 0xFF))
 #endif
 
-#define COLOR_ADDt(b)		(b>0xFF?0xFF:(b<0?0:b))
-#define COLOR_ADDb(b1,b2)	COLOR_ADDt((signed) (b1) + (b2))
+#define COLOR_ADDt(b)      (b>0xFF?0xFF:(b<0?0:b))
+#define COLOR_ADDb(b1,b2)   COLOR_ADDt((signed) (b1) + (b2))
 #ifdef WORDS_BIGENDIAN
-#define COLOR_ADD(l,r,g,b)	(COLOR_ADDb((l >> 24) & 0xFF, r) << 24) | \
-				(COLOR_ADDb((l >> 16) & 0xFF, g) << 16) | \
-				(COLOR_ADDb((l >> 8) & 0xFF, b) << 8) | \
-				(l & 0xFF)
+#define COLOR_ADD(l,r,g,b)   (COLOR_ADDb((l >> 24) & 0xFF, r) << 24) | \
+            (COLOR_ADDb((l >> 16) & 0xFF, g) << 16) | \
+            (COLOR_ADDb((l >> 8) & 0xFF, b) << 8) | \
+            (l & 0xFF)
 #else
-#define COLOR_ADD(l,r,g,b)	COLOR_ADDb((l & 0xFF), r) | \
-				(COLOR_ADDb((l >> 8 ) & 0xFF, g) << 8) | \
-				(COLOR_ADDb((l >> 16 ) & 0xFF, b) << 16) | \
-				(l & 0xFF000000)
+#define COLOR_ADD(l,r,g,b)   COLOR_ADDb((l & 0xFF), r) | \
+            (COLOR_ADDb((l >> 8 ) & 0xFF, g) << 8) | \
+            (COLOR_ADDb((l >> 16 ) & 0xFF, b) << 16) | \
+            (l & 0xFF000000)
 #endif
 
 int VIDOGLInit(void);
@@ -159,6 +151,7 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
    u32 charAddr = cmd->CMDSRCA * 8;
    u32 dot;
    u8 SPD = ((cmd->CMDPMOD & 0x40) != 0);
+   u8 END = ((cmd->CMDPMOD & 0x80) != 0);
    u32 alpha = 0xFF;
    VDP1LOG("Making new sprite %08X\n", charAddr);
 
@@ -194,11 +187,13 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
 
                // Pixel 1
                if (((dot >> 4) == 0) && !SPD) *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
+               else if( (dot >> 4) == 0x0F &!END ) *texture->textdata++ = 0x0;
                else *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor(((dot >> 4) | colorBank) + colorOffset, alpha), vdp1cor, vdp1cog, vdp1cob);
                j += 1;
 
                // Pixel 2
                if (((dot & 0xF) == 0) && !SPD) *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
+               else if( (dot & 0xF) == 0x0F &!END ) *texture->textdata++ = 0x0;
                else *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor(((dot & 0xF) | colorBank) + colorOffset, alpha), vdp1cor, vdp1cog, vdp1cob);
                j += 1;
 
@@ -214,7 +209,7 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
          u32 temp;
          u32 colorLut = cmd->CMDCOLR * 8;
          u16 i;
-
+         
          for(i = 0;i < sprite->h;i++)
          {
             u16 j;
@@ -224,27 +219,37 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
                dot = T1ReadByte(Vdp1Ram, charAddr & 0x7FFFF);
 
                if (((dot >> 4) == 0) && !SPD)
-                  *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
-               else
                {
+                  *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
+               }else if (((dot >> 4) == 0x0F) && !END ) // 6. Commandtable end code
+               {
+                  *texture->textdata++ = 0x0;
+               }else{
                   temp = T1ReadWord(Vdp1Ram, ((dot >> 4) * 2 + colorLut) & 0x7FFFF);
                   if (temp & 0x8000)
                      *texture->textdata++ = COLOR_ADD(SAT2YAB1(alpha, temp), vdp1cor, vdp1cog, vdp1cob);
-                  else
+                  else if( temp != 0x0000)
                      *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor(temp, alpha), vdp1cor, vdp1cog, vdp1cob);
+                  else
+                     *texture->textdata++ = 0x0;
                }
 
                j += 1;
 
                if (((dot & 0xF) == 0) && !SPD)
-                  *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
-               else
                {
+                  *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
+               }else if (((dot&0x0F) == 0x0F) && !END )
+               {
+                  *texture->textdata++ = 0x0;
+               }else{
                   temp = T1ReadWord(Vdp1Ram, ((dot & 0xF) * 2 + colorLut) & 0x7FFFF);
                   if (temp & 0x8000)
                      *texture->textdata++ = COLOR_ADD(SAT2YAB1(alpha, temp), vdp1cor, vdp1cog, vdp1cob);
-                  else
+                  else if( temp != 0x0000)
                      *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor(temp, alpha), vdp1cor, vdp1cog, vdp1cob);
+                  else
+                     *texture->textdata++ = 0x0;
                }
 
                j += 1;
@@ -262,7 +267,7 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
          u32 colorOffset = (Vdp2Regs->CRAOFB & 0x70) << 4;
 
          u16 i, j;
-
+         
          for(i = 0;i < sprite->h;i++)
          {
             for(j = 0;j < sprite->w;j++)
@@ -271,6 +276,7 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
                charAddr++;
 
                if ((dot == 0) && !SPD) *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
+               else if( dot==0xFF&!END ) *texture->textdata++ = 0x0;
                else *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor((dot | colorBank) + colorOffset, alpha), vdp1cor, vdp1cog, vdp1cob);
             }
             texture->textdata += texture->w;
@@ -283,7 +289,7 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
          u32 colorBank = cmd->CMDCOLR;
          u32 colorOffset = (Vdp2Regs->CRAOFB & 0x70) << 4;
          u16 i, j;
-
+         
          for(i = 0;i < sprite->h;i++)
          {
             for(j = 0;j < sprite->w;j++)
@@ -292,6 +298,7 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
                charAddr++;
 
                if ((dot == 0) && !SPD) *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
+               else if( dot == 0xFF & !END ) *texture->textdata++ = 0x0;
                else *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor((dot | colorBank) + colorOffset, alpha), vdp1cor, vdp1cog, vdp1cob);
             }
             texture->textdata += texture->w;
@@ -313,6 +320,7 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
                charAddr++;
 
                if ((dot == 0) && !SPD) *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
+               else if( dot == 0xFF & !END ) *texture->textdata++ = 0x0;
                else *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor((dot | colorBank) + colorOffset, alpha), vdp1cor, vdp1cog, vdp1cob);
             }
             texture->textdata += texture->w;
@@ -323,7 +331,6 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
       {
          // 16 bpp Bank mode
          u16 i, j;
-
          for(i = 0;i < sprite->h;i++)
          {
             for(j = 0;j < sprite->w;j++)
@@ -333,6 +340,7 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
 
                //if (!(dot & 0x8000) && (Vdp2Regs->SPCTL & 0x20)) printf("mixed mode\n");
                if (!(dot & 0x8000) && !SPD) *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
+               else if( dot == 0x7FFF & !END ) *texture->textdata++ = 0x0;
                else *texture->textdata++ = COLOR_ADD(SAT2YAB1(alpha, dot), vdp1cor, vdp1cog, vdp1cob);
             }
             texture->textdata += texture->w;
@@ -606,10 +614,10 @@ static u32 Vdp2ColorRamGetColor(u32 colorindex, int alpha)
 
 static void Vdp2GenerateWindowInfo(void)
 {
-	int i;
-	int HShift;
-	int v = 0;
-	u32 LineWinAddr;
+    int i;
+    int HShift;
+    int v = 0;
+    u32 LineWinAddr;
 
     // Is there BG uses Window0?
     if( (Vdp2Regs->WCTLA & 0X2) || (Vdp2Regs->WCTLA & 0X200) || (Vdp2Regs->WCTLB & 0X2) || (Vdp2Regs->WCTLB & 0X200) ||
@@ -620,17 +628,17 @@ static void Vdp2GenerateWindowInfo(void)
         if( m_vWindinfo0_size != vdp2height )
         {
             if(m_vWindinfo0 != NULL) free(m_vWindinfo0);
-			m_vWindinfo0 = (vdp2WindowInfo*)malloc(sizeof(vdp2WindowInfo)*vdp2height);
+            m_vWindinfo0 = (vdp2WindowInfo*)malloc(sizeof(vdp2WindowInfo)*vdp2height);
 
-			for( i=0; i<vdp2height; i++ )
-			{
-			   m_vWindinfo0[i].WinShowLine = 1; 
-			   m_vWindinfo0[i].WinHStart   = 0;
-			   m_vWindinfo0[i].WinHEnd     = 1024;
-			}
+            for( i=0; i<vdp2height; i++ )
+            {
+               m_vWindinfo0[i].WinShowLine = 1; 
+               m_vWindinfo0[i].WinHStart   = 0;
+               m_vWindinfo0[i].WinHEnd     = 1024;
+            }
 
             m_vWindinfo0_size = vdp2height;
-			m_b0WindowChg = 1;
+            m_b0WindowChg = 1;
         }
 
         HShift = 0;
@@ -645,47 +653,47 @@ static void Vdp2GenerateWindowInfo(void)
 
             for( v = 0; v < vdp2height; v++ )
             {
-				if( v < Vdp2Regs->WPSY0 || v > Vdp2Regs->WPEY0 )
-				{
-					if( m_vWindinfo0[v].WinShowLine ) m_b0WindowChg = 1;
-					m_vWindinfo0[v].WinShowLine = 0;
-					
-				}else{
-					short HStart = Vdp2RamReadWord(LineWinAddr + (v << 2) );
-					short HEnd   = Vdp2RamReadWord(LineWinAddr + (v << 2) + 2);
+                if( v < Vdp2Regs->WPSY0 || v > Vdp2Regs->WPEY0 )
+                {
+                    if( m_vWindinfo0[v].WinShowLine ) m_b0WindowChg = 1;
+                    m_vWindinfo0[v].WinShowLine = 0;
+                    
+                }else{
+                    short HStart = Vdp2RamReadWord(LineWinAddr + (v << 2) );
+                    short HEnd   = Vdp2RamReadWord(LineWinAddr + (v << 2) + 2);
 
-					if( HStart < HEnd )
-					{
-						HStart >>= HShift;
-						HEnd   >>= HShift;
+                    if( HStart < HEnd )
+                    {
+                        HStart >>= HShift;
+                        HEnd   >>= HShift;
 
-						if( !( m_vWindinfo0[v].WinHStart == HStart && m_vWindinfo0[v].WinHEnd == HEnd ) )
-						{
-							m_b0WindowChg = 1;
-						}
+                        if( !( m_vWindinfo0[v].WinHStart == HStart && m_vWindinfo0[v].WinHEnd == HEnd ) )
+                        {
+                            m_b0WindowChg = 1;
+                        }
 
-						m_vWindinfo0[v].WinHStart = HStart;
-						m_vWindinfo0[v].WinHEnd   = HEnd;
-						m_vWindinfo0[v].WinShowLine = 1;
+                        m_vWindinfo0[v].WinHStart = HStart;
+                        m_vWindinfo0[v].WinHEnd   = HEnd;
+                        m_vWindinfo0[v].WinShowLine = 1;
 
-					}else{
-						if( m_vWindinfo0[v].WinShowLine ) m_b0WindowChg = 1;
-						m_vWindinfo0[v].WinHStart = 0;
-						m_vWindinfo0[v].WinHEnd   = 0;
-						m_vWindinfo0[v].WinShowLine = 0;
+                    }else{
+                        if( m_vWindinfo0[v].WinShowLine ) m_b0WindowChg = 1;
+                        m_vWindinfo0[v].WinHStart = 0;
+                        m_vWindinfo0[v].WinHEnd   = 0;
+                        m_vWindinfo0[v].WinShowLine = 0;
 
-					}
-				}
+                    }
+                }
             }
 
         // Parameter Mode
         }else{
 
-			// Check Update
-			if( !( m_vWindinfo0[0].WinHStart == (Vdp2Regs->WPSX0>>HShift) && m_vWindinfo0[0].WinHEnd == (Vdp2Regs->WPEX0>>HShift) ) )
-			{
-				m_b0WindowChg = 1;
-			}
+            // Check Update
+            if( !( m_vWindinfo0[0].WinHStart == (Vdp2Regs->WPSX0>>HShift) && m_vWindinfo0[0].WinHEnd == (Vdp2Regs->WPEX0>>HShift) ) )
+            {
+                m_b0WindowChg = 1;
+            }
 
             for( v = 0; v < vdp2height; v++ )
             {
@@ -694,7 +702,7 @@ static void Vdp2GenerateWindowInfo(void)
                 m_vWindinfo0[v].WinHEnd   = Vdp2Regs->WPEX0 >> HShift;
                 if( v < Vdp2Regs->WPSY0 || v >= Vdp2Regs->WPEY0 )
                 {
-					if( m_vWindinfo0[v].WinShowLine ) m_b0WindowChg = 1;
+                    if( m_vWindinfo0[v].WinShowLine ) m_b0WindowChg = 1;
                     m_vWindinfo0[v].WinShowLine = 0;
                 }else{
                     m_vWindinfo0[v].WinShowLine = 1;
@@ -705,12 +713,12 @@ static void Vdp2GenerateWindowInfo(void)
 
     // there is no Window BG
     }else{
-		if( m_vWindinfo0 != NULL )
-		{
-			free(m_vWindinfo0);
-			m_vWindinfo0 = NULL;
-		}
-		m_vWindinfo0_size = 0;
+        if( m_vWindinfo0 != NULL )
+        {
+            free(m_vWindinfo0);
+            m_vWindinfo0 = NULL;
+        }
+        m_vWindinfo0_size = 0;
 
     }
 
@@ -724,66 +732,66 @@ static void Vdp2GenerateWindowInfo(void)
         if( m_vWindinfo1_size != vdp2height )
         {
             if(m_vWindinfo1 != NULL) free(m_vWindinfo1);
-			m_vWindinfo1 = (vdp2WindowInfo*)malloc(sizeof(vdp2WindowInfo)*vdp2height);
+            m_vWindinfo1 = (vdp2WindowInfo*)malloc(sizeof(vdp2WindowInfo)*vdp2height);
 
-			for( i=0; i<vdp2height; i++ )
-			{
-			   m_vWindinfo1[i].WinShowLine = 1; 
-			   m_vWindinfo1[i].WinHStart   = 0;
-			   m_vWindinfo1[i].WinHEnd     = 1024;
-			}
+            for( i=0; i<vdp2height; i++ )
+            {
+               m_vWindinfo1[i].WinShowLine = 1; 
+               m_vWindinfo1[i].WinHStart   = 0;
+               m_vWindinfo1[i].WinHEnd     = 1024;
+            }
 
             m_vWindinfo1_size = vdp2height;
-			m_b1WindowChg = 1;
+            m_b1WindowChg = 1;
         }
 
-		if( vdp2width>=640 ) HShift = 0; else HShift = 1;
+        if( vdp2width>=640 ) HShift = 0; else HShift = 1;
 
 
         // LineTable mode
-		if( (Vdp2Regs->LWTA1.part.U & 0x8000) )
-		{
-			// start address for Window table
-			LineWinAddr = (u32)((( (Vdp2Regs->LWTA1.part.U & 0x07) << 15) | (Vdp2Regs->LWTA1.part.L >> 1) ) << 2);
-			
-			for( v = 0; v < vdp2height; v++ )
+        if( (Vdp2Regs->LWTA1.part.U & 0x8000) )
+        {
+            // start address for Window table
+            LineWinAddr = (u32)((( (Vdp2Regs->LWTA1.part.U & 0x07) << 15) | (Vdp2Regs->LWTA1.part.L >> 1) ) << 2);
+            
+            for( v = 0; v < vdp2height; v++ )
             {
-				if( v < Vdp2Regs->WPSY1 || v > Vdp2Regs->WPEY1 )
-				{
-					if( m_vWindinfo1[v].WinShowLine ) m_b1WindowChg = 1;
+                if( v < Vdp2Regs->WPSY1 || v > Vdp2Regs->WPEY1 )
+                {
+                    if( m_vWindinfo1[v].WinShowLine ) m_b1WindowChg = 1;
                     m_vWindinfo1[v].WinShowLine = 0;
-				}else{
-					short HStart = Vdp2RamReadWord(LineWinAddr + (v << 2) );
-					short HEnd   = Vdp2RamReadWord(LineWinAddr + (v << 2) + 2);
-					if( HStart < HEnd )
-					{
-						HStart >>= HShift;
-						HEnd   >>= HShift;
+                }else{
+                    short HStart = Vdp2RamReadWord(LineWinAddr + (v << 2) );
+                    short HEnd   = Vdp2RamReadWord(LineWinAddr + (v << 2) + 2);
+                    if( HStart < HEnd )
+                    {
+                        HStart >>= HShift;
+                        HEnd   >>= HShift;
 
-						if( !( m_vWindinfo1[v].WinHStart == HStart && m_vWindinfo1[v].WinHEnd == HEnd ) )
-						{
-							m_b1WindowChg = 1;
-						}
+                        if( !( m_vWindinfo1[v].WinHStart == HStart && m_vWindinfo1[v].WinHEnd == HEnd ) )
+                        {
+                            m_b1WindowChg = 1;
+                        }
 
-						m_vWindinfo1[v].WinHStart = HStart;
-						m_vWindinfo1[v].WinHEnd   = HEnd;
-						m_vWindinfo1[v].WinShowLine = 1;
+                        m_vWindinfo1[v].WinHStart = HStart;
+                        m_vWindinfo1[v].WinHEnd   = HEnd;
+                        m_vWindinfo1[v].WinShowLine = 1;
 
-					}else{
-						if( m_vWindinfo1[v].WinShowLine ) m_b1WindowChg = 1;
-						m_vWindinfo1[v].WinShowLine = 0;
-					}
-				}
+                    }else{
+                        if( m_vWindinfo1[v].WinShowLine ) m_b1WindowChg = 1;
+                        m_vWindinfo1[v].WinShowLine = 0;
+                    }
+                }
             }
 
         // parameter mode
         }else{
 
-			// check update
-			if( !( m_vWindinfo1[0].WinHStart == (Vdp2Regs->WPSX1>>HShift) && m_vWindinfo1[0].WinHEnd == (Vdp2Regs->WPEX1>>HShift) ) )
-			{
-				m_b1WindowChg = 1;
-			}
+            // check update
+            if( !( m_vWindinfo1[0].WinHStart == (Vdp2Regs->WPSX1>>HShift) && m_vWindinfo1[0].WinHEnd == (Vdp2Regs->WPEX1>>HShift) ) )
+            {
+                m_b1WindowChg = 1;
+            }
 
             for( v = 0; v < vdp2height; v++ )
             {
@@ -791,7 +799,7 @@ static void Vdp2GenerateWindowInfo(void)
                 m_vWindinfo1[v].WinHEnd   = Vdp2Regs->WPEX1 >> HShift;
                 if( v < Vdp2Regs->WPSY1 || v > Vdp2Regs->WPEY1 )
                 {
-					if( m_vWindinfo1[v].WinShowLine ) m_b1WindowChg = 1;
+                    if( m_vWindinfo1[v].WinShowLine ) m_b1WindowChg = 1;
                     m_vWindinfo1[v].WinShowLine = 0;
                 }else{
                     m_vWindinfo1[v].WinShowLine = 1;
@@ -803,20 +811,20 @@ static void Vdp2GenerateWindowInfo(void)
     // no BG uses Window1
     }else{
 
-		if( m_vWindinfo1 != NULL )
-		{
- 			free(m_vWindinfo1);
-			m_vWindinfo1 = NULL;
-		}
-		m_vWindinfo1_size = 0;
+        if( m_vWindinfo1 != NULL )
+        {
+             free(m_vWindinfo1);
+            m_vWindinfo1 = NULL;
+        }
+        m_vWindinfo1_size = 0;
     }
 
-	if( m_b1WindowChg || m_b0WindowChg )
-	{
-		//if you need event callback, call it here.
-		m_b0WindowChg = 0;
-		m_b1WindowChg = 0;
-	}
+    if( m_b1WindowChg || m_b0WindowChg )
+    {
+        //if you need event callback, call it here.
+        m_b0WindowChg = 0;
+        m_b1WindowChg = 0;
+    }
 
 }
 
@@ -824,93 +832,93 @@ static void Vdp2GenerateWindowInfo(void)
 static INLINE int Vdp2CheckWindow(vdp2draw_struct *info, int x, int y, int area, vdp2WindowInfo * vWindinfo )
 {
    // inside
-	if( area == 1 )
-	{
-		if( vWindinfo[y].WinShowLine == 0  ) return 0;
-		if( x > vWindinfo[y].WinHStart && x < vWindinfo[y].WinHEnd )
-		{
-			return 1;
-		}else{
-			return 0;
-		}
-	// outside
-	}else{
-		if( vWindinfo[y].WinShowLine == 0  ) return 1;
-		if( x < vWindinfo[y].WinHStart ) return 1;
-		if( x > vWindinfo[y].WinHEnd ) return 1;
-		return 0;
-	}
-	return 0;
+    if( area == 1 )
+    {
+        if( vWindinfo[y].WinShowLine == 0  ) return 0;
+        if( x > vWindinfo[y].WinHStart && x < vWindinfo[y].WinHEnd )
+        {
+            return 1;
+        }else{
+            return 0;
+        }
+    // outside
+    }else{
+        if( vWindinfo[y].WinShowLine == 0  ) return 1;
+        if( x < vWindinfo[y].WinHStart ) return 1;
+        if( x > vWindinfo[y].WinHEnd ) return 1;
+        return 0;
+    }
+    return 0;
 }
 
 // 0 .. outside,1 .. inside 
 static int FASTCALL Vdp2CheckWindowDot(vdp2draw_struct *info, int x, int y )
 {
-	if( info->bEnWin0 != 0 &&  info->bEnWin1 == 0 )
-	{
-		return Vdp2CheckWindow(info, x, y, info->WindowArea0, m_vWindinfo0 );
-	}else if( info->bEnWin0 == 0 &&  info->bEnWin1 != 0 )
-	{
-		return Vdp2CheckWindow(info, x, y, info->WindowArea1, m_vWindinfo1 );
-	}else if( info->bEnWin0 != 0 &&  info->bEnWin1 != 0 )
-	{
-		if( info->LogicWin == 0 )
-		{
-			return (Vdp2CheckWindow(info, x, y, info->WindowArea0, m_vWindinfo0 )&
-					Vdp2CheckWindow(info, x, y, info->WindowArea1, m_vWindinfo1 ));
-		}else{
-			return (Vdp2CheckWindow(info, x, y, info->WindowArea0, m_vWindinfo0 )|
-					Vdp2CheckWindow(info, x, y, info->WindowArea1, m_vWindinfo1 ));
-		}
-	}
-	return 0;
+    if( info->bEnWin0 != 0 &&  info->bEnWin1 == 0 )
+    {
+        return Vdp2CheckWindow(info, x, y, info->WindowArea0, m_vWindinfo0 );
+    }else if( info->bEnWin0 == 0 &&  info->bEnWin1 != 0 )
+    {
+        return Vdp2CheckWindow(info, x, y, info->WindowArea1, m_vWindinfo1 );
+    }else if( info->bEnWin0 != 0 &&  info->bEnWin1 != 0 )
+    {
+        if( info->LogicWin == 0 )
+        {
+            return (Vdp2CheckWindow(info, x, y, info->WindowArea0, m_vWindinfo0 )&
+                    Vdp2CheckWindow(info, x, y, info->WindowArea1, m_vWindinfo1 ));
+        }else{
+            return (Vdp2CheckWindow(info, x, y, info->WindowArea0, m_vWindinfo0 )|
+                    Vdp2CheckWindow(info, x, y, info->WindowArea1, m_vWindinfo1 ));
+        }
+    }
+    return 0;
 }
 
 // 0 .. all outsize, 1~3 .. partly inside, 4.. all inside 
 static int FASTCALL Vdp2CheckWindowRange(vdp2draw_struct *info, int x, int y, int w, int h )
 {
-	int rtn=0;
-	
-	if( info->bEnWin0 != 0 &&  info->bEnWin1 == 0 )
-	{
-		rtn += Vdp2CheckWindow(info, x, y, info->WindowArea0, m_vWindinfo0 );
-		rtn += Vdp2CheckWindow(info, x+w, y, info->WindowArea0, m_vWindinfo0 );
-		rtn += Vdp2CheckWindow(info, x+w, y+h, info->WindowArea0, m_vWindinfo0 );
-		rtn += Vdp2CheckWindow(info, x, y+h, info->WindowArea0, m_vWindinfo0 );
-		return rtn;
-	}else if( info->bEnWin0 == 0 &&  info->bEnWin1 != 0 )
-	{
-		rtn += Vdp2CheckWindow(info, x, y, info->WindowArea1, m_vWindinfo1 );
-		rtn += Vdp2CheckWindow(info, x+w, y, info->WindowArea1, m_vWindinfo1 );
-		rtn += Vdp2CheckWindow(info, x+w, y+h, info->WindowArea1, m_vWindinfo1 );
-		rtn += Vdp2CheckWindow(info, x, y+h, info->WindowArea1, m_vWindinfo1 );
-		return rtn;	   
-	}else if( info->bEnWin0 != 0 &&  info->bEnWin1 != 0 )
-	{
-		if( info->LogicWin == 0 )
-		{
-			rtn += (Vdp2CheckWindow(info, x, y, info->WindowArea0, m_vWindinfo0 ) & 
-					Vdp2CheckWindow(info, x, y, info->WindowArea1, m_vWindinfo1 ) );
-			rtn += (Vdp2CheckWindow(info, x+w, y, info->WindowArea0, m_vWindinfo0 )& 
-					Vdp2CheckWindow(info, x+w, y, info->WindowArea1, m_vWindinfo1 ) );
-			rtn += (Vdp2CheckWindow(info, x+w, y+h, info->WindowArea0, m_vWindinfo0 )& 
-					Vdp2CheckWindow(info, x+w, y+h, info->WindowArea1, m_vWindinfo1 ) );
-			rtn += (Vdp2CheckWindow(info, x, y+h, info->WindowArea0, m_vWindinfo0 ) & 
-					Vdp2CheckWindow(info, x, y+h, info->WindowArea1, m_vWindinfo1 ) );
-			return rtn;
-		}else{
-			rtn += (Vdp2CheckWindow(info, x, y, info->WindowArea0, m_vWindinfo0 ) | 
-					Vdp2CheckWindow(info, x, y, info->WindowArea1, m_vWindinfo1 ) );
-			rtn += (Vdp2CheckWindow(info, x+w, y, info->WindowArea0, m_vWindinfo0 ) | 
-					Vdp2CheckWindow(info, x+w, y, info->WindowArea1, m_vWindinfo1 ) );
-			rtn += (Vdp2CheckWindow(info, x+w, y+h, info->WindowArea0, m_vWindinfo0 ) | 
-					Vdp2CheckWindow(info, x+w, y+h, info->WindowArea1, m_vWindinfo1 ) );
-			rtn += (Vdp2CheckWindow(info, x, y+h, info->WindowArea0, m_vWindinfo0 ) | 
-					Vdp2CheckWindow(info, x, y+h, info->WindowArea1, m_vWindinfo1 ) );
-			return rtn;	   
-		}  
-	}
-	return 0;
+    int rtn=0;
+    
+    if( info->bEnWin0 != 0 &&  info->bEnWin1 == 0 )
+    {
+        rtn += Vdp2CheckWindow(info, x, y, info->WindowArea0, m_vWindinfo0 );
+        rtn += Vdp2CheckWindow(info, x+w, y, info->WindowArea0, m_vWindinfo0 );
+        rtn += Vdp2CheckWindow(info, x+w, y+h, info->WindowArea0, m_vWindinfo0 );
+        rtn += Vdp2CheckWindow(info, x, y+h, info->WindowArea0, m_vWindinfo0 );
+        return rtn;
+    }else if( info->bEnWin0 == 0 &&  info->bEnWin1 != 0 )
+    {
+        rtn += Vdp2CheckWindow(info, x, y, info->WindowArea1, m_vWindinfo1 );
+        rtn += Vdp2CheckWindow(info, x+w, y, info->WindowArea1, m_vWindinfo1 );
+        rtn += Vdp2CheckWindow(info, x+w, y+h, info->WindowArea1, m_vWindinfo1 );
+        rtn += Vdp2CheckWindow(info, x, y+h, info->WindowArea1, m_vWindinfo1 );
+        return rtn;       
+    }else if( info->bEnWin0 != 0 &&  info->bEnWin1 != 0 )
+    {
+        if( info->LogicWin == 0 )
+        {
+            rtn += (Vdp2CheckWindow(info, x, y, info->WindowArea0, m_vWindinfo0 ) & 
+                    Vdp2CheckWindow(info, x, y, info->WindowArea1, m_vWindinfo1 ) );
+            rtn += (Vdp2CheckWindow(info, x+w, y, info->WindowArea0, m_vWindinfo0 )& 
+                    Vdp2CheckWindow(info, x+w, y, info->WindowArea1, m_vWindinfo1 ) );
+            rtn += (Vdp2CheckWindow(info, x+w, y+h, info->WindowArea0, m_vWindinfo0 )& 
+                    Vdp2CheckWindow(info, x+w, y+h, info->WindowArea1, m_vWindinfo1 ) );
+            rtn += (Vdp2CheckWindow(info, x, y+h, info->WindowArea0, m_vWindinfo0 ) & 
+                    Vdp2CheckWindow(info, x, y+h, info->WindowArea1, m_vWindinfo1 ) );
+            return rtn;
+        }else{
+            rtn += (Vdp2CheckWindow(info, x, y, info->WindowArea0, m_vWindinfo0 ) | 
+                    Vdp2CheckWindow(info, x, y, info->WindowArea1, m_vWindinfo1 ) );
+            rtn += (Vdp2CheckWindow(info, x+w, y, info->WindowArea0, m_vWindinfo0 ) | 
+                    Vdp2CheckWindow(info, x+w, y, info->WindowArea1, m_vWindinfo1 ) );
+            rtn += (Vdp2CheckWindow(info, x+w, y+h, info->WindowArea0, m_vWindinfo0 ) | 
+                    Vdp2CheckWindow(info, x+w, y+h, info->WindowArea1, m_vWindinfo1 ) );
+            rtn += (Vdp2CheckWindow(info, x, y+h, info->WindowArea0, m_vWindinfo0 ) | 
+                    Vdp2CheckWindow(info, x, y+h, info->WindowArea1, m_vWindinfo1 ) );
+            return rtn;       
+        }  
+    }
+    return 0;
 }
 
 
@@ -930,22 +938,22 @@ static void FASTCALL Vdp2DrawInsideCell(vdp2draw_struct *info, YglTexture *textu
                u16 dot = T1ReadWord(Vdp2Ram, info->charaddr & 0x7FFFF);
 
                info->charaddr += 2;
-			   if( Vdp2CheckWindowDot(info, info->x+j, info->y+i )==0) color = 0x00000000;
+               if( Vdp2CheckWindowDot(info, info->x+j, info->y+i )==0) color = 0x00000000;
                else if (!(dot & 0xF000) && info->transparencyenable) color = 0x00000000;
                else color = Vdp2ColorRamGetColor(info->coloroffset + ((info->paladdr << 4) | ((dot & 0xF000) >> 12)), info->alpha);
                *texture->textdata++ = info->PostPixelFetchCalc(info, color);
-			   
-			   if( Vdp2CheckWindowDot(info, info->x+j+1, info->y+i )==0) color = 0x00000000;
+               
+               if( Vdp2CheckWindowDot(info, info->x+j+1, info->y+i )==0) color = 0x00000000;
                else if (!(dot & 0xF00) && info->transparencyenable) color = 0x00000000;
                else color = Vdp2ColorRamGetColor(info->coloroffset + ((info->paladdr << 4) | ((dot & 0xF00) >> 8)), info->alpha);
                *texture->textdata++ = info->PostPixelFetchCalc(info, color);
-			   
-			   if( Vdp2CheckWindowDot(info, info->x+j+2, info->y+i )==0) color = 0x00000000;
+               
+               if( Vdp2CheckWindowDot(info, info->x+j+2, info->y+i )==0) color = 0x00000000;
                else if (!(dot & 0xF0) && info->transparencyenable) color = 0x00000000;
                else color = Vdp2ColorRamGetColor(info->coloroffset + ((info->paladdr << 4) | ((dot & 0xF0) >> 4)), info->alpha);
                *texture->textdata++ = info->PostPixelFetchCalc(info, color);
-			   
-			   if( Vdp2CheckWindowDot(info, info->x+j+3, info->y+i )==0) color = 0x00000000;
+               
+               if( Vdp2CheckWindowDot(info, info->x+j+3, info->y+i )==0) color = 0x00000000;
                else if (!(dot & 0xF) && info->transparencyenable) color = 0x00000000;
                else color = Vdp2ColorRamGetColor(info->coloroffset + ((info->paladdr << 4) | (dot & 0xF)), info->alpha);
                *texture->textdata++ = info->PostPixelFetchCalc(info, color);
@@ -961,12 +969,12 @@ static void FASTCALL Vdp2DrawInsideCell(vdp2draw_struct *info, YglTexture *textu
                u16 dot = T1ReadWord(Vdp2Ram, info->charaddr & 0x7FFFF);
 
                info->charaddr += 2;
-			   if( Vdp2CheckWindowDot(info, info->x+j, info->y+i )==0) color = 0x00000000;
+               if( Vdp2CheckWindowDot(info, info->x+j, info->y+i )==0) color = 0x00000000;
                else if (!(dot & 0xFF00) && info->transparencyenable) color = 0x00000000;
                else color = Vdp2ColorRamGetColor(info->coloroffset + ((info->paladdr << 4) | ((dot & 0xFF00) >> 8)), info->alpha);
                *texture->textdata++ = info->PostPixelFetchCalc(info, color);
-			   
-			   if( Vdp2CheckWindowDot(info, info->x+j+1, info->y+i )==0) color = 0x00000000;
+               
+               if( Vdp2CheckWindowDot(info, info->x+j+1, info->y+i )==0) color = 0x00000000;
                else if (!(dot & 0xFF) && info->transparencyenable) color = 0x00000000;
                else color = Vdp2ColorRamGetColor(info->coloroffset + ((info->paladdr << 4) | (dot & 0xFF)), info->alpha);
                *texture->textdata++ = info->PostPixelFetchCalc(info, color);
@@ -980,13 +988,13 @@ static void FASTCALL Vdp2DrawInsideCell(vdp2draw_struct *info, YglTexture *textu
         for(j = 0;j < info->cellw;j++)
         {
           u16 dot = T1ReadWord(Vdp2Ram, info->charaddr & 0x7FFFF);
-		  
-		  if( Vdp2CheckWindowDot(info, info->x+j, info->y+i )==0) color = 0x00000000;
+          
+          if( Vdp2CheckWindowDot(info, info->x+j, info->y+i )==0) color = 0x00000000;
           else if ((dot == 0) && info->transparencyenable) color = 0x00000000;
           else color = Vdp2ColorRamGetColor(info->coloroffset + dot, info->alpha);
           info->charaddr += 2;
           *texture->textdata++ = info->PostPixelFetchCalc(info, color);
-	}
+    }
         texture->textdata += texture->w;
       }
       break;
@@ -997,12 +1005,12 @@ static void FASTCALL Vdp2DrawInsideCell(vdp2draw_struct *info, YglTexture *textu
         {
           u16 dot = T1ReadWord(Vdp2Ram, info->charaddr & 0x7FFFF);
           info->charaddr += 2;
-		  
-		  if( Vdp2CheckWindowDot(info, info->x+j, info->y+i )==0) color = 0x00000000;
+          
+          if( Vdp2CheckWindowDot(info, info->x+j, info->y+i )==0) color = 0x00000000;
           else if (!(dot & 0x8000) && info->transparencyenable) color = 0x00000000;
-			else color = SAT2YAB1(0xFF, dot);
+            else color = SAT2YAB1(0xFF, dot);
           *texture->textdata++ = info->PostPixelFetchCalc(info, color);
-		}
+        }
         texture->textdata += texture->w;
       }
       break;
@@ -1016,8 +1024,8 @@ static void FASTCALL Vdp2DrawInsideCell(vdp2draw_struct *info, YglTexture *textu
           info->charaddr += 2;
           dot2 = T1ReadWord(Vdp2Ram, info->charaddr & 0x7FFFF);
           info->charaddr += 2;
-		  
-		  if( Vdp2CheckWindowDot(info, info->x+j, info->y+i )==0) color = 0x00000000;
+          
+          if( Vdp2CheckWindowDot(info, info->x+j, info->y+i )==0) color = 0x00000000;
           else if (!(dot1 & 0x8000) && info->transparencyenable) color = 0x00000000;
           else color = SAT2YAB2(info->alpha, dot1, dot2);
           *texture->textdata++ = info->PostPixelFetchCalc(info, color);
@@ -1088,7 +1096,7 @@ static void FASTCALL Vdp2DrawCell(vdp2draw_struct *info, YglTexture *texture)
           else color = Vdp2ColorRamGetColor(info->coloroffset + dot, info->alpha);
           info->charaddr += 2;
           *texture->textdata++ = info->PostPixelFetchCalc(info, color);
-	}
+    }
         texture->textdata += texture->w;
       }
       break;
@@ -1102,7 +1110,7 @@ static void FASTCALL Vdp2DrawCell(vdp2draw_struct *info, YglTexture *texture)
           if (!(dot & 0x8000) && info->transparencyenable) color = 0x00000000;
           else color = SAT2YAB1(0xFF, dot);
           *texture->textdata++ = info->PostPixelFetchCalc(info, color);
-		}
+        }
         texture->textdata += texture->w;
       }
       break;
@@ -1135,7 +1143,7 @@ static void Vdp2DrawPattern(vdp2draw_struct *info, YglTexture *texture)
    YglSprite tile;
    int winmode=0;
    tile.dst = 0;
-	
+    
    tile.w = tile.h = info->patternpixelwh;
    tile.flip = info->flipfunction;
 
@@ -1186,7 +1194,7 @@ static void Vdp2DrawPattern(vdp2draw_struct *info, YglTexture *texture)
          return;
 
       }else{ // all inside, draw normally
-	  }
+      }
    }
 
    if (1 == YglIsCached(cacheaddr,&c) )
@@ -1733,70 +1741,8 @@ static void SetSaturnResolution(int width, int height)
 
 //////////////////////////////////////////////////////////////////////////////
 
-#ifdef USEMICSHADERS
-
-#ifndef GL_FRAGMENT_SHADER
-#define GL_FRAGMENT_SHADER 0x8B30
-#endif
-#ifndef GL_VERTEX_SHADER
-#define GL_VERTEX_SHADER 0x8B31
-#endif
-
-GLuint (STDCALL *pfglCreateProgram)(void);
-GLuint (STDCALL *pfglCreateShader)(GLenum);
-void (STDCALL *pfglShaderSource)(GLuint,GLsizei,const GLchar **,const GLint *);
-void (STDCALL *pfglCompileShader)(GLuint);
-void (STDCALL *pfglAttachShader)(GLuint,GLuint);
-void (STDCALL *pfglLinkProgram)(GLuint);
-void (STDCALL *pfglUseProgram)(GLuint);
-GLint (STDCALL *pfglGetUniformLocation)(GLuint,const GLchar *);
-void (STDCALL *pfglUniform1i)(GLint,GLint);
-void (STDCALL *pfglGetShaderInfoLog)(GLuint,GLsizei,GLsizei *,GLchar *);
-
-GLuint shaderProgram;
-GLuint saturnMeshGouraudFragmentShader;
-int useShaders=0;
-
-// RGBA pattern that assures that no mesh effect or gouraud shading is applied
-const unsigned char noMeshGouraud[16] = {0x80,0x80,0x80,0xFF,0x80,0x80,0x80,0xFF,0x80,0x80,0x80,0xFF,0x80,0x80,0x80,0xFF};
-
-// This shader implements the mesh processing and gouraud shading of the VDP1.
-// Mesh processing is only applied when gl_Color.a==0 (set by VIDOGLVdp1PolygonDraw).
-const GLchar saturnMeshGouraudFragmentShaderCode[] = \
-"uniform sampler2D mytexture;\n" \
-"void main() {\n" \
-"  vec4 baseColor = texture2D(mytexture, gl_TexCoord[0].st);\n" \
-"  float red,green,blue;\n" \
-"  int xlsb = mod(floor(gl_FragCoord.x),2);\n" \
-"  int ylsb = mod(floor(gl_FragCoord.y),2);\n" \
-"  red = clamp(baseColor.r + (gl_Color.r - 0.5), 0.0, 1.0);\n" \
-"  green = clamp(baseColor.g + (gl_Color.g - 0.5), 0.0, 1.0);\n" \
-"  blue = clamp(baseColor.b + (gl_Color.b - 0.5), 0.0, 1.0);\n" \
-"  if (gl_Color.a == 0.0) {\n" \
-"    if ((xlsb+ylsb) != 1) {\n" \
-"      gl_FragColor = vec4(red, green, blue, baseColor.a);\n" \
-"    } else {\n" \
-"      gl_FragColor = vec4(red, green, blue, 0.0);\n" \
-"    }\n" \
-"  } else {\n" \
-"    gl_FragColor = vec4(red, green, blue, baseColor.a);\n" \
-"  }\n" \
-"}\n";
-const GLchar *saturnMeshGouraudFragmentShaderSource[] = {saturnMeshGouraudFragmentShaderCode, NULL};
-
-#ifdef HAVE_GLXGETPROCADDRESS
-void STDCALL * (*yglGetProcAddress)(const char *szProcName) = (void STDCALL *(*)(const char *))glXGetProcAddress;
-#elif WIN32
-void STDCALL * (*yglGetProcAddress)(const char *szProcName) = wglGetProcAddress;
-#endif
-#endif
-
 int VIDOGLInit(void)
 {
-#ifdef USEMICSHADERS
-   GLint mytexture;
-   GLchar shaderInfoLog[256];
-#endif
 
    if (YglInit(1024, 1024, 8) != 0)
       return -1;
@@ -1805,51 +1751,6 @@ int VIDOGLInit(void)
 
    vdp1wratio = 1;
    vdp1hratio = 1;
-
-#ifdef USEMICSHADERS
-   // Set up fragment shader
-   useShaders = 0;
-   pfglCreateProgram = yglGetProcAddress("glCreateProgram");
-   pfglCreateShader = yglGetProcAddress("glCreateShader");
-   pfglCompileShader = yglGetProcAddress("glCompileShader");
-   pfglAttachShader = yglGetProcAddress("glAttachShader");
-   pfglLinkProgram = yglGetProcAddress("glLinkProgram");
-   pfglUseProgram = yglGetProcAddress("glUseProgram");
-   pfglShaderSource = yglGetProcAddress("glShaderSource");
-   pfglGetUniformLocation = yglGetProcAddress("glGetUniformLocation");
-   pfglUniform1i = yglGetProcAddress("glUniform1i");
-   pfglGetShaderInfoLog = yglGetProcAddress("glGetShaderInfoLog");
-
-   if (pfglCreateProgram && pfglCreateShader && pfglCompileShader && pfglShaderSource &&
-       pfglAttachShader && pfglLinkProgram && pfglUseProgram && pfglGetUniformLocation &&
-       pfglUniform1i)
-   {
-      shaderProgram = pfglCreateProgram();
-      if (shaderProgram)
-      {
-	     saturnMeshGouraudFragmentShader = pfglCreateShader(GL_FRAGMENT_SHADER);
-		 if (saturnMeshGouraudFragmentShader)
-		 {
-		    useShaders = 1;
-		    pfglShaderSource(saturnMeshGouraudFragmentShader, 1, saturnMeshGouraudFragmentShaderSource, NULL);
-		    pfglCompileShader(saturnMeshGouraudFragmentShader);
-		    pfglGetShaderInfoLog(saturnMeshGouraudFragmentShader,255,NULL,shaderInfoLog);
-		    pfglAttachShader(shaderProgram, saturnMeshGouraudFragmentShader);
-		    pfglLinkProgram(shaderProgram);
-		    mytexture = pfglGetUniformLocation(shaderProgram, (const GLchar *)"mytexture");
-		    pfglUniform1i(mytexture, 0);
-		 }
-	  }
-   }
-
-
-   /*FILE *fp;
-   fp = fopen("yashader.txt", "wb");
-   fprintf(fp, "%p %p %p %p %p %p %p useShaders=%d\r\n",pfglCreateProgram,pfglCreateShader,pfglCompileShader,
-   pfglAttachShader,pfglLinkProgram,pfglUseProgram,pfglShaderSource,useShaders);
-   fputs(shaderInfoLog,fp);
-   fclose(fp);*/
-#endif
 
    return 0;
 }
@@ -1955,18 +1856,16 @@ void VIDOGLVdp1NormalSpriteDraw(void)
    vdp1cmd_struct cmd;
    YglSprite sprite;
    YglTexture texture;
-   YglCache c;
+   YglCache cash;
    float* pcache;   
    u32 tmp;
    s16 x, y;
    u16 CMDPMOD;
-#ifdef USEMICSHADERS
-   YglColor colors;
    u16 color2;
-   u8 mesh;
+   float mesh;
+   float col[4*4];
    int i;
-#endif
-
+   
    Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
    sprite.dst=0;
 
@@ -1994,55 +1893,63 @@ void VIDOGLVdp1NormalSpriteDraw(void)
 
    CMDPMOD = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
 
-#ifdef USEMICSHADERS
-   mesh = 0xFF;
-   if (CMDPMOD & 0x100)
-      mesh = 0x00;
-
-   // Check if the Gouraud shading bit is set and the color mode is RGB
-   if ((CMDPMOD & 4) && ((CMDPMOD & 0x38) == 0x28))
+   if ( (CMDPMOD & 4) || (CMDPMOD & 0x100) )
    {
-      for (i=0; i<4; i++)
-	  {
-	     color2 = T1ReadWord(Vdp1Ram, (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1C) << 3) + (i << 1));
-	     colors.rgba[(i << 2) + 0] = (color2 & 0x001F) << 3;
-             colors.rgba[(i << 2) + 1] = (color2 & 0x03E0) >> 2;
-             colors.rgba[(i << 2) + 2] = (color2 & 0x7C00) >> 7;
-	     colors.rgba[(i << 2) + 3] = mesh;
-	  }
+      if (CMDPMOD & 0x100)
+         mesh = 0.5f;
+      else
+         mesh = 1.0f;
+   
+      if( (CMDPMOD & 4) )
+      {
+         for (i=0; i<4; i++)
+         {
+            color2 = T1ReadWord(Vdp1Ram, (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1C) << 3) + (i << 1));
+            col[(i << 2) + 0] = (float)((color2 & 0x001F))/(float)(0x1F)-0.5f;
+            col[(i << 2) + 1] = (float)((color2 & 0x03E0)>>5)/(float)(0x1F)-0.5f;
+            col[(i << 2) + 2] = (float)((color2 & 0x7C00)>>10)/(float)(0x1F)-0.5f;
+            col[(i << 2) + 3] = mesh;
+         }
+      }else{
+         for (i=0; i<4; i++)
+         {
+            col[(i << 2) + 0] = 0.0f;
+            col[(i << 2) + 1] = 0.0f;
+            col[(i << 2) + 2] = 0.0f;
+            col[(i << 2) + 3] = mesh;
+         }         
+      }
+     
+      if (sprite.w > 0 && sprite.h > 1)
+      {
+         if (1 == YglIsCached(tmp,&cash) )
+         {
+            YglCacheQuadGrowShading(&sprite, col,&cash);
+            return;
+         }
+
+         pcache = YglQuadGrowShading(&sprite, &texture,col,&cash);
+         YglCacheAdd(tmp,&cash);
+         Vdp1ReadTexture(&cmd, &sprite, &texture);
+         return;
+      }
+   
    }
    else // No Gouraud shading, use same color for all 4 vertices
    {
-	  for (i=0; i<4; i++)
-	  {
-	     colors.rgba[(i << 2) + 0] = 0x80;
-             colors.rgba[(i << 2) + 1] = 0x80;
-             colors.rgba[(i << 2) + 2] = 0x80;
-	     colors.rgba[(i << 2) + 3] = mesh;
-	  }
-   }
-#endif
-
-   if (sprite.w > 0 && sprite.h > 1)
-   {
-      if (1 == YglIsCached(tmp,&c) )
+      if (sprite.w > 0 && sprite.h > 1)
       {
-#ifdef USEMICSHADERS
-         YglCachedQuad2(&sprite, &c, &colors);
-#else
-         YglCachedQuad(&sprite, &c);
-#endif
-         return;
+         if (1 == YglIsCached(tmp,&cash) )
+         {
+            YglCachedQuad(&sprite, &cash);
+            return;
+         }
+
+         pcache = YglQuad(&sprite, &texture,&cash);
+         YglCacheAdd(tmp,&cash);
+
+         Vdp1ReadTexture(&cmd, &sprite, &texture);
       }
-
-#ifdef USEMICSHADERS
-      YglQuad2(&sprite, &texture, &colors,&c);
-#else
-      YglQuad(&sprite, &texture,&c);
-#endif
-      YglCacheAdd(tmp, &c);
-
-      Vdp1ReadTexture(&cmd, &sprite, &texture);
    }
 }
 
@@ -2053,21 +1960,19 @@ void VIDOGLVdp1ScaledSpriteDraw(void)
    vdp1cmd_struct cmd;
    YglSprite sprite;
    YglTexture texture;
-   YglCache c;
+   YglCache cash;
    float* pcache;   
    u32 tmp;
    s16 rw=0, rh=0;
    s16 x, y;
    u16 CMDPMOD;
-#ifdef USEMICSHADERS
-   YglColor colors;
    u16 color2;
-   u8 mesh;
+   float mesh;
+   float col[4*4];
    int i;
-#endif
 
    Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
-	sprite.dst=0;
+   sprite.dst=0;
 
    x = cmd.CMDXA + Vdp1Regs->localX;
    y = cmd.CMDYA + Vdp1Regs->localY;
@@ -2164,58 +2069,67 @@ void VIDOGLVdp1ScaledSpriteDraw(void)
 
    CMDPMOD = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
 
-#ifdef USEMICSHADERS
-   mesh = 0xFF;
-   if (CMDPMOD & 0x100)
-      mesh = 0x00;
-
-   // Check if the Gouraud shading bit is set and the color mode is RGB
-   if ((CMDPMOD & 4) && ((CMDPMOD & 0x38) == 0x28))
+   Vdp1ReadPriority(&cmd, &sprite);
+   
+   if ( (CMDPMOD & 4) || (CMDPMOD & 0x100) )
    {
-      for (i=0; i<4; i++)
-	  {
-	     color2 = T1ReadWord(Vdp1Ram, (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1C) << 3) + (i << 1));
-	     colors.rgba[(i << 2) + 0] = (color2 & 0x001F) << 3;
-		 colors.rgba[(i << 2) + 1] = (color2 & 0x03E0) >> 2;
-		 colors.rgba[(i << 2) + 2] = (color2 & 0x7C00) >> 7;
-	     colors.rgba[(i << 2) + 3] = mesh;
-	  }
+      if (CMDPMOD & 0x100)
+         mesh = 0.5f;
+      else
+         mesh = 1.0f;
+   
+      if( (CMDPMOD & 4) )
+      {
+         for (i=0; i<4; i++)
+         {
+            color2 = T1ReadWord(Vdp1Ram, (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1C) << 3) + (i << 1));
+            col[(i << 2) + 0] = (float)((color2 & 0x001F))/(float)(0x1F)-0.5f;
+            col[(i << 2) + 1] = (float)((color2 & 0x03E0)>>5)/(float)(0x1F)-0.5f;
+            col[(i << 2) + 2] = (float)((color2 & 0x7C00)>>10)/(float)(0x1F)-0.5f;
+            col[(i << 2) + 3] = mesh;
+         }
+      }else{
+         for (i=0; i<4; i++)
+         {
+            col[(i << 2) + 0] = 0.0f;
+            col[(i << 2) + 1] = 0.0f;
+            col[(i << 2) + 2] = 0.0f;
+            col[(i << 2) + 3] = mesh;
+         }         
+      }
+     
+      if (sprite.w > 0 && sprite.h > 1)
+      {
+         if (1 == YglIsCached(tmp,&cash) )
+         {
+            YglCacheQuadGrowShading(&sprite, col,&cash);
+            return;
+         }
+
+         pcache = YglQuadGrowShading(&sprite, &texture,col,&cash);
+         YglCacheAdd(tmp,&cash);
+         Vdp1ReadTexture(&cmd, &sprite, &texture);
+         return;
+      }
+   
    }
    else // No Gouraud shading, use same color for all 4 vertices
    {
-	  for (i=0; i<4; i++)
-	  {
-	     colors.rgba[(i << 2) + 0] = 0x80;
-		 colors.rgba[(i << 2) + 1] = 0x80;
-		 colors.rgba[(i << 2) + 2] = 0x80;
-	     colors.rgba[(i << 2) + 3] = mesh;
-	  }
-   }
-#endif
-
-   Vdp1ReadPriority(&cmd, &sprite);
-
-   if (sprite.w > 0 && sprite.h > 1)
-   {
-      if (1 == YglIsCached(tmp,&c) )
+      if (sprite.w > 0 && sprite.h > 1)
       {
-#ifdef USEMICSHADERS
-         YglCachedQuad2(&sprite, &c, &colors);
-#else
-         YglCachedQuad(&sprite, &c);
-#endif
-         return;
+         if (1 == YglIsCached(tmp,&cash) )
+         {
+            YglCachedQuad(&sprite, &cash);
+            return;
+         }
+
+         pcache = YglQuad(&sprite, &texture,&cash);
+         YglCacheAdd(tmp,&cash);
+
+         Vdp1ReadTexture(&cmd, &sprite, &texture);
       }
-
-#ifdef USEMICSHADERS
-      pcache = YglQuad2(&sprite, &texture, &colors,&c);
-#else
-      pcache = YglQuad(&sprite, &texture,&c);
-#endif
-      YglCacheAdd(tmp,&c);
-
-      Vdp1ReadTexture(&cmd, &sprite, &texture);
    }
+  
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2226,16 +2140,15 @@ void VIDOGLVdp1DistortedSpriteDraw(void)
    vdp1cmd_struct cmd;
    YglSprite sprite;
    YglTexture texture;
-   YglCache c;
+   YglCache cash;
    float * pcache;
    u32 tmp;
    u16 CMDPMOD;
-#ifdef USEMICSHADERS
-   YglColor colors;
    u16 color2;
-   u8 mesh;
+   float mesh;
    int i;
-#endif
+   float col[4*4];
+   
 
    Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
 
@@ -2261,58 +2174,70 @@ void VIDOGLVdp1DistortedSpriteDraw(void)
 
    CMDPMOD = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
 
-#ifdef USEMICSHADERS
-   mesh = 0xFF;
-   if (CMDPMOD & 0x100)
-      mesh = 0x00;
+   Vdp1ReadPriority(&cmd, &sprite);
+   
 
    // Check if the Gouraud shading bit is set and the color mode is RGB
-   if ((CMDPMOD & 4) && ((CMDPMOD & 0x38) == 0x28))
+   if ( (CMDPMOD & 4) || (CMDPMOD & 0x100) )
    {
-      for (i=0; i<4; i++)
-	  {
-	     color2 = T1ReadWord(Vdp1Ram, (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1C) << 3) + (i << 1));
-	     colors.rgba[(i << 2) + 0] = (color2 & 0x001F) << 3;
-		 colors.rgba[(i << 2) + 1] = (color2 & 0x03E0) >> 2;
-		 colors.rgba[(i << 2) + 2] = (color2 & 0x7C00) >> 7;
-	     colors.rgba[(i << 2) + 3] = mesh;
-	  }
+      if (CMDPMOD & 0x100)
+         mesh = 0.5f;
+      else
+         mesh = 1.0f;
+   
+      if( (CMDPMOD & 4) )
+      {
+         for (i=0; i<4; i++)
+         {
+            color2 = T1ReadWord(Vdp1Ram, (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1C) << 3) + (i << 1));
+            col[(i << 2) + 0] = (float)((color2 & 0x001F))/(float)(0x1F)-0.5f;
+            col[(i << 2) + 1] = (float)((color2 & 0x03E0)>>5)/(float)(0x1F)-0.5f;
+            col[(i << 2) + 2] = (float)((color2 & 0x7C00)>>10)/(float)(0x1F)-0.5f;
+            col[(i << 2) + 3] = mesh;
+         }
+      }else{
+         for (i=0; i<4; i++)
+         {
+            col[(i << 2) + 0] = 0.0f;
+            col[(i << 2) + 1] = 0.0f;
+            col[(i << 2) + 2] = 0.0f;
+            col[(i << 2) + 3] = mesh;
+         }         
+      }
+     
+      if (sprite.w > 0 && sprite.h > 1)
+      {
+         if (1 == YglIsCached(tmp,&cash) )
+         {
+            YglCacheQuadGrowShading(&sprite, col,&cash);
+            return;
+         }
+
+         pcache = YglQuadGrowShading(&sprite, &texture,col,&cash);
+         //pcache = YglQuad(&sprite, &texture,&c);
+         YglCacheAdd(tmp,&cash);
+         Vdp1ReadTexture(&cmd, &sprite, &texture);
+         return;
+      }
+   
    }
    else // No Gouraud shading, use same color for all 4 vertices
    {
-	  for (i=0; i<4; i++)
-	  {
-	     colors.rgba[(i << 2) + 0] = 0x80;
-		 colors.rgba[(i << 2) + 1] = 0x80;
-		 colors.rgba[(i << 2) + 2] = 0x80;
-	     colors.rgba[(i << 2) + 3] = mesh;
-	  }
-   }
-#endif
-
-   Vdp1ReadPriority(&cmd, &sprite);
-
-   if (sprite.w > 0 && sprite.h > 1)
-   {
-      if (1 == YglIsCached(tmp,&c) )
+      if (sprite.w > 0 && sprite.h > 1)
       {
-#ifdef USEMICSHADERS
-         YglCachedQuad2(&sprite, &c, &colors);
-#else
-         YglCachedQuad(&sprite, &c);
-#endif
-         return;
+         if (1 == YglIsCached(tmp,&cash) )
+         {
+            YglCachedQuad(&sprite, &cash);
+            return;
+         }
+
+         pcache = YglQuad(&sprite, &texture,&cash);
+         YglCacheAdd(tmp,&cash);
+
+         Vdp1ReadTexture(&cmd, &sprite, &texture);
       }
-
-#ifdef USEMICSHADERS
-      pcache = YglQuad2(&sprite, &texture, &colors,&c);
-#else
-      pcache = YglQuad(&sprite, &texture,&c);
-#endif
-      YglCacheAdd(tmp,&c);
-
-      Vdp1ReadTexture(&cmd, &sprite, &texture);
    }
+   return ;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2326,12 +2251,11 @@ void VIDOGLVdp1PolygonDraw(void)
    u8 alpha;
    YglSprite polygon;
    YglTexture texture;
-#ifdef USEMICSHADERS
-   YglColor colors;
-   u8 mesh;
    u16 color2;
+   float mesh;
    int i;
-#endif
+   float col[4*4];
+   int gouraud=0;
 
    polygon.dst = 0;
    X[0] = Vdp1Regs->localX + T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0xC);
@@ -2354,34 +2278,36 @@ void VIDOGLVdp1PolygonDraw(void)
    if (color == 0)
       alpha = 0;
 
-#ifdef USEMICSHADERS
-   mesh = 0xFF;
-   if (CMDPMOD & 0x100)
-      mesh = 0x00;
-
    // Check if the Gouraud shading bit is set and the color mode is RGB
-   if ((CMDPMOD & 4) && ((CMDPMOD & 0x38) == 0x28))
+   if ( ((CMDPMOD & 4) /*&& ((CMDPMOD & 0x38) == 0x28)*/) ||  (CMDPMOD & 0x100) )
    {
-      for (i=0; i<4; i++)
-	  {
-	     color2 = T1ReadWord(Vdp1Ram, (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1C) << 3) + (i << 1));
-	     colors.rgba[(i << 2) + 0] = (color2 & 0x001F) << 3;
-		 colors.rgba[(i << 2) + 1] = (color2 & 0x03E0) >> 2;
-		 colors.rgba[(i << 2) + 2] = (color2 & 0x7C00) >> 7;
-	     colors.rgba[(i << 2) + 3] = mesh;
-	  }
+      if (CMDPMOD & 0x100)
+         mesh = 0.5f;
+      else
+         mesh = 1.0f;
+
+      if( (CMDPMOD & 4) )
+      {
+         for (i=0; i<4; i++)
+         {
+            color2 = T1ReadWord(Vdp1Ram, (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1C) << 3) + (i << 1));
+            col[(i << 2) + 0] = (float)((color2 & 0x001F))/(float)(0x1F)-0.5f;
+            col[(i << 2) + 1] = (float)((color2 & 0x03E0)>>5)/(float)(0x1F)-0.5f;
+            col[(i << 2) + 2] = (float)((color2 & 0x7C00)>>10)/(float)(0x1F)-0.5f;
+            col[(i << 2) + 3] = mesh;
+         }
+      }else{
+         for (i=0; i<4; i++)
+         {
+            col[(i << 2) + 0] = 0.0f;
+            col[(i << 2) + 1] = 0.0f;
+            col[(i << 2) + 2] = 0.0f;
+            col[(i << 2) + 3] = mesh;
+         }
+         
+      }
+     gouraud = 1;
    }
-   else // No Gouraud shading, use same color for all 4 vertices
-   {
-	  for (i=0; i<4; i++)
-	  {
-	     colors.rgba[(i << 2) + 0] = 0x80;
-		 colors.rgba[(i << 2) + 1] = 0x80;
-		 colors.rgba[(i << 2) + 2] = 0x80;
-	     colors.rgba[(i << 2) + 3] = mesh;
-	  }
-   }
-#endif
 
    if (color & 0x8000)
       polygon.priority = Vdp2Regs->PRISA & 0x7;
@@ -2411,11 +2337,12 @@ void VIDOGLVdp1PolygonDraw(void)
    polygon.h = 1;
    polygon.flip = 0;
 
-#ifdef USEMICSHADERS
-   YglQuad2(&polygon, &texture, &colors,NULL);
-#else
-   YglQuad(&polygon, &texture,NULL);
-#endif
+   if( gouraud == 1 )
+   {
+       YglQuadGrowShading(&polygon, &texture,col,NULL);
+   }else{
+      YglQuad(&polygon, &texture,NULL);
+   }
 
    if (color & 0x8000)
       *texture.textdata = COLOR_ADD(SAT2YAB1(alpha,color), vdp1cor, vdp1cog, vdp1cob);

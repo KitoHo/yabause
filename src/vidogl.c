@@ -144,6 +144,9 @@ static vdp2WindowInfo * m_vWindinfo1 = NULL;
 static int m_vWindinfo1_size = -1;
 static int m_b1WindowChg;
 
+vdp2Lineinfo lineNBG0[1024];
+vdp2Lineinfo lineNBG1[1024];
+
 //////////////////////////////////////////////////////////////////////////////
 
 static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, YglTexture *texture)
@@ -921,7 +924,53 @@ static int FASTCALL Vdp2CheckWindowRange(vdp2draw_struct *info, int x, int y, in
     return 0;
 }
 
+void Vdp2GenLineinfo( vdp2draw_struct *info )
+{
+   int bound = 0;
+   int v,i;
+   u16 val1,val2;
+   int index = 0;
+   if( info->lineinc == 0 || info->islinescroll == 0 ) return;
+   
+   if( VDPLINE_SY(info->islinescroll)) bound += 0x04;
+   if( VDPLINE_SX(info->islinescroll)) bound += 0x04;
+   if( VDPLINE_SZ(info->islinescroll)) bound += 0x04;   
+   
+   for( i = 0; i < vdp2height; i += info->lineinc )
+   {
+      index = 0;
+      if( VDPLINE_SX(info->islinescroll))
+      {
+         info->lineinfo[i].LineScrollValH = T1ReadWord(Vdp2Ram, info->linescrolltbl+(i/info->lineinc)*bound);
+         if( ( info->lineinfo[i].LineScrollValH & 0x400) ) info->lineinfo[i].LineScrollValH |= 0xF800; else info->lineinfo[i].LineScrollValH &= 0x07FF;
+         index += 4;
+      }else{
+         info->lineinfo[i].LineScrollValH = 0;
+      }
 
+      if( VDPLINE_SY(info->islinescroll))
+      {
+         info->lineinfo[i].LineScrollValV = T1ReadWord(Vdp2Ram, info->linescrolltbl+(i/info->lineinc)*bound+index);
+         if( ( info->lineinfo[i].LineScrollValV & 0x400) ) info->lineinfo[i].LineScrollValV |= 0xF800; else info->lineinfo[i].LineScrollValV &= 0x07FF;
+         index += 4;
+      }else{
+         info->lineinfo[i].LineScrollValV = 0;
+      }
+
+      if( VDPLINE_SZ(info->islinescroll))
+      {
+         val1=T1ReadWord(Vdp2Ram, info->linescrolltbl+(i/info->lineinc)*bound+index);
+         val2=T1ReadWord(Vdp2Ram, info->linescrolltbl+(i/info->lineinc)*bound+index+2);
+         //info->lineinfo[i].CoordinateIncH = (float)( (int)((val1) & 0x07) + (float)( (val2) >> 8) / 255.0f );
+         info->lineinfo[i].CoordinateIncH = (((int)((val1) & 0x07)<<8) | (int)( (val2) >> 8));
+         index += 4;
+      }else{
+         info->lineinfo[i].CoordinateIncH = 0x0100;
+      }
+
+      
+   }
+}
 //////////////////////////////////////////////////////////////////////////////
 static void FASTCALL Vdp2DrawInsideCell(vdp2draw_struct *info, YglTexture *texture)
 {
@@ -1115,20 +1164,62 @@ static void FASTCALL Vdp2DrawCell(vdp2draw_struct *info, YglTexture *texture)
       }
       break;
     case 4: // 32 BPP
-      for(i = 0;i < info->cellh;i++)
+      if( info->islinescroll ) // Nights Movie
       {
-        for(j = 0;j < info->cellw;j++)
-        {
-          u16 dot1, dot2;
-          dot1 = T1ReadWord(Vdp2Ram, info->charaddr & 0x7FFFF);
-          info->charaddr += 2;
-          dot2 = T1ReadWord(Vdp2Ram, info->charaddr & 0x7FFFF);
-          info->charaddr += 2;
-          if (!(dot1 & 0x8000) && info->transparencyenable) color = 0x00000000;
-          else color = SAT2YAB2(info->alpha, dot1, dot2);
-          *texture->textdata++ = info->PostPixelFetchCalc(info, color);
-       }
-        texture->textdata += texture->w;
+         for(i = 0;i < info->cellh;i++)
+         {
+            int sh,sv;
+            u32 baseaddr;
+            vdp2Lineinfo * line;
+         	baseaddr = (u32)info->charaddr;
+            line = &(info->lineinfo[i*info->lineinc]);
+            
+			   if( VDPLINE_SX(info->islinescroll) )
+				   sh = line->LineScrollValH+info->sh;
+			   else
+				   sh = info->sh;
+			
+			   if( VDPLINE_SY(info->islinescroll) )
+				   sv = line->LineScrollValV;
+			   else
+               sv = i+info->sv;
+
+            sh &= (info->cellw-1);
+            sv &= (info->cellh-1);
+            if( line->LineScrollValH < sh ) sv-=1; 
+
+            baseaddr += ((sh+ sv * info->cellw)<<2);
+            
+            for(j = 0;j < info->cellw;j++)
+            {
+               u16 dot1, dot2;
+               u32 addr;
+   			   if( Vdp2CheckWindowDot(info,j,i)==0 ){ *texture->textdata++=0; continue; }
+	   		   addr = baseaddr + (j<<2);
+               dot1 = T1ReadWord(Vdp2Ram, addr & 0x7FFFF);
+               dot2 = T1ReadWord(Vdp2Ram, (addr+2) & 0x7FFFF);
+               if (!(dot1 & 0x8000) && info->transparencyenable) color = 0x00000000;
+               else color = SAT2YAB2(info->alpha, dot1, dot2);
+               *texture->textdata++ = info->PostPixelFetchCalc(info, color);
+            }
+            texture->textdata += texture->w;
+         }
+      }else{
+         for(i = 0;i < info->cellh;i++)
+         {
+            for(j = 0;j < info->cellw;j++)
+            {
+               u16 dot1, dot2;
+               dot1 = T1ReadWord(Vdp2Ram, info->charaddr & 0x7FFFF);
+               info->charaddr += 2;
+               dot2 = T1ReadWord(Vdp2Ram, info->charaddr & 0x7FFFF);
+               info->charaddr += 2;
+               if (!(dot1 & 0x8000) && info->transparencyenable) color = 0x00000000;
+               else color = SAT2YAB2(info->alpha, dot1, dot2);
+               *texture->textdata++ = info->PostPixelFetchCalc(info, color);
+            }
+            texture->textdata += texture->w;
+         }
       }
       break;
   }
@@ -2589,7 +2680,7 @@ static void Vdp2DrawNBG0(void)
    YglTexture texture;
    YglCache tmpc;
    int i, i2;
-   u32 linescrolladdr;
+   u32 linescrolladdr; 
    vdp2rotationparameter_struct parameter;
    info.dst=0;
 
@@ -2686,41 +2777,22 @@ static void Vdp2DrawNBG0(void)
    info.bEnWin1 = (Vdp2Regs->WCTLA >> 3) &0x01;
    info.WindowArea1 = (Vdp2Regs->WCTLA >> 2) & 0x01; 
    info.LogicWin    = (Vdp2Regs->WCTLA >> 7 ) & 0x01;
+   
+   ReadLineScrollData(&info, Vdp2Regs->SCRCTL & 0xFF, Vdp2Regs->LSTA0.all);
+   info.lineinfo = lineNBG0;
+   Vdp2GenLineinfo( &info );
 
    if (info.enable == 1)
    {
       // NBG0 draw
       if (info.isbitmap)
       {
-         // Let's check to see if game has set up bitmap to a size smaller than
-         // 512x256 using line scroll and vertical cell scroll
-         if ((Vdp2Regs->SCRCTL & 0x7) == 0x7)
+         if(info.islinescroll) // Nights Movie
          {
-            linescrolladdr = (Vdp2Regs->LSTA0.all & 0x7FFFE) << 1;
-
-            // Let's first figure out if we have to adjust the vertical offset
-            for(i = 0; i < (info.cellh-1); i++)
-            {
-               if (T1ReadWord(Vdp2Ram, linescrolladdr+((i+1) * 8)) != 0x0000)
-               {
-                  info.y+=i;
-
-                  // Now let's figure out the height of the bitmap
-                  for (i2 = i+1; i2 < info.cellh; i2++)
-                  {
-                     if (T1ReadLong(Vdp2Ram,linescrolladdr+((i2+1)*8) + 4) == 0)
-                        break;
-                  }
-
-                  info.cellh = i2-i+1;
-
-                  break;
-               }
-            }
-
-            // Now let's fetch line 1's line scroll horizontal value, that should
-            // be the same as the bitmap width
-            info.cellw = T1ReadWord(Vdp2Ram, linescrolladdr+((i+1)*8));
+            info.sh = (Vdp2Regs->SCXIN0 & 0x7FF);
+            info.sv = (Vdp2Regs->SCYIN0 & 0x7FF);
+            info.x = 0;
+            info.y = 0;
          }
 
          info.vertices[0] = info.x * info.coordincx;
@@ -2798,9 +2870,8 @@ static void Vdp2DrawNBG1(void)
    {
       ReadBitmapSize(&info, Vdp2Regs->CHCTLA >> 10, 0x3);
 
-      info.x = - ((Vdp2Regs->SCXIN1 & 0x7FF) % info.cellw);
-      info.y = - ((Vdp2Regs->SCYIN1 & 0x7FF) % info.cellh);
-
+      info.x = -((Vdp2Regs->SCXIN1 & 0x7FF) % info.cellw);
+      info.y = -((Vdp2Regs->SCYIN1 & 0x7FF) % info.cellh);
       info.charaddr = ((Vdp2Regs->MPOFN & 0x70) >> 4) * 0x20000;
       info.paladdr = (Vdp2Regs->BMPNA & 0x700) >> 4;
       info.flipfunction = 0;
@@ -2841,9 +2912,20 @@ static void Vdp2DrawNBG1(void)
    info.WindowArea1 = (Vdp2Regs->WCTLA >> 10) & 0x01; 
    info.LogicWin    = (Vdp2Regs->WCTLA >> 15 ) & 0x01;
    
+   ReadLineScrollData(&info, Vdp2Regs->SCRCTL >> 8, Vdp2Regs->LSTA1.all);
+   info.lineinfo = lineNBG1;
+   Vdp2GenLineinfo( &info );
 
    if (info.isbitmap)
    {
+       if(info.islinescroll)
+       {
+           info.sh = (Vdp2Regs->SCXIN0 & 0x7FF);
+           info.sv = (Vdp2Regs->SCYIN0 & 0x7FF);
+           info.x = 0;
+           info.y = 0;
+       }
+
       info.vertices[0] = info.x * info.coordincx;
       info.vertices[1] = info.y * info.coordincy;
       info.vertices[2] = (info.x + info.cellw) * info.coordincx;
@@ -2933,6 +3015,9 @@ static void Vdp2DrawNBG2(void)
    info.WindowArea1 = (Vdp2Regs->WCTLB >> 2) & 0x01;    
    info.LogicWin    = (Vdp2Regs->WCTLB >> 7 ) & 0x01;
    
+   info.islinescroll = 0;
+   info.linescrolltbl = 0;
+   info.lineinc = 0;   
 
    Vdp2DrawMap(&info, &texture);
 }
@@ -2980,6 +3065,10 @@ static void Vdp2DrawNBG3(void)
    info.WindowArea1 = (Vdp2Regs->WCTLB >> 10) & 0x01;
    info.LogicWin    = (Vdp2Regs->WCTLB >> 15 ) & 0x01;
 
+   info.islinescroll = 0;
+   info.linescrolltbl = 0;
+   info.lineinc = 0;   
+   
    Vdp2DrawMap(&info, &texture);
 }
 
@@ -3009,6 +3098,10 @@ static void Vdp2DrawRBG0(void)
 
    info.LogicWin    = (Vdp2Regs->WCTLC >> 7 ) & 0x01;
 
+   info.islinescroll = 0;
+   info.linescrolltbl = 0;
+   info.lineinc = 0;   
+   
    // Figure out which Rotation Parameter we're using
    switch (Vdp2Regs->RPMD & 0x3)
    {

@@ -78,8 +78,8 @@ const GLchar Yglprg_vdp1_gouraudshading_f[] = \
 "}\n";
 
 const GLchar * pYglprg_vdp1_gouraudshading_f[] = {Yglprg_vdp1_gouraudshading_f, NULL};
-
-int STDCALL Ygl_uniformGlowShading(void * p )
+ 
+int Ygl_uniformGlowShading(void * p )
 {
    YglProgram * prg;
    prg = p;
@@ -151,12 +151,13 @@ int YglProgramInit()
 
 int YglProgramChange( YglLevel * level, int prgid )
 {
+   YglProgram* tmp;
    level->prgcurrent++;
 
    if( level->prgcurrent >= level->prgcount)
    {
       level->prgcount++;
-      YglProgram* tmp = (YglProgram*)malloc(sizeof(YglProgram)*level->prgcount);
+      tmp = (YglProgram*)malloc(sizeof(YglProgram)*level->prgcount);
       if( tmp == NULL ) return -1;
       memset(tmp,0,sizeof(YglProgram)*level->prgcount);
       memcpy(tmp,level->prg,sizeof(YglProgram)*(level->prgcount-1));

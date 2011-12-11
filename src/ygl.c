@@ -76,38 +76,38 @@ void (STDCALL *pfglEnableVertexAttribArray)(GLuint index);
 void (STDCALL *pfglDisableVertexAttribArray)(GLuint index);
 
 // extention function dummys
-GLuint pfglCreateProgramdmy(void){return 0;}
-GLuint pfglCreateShaderdmy(GLenum a){ return 0;}
-void pfglCompileShaderdmy(GLuint a){return;}
-void pfglAttachShaderdmy(GLuint a,GLuint b){return;}
-void pfglLinkProgramdmy(GLuint a){return;}
-void pfglUseProgramdmy(GLuint a){return;}
-GLint pfglGetUniformLocationdmy(GLuint a,const GLchar * b){return 0;}
-void pfglShaderSourcedmy(GLuint a,GLsizei b,const GLchar **c,const GLint *d){return;}
-void pfglUniform1idmy(GLint a,GLint b){return;}
-void pfglVertexAttribPointerdmy(GLuint index,GLint size, GLenum type, GLboolean normalized, GLsizei stride,const void *pointer){return;}
-GLint pfglGetAttribLocationdmy(GLuint program,const GLchar * name){return 0;}
-void pfglBindAttribLocationdmy( GLuint program, GLuint index, const GLchar * name){return;}
-void pfglGetProgramivdmy(GLuint    program, GLenum pname, GLint * params)
+GLuint STDCALL pfglCreateProgramdmy(void){return 0;}
+GLuint STDCALL pfglCreateShaderdmy(GLenum a){ return 0;}
+void STDCALL pfglCompileShaderdmy(GLuint a){return;}
+void STDCALL pfglAttachShaderdmy(GLuint a,GLuint b){return;}
+void STDCALL pfglLinkProgramdmy(GLuint a){return;}
+void STDCALL pfglUseProgramdmy(GLuint a){return;}
+GLint STDCALL pfglGetUniformLocationdmy(GLuint a,const GLchar * b){return 0;}
+void STDCALL pfglShaderSourcedmy(GLuint a,GLsizei b,const GLchar **c,const GLint *d){return;}
+void STDCALL pfglUniform1idmy(GLint a,GLint b){return;}
+void STDCALL pfglVertexAttribPointerdmy(GLuint index,GLint size, GLenum type, GLboolean normalized, GLsizei stride,const void *pointer){return;}
+GLint STDCALL pfglGetAttribLocationdmy(GLuint program,const GLchar * name){return 0;}
+void STDCALL pfglBindAttribLocationdmy( GLuint program, GLuint index, const GLchar * name){return;}
+void STDCALL pfglGetProgramivdmy(GLuint    program, GLenum pname, GLint * params)
 {
    if( pname == GL_LINK_STATUS ) *params = GL_FALSE;
    return;
 }
 GLchar s_msg_no_opengl2[]="Your GPU driver does not support OpenGL 2.0.\nOpenGL Video Interface is running fallback mode.";
-void pfglGetShaderivdmy(GLuint shader,GLenum pname,GLint *    params)
+void STDCALL pfglGetShaderivdmy(GLuint shader,GLenum pname,GLint *    params)
 {
    if( pname == GL_COMPILE_STATUS ) *params = GL_FALSE;
    if( pname == GL_INFO_LOG_LENGTH ) *params = strlen(s_msg_no_opengl2)+1;
    return;
 }
-void pfglGetShaderInfoLogdmy(GLuint a,GLsizei b,GLsizei *c,GLchar *d)
+void STDCALL pfglGetShaderInfoLogdmy(GLuint a,GLsizei b,GLsizei *c,GLchar *d)
 {
    memcpy(d,s_msg_no_opengl2,b);
    *c=b;
    return;
 }
-void pfglEnableVertexAttribArraydmy(GLuint index){return;}
-void pfglDisableVertexAttribArraydmy(GLuint index){return;}
+void STDCALL pfglEnableVertexAttribArraydmy(GLuint index){return;}
+void STDCALL pfglDisableVertexAttribArraydmy(GLuint index){return;}
 
 
 

@@ -25,6 +25,13 @@
 #include "vdp2.h"
 #include "debug.h"
 
+typedef struct 
+{
+   short LineScrollValH;
+   short LineScrollValV;
+   int CoordinateIncH;
+} vdp2Lineinfo;
+
 typedef struct
 {
    int vertices[8];
@@ -49,6 +56,7 @@ typedef struct
    int auxmode;
    int enable;
    int x, y;
+   int sh,sv;
    int alpha;
    int coloroffset;
    int transparencyenable;
@@ -70,6 +78,8 @@ typedef struct
    int mosaicymask;
    int islinescroll;
    u32 linescrolltbl;
+   u32 lineinc;
+   vdp2Lineinfo * lineinfo;
    int wctl;
    int islinewindow;
    int isverticalscroll;
@@ -424,7 +434,7 @@ static INLINE void ReadMosaicData(vdp2draw_struct *info, u16 mask)
       info->mosaicxmask = 1;
       info->mosaicymask = 1;
    }
-}
+} 
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -434,9 +444,13 @@ static INLINE void ReadLineScrollData(vdp2draw_struct *info, u16 mask, u32 tbl)
    {
       info->islinescroll = (mask >> 1) & 0x7;
       info->linescrolltbl = (tbl & 0x7FFFE) << 1;
+	   info->lineinc = 1 << ((mask >> 4) & 0x03);
    }
    else
+   {
       info->islinescroll = 0;
+	  info->lineinc = 0;
+   }
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -747,6 +761,11 @@ static INLINE void Vdp1ProcessSpritePixel(int type, u16 *pixel, int *shadow, int
       default: break;
    }
 }
+
+#define VDPLINE_SZ(a) ((a)&0x04)
+#define VDPLINE_SY(a) ((a)&0x02)
+#define VDPLINE_SX(a) ((a)&0x01)
+
 
 //////////////////////////////////////////////////////////////////////////////
 

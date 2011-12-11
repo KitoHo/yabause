@@ -37,7 +37,7 @@ static void Ygl_printShaderError( GLuint shader )
 {
   GLsizei bufSize;
   
-  glGetShaderiv(shader, GL_INFO_LOG_LENGTH , &bufSize);
+  pfglGetShaderiv(shader, GL_INFO_LOG_LENGTH , &bufSize);
   
   if (bufSize > 1) {
     GLchar *infoLog;
@@ -85,9 +85,17 @@ int Ygl_uniformGlowShading(void * p )
    prg = p;
    if( prg->vertexAttribute != NULL )
    {
-      glEnableVertexAttribArray(prg->vaid);
+      pfglEnableVertexAttribArray(prg->vaid);
       pfglVertexAttribPointer(prg->vaid,4, GL_FLOAT, GL_FALSE, 0, prg->vertexAttribute);
    }
+   return 0;
+}
+
+int Ygl_cleanupGlowShading(void * p )
+{
+   YglProgram * prg;
+   prg = p;
+   pfglDisableVertexAttribArray(prg->vaid);
    return 0;
 }
 
@@ -181,6 +189,7 @@ int YglProgramChange( YglLevel * level, int prgid )
    {
       GLuint id;
       level->prg[level->prgcurrent].setupUniform = Ygl_uniformGlowShading;
+	  level->prg[level->prgcurrent].cleanupUniform = Ygl_cleanupGlowShading;
       id = pfglGetUniformLocation(_prgid[PG_VFP1_GOURAUDSAHDING], (const GLchar *)"sprite");
       pfglUniform1i(id, 0);
       level->prg[level->prgcurrent].vaid = 0;

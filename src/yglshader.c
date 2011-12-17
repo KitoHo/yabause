@@ -33,6 +33,10 @@
 #include <GL/glx.h>
 #endif
 
+
+extern float vdp1wratio;
+extern float vdp1hratio;
+
 static void Ygl_printShaderError( GLuint shader )
 {
   GLsizei bufSize;
@@ -99,7 +103,75 @@ int Ygl_cleanupGlowShading(void * p )
    return 0;
 }
 
-int YglGetProgramId( int prg )
+int Ygl_uniformStartUserClip(void * p )
+{
+   YglProgram * prg;
+   prg = p;
+   
+   if( prg->ux1 != -1 )
+   {
+      GLint vertices[8];
+      glColorMask( GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE );
+      glStencilMask(0xffffffff);
+      glClearStencil(0);
+      glClear(GL_STENCIL_BUFFER_BIT);
+      glEnable(GL_STENCIL_TEST);
+      glStencilFunc(GL_ALWAYS,0x1,0x01);
+      glStencilOp(GL_REPLACE,GL_REPLACE,GL_REPLACE);
+      glDisable(GL_TEXTURE_2D);
+      glColor4f(0.0f,0.0f,0.0f,1.0f);      
+      
+      // render
+      vertices[0] = (int)((float)prg->ux1 * vdp1wratio);
+      vertices[1] = (int)((float)prg->uy1 * vdp1hratio);
+      vertices[2] = (int)((float)prg->ux2 * vdp1wratio);
+      vertices[3] = (int)((float)prg->uy1 * vdp1hratio);
+      vertices[4] = (int)((float)prg->ux2 * vdp1wratio);
+      vertices[5] = (int)((float)prg->uy2 * vdp1hratio);
+      vertices[6] = (int)((float)prg->ux1 * vdp1wratio);
+      vertices[7] = (int)((float)prg->uy2 * vdp1hratio);  
+      glVertexPointer(2, GL_INT, 0, vertices);
+      glDrawArrays(GL_QUADS, 0, 4);
+      
+      glColorMask( GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE );
+      glStencilFunc(GL_ALWAYS,0,0x0);
+      glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
+      glDisable(GL_STENCIL_TEST);
+      glEnable(GL_TEXTURE_2D);
+      glColor4f(1.0f,1.0f,1.0f,1.0f);
+   }
+   
+   glEnable(GL_STENCIL_TEST);
+   glStencilOp(GL_KEEP,GL_KEEP,GL_KEEP);
+   if( prg->uClipMode == 0x02 )
+   {
+      glStencilFunc(GL_EQUAL,0x1,0xFF);
+   }else if( prg->uClipMode == 0x03 )
+   {
+      glStencilFunc(GL_EQUAL,0x0,0xFF);      
+   }else{
+      glStencilFunc(GL_ALWAYS,0,0xFF);
+   }
+   
+   return 0;
+}
+
+int Ygl_cleanupStartUserClip(void * p ){return 0;}
+
+int Ygl_uniformEndUserClip(void * p )
+{
+   YglProgram * prg;
+   prg = p;
+   glDisable(GL_STENCIL_TEST);
+   glStencilFunc(GL_ALWAYS,0,0xFF);
+   return 0;
+}
+
+int Ygl_cleanupEndUserClip(void * p ){return 0;}
+
+
+
+int YglGetProgramId( int prg ) 
 {
    return _prgid[prg];
 }
@@ -153,6 +225,10 @@ int YglProgramInit()
 
    }
    
+   _prgid[PG_VFP1_STARTUSERCLIP] = 0;
+   _prgid[PG_VFP1_ENDUSERCLIP] = 0;   
+  
+   
    return 0;
 }
 
@@ -183,6 +259,7 @@ int YglProgramChange( YglLevel * level, int prgid )
          return -1;
    }
 
+   level->prg[level->prgcurrent].prgid=prgid;
    level->prg[level->prgcurrent].prg=_prgid[prgid];
    
    if( prgid == PG_VFP1_GOURAUDSAHDING )
@@ -194,10 +271,20 @@ int YglProgramChange( YglLevel * level, int prgid )
       pfglUniform1i(id, 0);
       level->prg[level->prgcurrent].vaid = 0;
       level->prg[level->prgcurrent].vaid = pfglGetAttribLocation(_prgid[PG_VFP1_GOURAUDSAHDING],(const GLchar *)"grcolor");
-   }else{
+   }  
+   else if( prgid == PG_VFP1_STARTUSERCLIP )
+   {
+      level->prg[level->prgcurrent].setupUniform = Ygl_uniformStartUserClip;
+      level->prg[level->prgcurrent].cleanupUniform = Ygl_cleanupStartUserClip;
+   }
+   else if( prgid == PG_VFP1_ENDUSERCLIP )
+   {
+      level->prg[level->prgcurrent].setupUniform = Ygl_uniformEndUserClip;
+      level->prg[level->prgcurrent].cleanupUniform = Ygl_cleanupEndUserClip;
+   }
+   else{
       level->prg[level->prgcurrent].setupUniform = NULL;
    }
-   
    return 0;
    
 }

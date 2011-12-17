@@ -117,8 +117,8 @@ YglOnScreenDebugMessage,
 YglGetGlSize
 };
 
-static float vdp1wratio=1;
-static float vdp1hratio=1;
+float vdp1wratio=1;
+float vdp1hratio=1;
 static int vdp1cor=0;
 static int vdp1cog=0;
 static int vdp1cob=0;
@@ -1234,6 +1234,7 @@ static void Vdp2DrawPattern(vdp2draw_struct *info, YglTexture *texture)
    YglSprite tile;
    int winmode=0;
    tile.dst = 0;
+   tile.uclipmode = 0;
     
    tile.w = tile.h = info->patternpixelwh;
    tile.flip = info->flipfunction;
@@ -1983,6 +1984,8 @@ void VIDOGLVdp1NormalSpriteDraw(void)
    Vdp1ReadPriority(&cmd, &sprite);
 
    CMDPMOD = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
+   
+   sprite.uclipmode=(CMDPMOD>>9)&0x03;
 
    if ( (CMDPMOD & 4) || (CMDPMOD & 0x100) )
    {
@@ -2159,7 +2162,8 @@ void VIDOGLVdp1ScaledSpriteDraw(void)
    tmp |= cmd.CMDCOLR;
 
    CMDPMOD = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
-
+   sprite.uclipmode=(CMDPMOD>>9)&0x03;
+   
    Vdp1ReadPriority(&cmd, &sprite);
    
    if ( (CMDPMOD & 4) || (CMDPMOD & 0x100) )
@@ -2264,9 +2268,11 @@ void VIDOGLVdp1DistortedSpriteDraw(void)
    tmp |= cmd.CMDCOLR;
 
    CMDPMOD = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
-
+   
    Vdp1ReadPriority(&cmd, &sprite);
    
+   sprite.uclipmode=(CMDPMOD>>9)&0x03;
+  
 
    // Check if the Gouraud shading bit is set and the color mode is RGB
    if ( (CMDPMOD & 4) || (CMDPMOD & 0x100) )
@@ -2328,6 +2334,7 @@ void VIDOGLVdp1DistortedSpriteDraw(void)
          Vdp1ReadTexture(&cmd, &sprite, &texture);
       }
    }
+   
    return ;
 }
 
@@ -2360,7 +2367,8 @@ void VIDOGLVdp1PolygonDraw(void)
 
    color = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x6);
    CMDPMOD = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
-
+   polygon.uclipmode=(CMDPMOD>>9)&0x03;
+   
    alpha = 0xFF;
 
    if ((CMDPMOD & 0x7) == 0x3)
@@ -2466,7 +2474,8 @@ void VIDOGLVdp1PolylineDraw(void)
 
    color = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x6);
    CMDPMOD = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
-
+   polygon.uclipmode=(CMDPMOD>>9)&0x03;
+   
    alpha = 0xFF;
    if ((CMDPMOD & 0x7) == 0x3)
       alpha = 0x80;
@@ -2541,6 +2550,7 @@ void VIDOGLVdp1LineDraw(void)
 
    color = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x6);
    CMDPMOD = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
+   polygon.uclipmode=(CMDPMOD>>9)&0x03;
 
    alpha = 0xFF;
 
@@ -2683,6 +2693,7 @@ static void Vdp2DrawNBG0(void)
    u32 linescrolladdr; 
    vdp2rotationparameter_struct parameter;
    info.dst=0;
+   info.uclipmode=0;
 
    if (Vdp2Regs->BGON & 0x20)
    {
@@ -2859,7 +2870,8 @@ static void Vdp2DrawNBG1(void)
    float *tmp;
    YglCache tmpc;
    info.dst=0;
-
+   info.uclipmode=0;
+   
    info.enable = Vdp2Regs->BGON & 0x2;
    info.transparencyenable = !(Vdp2Regs->BGON & 0x200);
    info.specialprimode = (Vdp2Regs->SFPRMD >> 2) & 0x3;
@@ -2980,7 +2992,8 @@ static void Vdp2DrawNBG2(void)
    vdp2draw_struct info;
    YglTexture texture;
    info.dst=0;
-
+   info.uclipmode=0;
+   
    info.enable = Vdp2Regs->BGON & 0x4;
    info.transparencyenable = !(Vdp2Regs->BGON & 0x400);
    info.specialprimode = (Vdp2Regs->SFPRMD >> 4) & 0x3;
@@ -3029,7 +3042,8 @@ static void Vdp2DrawNBG3(void)
    vdp2draw_struct info;
    YglTexture texture;
    info.dst=0;
-
+   info.uclipmode=0;
+   
    info.enable = Vdp2Regs->BGON & 0x8;
    info.transparencyenable = !(Vdp2Regs->BGON & 0x800);
    info.specialprimode = (Vdp2Regs->SFPRMD >> 6) & 0x3;
@@ -3080,7 +3094,8 @@ static void Vdp2DrawRBG0(void)
    YglTexture texture;
    vdp2rotationparameter_struct parameter;
    info.dst=0;
-
+   info.uclipmode=0;
+   
    info.enable = Vdp2Regs->BGON & 0x10;
    info.priority = rbg0priority;
    if (!(info.enable & Vdp2External.disptoggle) || (info.priority == 0))

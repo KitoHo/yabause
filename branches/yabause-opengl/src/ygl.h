@@ -63,6 +63,7 @@ typedef struct {
 	int flip;
 	int priority;
 	int dst;
+    int uclipmode;
 } YglSprite;
 
 typedef struct {
@@ -96,9 +97,13 @@ enum
 {
 	PG_NORMAL=0,
 	PG_VFP1_GOURAUDSAHDING,
+    PG_VFP1_STARTUSERCLIP,
+    PG_VFP1_ENDUSERCLIP,
 	PG_MAX,
 };
+
 typedef struct {
+    int prgid;
 	GLuint prg;
 	int * quads;
 	float * textcoords;
@@ -106,6 +111,8 @@ typedef struct {
 	int currentQuad;
 	int maxQuad;
 	int vaid;
+    char uClipMode;
+    short ux1,uy1,ux2,uy2;
 	int (*setupUniform)(void *);
 	int (*cleanupUniform)(void *);
 } YglProgram;
@@ -113,6 +120,8 @@ typedef struct {
 typedef struct {
 	int prgcount;
 	int prgcurrent;
+    int uclipcurrent;
+    short ux1,uy1,ux2,uy2;
 	YglProgram * prg;
 } YglLevel;
 

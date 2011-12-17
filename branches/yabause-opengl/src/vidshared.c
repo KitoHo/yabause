@@ -629,6 +629,7 @@ void VideoInitGlut()
    if (!glutinited)
    {
       glutInit(&fake_argc, fake_argv);
+      glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_STENCIL);
       glutinited = 1;
    }
 #endif

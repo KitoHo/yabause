@@ -39,6 +39,7 @@ typedef struct
    int flipfunction;
    int priority;
    int dst;
+   int uclipmode;
    /* The above fields MUST NOT BE CHANGED (including inserting new fields)
     * unless YglSprite is also updated in ygl.h */
 

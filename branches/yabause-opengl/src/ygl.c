@@ -441,6 +441,7 @@ int YglInit(int width, int height, unsigned int depth) {
       return -1;
    for(i = 0;i < depth;i++) {
      _Ygl->levels[i].prgcurrent = 0;
+     _Ygl->levels[i].uclipcurrent = 0;
      _Ygl->levels[i].prgcount = 1;
      _Ygl->levels[i].prg = (YglProgram*)malloc(sizeof(YglProgram)*_Ygl->levels[i].prgcount);
      memset(  _Ygl->levels[i].prg,0,sizeof(YglProgram)*_Ygl->levels[i].prgcount);
@@ -568,21 +569,52 @@ void YglDeInit(void) {
 
 //////////////////////////////////////////////////////////////////////////////
 
-float * YglQuad(YglSprite * input, YglTexture * output, YglCache * c) {
-   unsigned int x, y;
+YglProgram * YglGetProgram( YglSprite * input, int prg )
+{
    YglLevel   *level;
    YglProgram *program;
-   texturecoordinate_struct *tmp;
-   float q[4];
-   int prg = PG_NORMAL;
-
+   
    if (input->priority > 7) {
       VDP1LOG("sprite with priority %d\n", input->priority);
       return NULL;
-   }
-
+   }   
+   
    level = &_Ygl->levels[input->priority];
-   if( level->prg[level->prgcurrent].prg != YglGetProgramId(prg) ) {
+   
+   if( input->uclipmode != level->uclipcurrent )
+   {
+      if( input->uclipmode == 0x02 || input->uclipmode == 0x03 )
+      {
+         YglProgramChange(level,PG_VFP1_STARTUSERCLIP);
+         program = &level->prg[level->prgcurrent];
+         program->uClipMode = input->uclipmode;
+         if( level->ux1 != Vdp1Regs->userclipX1 || level->uy1 != Vdp1Regs->userclipY1 ||
+            level->ux2 != Vdp1Regs->userclipX2 || level->uy2 != Vdp1Regs->userclipY2 ) 
+         {
+            program->ux1=Vdp1Regs->userclipX1;
+            program->uy1=Vdp1Regs->userclipY1;
+            program->ux2=Vdp1Regs->userclipX2;
+            program->uy2=Vdp1Regs->userclipY2;
+            level->ux1=Vdp1Regs->userclipX1;
+            level->uy1=Vdp1Regs->userclipY1;
+            level->ux2=Vdp1Regs->userclipX2;
+            level->uy2=Vdp1Regs->userclipY2;
+         }else{
+            program->ux1=-1;
+            program->uy1=-1;
+            program->ux2=-1;
+            program->uy2=-1;
+         }
+      }else{
+         YglProgramChange(level,PG_VFP1_ENDUSERCLIP);
+         program = &level->prg[level->prgcurrent];
+         program->uClipMode = input->uclipmode;
+      }
+      level->uclipcurrent = input->uclipmode;
+   
+   }
+   
+   if( level->prg[level->prgcurrent].prgid != prg ) {
       YglProgramChange(level,prg);
    }
    program = &level->prg[level->prgcurrent];
@@ -594,6 +626,26 @@ float * YglQuad(YglSprite * input, YglTexture * output, YglCache * c) {
       program->vertexAttribute = (float *) realloc(program->vertexAttribute, program->maxQuad * sizeof(float)*2);          
       YglCacheReset();
    }
+   
+   return program;
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+
+float * YglQuad(YglSprite * input, YglTexture * output, YglCache * c) {
+   unsigned int x, y;
+   YglLevel   *level;
+   YglProgram *program;
+   texturecoordinate_struct *tmp;
+   float q[4];
+   int prg = PG_NORMAL;
+   
+
+   program = YglGetProgram(input,prg);
+   if( program == NULL ) return NULL;
+   
    tmp = (texturecoordinate_struct *)(program->textcoords + (program->currentQuad * 2));
    memcpy(program->quads + program->currentQuad, input->vertices, 8 * sizeof(int));
 
@@ -677,22 +729,8 @@ int YglQuadGrowShading(YglSprite * input, YglTexture * output, float * colors,Yg
    float q[4];
    int prg = PG_VFP1_GOURAUDSAHDING;
 
-   level = &_Ygl->levels[input->priority];
-   if( level->prg[level->prgcurrent].prg != YglGetProgramId(prg) ) {
-      YglProgramChange(level,prg);
-   }
-   program = &level->prg[level->prgcurrent];
-   
-
-   if (program->currentQuad == program->maxQuad) 
-   {
-      program->maxQuad += 8*128;
-      program->quads = (int *) realloc(program->quads, program->maxQuad * sizeof(int));
-      program->textcoords = (float *) realloc(program->textcoords, program->maxQuad * sizeof(float)*2);
-      program->vertexAttribute = (float *) realloc(program->vertexAttribute, program->maxQuad * sizeof(float)*2);
-      YglCacheReset();
-   }
-
+   program = YglGetProgram(input,prg);
+   if( program == NULL ) return NULL;
 
    // Vertex
    memcpy(program->quads + program->currentQuad, input->vertices, 8 * sizeof(int));
@@ -783,23 +821,11 @@ void YglCachedQuad(YglSprite * input, YglCache * cache) {
 
    int prg = PG_NORMAL;
   
-   level = &_Ygl->levels[input->priority];
-   if( level->prg[level->prgcurrent].prg != YglGetProgramId(prg) ) {
-      YglProgramChange(level,prg);
-   }
-   program = &level->prg[level->prgcurrent];
+   program = YglGetProgram(input,prg);
+   if( program == NULL ) return NULL;
    
    x = cache->x;
    y = cache->y;
-
-   if (program->currentQuad == program->maxQuad) 
-   {
-      program->maxQuad += 8*128;
-      program->quads = (int *) realloc(program->quads, program->maxQuad * sizeof(int));
-      program->textcoords = (float *) realloc(program->textcoords, program->maxQuad * sizeof(float) * 2);
-      program->vertexAttribute = (float *) realloc(program->vertexAttribute, program->maxQuad * sizeof(float)*2);     
-      YglCacheReset();
-   }
 
    // Vertex
    memcpy(program->quads + program->currentQuad, input->vertices, 8 * sizeof(int));
@@ -847,8 +873,7 @@ void YglCachedQuad(YglSprite * input, YglCache * cache) {
       tmp[2].q = 1.0f; 
       tmp[3].q = 1.0f; 
    }
-
-   
+  
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -862,24 +887,12 @@ void YglCacheQuadGrowShading(YglSprite * input, float * colors,YglCache * cache)
    int prg = PG_VFP1_GOURAUDSAHDING;
    int currentpg = 0;
    float * vtxa;
-   
 
-   level = &_Ygl->levels[input->priority];
-   if( level->prg[level->prgcurrent].prg != YglGetProgramId(prg) ) {
-      YglProgramChange(level,prg);
-   }
-   program = &level->prg[level->prgcurrent];
+   program = YglGetProgram(input,prg);
+   if( program == NULL ) return NULL;
    
    x = cache->x;
    y = cache->y;
-
-   if (program->currentQuad == program->maxQuad) {
-      program->maxQuad += 8*128;
-      program->quads = (int *) realloc(program->quads, program->maxQuad * sizeof(int));
-      program->textcoords = (float *) realloc(program->textcoords, program->maxQuad * sizeof(float)*2);
-      program->vertexAttribute = (float *) realloc(program->vertexAttribute, program->maxQuad * sizeof(float)*2);
-      YglCacheReset();
-   }
 
    // Vertex
    memcpy(program->quads + program->currentQuad, input->vertices, 8 * sizeof(int));
@@ -946,7 +959,7 @@ void YglRender(void) {
 
    glTexSubImage2D (GL_TEXTURE_2D, 0, 0, 0, YglTM->width, YglTM->yMax, GL_RGBA, GL_UNSIGNED_BYTE, YglTM->texture);
 
-   cprg = 0;
+   cprg = PG_NORMAL;
    pfglUseProgram(0);
 
    if(_Ygl->st) {
@@ -960,11 +973,12 @@ void YglRender(void) {
       for(i = 0;i < _Ygl->depth;i++) 
       {
          level = _Ygl->levels + i;
+         glDisable(GL_STENCIL_TEST);
          for( j=0;j<(level->prgcurrent+1); j++ )
          {
-            if( level->prg[j].prg != cprg )
+            if( level->prg[j].prgid != cprg )
             {
-               cprg = level->prg[j].prg;
+               cprg = level->prg[j].prgid;
                pfglUseProgram(level->prg[j].prg);
             }
             glVertexPointer(2, GL_INT, 0, level->prg[j].quads);
@@ -973,7 +987,10 @@ void YglRender(void) {
 			{
 				level->prg[j].setupUniform((void*)&level->prg[j]);
 			}
-            glDrawArrays(GL_QUADS, 0, level->prg[j].currentQuad/2);
+			if( level->prg[j].currentQuad != 0 )
+            {
+               glDrawArrays(GL_QUADS, 0, level->prg[j].currentQuad/2);
+            }
 			if( level->prg[j].cleanupUniform )
 			{
 				level->prg[j].cleanupUniform((void*)&level->prg[j]);
@@ -1015,6 +1032,11 @@ void YglReset(void) {
    for(i = 0;i < _Ygl->depth;i++) {
       level = _Ygl->levels + i;
      level->prgcurrent = 0;
+     level->uclipcurrent = 0;
+     level->ux1 = 0;
+     level->uy1 = 0;
+     level->ux2 = 0;
+     level->uy2 = 0;     
      for( j=0; j< level->prgcount; j++ )
      {
       level->prg[j].currentQuad = 0;

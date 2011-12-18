@@ -170,6 +170,18 @@ int Ygl_uniformEndUserClip(void * p )
 int Ygl_cleanupEndUserClip(void * p ){return 0;}
 
 
+int Ygl_uniformAddBlend(void * p )
+{
+   glBlendFunc(GL_ONE,GL_ONE);
+   return 0;
+}
+
+int Ygl_cleanupAddBlend(void * p )
+{
+   glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+   return 0;
+}
+
 
 int YglGetProgramId( int prg ) 
 {
@@ -228,9 +240,11 @@ int YglProgramInit()
    _prgid[PG_VFP1_STARTUSERCLIP] = 0;
    _prgid[PG_VFP1_ENDUSERCLIP] = 0;   
   
+   _prgid[PG_VDP2_ADDBLEND] = 0;
    
    return 0;
 }
+
 
 
 int YglProgramChange( YglLevel * level, int prgid )
@@ -281,6 +295,11 @@ int YglProgramChange( YglLevel * level, int prgid )
    {
       level->prg[level->prgcurrent].setupUniform = Ygl_uniformEndUserClip;
       level->prg[level->prgcurrent].cleanupUniform = Ygl_cleanupEndUserClip;
+   }
+   else if( prgid == PG_VDP2_ADDBLEND )
+   {
+      level->prg[level->prgcurrent].setupUniform = Ygl_uniformAddBlend;
+      level->prg[level->prgcurrent].cleanupUniform = Ygl_cleanupAddBlend;
    }
    else{
       level->prg[level->prgcurrent].setupUniform = NULL;

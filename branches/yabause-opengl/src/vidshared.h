@@ -40,6 +40,7 @@ typedef struct
    int priority;
    int dst;
    int uclipmode;
+   int blendmode;
    /* The above fields MUST NOT BE CHANGED (including inserting new fields)
     * unless YglSprite is also updated in ygl.h */
 

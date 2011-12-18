@@ -64,6 +64,7 @@ typedef struct {
 	int priority;
 	int dst;
     int uclipmode;
+    int blendmode;
 } YglSprite;
 
 typedef struct {
@@ -99,6 +100,7 @@ enum
 	PG_VFP1_GOURAUDSAHDING,
     PG_VFP1_STARTUSERCLIP,
     PG_VFP1_ENDUSERCLIP,
+    PG_VDP2_ADDBLEND,
 	PG_MAX,
 };
 
@@ -113,6 +115,7 @@ typedef struct {
 	int vaid;
     char uClipMode;
     short ux1,uy1,ux2,uy2;
+    int blendmode;
 	int (*setupUniform)(void *);
 	int (*cleanupUniform)(void *);
 } YglProgram;
@@ -122,6 +125,7 @@ typedef struct {
 	int prgcurrent;
     int uclipcurrent;
     short ux1,uy1,ux2,uy2;
+    int blendmode;
 	YglProgram * prg;
 } YglLevel;
 
@@ -155,6 +159,9 @@ int YglQuadGrowShading(YglSprite * input, YglTexture * output, float * colors,Yg
 int YglIsCached(u32,YglCache *);
 void YglCacheAdd(u32,YglCache *);
 void YglCacheReset(void);
+
+// 0.. no belnd, 1.. Alpha, 2.. Add 
+int YglSetLevelBlendmode( int pri, int mode );
 
 
 #if 1  // Does anything need this?  It breaks a bunch of prototypes if

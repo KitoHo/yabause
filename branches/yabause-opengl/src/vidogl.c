@@ -1235,6 +1235,7 @@ static void Vdp2DrawPattern(vdp2draw_struct *info, YglTexture *texture)
    int winmode=0;
    tile.dst = 0;
    tile.uclipmode = 0;
+   tile.blendmode = info->blendmode;
     
    tile.w = tile.h = info->patternpixelwh;
    tile.flip = info->flipfunction;
@@ -1960,6 +1961,7 @@ void VIDOGLVdp1NormalSpriteDraw(void)
    
    Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
    sprite.dst=0;
+   sprite.blendmode=0;
 
    x = cmd.CMDXA + Vdp1Regs->localX;
    y = cmd.CMDYA + Vdp1Regs->localY;
@@ -2067,7 +2069,8 @@ void VIDOGLVdp1ScaledSpriteDraw(void)
 
    Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
    sprite.dst=0;
-
+   sprite.blendmode=0;
+   
    x = cmd.CMDXA + Vdp1Regs->localX;
    y = cmd.CMDYA + Vdp1Regs->localY;
    sprite.w = ((cmd.CMDSIZE >> 8) & 0x3F) * 8;
@@ -2246,7 +2249,7 @@ void VIDOGLVdp1DistortedSpriteDraw(void)
    
 
    Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
-
+   sprite.blendmode=0;
    sprite.dst = 1;
    sprite.w = ((cmd.CMDSIZE >> 8) & 0x3F) * 8;
    sprite.h = cmd.CMDSIZE & 0xFF;
@@ -2355,6 +2358,7 @@ void VIDOGLVdp1PolygonDraw(void)
    float col[4*4];
    int gouraud=0;
 
+   polygon.blendmode=0;
    polygon.dst = 0;
    X[0] = Vdp1Regs->localX + T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0xC);
    Y[0] = Vdp1Regs->localY + T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0xE);
@@ -2462,6 +2466,7 @@ void VIDOGLVdp1PolylineDraw(void)
    YglTexture texture;
    YglCache c;
 
+   polygon.blendmode=0;   
    polygon.dst = 0;
    X[0] = Vdp1Regs->localX + (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x0C) );
    Y[0] = Vdp1Regs->localY + (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x0E) );
@@ -2542,6 +2547,7 @@ void VIDOGLVdp1LineDraw(void)
    YglSprite polygon;
    YglTexture texture;
 
+   polygon.blendmode=0;
    polygon.dst = 0;
    X[0] = Vdp1Regs->localX + (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x0C));
    Y[0] = Vdp1Regs->localY + (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x0E));
@@ -2770,10 +2776,14 @@ static void Vdp2DrawNBG0(void)
 
    info.colornumber = (Vdp2Regs->CHCTLA & 0x70) >> 4;
 
+   info.blendmode=0;
    if (Vdp2Regs->CCCTL & 0x1)
+   {
       info.alpha = ((~Vdp2Regs->CCRNA & 0x1F) << 3) + 0x7;
-   else
+      if(Vdp2Regs->CCCTL & 0x100)info.blendmode=1;
+   }else{
       info.alpha = 0xFF;
+   }
 
    info.coloroffset = (Vdp2Regs->CRAOFA & 0x7) << 8;
    ReadVdp2ColorOffset(&info, 0x1);
@@ -2901,10 +2911,14 @@ static void Vdp2DrawNBG1(void)
       ReadPatternData(&info, Vdp2Regs->PNCN1, Vdp2Regs->CHCTLA & 0x100);
    }
 
+   info.blendmode=0;
    if (Vdp2Regs->CCCTL & 0x2)
+   {
       info.alpha = ((~Vdp2Regs->CCRNA & 0x1F00) >> 5) + 0x7;
-   else
+      if(Vdp2Regs->CCCTL & 0x100)info.blendmode=1;
+   }else{
       info.alpha = 0xFF;
+   }
 
    info.coloroffset = (Vdp2Regs->CRAOFA & 0x70) << 4;
    ReadVdp2ColorOffset(&info, 0x2);
@@ -3006,10 +3020,14 @@ static void Vdp2DrawNBG2(void)
    info.y = - ((Vdp2Regs->SCYN2 & 0x7FF) % (512 * info.planeh));
    ReadPatternData(&info, Vdp2Regs->PNCN2, Vdp2Regs->CHCTLB & 0x1);
 
+   info.blendmode=0;
    if (Vdp2Regs->CCCTL & 0x4)
+   {
       info.alpha = ((~Vdp2Regs->CCRNB & 0x1F) << 3) + 0x7;
-   else
+      if(Vdp2Regs->CCCTL & 0x100)info.blendmode=1;
+   }else{
       info.alpha = 0xFF;
+   }
 
    info.coloroffset = Vdp2Regs->CRAOFA & 0x700;
    ReadVdp2ColorOffset(&info, 0x4);
@@ -3057,11 +3075,15 @@ static void Vdp2DrawNBG3(void)
    info.y = - ((Vdp2Regs->SCYN3 & 0x7FF) % (512 * info.planeh));
    ReadPatternData(&info, Vdp2Regs->PNCN3, Vdp2Regs->CHCTLB & 0x10);
 
+   info.blendmode=0;
    if (Vdp2Regs->CCCTL & 0x8)
+   {
       info.alpha = ((~Vdp2Regs->CCRNB & 0x1F00) >> 5) + 0x7;
-   else
+      if(Vdp2Regs->CCCTL & 0x100)info.blendmode=1;
+   }else{
       info.alpha = 0xFF;
-
+   }
+   
    info.coloroffset = (Vdp2Regs->CRAOFA & 0x7000) >> 4;
    ReadVdp2ColorOffset(&info, 0x8);
    info.coordincx = info.coordincy = 1;
@@ -3176,11 +3198,15 @@ static void Vdp2DrawRBG0(void)
       ReadPatternData(&info, Vdp2Regs->PNCR, Vdp2Regs->CHCTLB & 0x100);
    }
 
+   info.blendmode=0;
    if (Vdp2Regs->CCCTL & 0x10)
+   {
       info.alpha = ((~Vdp2Regs->CCRR & 0x1F) << 3) + 0x7;
-   else
+      if(Vdp2Regs->CCCTL & 0x100)info.blendmode=1;
+   }else{
       info.alpha = 0xFF;
-
+   }
+   
    info.coloroffset = (Vdp2Regs->CRAOFB & 0x7) << 8;
 
    ReadVdp2ColorOffset(&info, 0x10);

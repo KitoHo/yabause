@@ -642,6 +642,8 @@ float * YglQuad(YglSprite * input, YglTexture * output, YglCache * c) {
    float q[4];
    int prg = PG_NORMAL;
    
+   if( input->blendmode == 1 )
+      prg = PG_VDP2_ADDBLEND;
 
    program = YglGetProgram(input,prg);
    if( program == NULL ) return NULL;
@@ -820,6 +822,9 @@ void YglCachedQuad(YglSprite * input, YglCache * cache) {
    float q[4];
 
    int prg = PG_NORMAL;
+   
+   if( input->blendmode == 1 )
+      prg = PG_VDP2_ADDBLEND;
   
    program = YglGetProgram(input,prg);
    if( program == NULL ) return NULL;

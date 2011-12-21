@@ -508,7 +508,7 @@ int YglInit(int width, int height, unsigned int depth) {
    pfglGetAttribLocation  = (GLint (STDCALL *)(GLuint program,const GLchar *    name)) yglGetProcAddress("glGetAttribLocation");
    if( pfglGetAttribLocation == NULL ) pfglGetAttribLocation = pfglGetAttribLocationdmy;
    pfglBindAttribLocation = (void (STDCALL *)( GLuint program, GLuint index, const GLchar * name))yglGetProcAddress("glBindAttribLocation");
-   if( pfglGetAttribLocation == NULL ) pfglGetAttribLocation = pfglGetAttribLocationdmy;
+   if( pfglBindAttribLocation == NULL ) pfglBindAttribLocation = pfglBindAttribLocationdmy;
    pfglGetProgramiv = (void (STDCALL *)( GLuint    program, GLenum pname, GLint * params))yglGetProcAddress("glGetProgramiv");
    if( pfglGetProgramiv == NULL ) pfglGetProgramiv = pfglGetProgramivdmy;
    pfglGetShaderiv  = (void (STDCALL *)(GLuint shader,GLenum pname,GLint *    params))yglGetProcAddress("glGetShaderiv");

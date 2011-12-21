@@ -479,6 +479,26 @@ int YglInit(int width, int height, unsigned int depth) {
    YglGLInit(width, height);
 
    // Set up Extention
+/* would be much better to test the opengl api */
+#ifdef __APPLE__
+   pfglCreateProgram = glCreateProgram;
+   pfglCreateShader = glCreateShader;
+   pfglCompileShader = glCompileShader;
+   pfglAttachShader = glAttachShader;
+   pfglLinkProgram = glLinkProgram;
+   pfglUseProgram = glUseProgram;
+   pfglGetUniformLocation = glGetUniformLocation;
+   pfglShaderSource = glShaderSource;
+   pfglUniform1i = glUniform1i;
+   pfglGetShaderInfoLog = glGetShaderInfoLog;
+   pfglVertexAttribPointer = glVertexAttribPointer;
+   pfglGetAttribLocation = glGetAttribLocation;
+   pfglBindAttribLocation = glBindAttribLocation;
+   pfglGetProgramiv = glGetProgramiv;
+   pfglGetShaderiv = glGetShaderiv;
+   pfglEnableVertexAttribArray = glEnableVertexAttribArray;
+   pfglDisableVertexAttribArray = glDisableVertexAttribArray;
+#else
    pfglCreateProgram = (GLuint (STDCALL *)(void)) yglGetProcAddress("glCreateProgram");
    if( pfglCreateProgram == NULL )
    {
@@ -517,7 +537,7 @@ int YglInit(int width, int height, unsigned int depth) {
    if( pfglEnableVertexAttribArray == NULL ) pfglEnableVertexAttribArray = pfglEnableVertexAttribArraydmy;
    pfglDisableVertexAttribArray = (void (STDCALL *)(GLuint index))yglGetProcAddress("glDisableVertexAttribArray");
    if( pfglDisableVertexAttribArray == NULL ) pfglDisableVertexAttribArray = pfglDisableVertexAttribArraydmy;
-   
+#endif
       
    if( YglProgramInit() != 0 ) 
       return -1;

@@ -2772,15 +2772,16 @@ static void Vdp2DrawNBG0(void)
       return;
 
    info.transparencyenable = !(Vdp2Regs->BGON & 0x100);
-   info.specialprimode = Vdp2Regs->SFPRMD & 0x3;
+   info.specialprimode   = Vdp2Regs->SFPRMD & 0x3;
+   info.specialcolormode = Vdp2Regs->SFCCMD & 0x3;
 
    info.colornumber = (Vdp2Regs->CHCTLA & 0x70) >> 4;
 
-   info.blendmode=0;
+      info.blendmode=0;
    if (Vdp2Regs->CCCTL & 0x1)
    {
       info.alpha = ((~Vdp2Regs->CCRNA & 0x1F) << 3) + 0x7;
-      if(Vdp2Regs->CCCTL & 0x100)info.blendmode=1;
+      if(Vdp2Regs->CCCTL & 0x100 && info.specialcolormode == 0)info.blendmode=1;
    }else{
       info.alpha = 0xFF;
    }
@@ -2911,11 +2912,12 @@ static void Vdp2DrawNBG1(void)
       ReadPatternData(&info, Vdp2Regs->PNCN1, Vdp2Regs->CHCTLA & 0x100);
    }
 
+   info.specialcolormode = (Vdp2Regs->SFCCMD>>2) & 0x3;
    info.blendmode=0;
    if (Vdp2Regs->CCCTL & 0x2)
    {
       info.alpha = ((~Vdp2Regs->CCRNA & 0x1F00) >> 5) + 0x7;
-      if(Vdp2Regs->CCCTL & 0x100)info.blendmode=1;
+      if(Vdp2Regs->CCCTL & 0x100 && info.specialcolormode == 0 )info.blendmode=1;
    }else{
       info.alpha = 0xFF;
    }
@@ -3020,11 +3022,12 @@ static void Vdp2DrawNBG2(void)
    info.y = - ((Vdp2Regs->SCYN2 & 0x7FF) % (512 * info.planeh));
    ReadPatternData(&info, Vdp2Regs->PNCN2, Vdp2Regs->CHCTLB & 0x1);
 
+   info.specialcolormode = (Vdp2Regs->SFCCMD>>4) & 0x3;
    info.blendmode=0;
    if (Vdp2Regs->CCCTL & 0x4)
    {
       info.alpha = ((~Vdp2Regs->CCRNB & 0x1F) << 3) + 0x7;
-      if(Vdp2Regs->CCCTL & 0x100)info.blendmode=1;
+      if(Vdp2Regs->CCCTL & 0x100 && info.specialcolormode == 0 )info.blendmode=1;
    }else{
       info.alpha = 0xFF;
    }
@@ -3075,11 +3078,12 @@ static void Vdp2DrawNBG3(void)
    info.y = - ((Vdp2Regs->SCYN3 & 0x7FF) % (512 * info.planeh));
    ReadPatternData(&info, Vdp2Regs->PNCN3, Vdp2Regs->CHCTLB & 0x10);
 
+   info.specialcolormode = (Vdp2Regs->SFCCMD>>6) & 0x03;
    info.blendmode=0;
    if (Vdp2Regs->CCCTL & 0x8)
    {
       info.alpha = ((~Vdp2Regs->CCRNB & 0x1F00) >> 5) + 0x7;
-      if(Vdp2Regs->CCCTL & 0x100)info.blendmode=1;
+      if(Vdp2Regs->CCCTL & 0x100 && info.specialcolormode == 0 )info.blendmode=1;
    }else{
       info.alpha = 0xFF;
    }
@@ -3198,15 +3202,22 @@ static void Vdp2DrawRBG0(void)
       ReadPatternData(&info, Vdp2Regs->PNCR, Vdp2Regs->CHCTLB & 0x100);
    }
 
+   info.specialcolormode = (Vdp2Regs->SFCCMD>>8) & 0x03;
    info.blendmode=0;
-   if (Vdp2Regs->CCCTL & 0x10)
+   if( (Vdp2Regs->LNCLEN & 0x10) == 0x00 )
    {
-      info.alpha = ((~Vdp2Regs->CCRR & 0x1F) << 3) + 0x7;
-      if(Vdp2Regs->CCCTL & 0x100)info.blendmode=1;
+      if (Vdp2Regs->CCCTL & 0x10)
+      {
+         info.alpha = ((~Vdp2Regs->CCRR & 0x1F) << 3) + 0x7;
+         if(Vdp2Regs->CCCTL & 0x100 && info.specialcolormode == 0 )info.blendmode=1;
+      }else{
+         info.alpha = 0xFF;
+      }
    }else{
       info.alpha = 0xFF;
+      // Todo: Line Color Insertion
    }
-   
+
    info.coloroffset = (Vdp2Regs->CRAOFB & 0x7) << 8;
 
    ReadVdp2ColorOffset(&info, 0x10);

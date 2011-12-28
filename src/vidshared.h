@@ -51,6 +51,7 @@ typedef struct
    int patternwh, patternwh_bits;
    int patterndatasize, patterndatasize_bits;
    int specialfunction;
+   int specialcolormode;
    u32 addr, charaddr, paladdr;
    int colornumber;
    int isbitmap;

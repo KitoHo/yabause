@@ -110,7 +110,7 @@ int Ygl_uniformStartUserClip(void * p )
    
    if( prg->ux1 != -1 )
    {
-      GLint vertices[8];
+      GLint vertices[12];
       glColorMask( GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE );
       glStencilMask(0xffffffff);
       glClearStencil(0);
@@ -124,14 +124,20 @@ int Ygl_uniformStartUserClip(void * p )
       // render
       vertices[0] = (int)((float)prg->ux1 * vdp1wratio);
       vertices[1] = (int)((float)prg->uy1 * vdp1hratio);
-      vertices[2] = (int)((float)prg->ux2 * vdp1wratio);
+      vertices[2] = (int)((float)(prg->ux2+1) * vdp1wratio);
       vertices[3] = (int)((float)prg->uy1 * vdp1hratio);
-      vertices[4] = (int)((float)prg->ux2 * vdp1wratio);
-      vertices[5] = (int)((float)prg->uy2 * vdp1hratio);
+      vertices[4] = (int)((float)(prg->ux2+1) * vdp1wratio);
+      vertices[5] = (int)((float)(prg->uy2+1) * vdp1hratio);
+
       vertices[6] = (int)((float)prg->ux1 * vdp1wratio);
-      vertices[7] = (int)((float)prg->uy2 * vdp1hratio);  
+      vertices[7] = (int)((float)prg->uy1 * vdp1hratio);
+      vertices[8] = (int)((float)(prg->ux2+1) * vdp1wratio);
+      vertices[9] = (int)((float)(prg->uy2+1) * vdp1hratio);
+      vertices[10] = (int)((float)prg->ux1 * vdp1wratio);
+      vertices[11] = (int)((float)(prg->uy2+1) * vdp1hratio);  
+      
       glVertexPointer(2, GL_INT, 0, vertices);
-      glDrawArrays(GL_QUADS, 0, 4);
+      glDrawArrays(GL_TRIANGLES, 0, 4);
       
       glColorMask( GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE );
       glStencilFunc(GL_ALWAYS,0,0x0);
@@ -262,7 +268,7 @@ int YglProgramChange( YglLevel * level, int prgid )
       level->prg = tmp;
       
       level->prg[level->prgcurrent].currentQuad = 0;
-      level->prg[level->prgcurrent].maxQuad = 8 * 64;
+      level->prg[level->prgcurrent].maxQuad = 12 * 64;
       if ((level->prg[level->prgcurrent].quads = (int *) malloc(level->prg[level->prgcurrent].maxQuad * sizeof(int))) == NULL)
          return -1;
 

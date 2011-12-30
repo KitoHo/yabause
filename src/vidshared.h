@@ -34,6 +34,73 @@ typedef struct
 
 typedef struct
 {
+   float Xst;
+   float Yst;
+   float Zst;
+   float deltaXst;
+   float deltaYst;
+   float deltaX;
+   float deltaY;
+   float A;
+   float B;
+   float C;
+   float D;
+   float E;
+   float F;
+   float Px;
+   float Py;
+   float Pz;
+   float Cx;
+   float Cy;
+   float Cz;
+   float Mx;
+   float My;
+   float kx;
+   float ky;
+   float KAst;
+   float deltaKAst;
+   float deltaKAx;
+   u32 coeftbladdr;
+   int coefenab;
+   int coefmode;
+   int coefdatasize;
+   float Xp;
+   float Yp;
+   float dX;
+   float dY;
+   int screenover;
+   int msb;
+   
+   void FASTCALL (* PlaneAddr)(void *, int);
+   u32 charaddr;
+   int planew, planew_bits, planeh, planeh_bits;
+   int MaxH,MaxV;
+
+   float Xsp;
+   float Ysp;   
+   float dx;
+   float dy;
+   float lkx;
+   float lky;   
+   int KtablV;
+   int ShiftPaneX;
+   int ShiftPaneY;   
+   int MskH;
+   int MskV;
+   u32 lineaddr;
+   u32 PlaneAddrv[16];
+   
+} vdp2rotationparameter_struct;
+
+typedef struct 
+{
+   int  WinShowLine;
+    int WinHStart;
+    int WinHEnd;
+} vdp2WindowInfo;
+
+typedef struct
+{
    int vertices[8];
    int cellw, cellh;
    int flipfunction;
@@ -96,54 +163,17 @@ typedef struct
    u8  WindowArea0; // Window Area Mode 0
    u8  WindowArea1; // Window Area Mode 1
    
+   // Rotate Screen
+   vdp2WindowInfo * pWinInfo;
+   int WindwAreaMode;
+   vdp2rotationparameter_struct * FASTCALL (*GetKValueA)(vdp2rotationparameter_struct*,int);
+   vdp2rotationparameter_struct * FASTCALL (*GetKValueB)(vdp2rotationparameter_struct*,int);   
+   vdp2rotationparameter_struct * FASTCALL (*GetRParam)(void *, int h,int v);
+   u32 LineColorBase;
+   
 } vdp2draw_struct;
 
-typedef struct 
-{
-   int  WinShowLine;
-	int WinHStart;
-	int WinHEnd;
-} vdp2WindowInfo;
 
-typedef struct
-{
-   float Xst;
-   float Yst;
-   float Zst;
-   float deltaXst;
-   float deltaYst;
-   float deltaX;
-   float deltaY;
-   float A;
-   float B;
-   float C;
-   float D;
-   float E;
-   float F;
-   float Px;
-   float Py;
-   float Pz;
-   float Cx;
-   float Cy;
-   float Cz;
-   float Mx;
-   float My;
-   float kx;
-   float ky;
-   float KAst;
-   float deltaKAst;
-   float deltaKAx;
-   u32 coeftbladdr;
-   int coefenab;
-   int coefmode;
-   int coefdatasize;
-   float Xp;
-   float Yp;
-   float dX;
-   float dY;
-   int screenover;
-   int msb;
-} vdp2rotationparameter_struct;
 
 #define FP_SIZE 16
 typedef s32 fixed32;
@@ -365,6 +395,33 @@ static INLINE void ReadBitmapSize(vdp2draw_struct *info, u16 bm, int mask)
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+static INLINE void ReadPlaneSizeR(vdp2rotationparameter_struct *info, u16 reg)
+{
+   switch(reg & 0x3)
+   {
+      case 0:
+         info->planew = info->planeh = 1;
+         info->planew_bits = info->planeh_bits = 0;
+         break;
+      case 1:
+         info->planew = 2; info->planew_bits = 1;
+         info->planeh = 1; info->planeh_bits = 0;
+         break;
+      case 3:
+         info->planew = info->planeh = 2;
+         info->planew_bits = info->planeh_bits = 1;
+         break;
+      default: // Not sure what 0x2 does, though a few games seem to use it
+         info->planew = info->planeh = 1;
+         info->planew_bits = info->planeh_bits = 0;
+         break;
+   }
+   
+
+}
+
+
 
 static INLINE void ReadPlaneSize(vdp2draw_struct *info, u16 reg)
 {
@@ -768,6 +825,10 @@ static INLINE void Vdp1ProcessSpritePixel(int type, u16 *pixel, int *shadow, int
 #define VDPLINE_SZ(a) ((a)&0x04)
 #define VDPLINE_SY(a) ((a)&0x02)
 #define VDPLINE_SX(a) ((a)&0x01)
+#define OVERMODE_REPEAT      0
+#define OVERMODE_SELPATNAME  1
+#define OVERMODE_TRANSE      2
+#define OVERMODE_512         3
 
 
 //////////////////////////////////////////////////////////////////////////////

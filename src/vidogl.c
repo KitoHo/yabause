@@ -144,8 +144,29 @@ static vdp2WindowInfo * m_vWindinfo1 = NULL;
 static int m_vWindinfo1_size = -1;
 static int m_b1WindowChg;
 
-vdp2Lineinfo lineNBG0[1024];
-vdp2Lineinfo lineNBG1[1024];
+static vdp2Lineinfo lineNBG0[512];
+static vdp2Lineinfo lineNBG1[512];
+
+// Rotate Screen
+static vdp2rotationparameter_struct  paraA;
+static vdp2rotationparameter_struct  paraB;
+
+vdp2rotationparameter_struct * FASTCALL vdp2rGetKValue2W( vdp2rotationparameter_struct * param, int index );
+vdp2rotationparameter_struct * FASTCALL vdp2rGetKValue1W( vdp2rotationparameter_struct * param, int index );
+vdp2rotationparameter_struct * FASTCALL vdp2rGetKValue2Wm3( vdp2rotationparameter_struct * param, int index );
+vdp2rotationparameter_struct * FASTCALL vdp2rGetKValue1Wm3( vdp2rotationparameter_struct * param, int index );
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode00NoK( vdp2draw_struct * info, int h, int v );
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode00WithK( vdp2draw_struct * info,int h, int v );
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode01NoK( vdp2draw_struct * info,int h, int v );
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode01WithK( vdp2draw_struct * info,int h, int v );
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode02NoK( vdp2draw_struct * info,int h, int v );
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode02WithKA( vdp2draw_struct * info,int h, int v );
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode02WithKB( vdp2draw_struct * info,int h, int v );
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode03NoK( vdp2draw_struct * info,int h, int v );
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode03WithKA( vdp2draw_struct * info,int h, int v );
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode03WithKB( vdp2draw_struct * info,int h, int v );
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode03WithK( vdp2draw_struct * info,int h, int v );
+
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -631,7 +652,7 @@ static void Vdp2GenerateWindowInfo(void)
         if( m_vWindinfo0_size != vdp2height )
         {
             if(m_vWindinfo0 != NULL) free(m_vWindinfo0);
-            m_vWindinfo0 = (vdp2WindowInfo*)malloc(sizeof(vdp2WindowInfo)*vdp2height);
+            m_vWindinfo0 = (vdp2WindowInfo*)malloc(sizeof(vdp2WindowInfo)*(vdp2height+8));
 
             for( i=0; i<vdp2height; i++ )
             {
@@ -713,6 +734,7 @@ static void Vdp2GenerateWindowInfo(void)
             }
 
         }
+
 
     // there is no Window BG
     }else{
@@ -1567,176 +1589,208 @@ static INLINE u32 Vdp2RotationFetchPixel(vdp2draw_struct *info, int x, int y, in
 }
 
 //////////////////////////////////////////////////////////////////////////////
-
-static void FASTCALL Vdp2DrawRotation(vdp2draw_struct *info, vdp2rotationparameter_struct *parameter, YglTexture *texture)
+static void FASTCALL Vdp2DrawRotation(vdp2draw_struct *info, vdp2rotationparameter_struct *dmy, YglTexture *texture)
 {
-   if (!parameter->coefenab)
+   int useb = 0;
+   int i, j;
+   int x, y;
+   int cellw, cellh;
+   int pagepixelwh;
+   int planepixelwidth;
+   int planepixelheight;
+   int screenwidth;
+   int screenheight;
+   int oldcellx=-1, oldcelly=-1;
+   u32 color;
+   int vres,hres;
+   int h;
+   int v;
+   int pagesize;
+   int patternshift;
+   u32 LineColorRamAdress;   
+   u32 celladdr;
+   u32 cellc[16*16];
+   
+   vdp2rotationparameter_struct *parameter;
+   if( vdp2height >= 448 ) vres = (vdp2height>>1); else vres = vdp2height;
+   if( vdp2width >= 640 ) hres = (vdp2width>>1); else hres = vdp2width;
+   info->vertices[0] = 0;
+   info->vertices[1] = 0;
+   info->vertices[2] = vdp2width;
+   info->vertices[3] = 0;
+   info->vertices[4] = vdp2width;
+   info->vertices[5] = vdp2height;
+   info->vertices[6] = 0;
+   info->vertices[7] = vdp2height;
+   cellw = info->cellw;
+   cellh = info->cellh;   
+   info->cellw = hres;
+   info->cellh = vres;
+   info->flipfunction = 0;
+   YglQuad((YglSprite *)info, texture,NULL);
+   info->cellw = cellw;
+   info->cellh = cellh;
+   
+   if( Vdp2Regs->RPMD != 0 ) useb = 1;
+   
+   if (!info->isbitmap)
    {
-      // Since coefficients aren't being used, we can simplify the drawing process
-      if (IsScreenRotated(parameter))
-      {
-         // No rotation
-         // FIXME - This should really be fixed point math
-         info->x = (int)-(parameter->kx * (parameter->Xst - parameter->Px) + parameter->Px + parameter->Mx);
-         info->y = (int)-(parameter->ky * (parameter->Yst - parameter->Py) + parameter->Py + parameter->My);
-         info->coordincx = 1.0 / parameter->kx;
-         info->coordincy = 1.0 / parameter->ky;
-      }
-      else
-      {
-         // Do simple rotation
-         CalculateRotationValues(parameter);
-
-         if (info->isbitmap)
-         {
-            // Bitmap
-            info->vertices[0] = GenerateRotatedXPos(parameter, 0, 0);
-            info->vertices[1] = GenerateRotatedYPos(parameter, 0, 0);
-            info->vertices[2] = GenerateRotatedXPos(parameter, info->cellw-1, 0);
-            info->vertices[3] = GenerateRotatedYPos(parameter, info->cellw-1, 0);
-            info->vertices[4] = GenerateRotatedXPos(parameter, info->cellw-1, info->cellh-1);
-            info->vertices[5] = GenerateRotatedYPos(parameter, info->cellw-1, info->cellh-1);
-            info->vertices[6] = GenerateRotatedXPos(parameter, 0, info->cellh-1);
-            info->vertices[7] = GenerateRotatedYPos(parameter, 0, info->cellh-1);
-
-            YglQuad((YglSprite *)info, texture, NULL );
-            Vdp2DrawCell(info, texture);
-            return;
-         }
-         else
-         {
-            Vdp2DrawMap(info, texture);
-            return;
-         }
-      }
+      pagepixelwh=64*8;
+      planepixelwidth=info->planew*pagepixelwh;
+      planepixelheight=info->planeh*pagepixelwh;
+      screenwidth=4*planepixelwidth;
+      screenheight=4*planepixelheight;
+      oldcellx=-1;
+      oldcelly=-1;
+      pagesize=info->pagewh*info->pagewh;
+      patternshift = (2+info->patternwh);
    }
    else
    {
-      // Rotation using Coefficient Tables(now this stuff just gets wacky. It
-      // has to be done in software, no exceptions)
-      int i, j;
-      int x, y;
-      int cellw, cellh;
-      int pagepixelwh;
-      int planepixelwidth;
-      int planepixelheight;
-      int screenwidth;
-      int screenheight;
-      int oldcellx=-1, oldcelly=-1;
+      pagepixelwh=0;
+      planepixelwidth=0;
+      planepixelheight=0;
+      screenwidth=0;
+      screenheight=0;
+      oldcellx=0;
+      oldcelly=0;
+      pagesize=0;
+      patternshift = 0;      
+   }
+   
+   LineColorRamAdress = (T1ReadWord(Vdp2Ram,info->LineColorBase)&0x780) + info->coloroffset;
+            
 
-      CalculateRotationValues(parameter);
-
-      info->vertices[0] = 0;
-      info->vertices[1] = 0;
-      info->vertices[2] = vdp2width;
-      info->vertices[3] = 0;
-      info->vertices[4] = vdp2width;
-      info->vertices[5] = vdp2height;
-      info->vertices[6] = 0;
-      info->vertices[7] = vdp2height;
-
-      cellw = info->cellw;
-      cellh = info->cellh;
-      info->cellw = vdp2width;
-      info->cellh = vdp2height;
-      info->flipfunction = 0;
-      YglQuad((YglSprite *)info, texture,NULL);
-
-      if (!info->isbitmap)
+    paraA.dx = paraA.A * paraA.deltaX + paraA.B * paraA.deltaY;
+    paraA.dy = paraA.D * paraA.deltaX + paraA.E * paraA.deltaY;      
+    paraA.Xp = paraA.A * (paraA.Px - paraA.Cx) + 
+               paraA.B * (paraA.Py - paraA.Cy) + 
+               paraA.C * (paraA.Pz - paraA.Cz) + paraA.Cx + paraA.Mx;
+    paraA.Yp = paraA.D * (paraA.Px - paraA.Cx) + 
+               paraA.E * (paraA.Py - paraA.Cy) + 
+               paraA.F * (paraA.Pz - paraA.Cz) + paraA.Cy + paraA.My;
+                
+    if(useb)
+    {
+      paraB.dx = paraB.A * paraB.deltaX + paraB.B * paraB.deltaY;
+      paraB.dy = paraB.D * paraB.deltaX + paraB.E * paraB.deltaY;           
+      paraB.Xp = paraB.A * (paraB.Px - paraB.Cx) + paraB.B * (paraB.Py - paraB.Cy) 
+               + paraB.C * (paraB.Pz - paraB.Cz) + paraB.Cx + paraB.Mx;
+      paraB.Yp = paraB.D * (paraB.Px - paraB.Cx) + paraB.E * (paraB.Py - paraB.Cy)
+               + paraB.F * (paraB.Pz - paraB.Cz) + paraB.Cy + paraB.My;
+    }
+    
+   
+   for (j = 0; j < vres; j++)
+   {   
+      paraA.Xsp = paraA.A * ((paraA.Xst + paraA.deltaXst * j) - paraA.Px) +
+                  paraA.B * ((paraA.Yst + paraA.deltaYst * j) - paraA.Py) +
+                  paraA.C * (paraA.Zst - paraA.Pz);
+               
+      paraA.Ysp = paraA.D * ((paraA.Xst + paraA.deltaXst *j) - paraA.Px) +
+                  paraA.E * ((paraA.Yst + paraA.deltaYst * j) - paraA.Py) +
+                  paraA.F * (paraA.Zst - paraA.Pz);
+               
+      paraA.KtablV = paraA.deltaKAst* j;               
+      if(useb)
       {
-         pagepixelwh=64*8;
-         planepixelwidth=info->planew*pagepixelwh;
-         planepixelheight=info->planeh*pagepixelwh;
-         screenwidth=4*planepixelwidth;
-         screenheight=4*planepixelheight;
-         oldcellx=-1;
-         oldcelly=-1;
+         paraB.Xsp = paraB.A * ((paraB.Xst + paraB.deltaXst * j) - paraB.Px) +
+                  paraB.B * ((paraB.Yst + paraB.deltaYst * j) - paraB.Py) +
+                  paraB.C * (paraB.Zst - paraB.Pz);
+                  
+         paraB.Ysp = paraB.D * ((paraB.Xst + paraB.deltaXst * j) - paraB.Px) +
+                  paraB.E * ((paraB.Yst + paraB.deltaYst * j) - paraB.Py) +
+                  paraB.F * (paraB.Zst - paraB.Pz);
+                  
+         paraB.KtablV = paraB.deltaKAst * j;   
       }
-      else
-      {
-         pagepixelwh=0;
-         planepixelwidth=0;
-         planepixelheight=0;
-         screenwidth=0;
-         screenheight=0;
-         oldcellx=0;
-         oldcelly=0;
-      }
+      
 
-      for (j = 0; j < vdp2height; j++)
+      if( (Vdp2Regs->LCTA.part.U & 0x8000) != 0 )
       {
-         if (parameter->deltaKAx == 0)
+         LineColorRamAdress = (T1ReadWord(Vdp2Ram,info->LineColorBase+(y<<1))&0x780) + info->coloroffset;
+      }      
+
+      for( i = 0; i < hres; i++ )
+      {
+         parameter = info->GetRParam(info,i,j);
+         if( parameter == NULL )
          {
-            Vdp2ReadCoefficient(parameter,
-                                parameter->coeftbladdr +
-                                (u32)(((float)j)*parameter->deltaKAst *
-                                ((float)parameter->coefdatasize)));
+            *(texture->textdata++) = 0x000000;
+            continue;
          }
+         
+         h = (parameter->ky * ( parameter->Xsp + parameter->dx * i ) + parameter->Xp);
+         v = (parameter->ky * ( parameter->Ysp + parameter->dy * i ) + parameter->Yp);
 
-
-         for (i = 0; i < vdp2width; i++)
+         if (info->isbitmap)
          {
-            u32 color;
+            h &= cellw-1;
+            v &= cellh-1;
 
-            if (parameter->deltaKAx != 0)
+            // Fetch Pixel
+            color = Vdp2RotationFetchPixel(info, h, v, cellw);
+         }
+         else
+         {
+             // Tile
+            int planenum;
+            if( (h < 0 || h >= parameter->MaxH) || (v < 0 || v >= parameter->MaxV) )
             {
-               Vdp2ReadCoefficient(parameter,
-                                   parameter->coeftbladdr+
-                                   (u32)((((float)j*parameter->deltaKAst) +
-                                   ((float)i*parameter->deltaKAx)) *
-                                   ((float)parameter->coefdatasize)));
-            }
-
-            if (parameter->msb)
-            {
-               *texture->textdata++ = info->PostPixelFetchCalc(info, 0x00000000);
-               continue;
-            }
-
-            x = GenerateRotatedXPos(parameter, i, j);
-            y = GenerateRotatedYPos(parameter, i, j);
-
-            // Convert coordinates into graphics
-            if (info->isbitmap)
-            {
-               x &= cellw-1;
-               y &= cellh-1;
-
-               // Fetch Pixel
-               color = Vdp2RotationFetchPixel(info, x, y, cellw);
-            }
-            else
-            {
-               // Tile
-               int planenum;
-               int pagesize=info->pagewh*info->pagewh;
-
-               x &= screenwidth-1;
-               y &= screenheight-1;
-
-               if ((x / (8 * info->patternwh)) != oldcellx ||
-                   (y / (8 * info->patternwh)) != oldcelly)
+               switch( parameter->screenover )
                {
-                  oldcellx = x / (8 * info->patternwh);
-                  oldcelly = y / (8 * info->patternwh);
-
-                  // Calculate which plane we're dealing with
-                  planenum = ((int)(y / planepixelheight)*4) + (int)(x / planepixelwidth);
-                  x = (x % planepixelwidth);
-                  y = (y % planepixelheight);
-
-                  // Fetch and decode pattern name data
-                  info->PlaneAddr(info, planenum); // needs reworking
-
-                  // Figure out which page it's on(if plane size is not 1x1)
-                  info->addr += ((y / pagepixelwh * pagesize * info->planew) +
-                                (x / pagepixelwh * pagesize) +
-                                ((y % pagepixelwh) / (8 * info->patternwh) * info->pagewh) +
-                                ((x % pagepixelwh) / (8 * info->patternwh))) * info->patterndatasize * 2;
-
-                  Vdp2PatternAddr(info); // Heh, this could be optimized
+               case OVERMODE_REPEAT:
+                  h &= (parameter->MaxH-1);
+                  v &= (parameter->MaxH-1);
+                  break;
+               case OVERMODE_SELPATNAME:
+                  *(texture->textdata++) = 0x000000;  // ToDO
+                  continue;
+                  break;
+               default:
+                  *(texture->textdata++) = 0x000000;
+                  continue;
                }
+            }
 
+            x = h;
+            y = v;
+            
+
+            if ((x>>patternshift) != oldcellx || (y>>patternshift) != oldcelly)
+            {
+               int cv,ch;
+               oldcellx = x>>patternshift;
+               oldcelly = y>>patternshift;
+
+               // Calculate which plane we're dealing with
+               planenum = (x >> parameter->ShiftPaneX) + ((y >> parameter->ShiftPaneY) << 2);
+               x &= parameter->MskH;
+               y &= parameter->MskV;                  
+               info->addr = parameter->PlaneAddrv[planenum];
+                    
+                  // Figure out which page it's on(if plane size is not 1x1)
+                   info->addr += (((y>>9) * pagesize * info->planew) +
+                                ((x>>9) * pagesize) +
+                                (((y&511)>>patternshift) * info->pagewh) +
+                                ((x&511)>>patternshift)) << info->patterndatasize;
+
+                    Vdp2PatternAddr(info); // Heh, this could be optimized
+#if 0
+                    if( celladdr != info->charaddr )
+                    {
+                       celladdr = info->charaddr;
+                        for( cv = 0; cv < info->cellh; cv++ )
+                        {
+                           for( ch = 0; ch < info->cellw; ch++ )
+                           {
+                              cellc[cv*16+ch] = Vdp2RotationFetchPixel(info,ch,cv,info->cellw);
+                           }
+                        }
+                    }
+#endif                    
+               }
+               
                // Figure out which pixel in the tile we want
                if (info->patternwh == 1)
                {
@@ -1797,30 +1851,23 @@ static void FASTCALL Vdp2DrawRotation(vdp2draw_struct *info, vdp2rotationparamet
                color = Vdp2RotationFetchPixel(info, x, y, 8);
             }
 
-            *texture->textdata++ = info->PostPixelFetchCalc(info, color);
+            if( parameter->lineaddr != 0xFFFFFFFF && ((Vdp2Regs->CCCTL>>8)&0x01) )
+            {
+                  u32 linecolor = Vdp2ColorRamGetColor(LineColorRamAdress|parameter->lineaddr,0xFF);
+                  color = COLOR_ADD(color, (linecolor)&0xFF,
+                                           (linecolor>>8)&0xFF,
+                                           (linecolor>>16)&0xFF);            
+            }
+
+            *(texture->textdata++) = info->PostPixelFetchCalc(info, color);
          }
+
          texture->textdata += texture->w;
-      }
-      return;
    }
-
-   if (info->isbitmap)
-   {
-      info->vertices[0] = info->x * info->coordincx;
-      info->vertices[1] = info->y * info->coordincy;
-      info->vertices[2] = (info->x + info->cellw) * info->coordincx;
-      info->vertices[3] = info->y * info->coordincy;
-      info->vertices[4] = (info->x + info->cellw) * info->coordincx;
-      info->vertices[5] = (info->y + info->cellh) * info->coordincy;
-      info->vertices[6] = info->x * info->coordincx;
-      info->vertices[7] = (info->y + info->cellh) * info->coordincy;
-
-      YglQuad((YglSprite *)info, texture,NULL);
-      Vdp2DrawCell(info, texture);
-   }
-   else
-      Vdp2DrawMap(info, texture);
 }
+
+   
+
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -1837,7 +1884,7 @@ static void SetSaturnResolution(int width, int height)
 int VIDOGLInit(void)
 {
 
-   if (YglInit(1024, 1024, 8) != 0)
+   if (YglInit(2048, 1024, 8) != 0)
       return -1;
 
    SetSaturnResolution(320, 224);
@@ -1870,7 +1917,7 @@ void VIDOGLResize(unsigned int w, unsigned int h, int on)
    else
       YuiSetVideoMode(w, h, 32, 0);
 
-   YglGLInit(1024, 1024);
+   YglGLInit(2048, 1024);
    glViewport(0, 0, w, h);
 
    SetSaturnResolution(vdp2width, vdp2height);
@@ -2638,10 +2685,16 @@ void VIDOGLVdp2DrawEnd(void)
 
 //////////////////////////////////////////////////////////////////////////////
 
+
+   
 static void Vdp2DrawBackScreen(void)
 {
    u32 scrAddr;
    int dot, y;
+  
+   static unsigned char lineColors[512 * 3];
+   static int line[512*4];
+
 
    if (Vdp2Regs->VRSIZE & 0x8000)
       scrAddr = (((Vdp2Regs->BKTAU & 0x7) << 16) | Vdp2Regs->BKTAL) * 2;
@@ -2650,19 +2703,26 @@ static void Vdp2DrawBackScreen(void)
 
    if (Vdp2Regs->BKTAU & 0x8000)
    {
-      glBegin(GL_LINES);
-
       for(y = 0; y < vdp2height; y++)
       {
          dot = T1ReadWord(Vdp2Ram, scrAddr);
          scrAddr += 2;
-
-         glColor3ub((dot & 0x1F) << 3, (dot & 0x3E0) >> 2, (dot & 0x7C00) >> 7);
-
-         glVertex2f(0, y);
-         glVertex2f(vdp2width, y);
+         
+         lineColors[3*y+0] = (dot & 0x1F) << 3;
+         lineColors[3*y+1] = (dot & 0x3E0) >> 2;
+         lineColors[3*y+2] = (dot & 0x7C00) >> 7;
+         line[4*y+0] = 0;
+         line[4*y+1] = y;
+         line[4*y+2] = vdp2width;
+         line[4*y+3] = y;         
       }
-      glEnd();
+      
+      glColorPointer(3, GL_UNSIGNED_BYTE, 0, lineColors);
+      glEnableClientState(GL_COLOR_ARRAY);
+      glVertexPointer(2, GL_INT, 0, line);
+      glEnableClientState(GL_VERTEX_ARRAY);
+      glDrawArrays(GL_LINES,0,vdp2height*2);
+      glDisableClientState(GL_COLOR_ARRAY);      
       glColor3ub(0xFF, 0xFF, 0xFF);
    }
    else
@@ -2671,12 +2731,18 @@ static void Vdp2DrawBackScreen(void)
 
       glColor3ub((dot & 0x1F) << 3, (dot & 0x3E0) >> 2, (dot & 0x7C00) >> 7);
 
-      glBegin(GL_QUADS);
-      glVertex2i(0, 0);
-      glVertex2i(vdp2width, 0);
-      glVertex2i(vdp2width, vdp2height);
-      glVertex2i(0, vdp2height);
-      glEnd();
+      line[0] = 0;
+      line[1] = 0;
+      line[2] = vdp2width;
+      line[3] = 0;    
+      line[4] = vdp2width;
+      line[5] = vdp2height;
+      line[6] = 0;
+      line[7] = vdp2height;    
+
+      glVertexPointer(2, GL_INT, 0, line);
+      glEnableClientState(GL_VERTEX_ARRAY);
+      glDrawArrays(GL_TRIANGLE_FAN,0,8);
       glColor3ub(0xFF, 0xFF, 0xFF);
    }
 }
@@ -3143,6 +3209,116 @@ static void Vdp2DrawRBG0(void)
    info.linescrolltbl = 0;
    info.lineinc = 0;   
    
+   Vdp2ReadRotationTable(0, &paraA);
+   Vdp2ReadRotationTable(1, &paraB);
+   paraA.PlaneAddr = (void FASTCALL (*)(void *, int))&Vdp2ParameterAPlaneAddr;
+   paraB.PlaneAddr = (void FASTCALL (*)(void *, int))&Vdp2ParameterBPlaneAddr;
+   paraA.charaddr = (Vdp2Regs->MPOFR & 0x7) * 0x20000;
+   paraB.charaddr = (Vdp2Regs->MPOFR & 0x70) * 0x2000;
+   ReadPlaneSizeR(&paraA,Vdp2Regs->PLSZ >> 8);
+   ReadPlaneSizeR(&paraB,Vdp2Regs->PLSZ >> 12);
+   
+    
+    
+    if( paraA.coefdatasize == 2)
+    {
+        if(paraA.coefmode < 3 )
+        {
+            info.GetKValueA = vdp2rGetKValue1W;
+        }else{
+            info.GetKValueA = vdp2rGetKValue1Wm3;
+        }
+
+    }else{
+        if(paraA.coefmode < 3 )
+        {
+            info.GetKValueA = vdp2rGetKValue2W;
+        }else{
+            info.GetKValueA = vdp2rGetKValue2Wm3;
+        }
+    }
+
+    if( paraB.coefdatasize == 2)
+    {
+        if(paraB.coefmode < 3 )
+        {
+            info.GetKValueB = vdp2rGetKValue1W;
+        }else{
+            info.GetKValueB = vdp2rGetKValue1Wm3;
+        }
+
+    }else{
+        if(paraB.coefmode < 3 )
+        {
+            info.GetKValueB = vdp2rGetKValue2W;
+        }else{
+            info.GetKValueB = vdp2rGetKValue2Wm3;
+        }
+    }
+
+   if( Vdp2Regs->RPMD == 0x00 )
+   {
+      if(!(paraA.coefenab))
+      {
+         info.GetRParam = vdp2RGetParamMode00NoK;
+      }else{
+         info.GetRParam = vdp2RGetParamMode00WithK;
+      }
+
+   }else if( Vdp2Regs->RPMD == 0x01 )
+   {
+      if(!(paraB.coefenab))
+      {
+         info.GetRParam = vdp2RGetParamMode01NoK;
+      }else{
+         info.GetRParam = vdp2RGetParamMode01WithK;
+      }
+
+   }else if( Vdp2Regs->RPMD == 0x02 )
+   {
+      if(!(paraA.coefenab))
+      {
+         info.GetRParam = vdp2RGetParamMode02NoK;
+      }else{
+         info.GetRParam = vdp2RGetParamMode02WithKA;
+      }
+
+   }else if( Vdp2Regs->RPMD == 0x03 )
+   {
+      // Window0
+      if( ((Vdp2Regs->WCTLD >> 1) & 0x01) == 0x01 )
+      {
+         info.pWinInfo = m_vWindinfo0;
+         info.WindwAreaMode = (Vdp2Regs->WCTLD & 0x01) ;
+      }else if(  ((Vdp2Regs->WCTLD >> 3) & 0x01) == 0x01 )
+      {
+         info.pWinInfo = m_vWindinfo1;
+         info.WindwAreaMode = ((Vdp2Regs->WCTLD >>2)& 0x01) ;
+      }else{
+         info.pWinInfo = m_vWindinfo0;
+         info.WindwAreaMode = (Vdp2Regs->WCTLD & 0x01) ;
+      }
+
+      if( paraA.coefenab == 0 && paraB.coefenab == 0 )
+      {
+         info.GetRParam = vdp2RGetParamMode03NoK;
+      }else if( paraA.coefenab == 1 && paraB.coefenab == 0 )
+      {
+         info.GetRParam = vdp2RGetParamMode03WithKA;
+      }else if( paraA.coefenab == 0 && paraB.coefenab == 1  )
+      {
+         info.GetRParam = vdp2RGetParamMode03WithKB;
+      }else if( paraA.coefenab == 1 && paraB.coefenab == 1  )
+      {
+         info.GetRParam = vdp2RGetParamMode03WithK;
+      }
+   }
+   
+   paraA.screenover = (Vdp2Regs->PLSZ >> 10)  & 0x03;
+   paraB.screenover = (Vdp2Regs->PLSZ >> 14)  & 0x03;
+
+   
+   
    // Figure out which Rotation Parameter we're using
    switch (Vdp2Regs->RPMD & 0x3)
    {
@@ -3169,7 +3345,7 @@ static void Vdp2DrawRBG0(void)
          break;
    }
 
-   Vdp2ReadRotationTable(info.rotatenum, &parameter);
+   
 
    if((info.isbitmap = Vdp2Regs->CHCTLB & 0x200) != 0)
    {
@@ -3189,6 +3365,7 @@ static void Vdp2DrawRBG0(void)
    }
    else
    {
+      int i;
       // Tile Mode
       info.mapwh = 4;
 
@@ -3200,6 +3377,41 @@ static void Vdp2DrawRBG0(void)
          ReadPlaneSize(&info, Vdp2Regs->PLSZ >> 12);
 
       ReadPatternData(&info, Vdp2Regs->PNCR, Vdp2Regs->CHCTLB & 0x100);
+  
+      paraA.ShiftPaneX = 8 + paraA.planew;
+      paraA.ShiftPaneY = 8 + paraA.planeh;
+      paraB.ShiftPaneX = 8 + paraB.planew;
+      paraB.ShiftPaneY = 8 + paraB.planeh;      
+
+      paraA.MskH = (8 * 64 * paraA.planew)-1;
+      paraA.MskV = (8 * 64 * paraA.planeh)-1;
+      paraB.MskH = (8 * 64 * paraB.planew)-1;
+      paraB.MskV = (8 * 64 * paraB.planeh)-1;
+    
+	   paraA.MaxH = 8 * 64 * paraA.planew * 4;
+	   paraA.MaxV = 8 * 64 * paraA.planeh * 4;
+	   paraB.MaxH = 8 * 64 * paraB.planew * 4;
+	   paraB.MaxV = 8 * 64 * paraB.planeh * 4;
+
+	   if( paraA.screenover == OVERMODE_512 )
+	   {
+		   paraA.MaxH = 512;
+		   paraA.MaxV = 512;
+	   }
+
+	   if( paraB.screenover == OVERMODE_512 )
+	   {
+		   paraB.MaxH = 512;
+		   paraB.MaxV = 512;
+	   }
+	   
+	   for( i=0; i<16; i++ )
+       {
+         paraA.PlaneAddr(&info,i);
+         paraA.PlaneAddrv[i] = info.addr;
+         paraB.PlaneAddr(&info,i);
+         paraB.PlaneAddrv[i] = info.addr;
+       }
    }
 
    info.specialcolormode = (Vdp2Regs->SFCCMD>>8) & 0x03;
@@ -3213,10 +3425,17 @@ static void Vdp2DrawRBG0(void)
       }else{
          info.alpha = 0xFF;
       }
+      info.LineColorBase = 0x00;
+      paraA.lineaddr = 0xFFFFFFFF;
+      paraB.lineaddr = 0xFFFFFFFF;
    }else{
       info.alpha = 0xFF;
-      // Todo: Line Color Insertion
+      info.LineColorBase = (Vdp2Regs->LCTA.all) << 1;
+      paraA.lineaddr = 0xFFFFFFFF;
+      paraB.lineaddr = 0xFFFFFFFF;
    }
+
+
 
    info.coloroffset = (Vdp2Regs->CRAOFB & 0x7) << 8;
 
@@ -3357,4 +3576,259 @@ void YglGetGlSize(int *width, int *height)
    *height = GlHeight;
 }
 
+vdp2rotationparameter_struct * FASTCALL vdp2rGetKValue2W( vdp2rotationparameter_struct * param, int index )
+{
+   float kval;
+   int   kdata;
+      
+   kdata = T1ReadLong(Vdp2Ram, (param->coeftbladdr&0x7FFFF) + (index<<2) );
+   if( kdata & 0x80000000 ) return NULL;
+
+   kval = (float) (int) ((kdata & 0x00FFFFFF) | (kdata & 0x00800000 ? 0xFF800000 : 0x00000000)) / 65536.0f;
+    
+   switch( param->coefmode )
+   {
+   case 0: 
+       param->kx = kval;
+       param->ky = kval;
+       break;
+   case 1: 
+       param->kx = kval;
+       break;
+   case 2: 
+       param->ky = kval;
+       break;
+   }
+
+   param->lineaddr = (kdata >> 24)&0x7F;
+   return param;
+}
+
+vdp2rotationparameter_struct * FASTCALL vdp2rGetKValue1W( vdp2rotationparameter_struct * param, int index )
+{
+   float kval;
+   u16   kdata;
+  
+   kdata = T1ReadWord(Vdp2Ram, param->coeftbladdr + (index<<1) );
+   if( kdata & 0x8000 ) return NULL;
+
+   kval = (float) (signed) ((kdata & 0x7FFF) | (kdata & 0x4000 ? 0x8000 : 0x0000)) / 1024.0f;
+   
+   switch( param->coefmode )
+   {
+   case 0: 
+       param->kx = kval;
+       param->ky = kval;
+       break;
+   case 1: 
+       param->kx = kval;
+       break;
+   case 2: 
+       param->ky = kval;
+       break;
+   }
+   return param;
+   
+}
+
+vdp2rotationparameter_struct * FASTCALL vdp2rGetKValue2Wm3( vdp2rotationparameter_struct * param, int index )
+{
+   return param; // ToDo:
+}
+
+vdp2rotationparameter_struct * FASTCALL vdp2rGetKValue1Wm3( vdp2rotationparameter_struct * param, int index )
+{
+   return param; // ToDo:   
+}
+
+
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode00NoK( vdp2draw_struct * info, int h, int v )
+{
+   return &paraA;
+}
+
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode00WithK( vdp2draw_struct * info,int h, int v )
+{
+   h = paraA.KtablV+(paraA.deltaKAx * h);
+   return info->GetKValueA( &paraA, h );
+}
+
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode01NoK( vdp2draw_struct * info,int h, int v )
+{
+    return &paraB;   
+}
+
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode01WithK( vdp2draw_struct * info,int h, int v )
+{
+   h = (paraB.KtablV+(paraB.deltaKAx * h));
+   return info->GetKValueB( &paraB, h );   
+}
+
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode02NoK( vdp2draw_struct * info,int h, int v )
+{
+   return &paraA;
+}
+
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode02WithKA( vdp2draw_struct * info,int h, int v )
+{
+    h = (paraA.KtablV+(paraA.deltaKAx * h));
+    if( info->GetKValueA( &paraA, h ) == NULL )
+    {
+        return &paraB;
+    }
+    return &paraA;
+}
+
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode02WithKB( vdp2draw_struct * info,int h, int v )
+{
+   return &paraA;   
+}
+
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode03NoK( vdp2draw_struct * info,int h, int v )
+{
+   if( info->WindwAreaMode == 0 )
+   {
+      if( info->pWinInfo[v].WinShowLine == 0  )
+      {
+         return (&paraB);
+      }else{
+         if( h < info->pWinInfo[v].WinHStart || h >= info->pWinInfo[v].WinHEnd )
+         {
+            return (&paraB);
+         }else{
+            return (&paraA);
+         }
+      }
+   }
+   else
+   {
+      if( info->pWinInfo[v].WinShowLine == 0 )
+      {
+         return (&paraB);
+      }else{
+         if( h < info->pWinInfo[v].WinHStart || h >= info->pWinInfo[v].WinHEnd )
+         {
+            return (&paraA);
+         }else{
+            return (&paraB);
+         }
+      }
+   }
+   return NULL;   
+}
+
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode03WithKA( vdp2draw_struct * info,int h, int v )
+{
+  
+    if( info->WindwAreaMode == 0 )
+   {
+      if( info->pWinInfo[v].WinShowLine == 0 )
+      {
+         return (&paraB);
+      }else{
+         if( h < info->pWinInfo[v].WinHStart || h >= info->pWinInfo[v].WinHEnd )
+         {
+            return (&paraB);
+         }else{
+            h = (paraA.KtablV+(paraA.deltaKAx * h));
+            return info->GetKValueA( &paraA, h );
+         }
+      }
+   }else{
+        if( info->pWinInfo[v].WinShowLine == 0 )
+        {
+            h = (paraA.KtablV+(paraA.deltaKAx * h));
+            return info->GetKValueA( &paraA, h );
+        }else{
+         if( h < info->pWinInfo[v].WinHStart || h >= info->pWinInfo[v].WinHEnd )
+         {
+            h = (paraA.KtablV+(paraA.deltaKAx * h));
+            return info->GetKValueA( &paraA, h );
+         }else{
+            return (&paraB);
+         }
+      }
+   }
+   return NULL;
+
+}
+
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode03WithKB( vdp2draw_struct * info,int h, int v )
+{
+   if( info->WindwAreaMode == 0 )
+   {
+      if( info->pWinInfo[v].WinShowLine == 0 )
+      {
+         h = (paraB.KtablV+(paraB.deltaKAx * h));
+         return info->GetKValueB( &paraB, h );
+      }else{
+         if( h < info->pWinInfo[v].WinHStart || h >= info->pWinInfo[v].WinHEnd )
+         {
+            h = (paraB.KtablV+(paraB.deltaKAx * h));
+            return info->GetKValueB( &paraB, h );
+         }else{
+            return &paraA;
+         }
+      }
+   }else{
+      {
+        if( info->pWinInfo[v].WinShowLine == 0 )
+        {
+            return &paraA;
+        }else{
+         if( h < info->pWinInfo[v].WinHStart || h >= info->pWinInfo[v].WinHEnd )
+         {
+            h = (paraA.KtablV+(paraA.deltaKAx * h));
+            return info->GetKValueA( &paraA, h );
+         }else{
+            h = (paraB.KtablV+(paraB.deltaKAx * h));
+            return info->GetKValueB( &paraB, h );
+         }
+         }
+      }
+   }
+   return NULL;
+}
+
+vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode03WithK( vdp2draw_struct * info,int h, int v )
+{
+
+   if( info->WindwAreaMode == 0 )
+   {
+      if( info->pWinInfo[v].WinShowLine == 0 )
+      {
+         h = (paraB.KtablV+(paraB.deltaKAx * h));
+         return info->GetKValueB( &paraB, h );
+      }else{
+         if( h < info->pWinInfo[v].WinHStart || h >= info->pWinInfo[v].WinHEnd )
+         {
+            h = (paraB.KtablV+(paraB.deltaKAx * h));
+            return info->GetKValueB( &paraB, h );
+         }else{
+            h = (paraA.KtablV+(paraA.deltaKAx * h));
+            return info->GetKValueA( &paraA, h );
+         }
+      }
+   }else{
+      if( info->pWinInfo[v].WinShowLine == 0 )
+      {
+            h = (paraB.KtablV+(paraB.deltaKAx * h));
+            return info->GetKValueB( &paraB, h );
+      }else{
+         if( h < info->pWinInfo[v].WinHStart || h >= info->pWinInfo[v].WinHEnd )
+         {
+            h = (paraB.KtablV+(paraB.deltaKAx * h));
+            return info->GetKValueB( &paraB, h );
+         }else{
+            h = (paraA.KtablV+(paraA.deltaKAx * h));
+            return info->GetKValueA( &paraA, h );
+         }
+      }
+   }
+
+   return NULL;
+}
+
+
 #endif
+

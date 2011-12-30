@@ -450,7 +450,7 @@ int YglInit(int width, int height, unsigned int depth) {
      for(j = 0;j < _Ygl->levels[i].prgcount; j++) {
        _Ygl->levels[i].prg[j].prg=0;
       _Ygl->levels[i].prg[j].currentQuad = 0;
-      _Ygl->levels[i].prg[j].maxQuad = 8 * 2000;
+      _Ygl->levels[i].prg[j].maxQuad = 12 * 2000;
       if ((_Ygl->levels[i].prg[j].quads = (int *) malloc(_Ygl->levels[i].prg[j].maxQuad * sizeof(int))) == NULL)
          return -1;
 
@@ -640,7 +640,7 @@ YglProgram * YglGetProgram( YglSprite * input, int prg )
    program = &level->prg[level->prgcurrent];
    
    if (program->currentQuad == program->maxQuad) {
-      program->maxQuad += 8*128;
+      program->maxQuad += 12*128;
       program->quads = (int *) realloc(program->quads, program->maxQuad * sizeof(int));
       program->textcoords = (float *) realloc(program->textcoords, program->maxQuad * sizeof(float) * 2);
       program->vertexAttribute = (float *) realloc(program->vertexAttribute, program->maxQuad * sizeof(float)*2);          
@@ -661,6 +661,7 @@ float * YglQuad(YglSprite * input, YglTexture * output, YglCache * c) {
    texturecoordinate_struct *tmp;
    float q[4];
    int prg = PG_NORMAL;
+   int * pos;
    
    if( input->blendmode == 1 )
       prg = PG_VDP2_ADDBLEND;
@@ -668,39 +669,64 @@ float * YglQuad(YglSprite * input, YglTexture * output, YglCache * c) {
    program = YglGetProgram(input,prg);
    if( program == NULL ) return NULL;
    
-   tmp = (texturecoordinate_struct *)(program->textcoords + (program->currentQuad * 2));
-   memcpy(program->quads + program->currentQuad, input->vertices, 8 * sizeof(int));
+   
+   
+   pos = program->quads + program->currentQuad;
+   pos[0] = input->vertices[0];
+   pos[1] = input->vertices[1];
+   pos[2] = input->vertices[2];
+   pos[3] = input->vertices[3];   
+   pos[4] = input->vertices[4];
+   pos[5] = input->vertices[5];   
+   pos[6] = input->vertices[0];
+   pos[7] = input->vertices[1];
+   pos[8] = input->vertices[4];
+   pos[9] = input->vertices[5];   
+   pos[10] = input->vertices[6];
+   pos[11] = input->vertices[7];   
 
-   program->currentQuad += 8;
+   tmp = (texturecoordinate_struct *)(program->textcoords + (program->currentQuad * 2));
+   
+   program->currentQuad += 12;
    YglTMAllocate(output, input->w, input->h, &x, &y);
 
-   tmp[0].r = tmp[1].r = tmp[2].r = tmp[3].r = 0; // these can stay at 0
-
+   
+   tmp[0].r = tmp[1].r = tmp[2].r = tmp[3].r = tmp[4].r = tmp[5].r = 0; // these can stay at 0
+   
+   /*
+     0 +---+ 1
+       |   |
+       +---+ 2
+     3 +---+ 
+       |   |
+     5 +---+ 4
+   */
+   
    if (input->flip & 0x1) {
-      tmp[0].s = tmp[3].s = (float)(x + input->w);
-      tmp[1].s = tmp[2].s = (float)(x);
+      tmp[0].s = tmp[3].s = tmp[5].s = (float)(x + input->w);
+      tmp[1].s = tmp[2].s = tmp[4].s = (float)(x);
    } else {
-      tmp[0].s = tmp[3].s = (float)(x);
-      tmp[1].s = tmp[2].s = (float)(x + input->w);
+      tmp[0].s = tmp[3].s = tmp[5].s = (float)(x);
+      tmp[1].s = tmp[2].s = tmp[4].s = (float)(x + input->w);
    }
    if (input->flip & 0x2) {
-      tmp[0].t = tmp[1].t = (float)(y + input->h);
-      tmp[2].t = tmp[3].t = (float)(y);
+      tmp[0].t = tmp[1].t = tmp[3].t = (float)(y + input->h);
+      tmp[2].t = tmp[4].t = tmp[5].t = (float)(y);
    } else {
-      tmp[0].t = tmp[1].t = (float)(y);
-      tmp[2].t = tmp[3].t = (float)(y + input->h);
+      tmp[0].t = tmp[1].t = tmp[3].t = (float)(y);
+      tmp[2].t = tmp[4].t = tmp[5].t = (float)(y + input->h);
    }
 
    if( c != NULL )
    {
       switch(input->flip) {
         case 0:
-          c->x = *(program->textcoords + ((program->currentQuad - 8) * 2));   // upper left coordinates(0)
-          c->y = *(program->textcoords + ((program->currentQuad - 8) * 2)+1); // upper left coordinates(0)   
+          c->x = *(program->textcoords + ((program->currentQuad - 12) * 2));   // upper left coordinates(0)
+          c->y = *(program->textcoords + ((program->currentQuad - 12) * 2)+1); // upper left coordinates(0)   
           break;
         case 1:
-          c->x = *(program->textcoords + ((program->currentQuad - 6) * 2));   // upper left coordinates(0)
-          c->y = *(program->textcoords + ((program->currentQuad - 6) * 2)+1); // upper left coordinates(0)       
+          c->x = *(program->textcoords + ((program->currentQuad - 10) * 2));   // upper left coordinates(0)
+          c->y = *(program->textcoords + ((program->currentQuad - 10) * 2)+1); // upper left coordinates(0)       
           break;
        case 2:
           c->x = *(program->textcoords + ((program->currentQuad - 2) * 2));   // upper left coordinates(0)
@@ -723,17 +749,25 @@ float * YglQuad(YglSprite * input, YglTexture * output, YglCache * c) {
       tmp[1].t *= q[1];
       tmp[2].s *= q[2];
       tmp[2].t *= q[2];
-      tmp[3].s *= q[3];
-      tmp[3].t *= q[3];
+      tmp[3].s *= q[0];
+      tmp[3].t *= q[0];
+      tmp[4].s *= q[2];
+      tmp[4].t *= q[2];
+      tmp[5].s *= q[3];
+      tmp[5].t *= q[3];
       tmp[0].q = q[0]; 
       tmp[1].q = q[1]; 
       tmp[2].q = q[2]; 
-      tmp[3].q = q[3]; 
+      tmp[3].q = q[0]; 
+      tmp[4].q = q[2]; 
+      tmp[5].q = q[3]; 
    }else{
       tmp[0].q = 1.0f; 
       tmp[1].q = 1.0f; 
       tmp[2].q = 1.0f; 
       tmp[3].q = 1.0f; 
+      tmp[4].q = 1.0f; 
+      tmp[5].q = 1.0f; 
    }
 
 
@@ -750,63 +784,106 @@ int YglQuadGrowShading(YglSprite * input, YglTexture * output, float * colors,Yg
    float * vtxa;
    float q[4];
    int prg = PG_VFP1_GOURAUDSAHDING;
-
+   int * pos;
+   
    program = YglGetProgram(input,prg);
-   if( program == NULL ) return NULL;
+   if( program == NULL ) return -1;
 
    // Vertex
-   memcpy(program->quads + program->currentQuad, input->vertices, 8 * sizeof(int));
+   pos = program->quads + program->currentQuad;
+   pos[0] = input->vertices[0];
+   pos[1] = input->vertices[1];
+   pos[2] = input->vertices[2];
+   pos[3] = input->vertices[3];   
+   pos[4] = input->vertices[4];
+   pos[5] = input->vertices[5];   
+   pos[6] = input->vertices[0];
+   pos[7] = input->vertices[1];
+   pos[8] = input->vertices[4];
+   pos[9] = input->vertices[5];   
+   pos[10] = input->vertices[6];
+   pos[11] = input->vertices[7];   
+   
    
    // Color
    vtxa = (program->vertexAttribute + (program->currentQuad * 2));
-   memcpy( vtxa, colors, sizeof(float)*4*4);
+   vtxa[0] = colors[0];
+   vtxa[1] = colors[1];
+   vtxa[2] = colors[2];
+   vtxa[3] = colors[3];   
+   
+   vtxa[4] = colors[4];
+   vtxa[5] = colors[5];   
+   vtxa[6] = colors[6];
+   vtxa[7] = colors[7];
+   
+   vtxa[8] = colors[8];
+   vtxa[9] = colors[9];
+   vtxa[10] = colors[10];
+   vtxa[11] = colors[11];
+   
+   vtxa[12] = colors[0];
+   vtxa[13] = colors[1];
+   vtxa[14] = colors[2];
+   vtxa[15] = colors[3];
+
+   vtxa[16] = colors[8];
+   vtxa[17] = colors[9];
+   vtxa[18] = colors[10];
+   vtxa[19] = colors[11];
+
+   vtxa[20] = colors[12];
+   vtxa[21] = colors[13];
+   vtxa[22] = colors[14];
+   vtxa[23] = colors[15];
 
    // texture
    tmp = (texturecoordinate_struct *)(program->textcoords + (program->currentQuad * 2));
    
-   program->currentQuad += 8;
+   program->currentQuad += 12;
 
    YglTMAllocate(output, input->w, input->h, &x, &y);
 
-   tmp[0].r = tmp[1].r = tmp[2].r = tmp[3].r = 0; // these can stay at 0
+   tmp[0].r = tmp[1].r = tmp[2].r = tmp[3].r = tmp[4].r = tmp[5].r = 0; // these can stay at 0
 
-  if (input->flip & 0x1) {
-      tmp[0].s = tmp[3].s = (float)(x + input->w);
-      tmp[1].s = tmp[2].s = (float)(x);
+   if (input->flip & 0x1) {
+      tmp[0].s = tmp[3].s = tmp[5].s = (float)(x + input->w);
+      tmp[1].s = tmp[2].s = tmp[4].s = (float)(x);
    } else {
-      tmp[0].s = tmp[3].s = (float)(x);
-      tmp[1].s = tmp[2].s = (float)(x + input->w);
+      tmp[0].s = tmp[3].s = tmp[5].s = (float)(x);
+      tmp[1].s = tmp[2].s = tmp[4].s = (float)(x + input->w);
    }
    if (input->flip & 0x2) {
-      tmp[0].t = tmp[1].t = (float)(y + input->h);
-      tmp[2].t = tmp[3].t = (float)(y);
+      tmp[0].t = tmp[1].t = tmp[3].t = (float)(y + input->h);
+      tmp[2].t = tmp[4].t = tmp[5].t = (float)(y);
    } else {
-      tmp[0].t = tmp[1].t = (float)(y);
-      tmp[2].t = tmp[3].t = (float)(y + input->h);
+      tmp[0].t = tmp[1].t = tmp[3].t = (float)(y);
+      tmp[2].t = tmp[4].t = tmp[5].t = (float)(y + input->h);
    }
 
    if( c != NULL )
    {
       switch(input->flip) {
-      case 0:
-         c->x = *(program->textcoords + ((program->currentQuad - 8) * 2));   // upper left coordinates(0)
-         c->y = *(program->textcoords + ((program->currentQuad - 8) * 2)+1); // upper left coordinates(0)   
-         break;
-      case 1:
-         c->x = *(program->textcoords + ((program->currentQuad - 6) * 2));   // upper left coordinates(0)
-         c->y = *(program->textcoords + ((program->currentQuad - 6) * 2)+1); // upper left coordinates(0)       
-         break;
-      case 2:
-         c->x = *(program->textcoords + ((program->currentQuad - 2) * 2));   // upper left coordinates(0)
-         c->y = *(program->textcoords + ((program->currentQuad - 2) * 2)+1); // upper left coordinates(0)       
-         break;
-      case 3:
-         c->x = *(program->textcoords + ((program->currentQuad - 4) * 2));   // upper left coordinates(0)
-         c->y = *(program->textcoords + ((program->currentQuad - 4) * 2)+1); // upper left coordinates(0)       
-         break;
-   }
+        case 0:
+          c->x = *(program->textcoords + ((program->currentQuad - 12) * 2));   // upper left coordinates(0)
+          c->y = *(program->textcoords + ((program->currentQuad - 12) * 2)+1); // upper left coordinates(0)   
+          break;
+        case 1:
+          c->x = *(program->textcoords + ((program->currentQuad - 10) * 2));   // upper left coordinates(0)
+          c->y = *(program->textcoords + ((program->currentQuad - 10) * 2)+1); // upper left coordinates(0)       
+          break;
+       case 2:
+          c->x = *(program->textcoords + ((program->currentQuad - 2) * 2));   // upper left coordinates(0)
+          c->y = *(program->textcoords + ((program->currentQuad - 2) * 2)+1); // upper left coordinates(0)       
+          break;
+       case 3:
+          c->x = *(program->textcoords + ((program->currentQuad - 4) * 2));   // upper left coordinates(0)
+          c->y = *(program->textcoords + ((program->currentQuad - 4) * 2)+1); // upper left coordinates(0)       
+          break;
+      }
    }
 
+   
    if( input->dst == 1 )
    {
       YglCalcTextureQ(input->vertices,q);
@@ -816,17 +893,26 @@ int YglQuadGrowShading(YglSprite * input, YglTexture * output, float * colors,Yg
       tmp[1].t *= q[1];
       tmp[2].s *= q[2];
       tmp[2].t *= q[2];
-      tmp[3].s *= q[3];
-      tmp[3].t *= q[3];
+      tmp[3].s *= q[0];
+      tmp[3].t *= q[0];
+      tmp[4].s *= q[2];
+      tmp[4].t *= q[2];
+      tmp[5].s *= q[3];
+      tmp[5].t *= q[3];
+      
       tmp[0].q = q[0]; 
       tmp[1].q = q[1]; 
       tmp[2].q = q[2]; 
-      tmp[3].q = q[3]; 
+      tmp[3].q = q[0]; 
+      tmp[4].q = q[2]; 
+      tmp[5].q = q[3]; 
    }else{
       tmp[0].q = 1.0f; 
       tmp[1].q = 1.0f; 
       tmp[2].q = 1.0f; 
       tmp[3].q = 1.0f; 
+      tmp[4].q = 1.0f; 
+      tmp[5].q = 1.0f; 
    }
 
    return 0;
@@ -840,6 +926,7 @@ void YglCachedQuad(YglSprite * input, YglCache * cache) {
    unsigned int x,y;
    texturecoordinate_struct *tmp;
    float q[4];
+   int * pos;
 
    int prg = PG_NORMAL;
    
@@ -853,28 +940,40 @@ void YglCachedQuad(YglSprite * input, YglCache * cache) {
    y = cache->y;
 
    // Vertex
-   memcpy(program->quads + program->currentQuad, input->vertices, 8 * sizeof(int));
-
+   pos = program->quads + program->currentQuad;
+   pos[0] = input->vertices[0];
+   pos[1] = input->vertices[1];
+   pos[2] = input->vertices[2];
+   pos[3] = input->vertices[3];   
+   pos[4] = input->vertices[4];
+   pos[5] = input->vertices[5];   
+   pos[6] = input->vertices[0];
+   pos[7] = input->vertices[1];
+   pos[8] = input->vertices[4];
+   pos[9] = input->vertices[5];   
+   pos[10] = input->vertices[6];
+   pos[11] = input->vertices[7]; 
+   
    // Color
    tmp = (texturecoordinate_struct *)(program->textcoords + (program->currentQuad * 2));
       
-   program->currentQuad += 8;
+   program->currentQuad += 12;
 
-   tmp[0].r = tmp[1].r = tmp[2].r = tmp[3].r = 0; // these can stay at 0
+  tmp[0].r = tmp[1].r = tmp[2].r = tmp[3].r = tmp[4].r = tmp[5].r = 0; // these can stay at 0
 
-  if (input->flip & 0x1) {
-      tmp[0].s = tmp[3].s = (float)(x + input->w);
-      tmp[1].s = tmp[2].s = (float)(x);
+   if (input->flip & 0x1) {
+      tmp[0].s = tmp[3].s = tmp[5].s = (float)(x + input->w);
+      tmp[1].s = tmp[2].s = tmp[4].s = (float)(x);
    } else {
-      tmp[0].s = tmp[3].s = (float)(x);
-      tmp[1].s = tmp[2].s = (float)(x + input->w);
+      tmp[0].s = tmp[3].s = tmp[5].s = (float)(x);
+      tmp[1].s = tmp[2].s = tmp[4].s = (float)(x + input->w);
    }
    if (input->flip & 0x2) {
-      tmp[0].t = tmp[1].t = (float)(y + input->h);
-      tmp[2].t = tmp[3].t = (float)(y);
+      tmp[0].t = tmp[1].t = tmp[3].t = (float)(y + input->h);
+      tmp[2].t = tmp[4].t = tmp[5].t = (float)(y);
    } else {
-      tmp[0].t = tmp[1].t = (float)(y);
-      tmp[2].t = tmp[3].t = (float)(y + input->h);
+      tmp[0].t = tmp[1].t = tmp[3].t = (float)(y);
+      tmp[2].t = tmp[4].t = tmp[5].t = (float)(y + input->h);
    }
 
    if( input->dst == 1 )
@@ -886,17 +985,26 @@ void YglCachedQuad(YglSprite * input, YglCache * cache) {
       tmp[1].t *= q[1];
       tmp[2].s *= q[2];
       tmp[2].t *= q[2];
-      tmp[3].s *= q[3];
-      tmp[3].t *= q[3];
+      tmp[3].s *= q[0];
+      tmp[3].t *= q[0];
+      tmp[4].s *= q[2];
+      tmp[4].t *= q[2];
+      tmp[5].s *= q[3];
+      tmp[5].t *= q[3];
+      
       tmp[0].q = q[0]; 
       tmp[1].q = q[1]; 
       tmp[2].q = q[2]; 
-      tmp[3].q = q[3]; 
+      tmp[3].q = q[0]; 
+      tmp[4].q = q[2]; 
+      tmp[5].q = q[3]; 
    }else{
       tmp[0].q = 1.0f; 
       tmp[1].q = 1.0f; 
       tmp[2].q = 1.0f; 
       tmp[3].q = 1.0f; 
+      tmp[4].q = 1.0f; 
+      tmp[5].q = 1.0f; 
    }
   
 }
@@ -912,6 +1020,7 @@ void YglCacheQuadGrowShading(YglSprite * input, float * colors,YglCache * cache)
    int prg = PG_VFP1_GOURAUDSAHDING;
    int currentpg = 0;
    float * vtxa;
+   int *pos;
 
    program = YglGetProgram(input,prg);
    if( program == NULL ) return NULL;
@@ -920,32 +1029,73 @@ void YglCacheQuadGrowShading(YglSprite * input, float * colors,YglCache * cache)
    y = cache->y;
 
    // Vertex
-   memcpy(program->quads + program->currentQuad, input->vertices, 8 * sizeof(int));
+   pos = program->quads + program->currentQuad;
+   pos[0] = input->vertices[0];
+   pos[1] = input->vertices[1];
+   pos[2] = input->vertices[2];
+   pos[3] = input->vertices[3];   
+   pos[4] = input->vertices[4];
+   pos[5] = input->vertices[5];   
+   pos[6] = input->vertices[0];
+   pos[7] = input->vertices[1];
+   pos[8] = input->vertices[4];
+   pos[9] = input->vertices[5];   
+   pos[10] = input->vertices[6];
+   pos[11] = input->vertices[7]; 
 
    // Color 
    vtxa = (program->vertexAttribute + (program->currentQuad * 2));
-   memcpy( vtxa, colors, sizeof(float)*4*4);
- 
+
+   vtxa[0] = colors[0];
+   vtxa[1] = colors[1];
+   vtxa[2] = colors[2];
+   vtxa[3] = colors[3];   
+   
+   vtxa[4] = colors[4];
+   vtxa[5] = colors[5];   
+   vtxa[6] = colors[6];
+   vtxa[7] = colors[7];
+   
+   vtxa[8] = colors[8];
+   vtxa[9] = colors[9];
+   vtxa[10] = colors[10];
+   vtxa[11] = colors[11];
+   
+   vtxa[12] = colors[0];
+   vtxa[13] = colors[1];
+   vtxa[14] = colors[2];
+   vtxa[15] = colors[3];
+
+   vtxa[16] = colors[8];
+   vtxa[17] = colors[9];
+   vtxa[18] = colors[10];
+   vtxa[19] = colors[11];
+
+   vtxa[20] = colors[12];
+   vtxa[21] = colors[13];
+   vtxa[22] = colors[14];
+   vtxa[23] = colors[15];
+
    // Texture 
    tmp = (texturecoordinate_struct *)(program->textcoords + (program->currentQuad * 2));
  
-   program->currentQuad += 8;
+   program->currentQuad += 12;
 
-   tmp[0].r = tmp[1].r = tmp[2].r = tmp[3].r = 0; // these can stay at 0
-   
-  if (input->flip & 0x1) {
-      tmp[0].s = tmp[3].s = (float)(x + input->w);
-      tmp[1].s = tmp[2].s = (float)(x);
+  tmp[0].r = tmp[1].r = tmp[2].r = tmp[3].r = tmp[4].r = tmp[5].r = 0; // these can stay at 0
+
+   if (input->flip & 0x1) {
+      tmp[0].s = tmp[3].s = tmp[5].s = (float)(x + input->w);
+      tmp[1].s = tmp[2].s = tmp[4].s = (float)(x);
    } else {
-      tmp[0].s = tmp[3].s = (float)(x);
-      tmp[1].s = tmp[2].s = (float)(x + input->w);
+      tmp[0].s = tmp[3].s = tmp[5].s = (float)(x);
+      tmp[1].s = tmp[2].s = tmp[4].s = (float)(x + input->w);
    }
    if (input->flip & 0x2) {
-      tmp[0].t = tmp[1].t = (float)(y + input->h);
-      tmp[2].t = tmp[3].t = (float)(y);
+      tmp[0].t = tmp[1].t = tmp[3].t = (float)(y + input->h);
+      tmp[2].t = tmp[4].t = tmp[5].t = (float)(y);
    } else {
-      tmp[0].t = tmp[1].t = (float)(y);
-      tmp[2].t = tmp[3].t = (float)(y + input->h);
+      tmp[0].t = tmp[1].t = tmp[3].t = (float)(y);
+      tmp[2].t = tmp[4].t = tmp[5].t = (float)(y + input->h);
    }
 
    if( input->dst == 1 )
@@ -957,17 +1107,25 @@ void YglCacheQuadGrowShading(YglSprite * input, float * colors,YglCache * cache)
       tmp[1].t *= q[1];
       tmp[2].s *= q[2];
       tmp[2].t *= q[2];
-      tmp[3].s *= q[3];
-      tmp[3].t *= q[3];
+      tmp[3].s *= q[0];
+      tmp[3].t *= q[0];
+      tmp[4].s *= q[2];
+      tmp[4].t *= q[2];
+      tmp[5].s *= q[3];
+      tmp[5].t *= q[3];
       tmp[0].q = q[0]; 
       tmp[1].q = q[1]; 
       tmp[2].q = q[2]; 
-      tmp[3].q = q[3]; 
+      tmp[3].q = q[0]; 
+      tmp[4].q = q[2]; 
+      tmp[5].q = q[3]; 
    }else{
       tmp[0].q = 1.0f; 
       tmp[1].q = 1.0f; 
       tmp[2].q = 1.0f; 
       tmp[3].q = 1.0f; 
+      tmp[4].q = 1.0f; 
+      tmp[5].q = 1.0f; 
    }
 }
 
@@ -1014,7 +1172,7 @@ void YglRender(void) {
 			}
 			if( level->prg[j].currentQuad != 0 )
             {
-               glDrawArrays(GL_QUADS, 0, level->prg[j].currentQuad/2);
+               glDrawArrays(GL_TRIANGLES, 0, level->prg[j].currentQuad/2);
             }
 			if( level->prg[j].cleanupUniform )
 			{
@@ -1133,4 +1291,5 @@ void YglCacheReset(void) {
 
 
 #endif
+
 

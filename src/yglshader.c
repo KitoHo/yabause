@@ -137,7 +137,7 @@ int Ygl_uniformStartUserClip(void * p )
       vertices[11] = (int)((float)(prg->uy2+1) * vdp1hratio);  
       
       glVertexPointer(2, GL_INT, 0, vertices);
-      glDrawArrays(GL_TRIANGLES, 0, 4);
+      glDrawArrays(GL_TRIANGLES, 0, 6);
       
       glColorMask( GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE );
       glStencilFunc(GL_ALWAYS,0,0x0);

@@ -1172,17 +1172,59 @@ static void FASTCALL Vdp2DrawCell(vdp2draw_struct *info, YglTexture *texture)
       }
       break;
     case 3: // 16 BPP(RGB)
-      for(i = 0;i < info->cellh;i++)
+      if( info->islinescroll ) // Nights Movie
       {
-        for(j = 0;j < info->cellw;j++)
-        {
-          u16 dot = T1ReadWord(Vdp2Ram, info->charaddr & 0x7FFFF);
-          info->charaddr += 2;
-          if (!(dot & 0x8000) && info->transparencyenable) color = 0x00000000;
-          else color = SAT2YAB1(0xFF, dot);
-          *texture->textdata++ = info->PostPixelFetchCalc(info, color);
-        }
-        texture->textdata += texture->w;
+         for(i = 0;i < info->cellh;i++)
+         {
+            int sh,sv;
+            u32 baseaddr;
+            vdp2Lineinfo * line;
+            baseaddr = (u32)info->charaddr;
+            line = &(info->lineinfo[i*info->lineinc]);
+            
+            if( VDPLINE_SX(info->islinescroll) )
+               sh = line->LineScrollValH+info->sh;
+            else
+               sh = info->sh;
+            
+            if( VDPLINE_SY(info->islinescroll) )
+               sv = line->LineScrollValV;
+            else
+               sv = i+info->sv;
+
+            sh &= (info->cellw-1);
+            sv &= (info->cellh-1);
+            if( line->LineScrollValH < sh ) sv-=1; 
+
+            baseaddr += ((sh+ sv * info->cellw)<<1);
+            
+            for(j = 0;j < info->cellw;j++)
+            {
+               u16 dot;
+               u32 addr;
+               if( Vdp2CheckWindowDot(info,j,i)==0 ){ *texture->textdata++=0; continue; }
+               addr = baseaddr + (j<<1);
+               dot = T1ReadWord(Vdp2Ram, addr & 0x7FFFF);
+               if (!(dot & 0x8000) && info->transparencyenable) color = 0x00000000;
+               else color = SAT2YAB1(0xFF,dot);
+               *texture->textdata++ = info->PostPixelFetchCalc(info, color);
+            }
+            texture->textdata += texture->w;
+         }
+         
+      }else{
+         for(i = 0;i < info->cellh;i++)
+         {
+         for(j = 0;j < info->cellw;j++)
+         {
+            u16 dot = T1ReadWord(Vdp2Ram, info->charaddr & 0x7FFFF);
+            info->charaddr += 2;
+            if (!(dot & 0x8000) && info->transparencyenable) color = 0x00000000;
+            else color = SAT2YAB1(0xFF, dot);
+            *texture->textdata++ = info->PostPixelFetchCalc(info, color);
+         }
+         texture->textdata += texture->w;
+         }
       }
       break;
     case 4: // 32 BPP

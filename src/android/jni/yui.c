@@ -1,19 +1,38 @@
+/*  Copyright 2011 Guillaume Duhamel
+
+    This file is part of Yabause.
+
+    Yabause is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    Yabause is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Yabause; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+*/
+
 #include <jni.h>
 #include <android/bitmap.h>
 #include <android/log.h>
 
-#include "../../yabause.h"
-#include "../../scsp.h"
-#include "../../vidsoft.h"
-#include "../../peripheral.h"
-#include "../../m68kcore.h"
-#include "../../sh2core.h"
-#include "../../sh2int.h"
-#include "../../cdbase.h"
-#include "../../cs2.h"
+#include "yabause.h"
+#include "scsp.h"
+#include "vidsoft.h"
+#include "peripheral.h"
+#include "m68kcore.h"
+#include "sh2core.h"
+#include "sh2int.h"
+#include "cdbase.h"
+#include "cs2.h"
 
 static JavaVM * yvm;
-static jclass yabause;
+static jobject yabause;
 static jobject ybitmap;
 
 static char biospath[256] = "/mnt/sdcard/jap.rom";
@@ -63,6 +82,19 @@ NULL
 
 void YuiErrorMsg(const char *string)
 {
+    jclass yclass;
+    jmethodID errorMsg;
+    jstring message;
+    JNIEnv * env;
+    if ((*yvm)->GetEnv(yvm, (void**) &env, JNI_VERSION_1_6) != JNI_OK)
+        return;
+
+    yclass = (*env)->GetObjectClass(env, yabause);
+    __android_log_print(ANDROID_LOG_INFO, "yabause", "yclass = %p", yclass);
+    errorMsg = (*env)->GetMethodID(env, yclass, "errorMsg", "(Ljava/lang/String;)V");
+    __android_log_print(ANDROID_LOG_INFO, "yabause", "errorMsg = %p", errorMsg);
+    message = (*env)->NewStringUTF(env, string);
+    (*env)->CallVoidMethod(env, yabause, errorMsg, message);
 }
 
 void YuiSwapBuffers(void)
@@ -93,12 +125,16 @@ void YuiSwapBuffers(void)
     AndroidBitmap_unlockPixels(env, ybitmap);
 }
 
-void
-Java_org_yabause_android_YabauseRunnable_init( JNIEnv* env, jobject obj, jobject bitmap )
+jint
+Java_org_yabause_android_YabauseRunnable_init( JNIEnv* env, jobject obj, jobject yab, jobject bitmap )
 {
     yabauseinit_struct yinit;
+    int res;
 
+    yabause = (*env)->NewGlobalRef(env, yab);
+    __android_log_print(ANDROID_LOG_INFO, "yabause", "yabause = %p", yabause);
     ybitmap = (*env)->NewGlobalRef(env, bitmap);
+    __android_log_print(ANDROID_LOG_INFO, "yabause", "ybitmap = %p", ybitmap);
 
     yinit.m68kcoretype = M68KCORE_C68K;
     yinit.percoretype = PERCORE_DUMMY;
@@ -115,7 +151,11 @@ Java_org_yabause_android_YabauseRunnable_init( JNIEnv* env, jobject obj, jobject
     yinit.cartpath = cartpath;
     yinit.videoformattype = VIDEOFORMATTYPE_NTSC;
 
-    YabauseInit(&yinit);
+    res = YabauseInit(&yinit);
+
+    PerPortReset();
+
+    return res;
 }
 
 void

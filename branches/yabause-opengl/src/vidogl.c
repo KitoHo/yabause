@@ -225,10 +225,6 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
       break;
    }
 
-   if (cmd->CMDPMOD & 0x100)
-      alpha = 0x80;
-      
-
    alpha |= priority;
    
    switch((cmd->CMDPMOD >> 3) & 0x7)

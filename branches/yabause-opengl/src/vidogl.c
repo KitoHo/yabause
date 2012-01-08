@@ -119,9 +119,13 @@ YglGetGlSize
 
 float vdp1wratio=1;
 float vdp1hratio=1;
-static int vdp1cor=0;
-static int vdp1cog=0;
-static int vdp1cob=0;
+
+int GlWidth=320;
+int GlHeight=224;
+
+int vdp1cor=0;
+int vdp1cog=0;
+int vdp1cob=0;
 
 static int vdp2width;
 static int vdp2height;
@@ -133,8 +137,6 @@ static int rbg0priority=0;
 
 static u32 Vdp2ColorRamGetColor(u32 colorindex, int alpha);
 
-static int GlHeight=320;
-static int GlWidth=224;
 
 // Window Parameter
 static vdp2WindowInfo * m_vWindinfo0 = NULL;
@@ -150,6 +152,8 @@ static vdp2Lineinfo lineNBG1[512];
 // Rotate Screen
 static vdp2rotationparameter_struct  paraA;
 static vdp2rotationparameter_struct  paraB;
+
+
 
 vdp2rotationparameter_struct * FASTCALL vdp2rGetKValue2W( vdp2rotationparameter_struct * param, int index );
 vdp2rotationparameter_struct * FASTCALL vdp2rGetKValue1W( vdp2rotationparameter_struct * param, int index );
@@ -168,30 +172,65 @@ vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode03WithKB( vdp2draw_stru
 vdp2rotationparameter_struct * FASTCALL vdp2RGetParamMode03WithK( vdp2draw_struct * info,int h, int v );
 
 
+static void FASTCALL Vdp1ReadPriority(vdp1cmd_struct *cmd, int * priority, int * colorcl );
+static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, YglTexture *texture);
+
 //////////////////////////////////////////////////////////////////////////////
+
 
 static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, YglTexture *texture)
 {
+   int shadow;
+   int priority;
+   int colorcl;
+   
+   int ednmode;
+   int endcnt = 0;
+
    u32 charAddr = cmd->CMDSRCA * 8;
    u32 dot;
    u8 SPD = ((cmd->CMDPMOD & 0x40) != 0);
    u8 END = ((cmd->CMDPMOD & 0x80) != 0);
    u32 alpha = 0xFF;
    VDP1LOG("Making new sprite %08X\n", charAddr);
+   
 
-   switch(cmd->CMDPMOD & 0x7)
+   if( (cmd->CMDPMOD & 0x20) == 0)
+      ednmode = 1;
+   else 
+      ednmode = 0;
+   
+   Vdp1ReadPriority(cmd, &priority, &colorcl );
+
+   
+   alpha = 0xF8;
+
+   switch( (Vdp2Regs->SPCTL>>12)&0x03 ) 
    {
-      case 0:
-         alpha = 0xFF;
-         break;
-      case 3:
-         alpha = 0x80;
-         break;
-      default:
-         VDP1LOG("unimplemented color calculation: %X\n", (cmd->CMDPMOD & 0x7));
-         break;
+   case 0:
+      if( priority <= ((Vdp2Regs->SPCTL>>8)&0x07) )
+        alpha = 0xF8-((colorcl<<3)&0xF8);      
+      break;
+   case 1:
+      if( priority == ((Vdp2Regs->SPCTL>>8)&0x07) )
+        alpha = 0xF8-((colorcl<<3)&0xF8);      
+      break;
+   case 2:
+      if( priority >= ((Vdp2Regs->SPCTL>>8)&0x07) )
+        alpha = 0xF8-((colorcl<<3)&0xF8);      
+      break;
+   case 3:
+      //if( priority <= (Vdp2Regs->SPCTL>>8)&0x07 )
+     //   alpha = 0xF8-((colorcl<<3)&0xF8);      
+      break;
    }
 
+   if (cmd->CMDPMOD & 0x100)
+      alpha = 0x80;
+      
+
+   alpha |= priority;
+   
    switch((cmd->CMDPMOD >> 3) & 0x7)
    {
       case 0:
@@ -210,15 +249,15 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
                dot = T1ReadByte(Vdp1Ram, charAddr & 0x7FFFF);
 
                // Pixel 1
-               if (((dot >> 4) == 0) && !SPD) *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
-               else if( (dot >> 4) == 0x0F &!END ) *texture->textdata++ = 0x0;
-               else *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor(((dot >> 4) | colorBank) + colorOffset, alpha), vdp1cor, vdp1cog, vdp1cob);
+               if (((dot >> 4) == 0) && !SPD) *texture->textdata++ = 0x00;
+               else if( (dot >> 4) == 0x0F &!END ) *texture->textdata++ = 0x00;
+               else *texture->textdata++ = Vdp2ColorRamGetColor(((dot >> 4) | colorBank) + colorOffset, alpha);
                j += 1;
 
                // Pixel 2
-               if (((dot & 0xF) == 0) && !SPD) *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
-               else if( (dot & 0xF) == 0x0F &!END ) *texture->textdata++ = 0x0;
-               else *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor(((dot & 0xF) | colorBank) + colorOffset, alpha), vdp1cor, vdp1cog, vdp1cob);
+               if (((dot & 0xF) == 0) && !SPD) *texture->textdata++  = 0x00;
+               else if( (dot & 0xF) == 0x0F &!END ) *texture->textdata++ = 0x00;
+               else *texture->textdata++ = Vdp2ColorRamGetColor(((dot & 0xF) | colorBank) + colorOffset, alpha);
                j += 1;
 
                charAddr += 1;
@@ -230,7 +269,8 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
       case 1:
       {
          // 4 bpp LUT mode
-         u32 temp;
+         u16 temp;
+         u16 temp2;
          u32 colorLut = cmd->CMDCOLR * 8;
          u16 i;
          
@@ -238,41 +278,124 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
          {
             u16 j;
             j = 0;
+            endcnt = 0;
             while(j < sprite->w)
             {
                dot = T1ReadByte(Vdp1Ram, charAddr & 0x7FFFF);
 
-               if (((dot >> 4) == 0) && !SPD)
+               if( ednmode && endcnt >= 2 )
                {
-                  *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
+                  *texture->textdata++ = 0x00;
+               }else if (((dot >> 4) == 0) && !SPD)
+               {
+                  *texture->textdata++ = 0;
                }else if (((dot >> 4) == 0x0F) && !END ) // 6. Commandtable end code
                {
                   *texture->textdata++ = 0x0;
+                  endcnt++;
+                  
                }else{
                   temp = T1ReadWord(Vdp1Ram, ((dot >> 4) * 2 + colorLut) & 0x7FFFF);
                   if (temp & 0x8000)
-                     *texture->textdata++ = COLOR_ADD(SAT2YAB1(alpha, temp), vdp1cor, vdp1cog, vdp1cob);
+                     *texture->textdata++ = SAT2YAB1(alpha, temp);
                   else if( temp != 0x0000)
-                     *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor(temp, alpha), vdp1cor, vdp1cog, vdp1cob);
-                  else
+                  {
+                     Vdp1ProcessSpritePixel(Vdp2Regs->SPCTL & 0xF, &temp, &shadow, &priority, &colorcl);
+                     if( shadow != 0 ) 
+                     {
+                        *texture->textdata++ = 0x00;
+                     }else{
+#ifdef WORDS_BIGENDIAN
+                        priority = ((u8 *)&Vdp2Regs->PRISA)[priority^1]&0x7;
+                        colorcl =  ((u8 *)&Vdp2Regs->CCRSA)[colorcl^1]&0x1F;
+#else
+                        priority = ((u8 *)&Vdp2Regs->PRISA)[priority]&0x7;
+                        colorcl =  ((u8 *)&Vdp2Regs->CCRSA)[colorcl]&0x1F;
+#endif
+                        alpha = 0xF8;
+                        switch( (Vdp2Regs->SPCTL>>12)&0x03 ) 
+                        {
+                        case 0:
+                           if( priority <= ((Vdp2Regs->SPCTL>>8)&0x07) )
+                           alpha = 0xF8-((colorcl<<3)&0xF8);      
+                           break;
+                        case 1:
+                           if( priority == ((Vdp2Regs->SPCTL>>8)&0x07) )
+                           alpha = 0xF8-((colorcl<<3)&0xF8);      
+                           break;
+                        case 2:
+                           if( priority >= ((Vdp2Regs->SPCTL>>8)&0x07) )
+                           alpha = 0xF8-((colorcl<<3)&0xF8);      
+                           break;
+                        case 3:
+                           //if( priority <= (Vdp2Regs->SPCTL>>8)&0x07 )
+                        //   alpha = 0xF8-((colorcl<<3)&0xF8);      
+                           break;
+                        }                     
+                        alpha |= priority;
+                        *texture->textdata++ = Vdp2ColorRamGetColor(temp, alpha);
+                     }
+                  }else
                      *texture->textdata++ = 0x0;
                }
 
                j += 1;
 
-               if (((dot & 0xF) == 0) && !SPD)
+               if( ednmode && endcnt >= 2 )
                {
-                  *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
+                  *texture->textdata++ = 0x00;
+               }else if (((dot & 0xF) == 0) && !SPD)
+               {
+                  *texture->textdata++ = 0x00;
                }else if (((dot&0x0F) == 0x0F) && !END )
                {
                   *texture->textdata++ = 0x0;
+                  endcnt++;
                }else{
+                  
                   temp = T1ReadWord(Vdp1Ram, ((dot & 0xF) * 2 + colorLut) & 0x7FFFF);
+                  
                   if (temp & 0x8000)
-                     *texture->textdata++ = COLOR_ADD(SAT2YAB1(alpha, temp), vdp1cor, vdp1cog, vdp1cob);
+                     *texture->textdata++ = SAT2YAB1(alpha, temp);
                   else if( temp != 0x0000)
-                     *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor(temp, alpha), vdp1cor, vdp1cog, vdp1cob);
-                  else
+                  {
+                     
+                     Vdp1ProcessSpritePixel(Vdp2Regs->SPCTL & 0xF, &temp, &shadow, &priority, &colorcl);
+                     if( shadow != 0 ) 
+                     {
+                        *texture->textdata++ = 0x00;
+                     }else{                     
+#ifdef WORDS_BIGENDIAN
+                        priority = ((u8 *)&Vdp2Regs->PRISA)[priority^1]&0x7;
+                        colorcl =  ((u8 *)&Vdp2Regs->CCRSA)[colorcl^1]&0x1F;
+#else
+                        priority = ((u8 *)&Vdp2Regs->PRISA)[priority]&0x7;
+                        colorcl =  ((u8 *)&Vdp2Regs->CCRSA)[colorcl]&0x1F;
+#endif
+                        alpha = 0xF8;
+                        switch( (Vdp2Regs->SPCTL>>12)&0x03 ) 
+                        {
+                        case 0:
+                           if( priority <= ((Vdp2Regs->SPCTL>>8)&0x07) )
+                           alpha = 0xF8-((colorcl<<3)&0xF8);      
+                           break;
+                        case 1:
+                           if( priority == ((Vdp2Regs->SPCTL>>8)&0x07) )
+                           alpha = 0xF8-((colorcl<<3)&0xF8);      
+                           break;
+                        case 2:
+                           if( priority >= ((Vdp2Regs->SPCTL>>8)&0x07) )
+                           alpha = 0xF8-((colorcl<<3)&0xF8);      
+                           break;
+                        case 3:
+                           //if( priority <= (Vdp2Regs->SPCTL>>8)&0x07 )
+                           // alpha = 0xF8-((colorcl<<3)&0xF8);      
+                           break;
+                        } 
+                        alpha |= priority;
+                        *texture->textdata++ = Vdp2ColorRamGetColor(temp, alpha);
+                     }
+                  }else
                      *texture->textdata++ = 0x0;
                }
 
@@ -299,9 +422,9 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
                dot = T1ReadByte(Vdp1Ram, charAddr & 0x7FFFF) & 0x3F;
                charAddr++;
 
-               if ((dot == 0) && !SPD) *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
-               else if( dot==0xFF&!END ) *texture->textdata++ = 0x0;
-               else *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor((dot | colorBank) + colorOffset, alpha), vdp1cor, vdp1cog, vdp1cob);
+               if ((dot == 0) && !SPD) *texture->textdata++ = 0x00;
+               else if( dot==0xFF&!END ) *texture->textdata++ = 0x00;
+               else *texture->textdata++ = Vdp2ColorRamGetColor((dot | colorBank) + colorOffset, alpha);
             }
             texture->textdata += texture->w;
          }
@@ -321,9 +444,9 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
                dot = T1ReadByte(Vdp1Ram, charAddr & 0x7FFFF) & 0x7F;
                charAddr++;
 
-               if ((dot == 0) && !SPD) *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
-               else if( dot == 0xFF & !END ) *texture->textdata++ = 0x0;
-               else *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor((dot | colorBank) + colorOffset, alpha), vdp1cor, vdp1cog, vdp1cob);
+               if ((dot == 0) && !SPD) *texture->textdata++ = 0x00;
+               else if( dot == 0xFF & !END ) *texture->textdata++ = 0x00;
+               else *texture->textdata++ = Vdp2ColorRamGetColor((dot | colorBank) + colorOffset, alpha);
             }
             texture->textdata += texture->w;
          }
@@ -343,9 +466,9 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
                dot = T1ReadByte(Vdp1Ram, charAddr & 0x7FFFF);
                charAddr++;
 
-               if ((dot == 0) && !SPD) *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
+               if ((dot == 0) && !SPD) *texture->textdata++ = 0x00;
                else if( dot == 0xFF & !END ) *texture->textdata++ = 0x0;
-               else *texture->textdata++ = COLOR_ADD(Vdp2ColorRamGetColor((dot | colorBank) + colorOffset, alpha), vdp1cor, vdp1cog, vdp1cob);
+               else *texture->textdata++ = Vdp2ColorRamGetColor((dot | colorBank) + colorOffset, alpha);
             }
             texture->textdata += texture->w;
          }
@@ -363,9 +486,9 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
                charAddr += 2;
 
                //if (!(dot & 0x8000) && (Vdp2Regs->SPCTL & 0x20)) printf("mixed mode\n");
-               if (!(dot & 0x8000) && !SPD) *texture->textdata++ = COLOR_ADD(0, vdp1cor, vdp1cog, vdp1cob);
+               if (!(dot & 0x8000) && !SPD) *texture->textdata++ = 0x00;
                else if( dot == 0x7FFF & !END ) *texture->textdata++ = 0x0;
-               else *texture->textdata++ = COLOR_ADD(SAT2YAB1(alpha, dot), vdp1cor, vdp1cog, vdp1cob);
+               else *texture->textdata++ = SAT2YAB1(alpha, dot);
             }
             texture->textdata += texture->w;
          }
@@ -379,11 +502,12 @@ static void FASTCALL Vdp1ReadTexture(vdp1cmd_struct *cmd, YglSprite *sprite, Ygl
 
 //////////////////////////////////////////////////////////////////////////////
 
-static void FASTCALL Vdp1ReadPriority(vdp1cmd_struct *cmd, YglSprite *sprite)
+static void FASTCALL Vdp1ReadPriority(vdp1cmd_struct *cmd, int * priority, int * colorcl )
 {
    u8 SPCLMD = Vdp2Regs->SPCTL;
    u8 sprite_register;
    u8 *sprprilist = (u8 *)&Vdp2Regs->PRISA;
+   u8 *cclist = (u8 *)&Vdp2Regs->CCRSA;   
    u16 lutPri;
    u16 *reg_src = &cmd->CMDCOLR;
    int not_lut = 1;
@@ -392,14 +516,14 @@ static void FASTCALL Vdp1ReadPriority(vdp1cmd_struct *cmd, YglSprite *sprite)
    if ((SPCLMD & 0x20) && (cmd->CMDCOLR & 0x8000))
    {
       // RGB data, use register 0
-      sprite->priority = Vdp2Regs->PRISA & 0x7;
+      *priority = Vdp2Regs->PRISA & 0x7;
       return;
    }
 
    if (((cmd->CMDPMOD >> 3) & 0x7) == 1) {
       u32 charAddr, dot, colorLut;
 
-      sprite->priority = Vdp2Regs->PRISA & 0x7;
+      *priority = Vdp2Regs->PRISA & 0x7;
 
       charAddr = cmd->CMDSRCA * 8;
       dot = T1ReadByte(Vdp1Ram, charAddr & 0x7FFFF);
@@ -419,144 +543,172 @@ static void FASTCALL Vdp1ReadPriority(vdp1cmd_struct *cmd, YglSprite *sprite)
          case 0:
             sprite_register = (*reg_src & 0xC000) >> 14;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+            *priority = sprprilist[sprite_register^1] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>11)&0x07)^1]&0x1F;
 #else
-            sprite->priority = sprprilist[sprite_register] & 0x7;
+            *priority = sprprilist[sprite_register] & 0x7;
+            *colorcl =  cclist[(cmd->CMDCOLR>>11)&0x07]&0x1F;
 #endif
             if (not_lut) cmd->CMDCOLR &= 0x7FF;
             break;
          case 1:
             sprite_register = (*reg_src & 0xE000) >> 13;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+            *priority = sprprilist[sprite_register^1] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>11)&0x03)^1]&0x1F;
 #else
-            sprite->priority = sprprilist[sprite_register] & 0x7;
+            *priority = sprprilist[sprite_register] & 0x7;
+            *colorcl =  cclist[(cmd->CMDCOLR>>11)&0x03]&0x1F;
 #endif
             if (not_lut) cmd->CMDCOLR &= 0x7FF;
             break;
          case 2:
             sprite_register = (*reg_src >> 14) & 0x1;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+            *priority = sprprilist[sprite_register^1] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>11)&0x07)^1]&0x1F;
 #else
-            sprite->priority = sprprilist[sprite_register] & 0x7;
+            *priority = sprprilist[sprite_register] & 0x7;
+            *colorcl =  cclist[(cmd->CMDCOLR>>11)&0x07]&0x1F;
 #endif
             if (not_lut) cmd->CMDCOLR &= 0x7FF;
             break;
          case 3:
             sprite_register = (*reg_src & 0x6000) >> 13;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+            *priority = sprprilist[sprite_register^1] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>11)&0x03)^1]&0x1F;
 #else
-            sprite->priority = sprprilist[sprite_register] & 0x7;
+            *priority = sprprilist[sprite_register] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>11)&0x03)]&0x1F;
 #endif
             if (not_lut) cmd->CMDCOLR &= 0x7FF;
             break;
          case 4:
             sprite_register = (*reg_src & 0x6000) >> 13;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+            *priority = sprprilist[sprite_register^1] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>10)&0x07)^1]&0x1F;
 #else
-            sprite->priority = sprprilist[sprite_register] & 0x7;
+            *priority = sprprilist[sprite_register] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>10)&0x07)]&0x1F;
 #endif
             if (not_lut) cmd->CMDCOLR &= 0x3FF;
             break;
          case 5:
             sprite_register = (*reg_src & 0x7000) >> 12;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+            *priority = sprprilist[sprite_register^1] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>11)&0x01)^1]&0x1F;
 #else
-            sprite->priority = sprprilist[sprite_register] & 0x7;
+            *priority = sprprilist[sprite_register] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>11)&0x01)]&0x1F;
 #endif
             if (not_lut) cmd->CMDCOLR &= 0x7FF;
             break;
          case 6:
             sprite_register = (*reg_src & 0x7000) >> 12;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+            *priority = sprprilist[sprite_register^1] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>10)&0x03)^1]&0x1F;
 #else
-            sprite->priority = sprprilist[sprite_register] & 0x7;
+            *priority = sprprilist[sprite_register] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>10)&0x03)]&0x1F;
 #endif
             if (not_lut) cmd->CMDCOLR &= 0x3FF;
             break;
          case 7:
             sprite_register = (*reg_src & 0x7000) >> 12;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+            *priority = sprprilist[sprite_register^1] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>9)&0x07)^1]&0x1F;
 #else
-            sprite->priority = sprprilist[sprite_register] & 0x7;
+            *priority = sprprilist[sprite_register] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>9)&0x07)]&0x1F;
 #endif
             if (not_lut) cmd->CMDCOLR &= 0x1FF;
             break;
          case 8:
             sprite_register = (*reg_src & 0x80) >> 7;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+            *priority = sprprilist[sprite_register^1] & 0x7;
 #else
-            sprite->priority = sprprilist[sprite_register] & 0x7;
+            *priority = sprprilist[sprite_register] & 0x7;
 #endif
+            *colorcl =  cclist[0]&0x1F;
             if (not_lut) cmd->CMDCOLR &= 0x7F;
             break;
          case 9:
             sprite_register = (*reg_src & 0x80) >> 7;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+            *priority = sprprilist[sprite_register^1] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>6)&0x01)^1]&0x1F;
 #else
-            sprite->priority = sprprilist[sprite_register] & 0x7;
+            *priority = sprprilist[sprite_register] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>6)&0x01)]&0x1F;
 #endif
             if (not_lut) cmd->CMDCOLR &= 0x3F;
             break;
          case 10:
             sprite_register = (*reg_src & 0xC0) >> 6;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+            *priority = sprprilist[sprite_register^1] & 0x7;
 #else
-            sprite->priority = sprprilist[sprite_register] & 0x7;
+            *priority = sprprilist[sprite_register] & 0x7;
 #endif
+            *colorcl =  cclist[0]&0x1F;
             if (not_lut) cmd->CMDCOLR &= 0x3F;
             break;
          case 11:
             sprite_register = 0;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+            *priority = sprprilist[sprite_register^1] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>6)&0x03)^1]&0x1F;
 #else
-            sprite->priority = sprprilist[sprite_register] & 0x7;
+            *priority = sprprilist[sprite_register] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>6)&0x03)]&0x1F;
 #endif
             if (not_lut) cmd->CMDCOLR &= 0x3F;
             break;
          case 12:
             sprite_register = (*reg_src & 0x80) >> 7;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+            *priority = sprprilist[sprite_register^1] & 0x7;
 #else
-            sprite->priority = sprprilist[sprite_register] & 0x7;
+            *priority = sprprilist[sprite_register] & 0x7;
 #endif
+            *colorcl =  cclist[0]&0x1F;
             if (not_lut) cmd->CMDCOLR &= 0xFF;
             break;
          case 13:
             sprite_register = (*reg_src & 0x80) >> 7;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+            *priority = sprprilist[sprite_register^1] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>6)&0x01)^1]&0x1F;
 #else
-            sprite->priority = sprprilist[sprite_register] & 0x7;
+            *priority = sprprilist[sprite_register] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>6)&0x01)]&0x1F;
 #endif
             if (not_lut) cmd->CMDCOLR &= 0xFF;
             break;
          case 14:
             sprite_register = (*reg_src & 0xC0) >> 6;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+            *priority = sprprilist[sprite_register^1] & 0x7;
 #else
-            sprite->priority = sprprilist[sprite_register] & 0x7;
+            *priority = sprprilist[sprite_register] & 0x7;
 #endif
+            *colorcl =  cclist[0]&0x1F;
             if (not_lut) cmd->CMDCOLR &= 0xFF;
             break;
          case 15:
             sprite_register = 0;
 #ifdef WORDS_BIGENDIAN
-            sprite->priority = sprprilist[sprite_register^1] & 0x7;
+            *priority = sprprilist[sprite_register^1] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>6)&0x03)^1]&0x1F;
 #else
-            sprite->priority = sprprilist[sprite_register] & 0x7;
+            *priority = sprprilist[sprite_register] & 0x7;
+            *colorcl =  cclist[((cmd->CMDCOLR>>6)&0x03)]&0x1F;
 #endif
             if (not_lut) cmd->CMDCOLR &= 0xFF;
             break;
@@ -564,7 +716,7 @@ static void FASTCALL Vdp1ReadPriority(vdp1cmd_struct *cmd, YglSprite *sprite)
             VDP1LOG("sprite type %d not implemented\n", sprite_type);
 
             // if we don't know what to do with a sprite, we put it on top
-            sprite->priority = 7;
+            *priority = 7;
             break;
       }
    }
@@ -1959,13 +2111,14 @@ void VIDOGLResize(unsigned int w, unsigned int h, int on)
    else
       YuiSetVideoMode(w, h, 32, 0);
 
+   GlHeight=h;
+   GlWidth=w;
+   
    YglGLInit(2048, 1024);
    glViewport(0, 0, w, h);
 
    SetSaturnResolution(vdp2width, vdp2height);
 
-   GlHeight=h;
-   GlWidth=w;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1985,7 +2138,23 @@ int VIDOGLVdp1Reset(void)
 
 void VIDOGLVdp1DrawStart(void)
 {
+   int i;
+   int maxpri;
+   int minpri;
+   u8 *sprprilist = (u8 *)&Vdp2Regs->PRISA;
+   
    YglCacheReset();
+   
+
+   maxpri = 0x00;
+   minpri = 0x07;   
+   for( i=0; i<8; i++ )
+   {
+      if( (sprprilist[i]&0x07) < minpri ) minpri = (sprprilist[i]&0x07);
+      if( (sprprilist[i]&0x07) > maxpri ) maxpri = (sprprilist[i]&0x07);
+   }
+   _Ygl->vdp1_maxpri = maxpri;
+   _Ygl->vdp1_minpri = minpri;
 
    if (Vdp2Regs->CLOFEN & 0x40)
    {
@@ -2048,6 +2217,7 @@ void VIDOGLVdp1NormalSpriteDraw(void)
    float col[4*4];
    int i;
    
+   
    Vdp1ReadCommand(&cmd, Vdp1Regs->addr);
    sprite.dst=0;
    sprite.blendmode=0;
@@ -2072,37 +2242,27 @@ void VIDOGLVdp1NormalSpriteDraw(void)
    tmp <<= 16;
    tmp |= cmd.CMDCOLR;
 
-   Vdp1ReadPriority(&cmd, &sprite);
+   sprite.priority = 8;
 
    CMDPMOD = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
    
    sprite.uclipmode=(CMDPMOD>>9)&0x03;
-
-   if ( (CMDPMOD & 4) || (CMDPMOD & 0x100) )
-   {
-      if (CMDPMOD & 0x100)
-         mesh = 0.5f;
-      else
-         mesh = 1.0f;
    
-      if( (CMDPMOD & 4) )
+   // Half trans parent to VDP1 Framebuffer
+   if( (CMDPMOD & 0x7)==0x03 || (CMDPMOD & 0x100) )
+   {
+      sprite.blendmode = 0x80;
+   }
+
+   if( (CMDPMOD & 4)  )
+   {
+      for (i=0; i<4; i++)
       {
-         for (i=0; i<4; i++)
-         {
-            color2 = T1ReadWord(Vdp1Ram, (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1C) << 3) + (i << 1));
-            col[(i << 2) + 0] = (float)((color2 & 0x001F))/(float)(0x1F)-0.5f;
-            col[(i << 2) + 1] = (float)((color2 & 0x03E0)>>5)/(float)(0x1F)-0.5f;
-            col[(i << 2) + 2] = (float)((color2 & 0x7C00)>>10)/(float)(0x1F)-0.5f;
-            col[(i << 2) + 3] = mesh;
-         }
-      }else{
-         for (i=0; i<4; i++)
-         {
-            col[(i << 2) + 0] = 0.0f;
-            col[(i << 2) + 1] = 0.0f;
-            col[(i << 2) + 2] = 0.0f;
-            col[(i << 2) + 3] = mesh;
-         }         
+         color2 = T1ReadWord(Vdp1Ram, (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1C) << 3) + (i << 1));
+         col[(i << 2) + 0] = (float)((color2 & 0x001F))/(float)(0x1F)-0.5f;
+         col[(i << 2) + 1] = (float)((color2 & 0x03E0)>>5)/(float)(0x1F)-0.5f;
+         col[(i << 2) + 2] = (float)((color2 & 0x7C00)>>10)/(float)(0x1F)-0.5f;
+         col[(i << 2) + 3] = 1.0f;
       }
      
       if (sprite.w > 0 && sprite.h > 1)
@@ -2256,33 +2416,23 @@ void VIDOGLVdp1ScaledSpriteDraw(void)
    CMDPMOD = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
    sprite.uclipmode=(CMDPMOD>>9)&0x03;
    
-   Vdp1ReadPriority(&cmd, &sprite);
+   sprite.priority = 8;
    
-   if ( (CMDPMOD & 4) || (CMDPMOD & 0x100) )
+   // Half trans parent to VDP1 Framebuffer
+   if( (CMDPMOD & 0x7)==0x03 || (CMDPMOD & 0x100) )
    {
-      if (CMDPMOD & 0x100)
-         mesh = 0.5f;
-      else
-         mesh = 1.0f;
+      sprite.blendmode = 0x80;
+   }  
    
-      if( (CMDPMOD & 4) )
+   if ( (CMDPMOD & 4) )
+   {
+      for (i=0; i<4; i++)
       {
-         for (i=0; i<4; i++)
-         {
-            color2 = T1ReadWord(Vdp1Ram, (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1C) << 3) + (i << 1));
-            col[(i << 2) + 0] = (float)((color2 & 0x001F))/(float)(0x1F)-0.5f;
-            col[(i << 2) + 1] = (float)((color2 & 0x03E0)>>5)/(float)(0x1F)-0.5f;
-            col[(i << 2) + 2] = (float)((color2 & 0x7C00)>>10)/(float)(0x1F)-0.5f;
-            col[(i << 2) + 3] = mesh;
-         }
-      }else{
-         for (i=0; i<4; i++)
-         {
-            col[(i << 2) + 0] = 0.0f;
-            col[(i << 2) + 1] = 0.0f;
-            col[(i << 2) + 2] = 0.0f;
-            col[(i << 2) + 3] = mesh;
-         }         
+         color2 = T1ReadWord(Vdp1Ram, (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1C) << 3) + (i << 1));
+         col[(i << 2) + 0] = (float)((color2 & 0x001F))/(float)(0x1F)-0.5f;
+         col[(i << 2) + 1] = (float)((color2 & 0x03E0)>>5)/(float)(0x1F)-0.5f;
+         col[(i << 2) + 2] = (float)((color2 & 0x7C00)>>10)/(float)(0x1F)-0.5f;
+         col[(i << 2) + 3] = 1.0f;
       }
      
       if (sprite.w > 0 && sprite.h > 1)
@@ -2361,37 +2511,26 @@ void VIDOGLVdp1DistortedSpriteDraw(void)
 
    CMDPMOD = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
    
-   Vdp1ReadPriority(&cmd, &sprite);
+   sprite.priority = 8;
    
    sprite.uclipmode=(CMDPMOD>>9)&0x03;
-  
+   
+   // Half trans parent to VDP1 Framebuffer
+   if( (CMDPMOD & 0x7)==0x03 || (CMDPMOD & 0x100) )
+   {
+      sprite.blendmode = 0x80;
+   }   
 
    // Check if the Gouraud shading bit is set and the color mode is RGB
-   if ( (CMDPMOD & 4) || (CMDPMOD & 0x100) )
+   if ( (CMDPMOD & 4) )
    {
-      if (CMDPMOD & 0x100)
-         mesh = 0.5f;
-      else
-         mesh = 1.0f;
-   
-      if( (CMDPMOD & 4) )
+      for (i=0; i<4; i++)
       {
-         for (i=0; i<4; i++)
-         {
-            color2 = T1ReadWord(Vdp1Ram, (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1C) << 3) + (i << 1));
-            col[(i << 2) + 0] = (float)((color2 & 0x001F))/(float)(0x1F)-0.5f;
-            col[(i << 2) + 1] = (float)((color2 & 0x03E0)>>5)/(float)(0x1F)-0.5f;
-            col[(i << 2) + 2] = (float)((color2 & 0x7C00)>>10)/(float)(0x1F)-0.5f;
-            col[(i << 2) + 3] = mesh;
-         }
-      }else{
-         for (i=0; i<4; i++)
-         {
-            col[(i << 2) + 0] = 0.0f;
-            col[(i << 2) + 1] = 0.0f;
-            col[(i << 2) + 2] = 0.0f;
-            col[(i << 2) + 3] = mesh;
-         }         
+         color2 = T1ReadWord(Vdp1Ram, (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1C) << 3) + (i << 1));
+         col[(i << 2) + 0] = (float)((color2 & 0x001F))/(float)(0x1F)-0.5f;
+         col[(i << 2) + 1] = (float)((color2 & 0x03E0)>>5)/(float)(0x1F)-0.5f;
+         col[(i << 2) + 2] = (float)((color2 & 0x7C00)>>10)/(float)(0x1F)-0.5f;
+         col[(i << 2) + 3] = 1.0f;
       }
      
       if (sprite.w > 0 && sprite.h > 1)
@@ -2446,6 +2585,8 @@ void VIDOGLVdp1PolygonDraw(void)
    int i;
    float col[4*4];
    int gouraud=0;
+   int priority;
+   
 
    polygon.blendmode=0;
    polygon.dst = 0;
@@ -2462,60 +2603,46 @@ void VIDOGLVdp1PolygonDraw(void)
    CMDPMOD = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
    polygon.uclipmode=(CMDPMOD>>9)&0x03;
    
-   alpha = 0xFF;
+  
+   // Half trans parent to VDP1 Framebuffer
+   if( (CMDPMOD & 0x7)==0x03 || (CMDPMOD & 0x100) )
+   {
+      polygon.blendmode = 0x80;
+   }   
 
-   if ((CMDPMOD & 0x7) == 0x3)
-      alpha = 0x80;
-
-   if (color == 0)
-      alpha = 0;
 
    // Check if the Gouraud shading bit is set and the color mode is RGB
-   if ( ((CMDPMOD & 4) /*&& ((CMDPMOD & 0x38) == 0x28)*/) ||  (CMDPMOD & 0x100) )
+   if( (CMDPMOD & 4) )
    {
-      if (CMDPMOD & 0x100)
-         mesh = 0.5f;
-      else
-         mesh = 1.0f;
-
-      if( (CMDPMOD & 4) )
+      for (i=0; i<4; i++)
       {
-         for (i=0; i<4; i++)
-         {
-            color2 = T1ReadWord(Vdp1Ram, (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1C) << 3) + (i << 1));
-            col[(i << 2) + 0] = (float)((color2 & 0x001F))/(float)(0x1F)-0.5f;
-            col[(i << 2) + 1] = (float)((color2 & 0x03E0)>>5)/(float)(0x1F)-0.5f;
-            col[(i << 2) + 2] = (float)((color2 & 0x7C00)>>10)/(float)(0x1F)-0.5f;
-            col[(i << 2) + 3] = mesh;
-         }
-      }else{
-         for (i=0; i<4; i++)
-         {
-            col[(i << 2) + 0] = 0.0f;
-            col[(i << 2) + 1] = 0.0f;
-            col[(i << 2) + 2] = 0.0f;
-            col[(i << 2) + 3] = mesh;
-         }
-         
+         color2 = T1ReadWord(Vdp1Ram, (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x1C) << 3) + (i << 1));
+         col[(i << 2) + 0] = (float)((color2 & 0x001F))/(float)(0x1F)-0.5f;
+         col[(i << 2) + 1] = (float)((color2 & 0x03E0)>>5)/(float)(0x1F)-0.5f;
+         col[(i << 2) + 2] = (float)((color2 & 0x7C00)>>10)/(float)(0x1F)-0.5f;
+         col[(i << 2) + 3] = 1.0f;
       }
-     gouraud = 1;
+      gouraud = 1;
    }
 
    if (color & 0x8000)
-      polygon.priority = Vdp2Regs->PRISA & 0x7;
+      priority = Vdp2Regs->PRISA & 0x7;
    else
    {
-      int shadow, priority, colorcalc;
+      int shadow, colorcalc;
 
       priority = 0;  // Avoid compiler warning
       Vdp1ProcessSpritePixel(Vdp2Regs->SPCTL & 0xF, &color, &shadow, &priority, &colorcalc);
 #ifdef WORDS_BIGENDIAN
-      polygon.priority = ((u8 *)&Vdp2Regs->PRISA)[priority^1] & 0x7;
+      priority = ((u8 *)&Vdp2Regs->PRISA)[priority^1] & 0x7;
 #else
-      polygon.priority = ((u8 *)&Vdp2Regs->PRISA)[priority] & 0x7;
+      priority = ((u8 *)&Vdp2Regs->PRISA)[priority] & 0x7;
 #endif
    }
 
+  
+   polygon.priority = 8;
+     
    polygon.vertices[0] = (int)((float)X[0] * vdp1wratio);
    polygon.vertices[1] = (int)((float)Y[0] * vdp1hratio);
    polygon.vertices[2] = (int)((float)X[1] * vdp1wratio);
@@ -2535,11 +2662,26 @@ void VIDOGLVdp1PolygonDraw(void)
    }else{
       YglQuad(&polygon, &texture,NULL);
    }
-
+   
+   if (color == 0)
+   {
+      alpha = 0;   
+      priority = 0;
+   }else{
+      alpha = 0xF8;
+   }
+   
+   if( (CMDPMOD & 0x100) || (CMDPMOD & 0x7) == 0x3)
+   {
+      alpha = 0x80;
+   }
+        
+   alpha |= priority;
+   
    if (color & 0x8000)
-      *texture.textdata = COLOR_ADD(SAT2YAB1(alpha,color), vdp1cor, vdp1cog, vdp1cob);
+      *texture.textdata = SAT2YAB1(alpha,color);
    else
-      *texture.textdata = COLOR_ADD(Vdp2ColorRamGetColor(color, alpha), vdp1cor, vdp1cog, vdp1cob);
+      *texture.textdata = Vdp2ColorRamGetColor(color, alpha);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2554,6 +2696,7 @@ void VIDOGLVdp1PolylineDraw(void)
    YglSprite polygon;
    YglTexture texture;
    YglCache c;
+   int priority;
 
    polygon.blendmode=0;   
    polygon.dst = 0;
@@ -2570,11 +2713,29 @@ void VIDOGLVdp1PolylineDraw(void)
    CMDPMOD = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
    polygon.uclipmode=(CMDPMOD>>9)&0x03;
    
-   alpha = 0xFF;
-   if ((CMDPMOD & 0x7) == 0x3)
-      alpha = 0x80;
 
-   polygon.priority = Vdp2Regs->PRISA & 0x7;
+   // Half trans parent to VDP1 Framebuffer
+   if( (CMDPMOD & 0x7)==0x03 || (CMDPMOD & 0x100) )
+   {
+      polygon.blendmode = 0x80;
+   }     
+      
+   if (color & 0x8000)
+      priority = Vdp2Regs->PRISA & 0x7;
+   else
+   {
+      int shadow, colorcalc;
+
+      priority = 0;  // Avoid compiler warning
+      Vdp1ProcessSpritePixel(Vdp2Regs->SPCTL & 0xF, &color, &shadow, &priority, &colorcalc);
+#ifdef WORDS_BIGENDIAN
+      priority = ((u8 *)&Vdp2Regs->PRISA)[priority^1] & 0x7;
+#else
+      priority = ((u8 *)&Vdp2Regs->PRISA)[priority] & 0x7;
+#endif
+   }
+   
+   polygon.priority = 8;
 
    // A bit of kludge, but eventually we'll have to redo the YGL anyways.
    polygon.vertices[0] = (int)((float)X[0] * vdp1wratio);
@@ -2618,10 +2779,24 @@ void VIDOGLVdp1PolylineDraw(void)
    polygon.vertices[3] = (int)((float)Y[0] * vdp1hratio)+1;
    YglCachedQuad(&polygon, &c);
 
+   if (color == 0)
+   {
+      alpha = 0;   
+      priority = 0;
+   }else{
+      alpha = 0xF8;
+      if (CMDPMOD & 0x100)
+      {
+         alpha = 0x80;
+      }
+   }
+
+   alpha |= priority;
+   
    if (color & 0x8000)
-      *texture.textdata = COLOR_ADD(SAT2YAB1(alpha,color), vdp1cor, vdp1cog, vdp1cob);
+      *texture.textdata = SAT2YAB1(alpha,color);
    else
-      *texture.textdata = COLOR_ADD(Vdp2ColorRamGetColor(color, alpha), vdp1cor, vdp1cog, vdp1cob);
+      *texture.textdata = Vdp2ColorRamGetColor(color, alpha);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2635,7 +2810,8 @@ void VIDOGLVdp1LineDraw(void)
    u8 alpha;
    YglSprite polygon;
    YglTexture texture;
-
+   int priority;
+   
    polygon.blendmode=0;
    polygon.dst = 0;
    X[0] = Vdp1Regs->localX + (T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x0C));
@@ -2647,12 +2823,28 @@ void VIDOGLVdp1LineDraw(void)
    CMDPMOD = T1ReadWord(Vdp1Ram, Vdp1Regs->addr + 0x4);
    polygon.uclipmode=(CMDPMOD>>9)&0x03;
 
-   alpha = 0xFF;
+   // Half trans parent to VDP1 Framebuffer
+   if( (CMDPMOD & 0x7)==0x03 || (CMDPMOD & 0x100) )
+   {
+      polygon.blendmode = 0x80;
+   }  
 
-   if ((CMDPMOD & 0x7) == 0x3)
-      alpha = 0x80;
+   if (color & 0x8000)
+      priority = Vdp2Regs->PRISA & 0x7;
+   else
+   {
+      int shadow, colorcalc;
 
-   polygon.priority = Vdp2Regs->PRISA & 0x7;
+      priority = 0;  // Avoid compiler warning
+      Vdp1ProcessSpritePixel(Vdp2Regs->SPCTL & 0xF, &color, &shadow, &priority, &colorcalc);
+#ifdef WORDS_BIGENDIAN
+      priority = ((u8 *)&Vdp2Regs->PRISA)[priority^1] & 0x7;
+#else
+      priority = ((u8 *)&Vdp2Regs->PRISA)[priority] & 0x7;
+#endif
+   }
+   
+   polygon.priority = 8;
 
    polygon.vertices[0] = (int)((float)X[0] * vdp1wratio);
    polygon.vertices[1] = (int)((float)Y[0] * vdp1hratio);
@@ -2668,11 +2860,24 @@ void VIDOGLVdp1LineDraw(void)
    polygon.flip = 0;
 
    YglQuad(&polygon, &texture,NULL);
-
+   
+   if (color == 0)
+   {
+      alpha = 0;  
+      priority = 0;
+   }else{
+      alpha = 0xF8;
+      if (CMDPMOD & 0x100)
+      {
+         alpha = 0x80;
+      }
+   }
+   alpha |= priority;
+   
    if (color & 0x8000)
-      *texture.textdata = COLOR_ADD(SAT2YAB1(alpha,color), vdp1cor, vdp1cog, vdp1cob);
+      *texture.textdata = SAT2YAB1(alpha,color);
    else
-      *texture.textdata = COLOR_ADD(Vdp2ColorRamGetColor(color, alpha), vdp1cor, vdp1cog, vdp1cob);
+      *texture.textdata = Vdp2ColorRamGetColor(color, alpha);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2885,13 +3090,17 @@ static void Vdp2DrawNBG0(void)
 
    info.colornumber = (Vdp2Regs->CHCTLA & 0x70) >> 4;
 
-      info.blendmode=0;
-   if (Vdp2Regs->CCCTL & 0x1)
+   
+   if(Vdp2Regs->CCCTL & 0x1)
    {
       info.alpha = ((~Vdp2Regs->CCRNA & 0x1F) << 3) + 0x7;
-      if(Vdp2Regs->CCCTL & 0x100 && info.specialcolormode == 0)info.blendmode=1;
+      if(Vdp2Regs->CCCTL & 0x100 && info.specialcolormode == 0)
+         info.blendmode=2;
+      else
+         info.blendmode=1;
    }else{
       info.alpha = 0xFF;
+      info.blendmode=0;
    }
 
    info.coloroffset = (Vdp2Regs->CRAOFA & 0x7) << 8;
@@ -3021,13 +3230,19 @@ static void Vdp2DrawNBG1(void)
    }
 
    info.specialcolormode = (Vdp2Regs->SFCCMD>>2) & 0x3;
-   info.blendmode=0;
+
    if (Vdp2Regs->CCCTL & 0x2)
    {
       info.alpha = ((~Vdp2Regs->CCRNA & 0x1F00) >> 5) + 0x7;
-      if(Vdp2Regs->CCCTL & 0x100 && info.specialcolormode == 0 )info.blendmode=1;
+      if(Vdp2Regs->CCCTL & 0x100 && info.specialcolormode == 0 )
+      {
+         info.blendmode=2;
+      }else{
+         info.blendmode=1;
+      }
    }else{
       info.alpha = 0xFF;
+      info.blendmode=0;
    }
 
    info.coloroffset = (Vdp2Regs->CRAOFA & 0x70) << 4;
@@ -3131,13 +3346,19 @@ static void Vdp2DrawNBG2(void)
    ReadPatternData(&info, Vdp2Regs->PNCN2, Vdp2Regs->CHCTLB & 0x1);
 
    info.specialcolormode = (Vdp2Regs->SFCCMD>>4) & 0x3;
-   info.blendmode=0;
+
    if (Vdp2Regs->CCCTL & 0x4)
    {
       info.alpha = ((~Vdp2Regs->CCRNB & 0x1F) << 3) + 0x7;
-      if(Vdp2Regs->CCCTL & 0x100 && info.specialcolormode == 0 )info.blendmode=1;
+      if(Vdp2Regs->CCCTL & 0x100 && info.specialcolormode == 0 )
+      {
+         info.blendmode=2;
+      }else{
+         info.blendmode=1;
+      }
    }else{
       info.alpha = 0xFF;
+      info.blendmode=0;
    }
 
    info.coloroffset = Vdp2Regs->CRAOFA & 0x700;
@@ -3187,13 +3408,19 @@ static void Vdp2DrawNBG3(void)
    ReadPatternData(&info, Vdp2Regs->PNCN3, Vdp2Regs->CHCTLB & 0x10);
 
    info.specialcolormode = (Vdp2Regs->SFCCMD>>6) & 0x03;
-   info.blendmode=0;
+   
    if (Vdp2Regs->CCCTL & 0x8)
    {
       info.alpha = ((~Vdp2Regs->CCRNB & 0x1F00) >> 5) + 0x7;
-      if(Vdp2Regs->CCCTL & 0x100 && info.specialcolormode == 0 )info.blendmode=1;
+      if(Vdp2Regs->CCCTL & 0x100 && info.specialcolormode == 0 )
+      {
+         info.blendmode=2;
+      }else{
+         info.blendmode=1;
+      }
    }else{
       info.alpha = 0xFF;
+      info.blendmode=0;
    }
    
    info.coloroffset = (Vdp2Regs->CRAOFA & 0x7000) >> 4;
@@ -3457,13 +3684,19 @@ static void Vdp2DrawRBG0(void)
    }
 
    info.specialcolormode = (Vdp2Regs->SFCCMD>>8) & 0x03;
-   info.blendmode=0;
+   
+   info.blendmode=0;         
    if( (Vdp2Regs->LNCLEN & 0x10) == 0x00 )
    {
       if (Vdp2Regs->CCCTL & 0x10)
       {
          info.alpha = ((~Vdp2Regs->CCRR & 0x1F) << 3) + 0x7;
-         if(Vdp2Regs->CCCTL & 0x100 && info.specialcolormode == 0 )info.blendmode=1;
+         if(Vdp2Regs->CCCTL & 0x100 && info.specialcolormode == 0 )
+         {
+            info.blendmode=2;
+         }else{
+            info.blendmode=1;         
+         }
       }else{
          info.alpha = 0xFF;
       }

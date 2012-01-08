@@ -1848,7 +1848,12 @@ static void FASTCALL Vdp2DrawRotation(vdp2draw_struct *info, vdp2rotationparamet
       patternshift = 0;      
    }
    
-   LineColorRamAdress = (T1ReadWord(Vdp2Ram,info->LineColorBase)&0x780) + info->coloroffset;
+   if( info->LineColorBase !=0 )
+   {
+      LineColorRamAdress = (T1ReadWord(Vdp2Ram,info->LineColorBase)&0x780) + info->coloroffset;
+   }else{
+      LineColorRamAdress = 0x00;
+   }
             
 
     paraA.dx = paraA.A * paraA.deltaX + paraA.B * paraA.deltaY;
@@ -1896,7 +1901,7 @@ static void FASTCALL Vdp2DrawRotation(vdp2draw_struct *info, vdp2rotationparamet
       }
       
 
-      if( (Vdp2Regs->LCTA.part.U & 0x8000) != 0 )
+      if( (Vdp2Regs->LCTA.part.U & 0x8000) != 0 && info->LineColorBase !=0 )
       {
          LineColorRamAdress = (T1ReadWord(Vdp2Ram,info->LineColorBase+(y<<1))&0x780) + info->coloroffset;
       }      
@@ -2983,10 +2988,13 @@ static void Vdp2DrawBackScreen(void)
       line[6] = 0;
       line[7] = vdp2height;    
 
+      glDisable(GL_TEXTURE_2D);
       glVertexPointer(2, GL_INT, 0, line);
       glEnableClientState(GL_VERTEX_ARRAY);
+      glDisableClientState(GL_TEXTURE_COORD_ARRAY);
       glDrawArrays(GL_TRIANGLE_FAN,0,8);
       glColor3ub(0xFF, 0xFF, 0xFF);
+      glEnableClientState(GL_TEXTURE_COORD_ARRAY);
    }
 }
 
@@ -3702,6 +3710,7 @@ static void Vdp2DrawRBG0(void)
    }else{
       info.alpha = 0xFF;
       info.LineColorBase = (Vdp2Regs->LCTA.all) << 1;
+      if( info.LineColorBase >= 0x80000 ) info.LineColorBase = 0x00;
       paraA.lineaddr = 0xFFFFFFFF;
       paraB.lineaddr = 0xFFFFFFFF;
    }

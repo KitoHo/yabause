@@ -36,12 +36,14 @@
 
 extern float vdp1wratio;
 extern float vdp1hratio;
+extern int GlHeight;
+extern int GlWidth;
 
 static void Ygl_printShaderError( GLuint shader )
 {
   GLsizei bufSize;
   
-  pfglGetShaderiv(shader, GL_INFO_LOG_LENGTH , &bufSize);
+  glGetShaderiv(shader, GL_INFO_LOG_LENGTH , &bufSize);
   
   if (bufSize > 1) {
     GLchar *infoLog;
@@ -49,7 +51,7 @@ static void Ygl_printShaderError( GLuint shader )
     infoLog = (GLchar *)malloc(bufSize);
     if (infoLog != NULL) {
       GLsizei length;
-      pfglGetShaderInfoLog(shader, bufSize, &length, infoLog);
+      glGetShaderInfoLog(shader, bufSize, &length, infoLog);
       printf("Shaderlog:\n%s\n", infoLog);
       free(infoLog);
     }
@@ -58,6 +60,9 @@ static void Ygl_printShaderError( GLuint shader )
 
 static GLuint _prgid[PG_MAX] ={0};
 
+/*------------------------------------------------------------------------------------
+ *  VDP1 GlowShading Operation
+ * ----------------------------------------------------------------------------------*/
 const GLchar Yglprg_vdp1_gouraudshading_v[] = \
 "attribute vec4 grcolor;\n" \
 "varying vec4 vtxcolor;\n" \
@@ -78,19 +83,18 @@ const GLchar Yglprg_vdp1_gouraudshading_f[] = \
 "  vec4 spriteColor = texture2D(sprite,addr);\n" \
 "  gl_FragColor = spriteColor; \n" \
 "  gl_FragColor += vec4(vtxcolor.r,vtxcolor.g,vtxcolor.b,0.0);\n" \
-"  gl_FragColor.a = spriteColor.a * vtxcolor.a;\n" \
+"  gl_FragColor.a = spriteColor.a;\n" \
 "}\n";
-
 const GLchar * pYglprg_vdp1_gouraudshading_f[] = {Yglprg_vdp1_gouraudshading_f, NULL};
- 
+
 int Ygl_uniformGlowShading(void * p )
 {
    YglProgram * prg;
    prg = p;
    if( prg->vertexAttribute != NULL )
    {
-      pfglEnableVertexAttribArray(prg->vaid);
-      pfglVertexAttribPointer(prg->vaid,4, GL_FLOAT, GL_FALSE, 0, prg->vertexAttribute);
+      glEnableVertexAttribArray(prg->vaid);
+      glVertexAttribPointer(prg->vaid,4, GL_FLOAT, GL_FALSE, 0, prg->vertexAttribute);
    }
    return 0;
 }
@@ -99,10 +103,143 @@ int Ygl_cleanupGlowShading(void * p )
 {
    YglProgram * prg;
    prg = p;
-   pfglDisableVertexAttribArray(prg->vaid);
+   glDisableVertexAttribArray(prg->vaid);
    return 0;
 }
 
+/*------------------------------------------------------------------------------------
+ *  VDP1 GlowShading and Half Trans Operation
+ * ----------------------------------------------------------------------------------*/
+static int id_sprite;
+static int id_fbo;
+static int id_fbowidth;
+static int id_fboheight;
+
+const GLchar Yglprg_vdp1_gouraudshading_hf_v[] = \
+"attribute vec4 grcolor;\n" \
+"varying vec4 vtxcolor;\n" \
+"void main() {\n" \
+" vtxcolor=grcolor;\n" \
+" gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;\n" \
+" gl_Position = ftransform();\n" \
+"}\n";
+const GLchar * pYglprg_vdp1_gouraudshading_hf_v[] = {Yglprg_vdp1_gouraudshading_hf_v, NULL};
+
+const GLchar Yglprg_vdp1_gouraudshading_hf_f[] = \
+"uniform sampler2D sprite;\n" \
+"uniform sampler2D fbo;\n" \
+"uniform int fbowidth;\n" \
+"uniform int fbohegiht;\n" \
+"varying vec4 vtxcolor;\n" \
+"void main() {\n" \
+"  vec2 addr = gl_TexCoord[0].st;\n" \
+"  vec2 faddr = vec2( gl_FragCoord.x/float(fbowidth), gl_FragCoord.y/float(fbohegiht)); \n " \
+"  addr.s = addr.s / (gl_TexCoord[0].q);\n" \
+"  addr.t = addr.t / (gl_TexCoord[0].q);\n" \
+"  vec4 spriteColor = texture2D(sprite,addr);\n" \
+"  vec4 fboColor = texture2D(fbo,faddr);\n" \
+"  spriteColor += vec4(vtxcolor.r,vtxcolor.g,vtxcolor.b,0.0);\n" \
+"  if( fboColor.a > 0.0 && spriteColor.a > 0.0 )\n" \
+"  { \n  " \
+"    gl_FragColor = spriteColor*0.5 + fboColor*0.5;\n " \
+"    gl_FragColor.a = fboColor.a;\n "\
+"  }else{\n" \
+"    gl_FragColor = spriteColor;\n" \
+"  }\n"  \
+"}\n";
+const GLchar * pYglprg_vdp1_gouraudshading_hf_f[] = {Yglprg_vdp1_gouraudshading_hf_f, NULL};
+
+int Ygl_uniformGlowShadingHalfTrans(void * p )
+{
+   YglProgram * prg;
+   prg = p;
+   if( prg->vertexAttribute != NULL )
+   {
+      glEnableVertexAttribArray(prg->vaid);
+      glVertexAttribPointer(prg->vaid,4, GL_FLOAT, GL_FALSE, 0, prg->vertexAttribute);
+   }
+   
+   glUniform1i(id_sprite, 0);
+   glUniform1i(id_fbo, 1);
+   glActiveTexture(GL_TEXTURE1);
+   glBindTexture(GL_TEXTURE_2D,_Ygl->vdp1FrameBuff[_Ygl->drawframe]);
+   glUniform1i(id_fbowidth, GlWidth);
+   glUniform1i(id_fboheight, GlHeight);
+   glActiveTexture(GL_TEXTURE0); 
+   return 0;
+}
+
+int Ygl_cleanupGlowShadingHalfTrans(void * p )
+{
+   YglProgram * prg;
+   prg = p;
+   glDisableVertexAttribArray(prg->vaid);
+   return 0;
+}
+
+
+/*------------------------------------------------------------------------------------
+ *  VDP1 Half Trans Operation
+ * ----------------------------------------------------------------------------------*/
+static int id_hf_sprite;
+static int id_hf_fbo;
+static int id_hf_fbowidth;
+static int id_hf_fboheight;
+
+const GLchar Yglprg_vdp1_halftrans_v[] = \
+"void main() {\n" \
+" gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;\n" \
+" gl_Position = ftransform();\n" \
+"}\n";
+const GLchar * pYglprg_vdp1_halftrans_v[] = {Yglprg_vdp1_halftrans_v, NULL};
+
+const GLchar Yglprg_vdp1_halftrans_f[] = \
+"uniform sampler2D sprite;\n" \
+"uniform sampler2D fbo;\n" \
+"uniform int fbowidth;\n" \
+"uniform int fbohegiht;\n" \
+"void main() {\n" \
+"  vec2 addr = gl_TexCoord[0].st;\n" \
+"  vec2 faddr = vec2( gl_FragCoord.x/float(fbowidth), gl_FragCoord.y/float(fbohegiht)); \n " \
+"  addr.s = addr.s / (gl_TexCoord[0].q);\n" \
+"  addr.t = addr.t / (gl_TexCoord[0].q);\n" \
+"  vec4 spriteColor = texture2D(sprite,addr);\n" \
+"  vec4 fboColor = texture2D(fbo,faddr);\n" \
+"  if( fboColor.a > 0.0 && spriteColor.a > 0.0 )\n" \
+"  { \n  " \
+"    gl_FragColor = spriteColor*0.5 + fboColor*0.5;\n " \
+"    gl_FragColor.a = fboColor.a;\n "\
+"  }else{\n" \
+"    gl_FragColor = spriteColor;\n" \
+"  }\n"  \
+"}\n";
+const GLchar * pYglprg_vdp1_halftrans_f[] = {Yglprg_vdp1_halftrans_f, NULL};
+
+int Ygl_uniformHalfTrans(void * p )
+{
+   YglProgram * prg;
+   prg = p;
+
+   glUniform1i(id_hf_sprite, 0);
+   glUniform1i(id_hf_fbo, 1);
+   glActiveTexture(GL_TEXTURE1);
+   glBindTexture(GL_TEXTURE_2D,_Ygl->vdp1FrameBuff[_Ygl->drawframe]);
+   glUniform1i(id_hf_fbowidth, GlWidth);
+   glUniform1i(id_hf_fboheight, GlHeight);
+   glActiveTexture(GL_TEXTURE0); 
+   return 0;
+}
+
+int Ygl_cleanupHalfTrans(void * p )
+{
+   YglProgram * prg;
+   prg = p;
+   return 0;
+}
+
+/*------------------------------------------------------------------------------------
+ *  VDP1 UserClip Operation
+ * ----------------------------------------------------------------------------------*/
 int Ygl_uniformStartUserClip(void * p )
 {
    YglProgram * prg;
@@ -176,6 +313,56 @@ int Ygl_uniformEndUserClip(void * p )
 int Ygl_cleanupEndUserClip(void * p ){return 0;}
 
 
+/*------------------------------------------------------------------------------------
+ *  VDP2 Draw Frame buffer Operation
+ * ----------------------------------------------------------------------------------*/
+static int idvdp1FrameBuffer;
+static int idfrom;
+static int idto;
+static int idcoloroffset;
+
+const GLchar Yglprg_vdp1_drawfb_v[] = \
+"void main() {\n" \
+" gl_TexCoord[0] = gl_MultiTexCoord0;\n" \
+" gl_Position = ftransform();\n" \
+"}\n";
+const GLchar * pYglprg_vdp2_drawfb_v[] = {Yglprg_vdp1_drawfb_v, NULL};
+
+
+const GLchar Yglprg_vdp2_drawfb_f[] = \
+"uniform sampler2D vdp1FrameBuffer;\n" \
+"uniform float from; \n" \
+"uniform float to; \n" \
+"uniform vec4 coloroffset;\n" \
+"void main() {\n" \
+"  vec2 addr = gl_TexCoord[0].st;\n" \
+"  vec4 fbColor = texture2D(vdp1FrameBuffer,addr);\n" \
+"  int additional = int(fbColor.a * 255.0);\n" \
+"   float alpha = float(int(additional/8)*8)/255; \n" \
+"   float depth = (fbColor.a-alpha)*255.0/10.0 + 0.05; \n" \
+"  if( depth < from || depth > to ){ discard; return; }\n" \
+"  gl_FragColor = fbColor; \n" \
+"  gl_FragColor += vec4(coloroffset.r,coloroffset.g,coloroffset.b,0.0);\n" \
+"  gl_FragColor.a = alpha;\n" \
+"  gl_FragDepth = depth;\n" \
+"}\n";
+
+const GLchar * pYglprg_vdp2_drawfb_f[] = {Yglprg_vdp2_drawfb_f, NULL};
+
+int Ygl_uniformVDP2DrawFramebuffer( float from, float to , float * offsetcol )
+{
+   glUseProgram(_prgid[PG_VDP2_DRAWFRAMEBUFF]);
+   glUniform1i(idvdp1FrameBuffer, 0);
+   glActiveTexture(GL_TEXTURE0);
+   glUniform1f(idfrom,from);
+   glUniform1f(idto,to);
+   glUniform4f(idcoloroffset,offsetcol[0],offsetcol[1],offsetcol[2],offsetcol[3]);
+}
+ 
+
+/*------------------------------------------------------------------------------------
+ *  VDP2 Add Blend operaiotn 
+ * ----------------------------------------------------------------------------------*/
 int Ygl_uniformAddBlend(void * p )
 {
    glBlendFunc(GL_ONE,GL_ONE);
@@ -194,60 +381,94 @@ int YglGetProgramId( int prg )
    return _prgid[prg];
 }
 
+int YglInitShader( int id, const GLchar * vertex[], const GLchar * frag[] )
+{
+    GLint compiled,linked;
+    GLuint vshader;
+    GLuint fshader;
+
+   _prgid[id] = glCreateProgram();
+    if (_prgid[id] == 0 ) return -1;
+    
+    vshader = glCreateShader(GL_VERTEX_SHADER);
+    fshader = glCreateShader(GL_FRAGMENT_SHADER);
+
+    glShaderSource(vshader, 1, vertex, NULL);
+    glCompileShader(vshader);
+    glGetShaderiv(vshader, GL_COMPILE_STATUS, &compiled);
+    if (compiled == GL_FALSE) {
+       printf( "Compile error in vertex shader.\n");
+       Ygl_printShaderError(vshader);
+       _prgid[id] = 0;
+       return -1;
+    }
+  
+    glShaderSource(fshader, 1, frag, NULL);
+    glCompileShader(fshader);
+    glGetShaderiv(fshader, GL_COMPILE_STATUS, &compiled);
+    if (compiled == GL_FALSE) {
+       printf( "Compile error in fragment shader.\n");
+       Ygl_printShaderError(fshader);         
+       _prgid[id] = 0;
+       return -1;
+     }
+      
+    glAttachShader(_prgid[id], vshader);
+    glAttachShader(_prgid[id], fshader);
+    glLinkProgram(_prgid[id]);
+    glGetProgramiv(_prgid[id], GL_LINK_STATUS, &linked);
+    if (linked == GL_FALSE) {
+       printf("Link error..\n");
+       Ygl_printShaderError(_prgid[id]);
+       _prgid[id] = 0;
+       return -1;
+    }
+    return 0;
+}
+
 int YglProgramInit()
 {
-   GLchar shaderInfoLog[256];
+
    GLint compiled,linked;
    
    // 
    _prgid[PG_NORMAL] = 0;
    
    // 
-   _prgid[PG_VFP1_GOURAUDSAHDING] = pfglCreateProgram();
-    if (_prgid[PG_VFP1_GOURAUDSAHDING])
-    {
-      GLuint vshader = pfglCreateShader(GL_VERTEX_SHADER);
-      GLuint fshader = pfglCreateShader(GL_FRAGMENT_SHADER);
-      GLuint id;
-
-      pfglShaderSource(vshader, 1, pYglprg_vdp1_gouraudshading_v, NULL);
-      pfglCompileShader(vshader);
-      pfglGetShaderiv(vshader, GL_COMPILE_STATUS, &compiled);
-      if (compiled == GL_FALSE) {
-         printf( "Compile error in vertex shader.\n");
-         Ygl_printShaderError(vshader);
-         _prgid[PG_VFP1_GOURAUDSAHDING] = 0;
-         return 0;
-      }
-  
-      pfglShaderSource(fshader, 1, pYglprg_vdp1_gouraudshading_f, NULL);
-      pfglCompileShader(fshader);
-      pfglGetShaderiv(fshader, GL_COMPILE_STATUS, &compiled);
-      if (compiled == GL_FALSE) {
-         printf( "Compile error in fragment shader.\n");
-         Ygl_printShaderError(fshader);         
-         _prgid[PG_VFP1_GOURAUDSAHDING] = 0;
-         return 0;
-      }
-      
-      pfglAttachShader(_prgid[PG_VFP1_GOURAUDSAHDING], vshader);
-      pfglAttachShader(_prgid[PG_VFP1_GOURAUDSAHDING], fshader);
-      pfglLinkProgram(_prgid[PG_VFP1_GOURAUDSAHDING]);
-      pfglGetProgramiv(_prgid[PG_VFP1_GOURAUDSAHDING], GL_LINK_STATUS, &linked);
-      if (linked == GL_FALSE) {
-         printf("Link error..\n");
-         Ygl_printShaderError(_prgid[PG_VFP1_GOURAUDSAHDING]);
-         _prgid[PG_VFP1_GOURAUDSAHDING] = 0;
-         return 0;
-      }
-
-   }
+   if( YglInitShader( PG_VFP1_GOURAUDSAHDING, pYglprg_vdp1_gouraudshading_v, pYglprg_vdp1_gouraudshading_f ) != 0 )
+      return 0;
    
    _prgid[PG_VFP1_STARTUSERCLIP] = 0;
    _prgid[PG_VFP1_ENDUSERCLIP] = 0;   
-  
    _prgid[PG_VDP2_ADDBLEND] = 0;
+
+   //
+   if( YglInitShader( PG_VDP2_DRAWFRAMEBUFF, pYglprg_vdp2_drawfb_v, pYglprg_vdp2_drawfb_f ) != 0 )
+      return 0;
    
+   idvdp1FrameBuffer = glGetUniformLocation(_prgid[PG_VDP2_DRAWFRAMEBUFF], (const GLchar *)"vdp1FrameBuffer");
+   idfrom = glGetUniformLocation(_prgid[PG_VDP2_DRAWFRAMEBUFF], (const GLchar *)"from");
+   idto   = glGetUniformLocation(_prgid[PG_VDP2_DRAWFRAMEBUFF], (const GLchar *)"to");
+   idcoloroffset = glGetUniformLocation(_prgid[PG_VDP2_DRAWFRAMEBUFF], (const GLchar *)"coloroffset");
+   
+   //
+   if( YglInitShader( PG_VFP1_HALFTRANS, pYglprg_vdp1_halftrans_v, pYglprg_vdp1_halftrans_f ) != 0 )
+      return 0;
+   
+   id_hf_sprite = glGetUniformLocation(_prgid[PG_VFP1_HALFTRANS], (const GLchar *)"sprite");
+   id_hf_fbo = glGetUniformLocation(_prgid[PG_VFP1_HALFTRANS], (const GLchar *)"fbo");
+   id_hf_fbowidth = glGetUniformLocation(_prgid[PG_VFP1_HALFTRANS], (const GLchar *)"fbowidth");
+   id_hf_fboheight = glGetUniformLocation(_prgid[PG_VFP1_HALFTRANS], (const GLchar *)"fbohegiht");
+   
+
+   if( YglInitShader( PG_VFP1_GOURAUDSAHDING_HALFTRANS, pYglprg_vdp1_gouraudshading_hf_v, pYglprg_vdp1_gouraudshading_hf_f ) != 0 )
+      return 0;
+
+   id_sprite = glGetUniformLocation(_prgid[PG_VFP1_GOURAUDSAHDING_HALFTRANS], (const GLchar *)"sprite");
+   id_fbo = glGetUniformLocation(_prgid[PG_VFP1_GOURAUDSAHDING_HALFTRANS], (const GLchar *)"fbo");
+   id_fbowidth = glGetUniformLocation(_prgid[PG_VFP1_GOURAUDSAHDING_HALFTRANS], (const GLchar *)"fbowidth");
+   id_fboheight = glGetUniformLocation(_prgid[PG_VFP1_GOURAUDSAHDING_HALFTRANS], (const GLchar *)"fbohegiht");
+  
    return 0;
 }
 
@@ -286,11 +507,11 @@ int YglProgramChange( YglLevel * level, int prgid )
    {
       GLuint id;
       level->prg[level->prgcurrent].setupUniform = Ygl_uniformGlowShading;
-	  level->prg[level->prgcurrent].cleanupUniform = Ygl_cleanupGlowShading;
-      id = pfglGetUniformLocation(_prgid[PG_VFP1_GOURAUDSAHDING], (const GLchar *)"sprite");
-      pfglUniform1i(id, 0);
+      level->prg[level->prgcurrent].cleanupUniform = Ygl_cleanupGlowShading;
+      id = glGetUniformLocation(_prgid[PG_VFP1_GOURAUDSAHDING], (const GLchar *)"sprite");
+      glUniform1i(id, 0);
       level->prg[level->prgcurrent].vaid = 0;
-      level->prg[level->prgcurrent].vaid = pfglGetAttribLocation(_prgid[PG_VFP1_GOURAUDSAHDING],(const GLchar *)"grcolor");
+      level->prg[level->prgcurrent].vaid = glGetAttribLocation(_prgid[PG_VFP1_GOURAUDSAHDING],(const GLchar *)"grcolor");
    }  
    else if( prgid == PG_VFP1_STARTUSERCLIP )
    {
@@ -302,12 +523,27 @@ int YglProgramChange( YglLevel * level, int prgid )
       level->prg[level->prgcurrent].setupUniform = Ygl_uniformEndUserClip;
       level->prg[level->prgcurrent].cleanupUniform = Ygl_cleanupEndUserClip;
    }
-   else if( prgid == PG_VDP2_ADDBLEND )
+   else if( prgid == PG_VFP1_HALFTRANS )
+   {
+      GLuint id;
+      level->prg[level->prgcurrent].setupUniform = Ygl_uniformHalfTrans;
+      level->prg[level->prgcurrent].cleanupUniform = Ygl_cleanupHalfTrans;
+
+      
+   }   
+   else if( prgid == PG_VFP1_GOURAUDSAHDING_HALFTRANS )
+   {
+      GLuint id;
+      level->prg[level->prgcurrent].setupUniform = Ygl_uniformGlowShadingHalfTrans;
+      level->prg[level->prgcurrent].cleanupUniform = Ygl_cleanupGlowShadingHalfTrans;
+      level->prg[level->prgcurrent].vaid = glGetAttribLocation(_prgid[PG_VFP1_GOURAUDSAHDING],(const GLchar *)"grcolor");
+      
+      
+   }else if( prgid == PG_VDP2_ADDBLEND )
    {
       level->prg[level->prgcurrent].setupUniform = Ygl_uniformAddBlend;
       level->prg[level->prgcurrent].cleanupUniform = Ygl_cleanupAddBlend;
-   }
-   else{
+   }else{
       level->prg[level->prgcurrent].setupUniform = NULL;
    }
    return 0;

@@ -4444,3 +4444,35 @@ ScspSlotDebugAudioSaveWav (u8 slotnum, const char *filename)
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+static unsigned int m68kcycles;
+static unsigned int m68kcenticycles;
+
+void M68KInitCycles(unsigned int cycles, unsigned int centicycles)
+{
+   m68kcycles = cycles;
+   m68kcenticycles = centicycles;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void M68KExecCycles()
+{
+   static unsigned int m68ksavedcenticycles = 0;
+   unsigned int cycles;
+
+   cycles = m68kcycles;
+   m68ksavedcenticycles += m68kcenticycles;
+   if (m68ksavedcenticycles >= 100)
+   {
+      cycles++;
+      m68ksavedcenticycles -= 100;
+   }
+   M68KExec(cycles);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+void ScspExecDecilines(int decilines)
+{
+}

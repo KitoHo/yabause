@@ -142,4 +142,10 @@ int M68KDelCodeBreakpoint(u32 addr);
 m68kcodebreakpoint_struct *M68KGetBreakpointList(void);
 void M68KClearCodeBreakpoints(void);
 
+void M68KInitCycles(unsigned int cycles, unsigned int centicycles);
+void M68KExecCycles(void);
+
+/* compability function to match scsp2 interface */
+void ScspExecDecilines(int decilines);
+
 #endif

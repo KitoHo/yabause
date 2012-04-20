@@ -87,7 +87,7 @@ extern void ScspUnMuteAudio(int flags);
 extern void ScspSetVolume(int volume);
 extern void ScspDeInit(void);
 
-extern void ScspExec(int decilines);
+extern void ScspExecDecilines(int decilines);
 
 extern u8 FASTCALL SoundRamReadByte(u32 address);
 extern u16 FASTCALL SoundRamReadWord(u32 address);
@@ -126,6 +126,12 @@ extern u32 FASTCALL M68KReadByte(u32 address);
 extern u32 FASTCALL M68KReadWord(u32 address);
 extern void FASTCALL M68KWriteByte(u32 address, u32 data);
 extern void FASTCALL M68KWriteWord(u32 address, u32 data);
+
+/* Compatibilty functions to match scsp */
+void M68KInitCycles(unsigned int cycles, unsigned int centicycles);
+void M68KExecCycles(void);
+void M68KSync(void);
+void ScspExec(void);
 
 ///////////////////////////////////////////////////////////////////////////
 

@@ -1203,7 +1203,7 @@ void ScspDeInit(void)
 // scanlines worth of SCSP emulation; in multithreaded mode, bumps the
 // clock target by the same amount of time.
 
-void ScspExec(int decilines)
+void ScspExecDecilines(int decilines)
 {
    u32 new_target;
 
@@ -3558,3 +3558,19 @@ void FASTCALL M68KWriteWord(u32 address, u32 data)
 }
 
 ///////////////////////////////////////////////////////////////////////////
+
+void M68KInitCycles(unsigned int cycles, unsigned int centicycles)
+{
+}
+
+void M68KExecCycles()
+{
+}
+
+void M68KSync()
+{
+}
+
+void ScspExec()
+{
+}
